@@ -1,0 +1,7 @@
+*.pyc
+.DS_Store
+*.swp
+node_modules/
+build/
+.nyc_output/
+coverage/
