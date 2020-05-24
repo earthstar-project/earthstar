@@ -14,7 +14,7 @@
     "test-sqlite": "tap -Rspecy --jobs=1 build/keywingStoreSqlite.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",
     "build-and-test": "npm run build && npm run test",
-    "prepublish": "npm run clean && npm run build && npm test"
+    "prepublishOnly": "npm run clean && npm run build && npm test"
   },
   "author": "Cinnamon <cinnamon_npm@fastmail.com>",
   "license": "ISC",
