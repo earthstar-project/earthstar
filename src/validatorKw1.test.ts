@@ -10,13 +10,25 @@ let author1: AuthorKey = addSigilToKey(keypair1.public);
 let now = 1500000000000000;
 let Val = ValidatorKw1;
 
+let snowmanJsString = '☃';
+let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
+let snowmanJs2 = snowmanBufferUtf8.toString('utf8');
+let snowmanU = '\u2604';
+
 t.test('keyIsValid', (t: any) => {
     t.ok(Val.keyIsValid('hello'), 'regular public key');
-    t.ok(Val.keyIsValid('hello/there'), 'regular public key');
-    t.ok(Val.keyIsValid('(@aaa.ed25519)/foo/bar'), 'valid key with write permission');
+    t.ok(Val.keyIsValid('~@aaa.ed25519/foo/bar'), 'valid key with write permission');
 
-    t.notOk(Val.keyIsValid(''), 'empty key');
+    t.ok(Val.keyIsValid(''), 'empty string');
+    t.ok(Val.keyIsValid(' '), 'space');
+
+    // forbidden: non-printable characters and utf-8
     t.notOk(Val.keyIsValid('hello\n'), 'contains \\n');
+    t.notOk(Val.keyIsValid('aa\tbb'), 'contains \\t');
+    t.notOk(Val.keyIsValid('\x00'), 'null byte');
+    t.notOk(Val.keyIsValid(snowmanJsString), 'snowman');
+    t.notOk(Val.keyIsValid(snowmanJs2), 'snowman 2');
+    t.notOk(Val.keyIsValid(snowmanU), 'snowman 3');
 
     t.done();
 });
@@ -25,13 +37,14 @@ t.test('authorCanWriteToKey', (t: any) => {
     let author = '@aaa.ed25519';
     t.ok(Val.authorCanWriteToKey(author, 'public'), 'regular public key');
     t.ok(Val.authorCanWriteToKey(author, author + '/about'), 'public key containing author');
-    t.ok(Val.authorCanWriteToKey(author, '(' + author + ')/about'), 'only writable by author');
-    t.ok(Val.authorCanWriteToKey(author, '(@notme.ed25519)(' + author + ')/about'), 'writable by me and someone else');
+    t.ok(Val.authorCanWriteToKey(author, '~' + author + '/about'), 'only writable by author');
+    t.ok(Val.authorCanWriteToKey(author, '~@notme.ed25519~' + author + '/about'), 'writable by me and someone else');
 
-    t.notOk(Val.authorCanWriteToKey(author, '(@notme.ed25519)/about'), 'only writable by someone else');
-    t.notOk(Val.authorCanWriteToKey(author, 'zzz()zzz'), 'nobody can write to this key: ()');
-    t.notOk(Val.authorCanWriteToKey(author, 'zzz)zzz'), 'nobody can write to this key: )');
-    t.notOk(Val.authorCanWriteToKey(author, 'zzz(zzz'), 'nobody can write to this key: (');
+    t.ok(Val.authorCanWriteToKey(author, '~' + author + '/about/~'), 'extra tilde');
+    t.ok(Val.authorCanWriteToKey(author, '~' + author + '/about/~@notme.ed25519'), 'second author');
+
+    t.notOk(Val.authorCanWriteToKey(author, '~@notme.ed25519/about'), 'only writable by someone else');
+    t.notOk(Val.authorCanWriteToKey(author, 'zzz~zzz'), 'nobody can write to a key with a bare ~');
 
     t.done();
 });
@@ -60,14 +73,14 @@ t.test('signItem and itemSignatureIsValid', (t: any) => {
         author: author1,
         signature: '',
     };
+    t.notOk(Val.itemSignatureIsValid(item1), 'item with empty sig is not valid');
+
     let signedItem = Val.signItem(item1, keypair1.secret);
 
     t.ok(signedItem.signature.endsWith('.sig.ed25519'), 'item looks like it has a signature');
     t.ok(Val.itemSignatureIsValid(signedItem), 'signature is valid');
 
-    t.notOk(Val.itemSignatureIsValid(item1), 'empty sig is not valid');
-
-    // TODO: once sigs are working, enable these tests
+    // modify various things and ensure the signature becomes invalid
     t.notOk(
         Val.itemSignatureIsValid({...signedItem, signature: 'xxx.sig.ed25519'}),
         'garbage sig is not valid'

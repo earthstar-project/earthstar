@@ -6,33 +6,35 @@ let logWarning = console.log;
 //let log = (...args : any[]) => void {};  // turn off logging for now
 //let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
+let isOnlyPrintableAscii = (s : string) : boolean => {
+    let buf = Buffer.from(s, 'utf8');
+    for (let char of buf) {
+        // char must be between ' ' (space) and '~' inclusive
+        if (char < 32 || char > 126) { return false; }
+    }
+    return true;
+}
+
 export const ValidatorKw1 : IValidator = class {
     static format : FormatName = 'kw.1';
     static keyIsValid(key: Key): boolean {
-        // TODO: check for valid utf8?
-        if (key.length === 0) {
-            logWarning('invalid key: length === 0');
+        if (!isOnlyPrintableAscii(key)) {
+            logWarning('invalid key: contains non-printable or non-ascii characters');
             return false;
         }
-        if (key.indexOf('\n') !== -1) {
-            logWarning('invalid key: contains "\\n"');
-            return false;
-        }
-        // TODO: try adding a literal '*' and see if it screws up sqlite LIKE
         return true;
     }
     static authorCanWriteToKey(author: AuthorKey, key: Key): boolean {
-        // Note that multiple authors are allowed: "(@a)(@b)" means both have write permission
-        if (key.indexOf('(') === -1 && key.indexOf(')') === -1) {
-            // key has no parens: it's public.
+        // no tilde: it's public
+        if (key.indexOf('~') === -1) {
             return true;
         }
-        if (key.indexOf('(' + author + ')') !== -1) {
-            // key contains (author).  the author can write here.
+        // key contains "~" + author.  the author can write here.
+        if (key.indexOf('~' + author) !== -1) {
             return true;
         }
-        // key contains at least one paren but not (author).  The author can't write here.
-        logWarning('author can\'t write to key');
+        // key contains at least one tilde but not ~author.  The author can't write here.
+        logWarning(`author ${author} can't write to key ${key}`);
         return false;
     }
     static hashItem(item: Item): string {
@@ -66,9 +68,9 @@ export const ValidatorKw1 : IValidator = class {
         // "futureCutoff" is a time in microseconds (milliseconds * 1000).
         // If a message is from after futureCutoff, it's not valid.
         // It defaults to 10 minutes in the future.
-
         const FUTURE_CUTOFF_MINUTES = 10;
         futureCutoff = futureCutoff || (Date.now() + FUTURE_CUTOFF_MINUTES * 60 * 1000) * 1000;
+
         if (   typeof item.format !== 'string'
             || typeof item.workspace !== 'string'
             || typeof item.key !== 'string'
@@ -81,7 +83,7 @@ export const ValidatorKw1 : IValidator = class {
             return false;
         }
 
-        // don't allow extra properties
+        // Don't allow extra properties in the object
         if (Object.keys(item).length !== 7) {
             logWarning('itemIsValid: item has extra properties');
             return false;
@@ -101,7 +103,7 @@ export const ValidatorKw1 : IValidator = class {
         // If the timestamp is small enough that it was probably
         // accidentally created with milliseconds or seconds,
         // the message is invalid.
-        if (item.timestamp < 9999999999999) {
+        if (item.timestamp <= 9999999999999) {
             logWarning('itemIsValid: timestamp too small');
             return false;
         }
@@ -116,27 +118,31 @@ export const ValidatorKw1 : IValidator = class {
             return false;
         }
 
-        // Format can't contain newline.
-        if (item.format.indexOf('\n') !== -1) {
-            logWarning('itemIsValid: format contains newline');
+        // No non-printable ascii characters or unicode (except item.value)
+        if (!isOnlyPrintableAscii(item.format)) {
+            logWarning('itemIsValid: format contains non-printable ascii characters');
             return false;
         }
-        // Workspace can't contain newline.
-        if (item.workspace.indexOf('\n') !== -1) {
-            logWarning('itemIsValid: workspace contains newline');
+        if (!isOnlyPrintableAscii(item.workspace)) {
+            logWarning('itemIsValid: workspace contains non-printable ascii characters');
             return false;
         }
-        // Key can't contain newline, plus has other restrictions.
+        if (!isOnlyPrintableAscii(item.author)) {
+            logWarning('itemIsValid: author contains non-printable ascii characters');
+            return false;
+        }
+        if (!isOnlyPrintableAscii(item.signature)) {
+            logWarning('itemIsValid: signature contains non-printable ascii characters');
+            return false;
+        }
+
+        // Key must be valid (only printable ascii, etc)
         if (!this.keyIsValid(item.key)) {
             logWarning('itemIsValid: key not valid');
             return false;
         }
-        // Value CAN contain newline
-        // Author can't contain newline.
-        if (item.author.indexOf('\n') !== -1) {
-            logWarning('itemIsValid: author contains newline');
-            return false;
-        }
+
+        // Author must have write permission
         if (!this.authorCanWriteToKey(item.author, item.key)) {
             logWarning('itemIsValid: author can\'t write to key');
             return false;

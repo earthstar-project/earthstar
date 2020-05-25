@@ -1,88 +1,147 @@
 
 # Keywing
 
-Status: early alpha
+*Early alpha - do not use for important data yet*
 
-## A distributed, syncable key-value store
+## An offline-first, distributed, syncable key-value store for use in p2p software
 
-It's like leveldb but it syncs.
+Implementations so far:
+* Typescript (node, browsers)
 
-It's like Couchdb but with signatures and encryption, so untrusted nodes can help move data around without tampering.
+### Data model
 
-It's like Scuttlebutt but with more flexibility, so you can do partial sync.
+A Keywing database holds mutable key-value pairs, similar to leveldb or CouchDb.  Keys and values are strings.  If you want to store JSON in the values, you can stringify/parse it yourself.
 
-It's like DAT but simpler and more modular, so you can implement it in any language and make it fit your use case.
+There are no transactions.  The unit of atomic change is writing a value to one key.  Causal order is not preserved for edits across multiple keys.
 
-It's like IPFS but simpler and less structured.
+### Scope
 
-It has fewer cryptography guarantees than the above, so it's useful in informal settings amongst semi-trusted people, not for producing audit logs.
+Each user will have their own instance of a Keywing database, maybe in their browser or embedded in an Electron app.  There might also be some on cloud servers.  These databases can sync with each other across HTTP or duplex stream connections.
 
-## What's nice about it
+Each database instance can hold a subset of the entire data, specified by a query such as "keys starting with a certain substring", "keys written after a certain timestamp", etc.
 
-* It's NOT an immutable append-only log.  You can delete things.
-* You can use multiple devices with the same identity.
-* Easy, flexible sync options for selective sync (only some keys, only recent data, only certain authors, ...)
-* Can sync over HTTP, so it's easy to host places like Glitch.
-* Can sync over duplex stream, so it works with hyperswarm.
-* Simple algorithms, easy to implement without a lot of dependencies
+A "workspace" is a collection of data which is sync'd across database instances.  It's similar to a Slack workspace -- a collection of related people and data.  To join a workspace you need to know its unique ID, which is a random string.
+
+### Security
+
+Each author is identified by a public key.
+
+Data updates are signed by the author, so it's safe for untrusted peers to help host and propagate data.  (Soon) you will also be able to encrypt data so untrusted peers can host it without reading it.
+
+### Editing data; multiple users and devices; conflicts
+
+A single author can use multiple devices at the same time.  You "log into" a device by providing your public and private key, like a username and password.
+
+Data is mutable.  Authors can update keys with new values.  The old data is thrown away and doesn't take up space.  You can also delete keys (soon); this replaces them with a tombstone value which is kept around.
+
+There is a write permission system to allow only certain authors to write to certain keys.  Other keys can be written by anyone.
+
+Soon, there will also be a way to write immutable messages, for use cases where you need those.
+
+Conflicts from a single author (on multiple devices) are resolved by timestamp and the old data is discarded.  Conflicts from multiple authors are resolved by timestamp by default, but the old data is kept to allow for manual conflict resolution if needed.
+
+## Security properties
+
+Malicious peers can:
+* Withold updates to individual key-value pairs during a sync
+* See the data (until encryption is implemented, soon)
+* Know which peers they're connecting to
+
+Malicious peers cannot:
+* Alter key-value pairs from another author
+* Forge new key-value pairs signed by another author
+
+Because it allows partial sync and mutation of data, Keywing doesn't cryptographically guarantee that you have a complete dataset with no gaps from a certain author.  Authors could chose to use sequential keys or embed a blockchain of hash backlinks into their messages, and you could verify these in your app (outside of Keywing).
+
+## Comparisons
+
+Like leveldb, but:
+* multi-author
+* it syncs
+
+Like CouchDb, but:
+* with signatures and encryption, so untrusted nodes can help move data around.
+
+Like Scuttlebutt, but:
+* one author can use multiple devices
+* data is mutable
+* uses a key-value data model instead of event-sourcing, to reduce the need for custom indexing
+* supports partial replication
+* will sync over HTTP, so it's easy to host in places like Glitch.com
+
+Like DAT, but:
+* multi-author, multi-device
+* simpler code and algorithms, easier to implement
+
+Like IPFS, but:
+* mutable
+* multi-author, multi-device
+
+Sometimes immutability is needed, like if you're running a package registry or want an audit log.  For social-network style use cases, though, immutability is a privacy liability instead of a desirable guarantee.
 
 ## Use cases
 
-Apps similar to these could be built on top of Keywing:
+Keywing can be used for small invite-only tools (think Slack) and large open-world tools (think Facebook).  Apps can decide which authors to replicate, ensuring you download the people you care about and not the entire world.
+
+These styles of app could be built on top of Keywing:
 * Wikis
 * End-to-end encrypted chat
-* Slack, IRC
-* Facebook, Scuttlebutt, Discourse, Forums
-* Twitter, Mastodon
-* Trello, GitHub Issues, Asana, Todo lists
-* Google sheets
-* Collaborative drawing or music tools
-* Multi-user Twine for making interactive fiction games
+* chat: Slack, IRC
+* social: Facebook, Scuttlebutt, Discourse, LiveJournal, Forums
+* microblogging: Twitter, Mastodon
+* productivity: Trello, GitHub Issues, Asana, Todo lists
+* office: Google sheets
+* art: Collaborative drawing or music tools, multi-user Twine for making interactive fiction games
 
 ## What doesn't it do?
 
+Keywing doesn't handle multi-user text editing like Google Docs.  This is a different challenge.  You could probably use a CRDT like Automerge and rely on Keywing to move and sync the patches it produces.
+
 It's not real-time yet - changes propagate over a few minutes.  This will improve but might not ever get below 1s latency.
 
-It doesn't handle tricky conflict resolution like Google Docs.
+The crypto is not audited or bulletproof yet.
 
-The crypto is not audited or bulletproof, it's just enough to keep your friends from seeing your chats with your other friends.
+Keywing is not focused on anonymity -- more on autonomy.  You could use it over Tor or something.
+
+Keywing doesn't provide transactions or causality guarantees across keys.
 
 ## Example
 
-Let's create a `KeywingStore`, a key-value database that syncs.
-
-* see more in `src/keywingStore.test.ts`
+The API for a Store:
 ```ts
-// The API for a store
-export interface IKeywingStore {
-    // A KeywingStore is all about a single workspace.
-    // Workspaces are separate universes of data
-    // that don't sync with each other.
-    constructor(workspace : string)
+// A Store is all about a single workspace.
+// Workspaces are separate universes of data
+// that don't sync with each other.
+// You also choose which feed formats you want to support
+// by supplying validators (one for each format).
+constructor(validators : IValidator[], workspace : string)
 
-    // look up a key and get the corresponding value
-    getValue(key : string) : string | undefined;
-    // or "item", which is an object with more details (author, timestamp...)
-    getItem(key : string) : Item | undefined;
+// look up a key and get the corresponding value...
+getValue(key : string) : string | undefined;
 
-    // query with a variety of options - filter by keys and authors, etc
-    items(query? : QueryOpts) : Item[];
-    keys(query? : QueryOpts) : string[];
-    values(query? : QueryOpts) : string[];
+// or get the whole "item", which is an object with more details (author, timestamp...)
+getItem(key : string) : Item | undefined;
 
-    // write a key-value pair to the database, which will be signed by your author key.
-    set(itemToSet : ItemToSet) : boolean;
+// query with a variety of options - filter by keys and authors, etc
+items(query? : QueryOpts) : Item[];
+keys(query? : QueryOpts) : string[];
+values(query? : QueryOpts) : string[];
 
-    // try to import an item from another KeywingStore.
-    ingestItem(item : Item) : boolean;
+// write a key-value pair to the database, which will be signed by your author key.
+set(itemToSet : ItemToSet) : boolean;
 
-    // basic sync algorithm.  a faster one could be made later.
-    _syncFrom(otherKeywing : IKeywingStore, existing : boolean, live : boolean) : number;
-    sync(otherKeywing : IKeywingStore, opts? : SyncOpts) : SyncResults;
-}
+// try to import an item from another Store.
+ingestItem(item : Item) : boolean;
 
-// Create a database for a particular workspace
-let kw = new KeywingStoreMemory('gardening-pals');
+// basic sync algorithm.  a faster one will be made later.
+sync(otherStore : IKeywingStore, opts? : SyncOpts) : SyncResults;
+```
+
+Usage example:
+```ts
+// Create a database for a particular workspace, 'gardening-pals'
+// We've chosen to use the 'kw.1' feed format so we supply the matching validator
+let kw = new StoreMemory([ValidatorKw1], 'gardening-pals');
 
 // Make up some authors for testing
 let keypair1 = generateKeypair();  // { public, secret } as base64 strings
@@ -114,7 +173,7 @@ kw.values({ key='wiki/Strawberry', includeHistory: true })
 // Get more context about an item, besides just the value.
 kw.getItem('wiki/Strawberry')
 /* {
-    schema: 'kw.1',
+    format: 'kw.1',
     workspace: 'gardening-pals',
     key: 'wiki/Strawberry',
     value: 'Yum.',
@@ -126,11 +185,19 @@ kw.getItem('wiki/Strawberry')
 // WRITE PERMISSIONS
 //
 // Keys can specify which authors are allowed to write to them.
-// Author names who occur within parens can write.
-// Like '(@aaa.ed25519)/about'  -- only @aaa can write here.
-// You can also put several authors and they will all have write permissions: '(@a)(@b)(@c)/whiteboard'
-// If there are no parens, the key can be written to by anyone in the workspace.
-kw.set('(' + author1 + ')/about', '{name: ""}', author1, keypair1.secret);
+// Author names that occur prefixed by '~' in a key can write to that key.
+//
+// Examples:
+// One author write permission:
+//   '~@aaa.ed25519/about'  -- only @aaa can write here.
+//   '~@aaa.ed25519/follows/@bbb.ed25519'  -- only @aaa can write here
+// Public:
+//   '@aaa.ed25519/wall'  -- no tilde, so anyone can write here
+//   'wiki/kittens'  -- no tilde, so anyone can write here
+// Multiple authors:
+//   'whiteboard/~@aaa.ed25519~@bbb.ed25519'  -- both @aaa and @bbb can write here
+//
+kw.set('~' + author1 + '/about', '{name: ""}', author1, keypair1.secret);
 
 // Coming soon, the workspace can also have members with
 // read or read-write permissions in general.
@@ -141,13 +208,13 @@ kw.set('(' + author1 + ')/about', '{name: ""}', author1, keypair1.secret);
 // To delete a message, maybe set it to "null" if you expect it to be JSON.
 // This may improve later.
 
-// You can do the usual key-value things.
+// You can do leveldb style queries.
 kw.keys()
-kw.keys({ lowKey: 'abc', limit: 100})
-kw.keys({ prefix: 'wiki/'})
+kw.keys({ lowKey: 'abc', limit: 100 })
+kw.keys({ prefix: 'wiki/' })
 
-// You can sync to another KeywingStore!
-let kw2 = new KeywingStoreMemory();
+// You can sync to another Store
+let kw2 = new StoreMemory();
 kw.sync(kw2);
 // Now kw and kw2 are identical.
 
@@ -161,7 +228,7 @@ kw.sync(kw2, [
     { prefix: 'wiki/' },
 ]);
 
-// Soon you can subscribe to changes from a KeywingStore:
+// Soon you can subscribe to changes from a Store:
 kw.onChange(cb);  // -> new data events, changed data events
 
 // Soon you can control who can join, read, and write in a workspace, but details TBD.
@@ -170,7 +237,7 @@ kw.onChange(cb);  // -> new data events, changed data events
 // This will provide a general-purpose way of querying so apps don't
 // have to index messages themselves.
 /* {
-    schema: 'kw.1',
+    format: 'kw.1',
     workspace: 'gardening-pals',
     key: 'wiki/Strawberry',
     value: 'Yum.',
@@ -190,21 +257,19 @@ kw.onChange(cb);  // -> new data events, changed data events
 ## Details
 
 ### Classes
-* A KeywingStore is responsible for holding and querying the data.
-* So far there's an in-memory implementation.
-* Next up will be SQLite, leveldb, IndexedDB?
-* The zoo of classes will eventually be:
-    * KeywingStore -- store and query the data
-    * KeywingHTTPSyncer -- run HTTP server, and sync over HTTP
-    * KeywingStreamSyncer -- sync over a duplex stream
-    * KeywingPeerFinder -- find peers and connect to them
-    * KeywingEncryptedStore -- make it easier to store encrypted items
+* Store -- responsible for holding and querying the data.
+* Validator -- for a specific feed format, checks validity of incoming messages and signs outgoing messages.
+* Coming soon:
+    * HTTPSyncer -- run HTTP server, and sync over HTTP
+    * StreamSyncer -- sync over a duplex stream
+    * PeerFinder -- find peers and connect to them
+    * EncryptedStore -- make it easier to store encrypted items
     * your app -- tell Keywing which data and which peers you are interested in so it knows what to fetch
 
 ### Planned features:
 * Workspaces - Like a Slack workspace / Discord server / scuttleverse.  Control who joins, block people, invitations, etc.
 * Encryption - Wrap items in an encrypted envelope.  They will still sync without being understood by middle-people.
-* Metadata - Each item can have its own small k-v metadata, which can help us query for things.  KeywingStore will be responsible for indexing it.  The goal is simple general purpose indexing so apps don't need their own indexes.
+* Metadata - Each item can have its own small k-v metadata, which can help us query for things.  The Store will be responsible for indexing it.  The goal is simple general purpose indexing so apps don't need their own indexes.
 * Namespaces? - Within a workspace, like top-level folders, to more easily control what to sync and keep different apps from stepping on each others' data.
 
 ### Items table schema
@@ -221,20 +286,25 @@ kw.onChange(cb);  // -> new data events, changed data events
 primary key: (key, author) -- one item per key per author.
 ```
 
+### Feed formats
+* The main feed format is called `kw`.  It's versioned, like `kw.1`.
+* Feed formats are responsible for:
+    * Validating incoming messages
+    * Checking signatures
+    * Signing outgoing messages
+    * Setting rules about keys (not pubkeys, k-v keys), for example enforcing url-safe characters
+    * Encoding and decoding author pubkeys between raw buffers and a string format such as `'@'+base64(key)`
+* There will eventually be a `ssb` feed format, which encapsulates SSB messages as key-value pairs.  It will be able to validate existing `ssb` signatures.  It will not enforce the hash chain backlinks because Keywing can do partial syncs or sync in any order.
+
 ### All about keys
-* are kind of like file paths
+* typically you will think of them like file paths or URL paths
 * requirements:
-    * utf-8
-    * don't contain `\n`
-    * empty string is not allowed
-    * parens have special meaning (for author write permissions)
-    * any other valid utf-8 is ok
-    * TODO: or should we limit to ascii to avoid unicode normalization attacks?
+    * printable ASCII characters only
+    * tilde `~` has special mening for giving author write permissions
 * recommendations:
-    * preferred to use url-safe characters `'()-._~$&+,/:;=?@` so browsers won't percent-escape them
+    * preferred to limit to url-safe characters `'()-._~$&+,/:;=?@` so browsers won't percent-escape them
     * be aware using `/` will affect links in the browser (e.g. your content within a wiki) - you may need to set a <base> path.
-    * preferred to not start with `/`, for consistency.
-* max length: ? has to be pretty long to allow several authors to have write permissions
+* max length: TODO.  has to be pretty long to allow several authors to have write permissions.
 
 ### Key permissions
 * a key is writable by an author if their key appears in curly brackets
@@ -405,6 +475,6 @@ t:      tombstone for deleted items
     * ...if we make it use a character that's forbidden in regular keys
 
 ### Key overlays?
-* It would be easy make an overlay view of different key prefixes ("folders") within a Keywing
-* Or overlay two Keywing instances
-* For example you can combine `{@a}/wiki` and `{@b}/wiki` into one namespace
+* It would be easy make an overlay view of different key prefixes ("folders") within a Store
+* Or overlay two Store instances
+* For example you could combine `~@a/wiki` and `~@b/wiki` into one namespace

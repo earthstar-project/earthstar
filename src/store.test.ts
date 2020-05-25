@@ -21,13 +21,13 @@ let author2: AuthorKey = addSigilToKey(keypair2.public);
 let author3: AuthorKey = addSigilToKey(keypair3.public);
 let now = 1500000000000000;
 
-let scenarios = [
+let scenarios : any[] = [
     {
-        constructor: () : IStore => new StoreMemory(VALIDATORS, WORKSPACE),
+        makeStore: () : IStore => new StoreMemory(VALIDATORS, WORKSPACE),
         description: 'StoreMemory',
     },
     {
-        constructor: () : IStore => new StoreSqlite(VALIDATORS, WORKSPACE, ':memory:'),
+        makeStore: () : IStore => new StoreSqlite(VALIDATORS, WORKSPACE, ':memory:'),
         description: "StoreSqlite(':memory:')",
     },
 ];
@@ -41,7 +41,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': empty store', (t: any) => {
-        let kw = scenario.constructor();
+        let kw = scenario.makeStore();
         t.same(kw.keys(), [], 'no keys');
         t.same(kw.items(), [], 'no items');
         t.same(kw.values(), [], 'no values');
@@ -51,7 +51,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': store ingestItem rejects invalid items', (t: any) => {
-        let kw = scenario.constructor();
+        let kw = scenario.makeStore();
 
         let item1: Item = {
             format: FORMAT,
@@ -63,6 +63,8 @@ for (let scenario of scenarios) {
             signature: 'xxx',
         };
         let signedItem = ValidatorKw1.signItem(item1, keypair1.secret);
+        t.ok(kw.ingestItem(signedItem), "successful ingestion");
+        t.equal(kw.getValue('k1'), 'v1', "getValue worked");
 
         t.notOk(kw.ingestItem(item1), "don't ingest: bad signature");
         t.notOk(kw.ingestItem({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
@@ -73,14 +75,39 @@ for (let scenario of scenarios) {
         let signedItemDifferentWorkspace = ValidatorKw1.signItem({...item1, workspace: 'xxx'}, keypair1.secret);
         t.notOk(kw.ingestItem(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
 
-        t.ok(kw.ingestItem(signedItem), "successful ingestion");
-        t.equal(kw.getValue('k1'), 'v1', "getValue worked");
+        let writableKeys = [
+            'hello',
+            '~' + author1 + '/about',
+            'chat/~@notme.ed25519~' + author1,
+        ];
+        for (let key of writableKeys) {
+            t.ok(kw.ingestItem(
+                ValidatorKw1.signItem(
+                    {...item1, key: key},
+                    keypair1.secret
+                )),
+                "do ingest: writable key " + key
+            );
+        }
+        let notWritableKeys = [
+            '~@notme.ed25519/about',
+            '~',
+        ];
+        for (let key of notWritableKeys) {
+            t.notOk(kw.ingestItem(
+                ValidatorKw1.signItem(
+                    {...item1, key: key},
+                    keypair1.secret
+                )),
+                "don't ingest: non-writable key " + key
+            );
+        }
 
         t.done();
     });
 
     t.test(scenario.description + ': one-author store', (t: any) => {
-        let kw = scenario.constructor();
+        let kw = scenario.makeStore();
         t.equal(kw.getValue('key1'), undefined, 'nonexistant keys are undefined');
         t.equal(kw.getValue('key2'), undefined, 'nonexistant keys are undefined');
 
@@ -112,7 +139,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': key queries', (t: any) => {
-        let kw = scenario.constructor();
+        let kw = scenario.makeStore();
         let keys = 'zzz aaa dir dir/ q qq qqq dir/a dir/b dir/c'.split(' ');
         let ii = 0;
         for (let key of keys) {
@@ -134,7 +161,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': multi-author writes', (t: any) => {
-        let kw = scenario.constructor();
+        let kw = scenario.makeStore();
 
         // set decoy keys to make sure the later tests return the correct key
         t.ok(kw.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 2');
@@ -175,8 +202,8 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': sync: push to empty store', (t: any) => {
-        let kw1 = scenario.constructor();
-        let kw2 = scenario.constructor();
+        let kw1 = scenario.makeStore();
+        let kw2 = scenario.makeStore();
 
         // set up some keys
         t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
@@ -221,8 +248,8 @@ for (let scenario of scenarios) {
         ];
 
         for (let opts of optsToTry) {
-            let kw1 = scenario.constructor();
-            let kw2 = scenario.constructor();
+            let kw1 = scenario.makeStore();
+            let kw2 = scenario.makeStore();
 
             // set up some keys
             t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
@@ -264,9 +291,9 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': sync: misc other options', (t: any) => {
-        let kwEmpty1 = scenario.constructor();
-        let kwEmpty2 = scenario.constructor();
-        let kw = scenario.constructor();
+        let kwEmpty1 = scenario.makeStore();
+        let kwEmpty2 = scenario.makeStore();
+        let kw = scenario.makeStore();
 
         // this time let's omit schema and timestamp
         t.ok(kw.set({format: FORMAT, key: 'foo', value: 'bar', author: author1, authorSecret: keypair1.secret}));
