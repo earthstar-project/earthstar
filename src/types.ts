@@ -10,9 +10,9 @@ export type Keypair = {
 
 export type WorkspaceId = string;
 
-export type CodecName = 'kw.1';
+export type FormatName = 'kw.1';
 export type Item = {
-    codec : CodecName,
+    format : FormatName,
     workspace : WorkspaceId,
     // workspace : string,
     key : string,
@@ -25,7 +25,7 @@ export type Item = {
 // These options are passed to the set() method.
 // We don't know the signature yet, but we do need the author secret.
 export type ItemToSet = {
-    codec : CodecName,
+    format : FormatName,
     // workspace : string,
     key : string,
     value : string,
@@ -67,9 +67,9 @@ export interface SyncResults {
     numPulled : number,
 }
 
-export interface ICodec {
+export interface IValidator {
     // this should be implemented as an abstract class, not a regular class
-    getName(): string;
+    format: FormatName;
     keyIsValid(key: Key): boolean;
     authorCanWriteToKey(author: AuthorKey, key: Key): boolean;
     hashItem(item: Item): string;

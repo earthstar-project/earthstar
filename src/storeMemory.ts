@@ -4,7 +4,7 @@ import {
     ItemToSet,
     QueryOpts,
     SyncOpts,
-    ICodec,
+    IValidator,
     SyncResults,
     WorkspaceId,
 } from './types';
@@ -55,12 +55,12 @@ export class StoreMemory implements IStore {
     */
     _items : {[key:string] : {[author:string] : Item}} = {};
     workspace : WorkspaceId;
-    codecMap : {[codecName: string] : ICodec};
-    constructor(codecs : ICodec[], workspace : WorkspaceId) {
+    validatorMap : {[format: string] : IValidator};
+    constructor(validators : IValidator[], workspace : WorkspaceId) {
         this.workspace = workspace;
-        this.codecMap = {};
-        for (let codec of codecs) {
-            this.codecMap[codec.getName()] = codec;
+        this.validatorMap = {};
+        for (let validator of validators) {
+            this.validatorMap[validator.format] = validator;
         }
     }
 
@@ -159,13 +159,13 @@ export class StoreMemory implements IStore {
         // Defaults to now + 10 minutes.
         // This prevents malicious peers from sending very high timestamps.
 
-        let codec = this.codecMap[item.codec];
-        if (codec === undefined) {
-            logWarning(`ingestItem: unrecognized codec ${item.codec}`);
+        let validator = this.validatorMap[item.format];
+        if (validator === undefined) {
+            logWarning(`ingestItem: unrecognized format ${item.format}`);
             return false;
         }
 
-        if (!codec.itemIsValid(item, futureCutoff)) {
+        if (!validator.itemIsValid(item, futureCutoff)) {
             logWarning(`ingestItem: item is not valid`);
             return false;
         }
@@ -202,15 +202,15 @@ export class StoreMemory implements IStore {
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
 
-        let codec = this.codecMap[itemToSet.codec];
-        if (codec === undefined) {
-            logWarning(`set: unrecognized codec ${itemToSet.codec}`);
+        let validator = this.validatorMap[itemToSet.format];
+        if (validator === undefined) {
+            logWarning(`set: unrecognized format ${itemToSet.format}`);
             return false;
         }
 
         itemToSet.timestamp = itemToSet.timestamp || 0;
         let item : Item = {
-            codec: itemToSet.codec,  // TODO: make KW_LATEST var
+            format: itemToSet.format,
             workspace: this.workspace,
             key: itemToSet.key,
             value: itemToSet.value,
@@ -227,7 +227,7 @@ export class StoreMemory implements IStore {
         let existingItemTimestamp = this.getItem(item.key)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
-        let signedItem = codec.signItem(item, itemToSet.authorSecret);
+        let signedItem = validator.signItem(item, itemToSet.authorSecret);
         return this.ingestItem(signedItem, item.timestamp);
     }
 

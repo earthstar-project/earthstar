@@ -1,4 +1,4 @@
-import { AuthorKey, Item, ICodec, Key, RawCryptKey } from './types';
+import { AuthorKey, FormatName, Item, IValidator, Key, RawCryptKey } from './types';
 import { isSignatureValid, removeSigilFromKey, sha256, sign } from './crypto';
 
 let log = console.log;
@@ -6,8 +6,8 @@ let logWarning = console.log;
 //let log = (...args : any[]) => void {};  // turn off logging for now
 //let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
-export const CodecKw1 : ICodec = class {
-    static getName() : string { return 'kw.1'; }
+export const ValidatorKw1 : IValidator = class {
+    static format : FormatName = 'kw.1';
     static keyIsValid(key: Key): boolean {
         // TODO: check for valid utf8?
         if (key.length === 0) {
@@ -45,7 +45,7 @@ export const CodecKw1 : ICodec = class {
         // use newlines as a field separator.
         // We enforce the no-newlines rules in itemIsValid() and keyIsValid().
         return sha256([
-            item.codec,
+            item.format,
             item.workspace,
             item.key,
             sha256(item.value),
@@ -69,7 +69,7 @@ export const CodecKw1 : ICodec = class {
 
         const FUTURE_CUTOFF_MINUTES = 10;
         futureCutoff = futureCutoff || (Date.now() + FUTURE_CUTOFF_MINUTES * 60 * 1000) * 1000;
-        if (   typeof item.codec !== 'string'
+        if (   typeof item.format !== 'string'
             || typeof item.workspace !== 'string'
             || typeof item.key !== 'string'
             || typeof item.value !== 'string'
@@ -87,10 +87,16 @@ export const CodecKw1 : ICodec = class {
             return false;
         }
 
-        // item.codec is checked against the approved list of values by the store
+        // item.format should have already been checked by the store, when it decides
+        // which validator to use.  But let's check it anyway.
+        if (item.format !== this.format) {
+            logWarning('itemIsValid: format does not match');
+            return false;
+        }
 
         // TODO: size / length limits
         // Use Buffer.byteLength(string, 'utf8') to count bytes in a string.
+
         // Timestamps have to be in microseconds.
         // If the timestamp is small enough that it was probably
         // accidentally created with milliseconds or seconds,
@@ -110,9 +116,9 @@ export const CodecKw1 : ICodec = class {
             return false;
         }
 
-        // Codec can't contain newline.
-        if (item.codec.indexOf('\n') !== -1) {
-            logWarning('itemIsValid: codec contains newline');
+        // Format can't contain newline.
+        if (item.format.indexOf('\n') !== -1) {
+            logWarning('itemIsValid: format contains newline');
             return false;
         }
         // Workspace can't contain newline.

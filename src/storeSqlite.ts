@@ -8,7 +8,7 @@ import {
     Item,
     QueryOpts,
     SyncOpts,
-    ICodec,
+    IValidator,
     SyncResults,
     WorkspaceId,
 } from './types';
@@ -21,14 +21,14 @@ let logWarning = (...args : any[]) => void {};  // turn off logging for now
 export class StoreSqlite implements IStore {
     db : SqliteDatabase;
     workspace : WorkspaceId;
-    codecMap : {[codecName: string] : ICodec};
-    constructor(codecs : ICodec[], workspace : WorkspaceId, dbFilename : string = ':memory:') {
+    validatorMap : {[format: string] : IValidator};
+    constructor(validators : IValidator[], workspace : WorkspaceId, dbFilename : string = ':memory:') {
         this.workspace = workspace;
         this.db = sqlite(dbFilename);
         this._ensureTables();
-        this.codecMap = {};
-        for (let codec of codecs) {
-            this.codecMap[codec.getName()] = codec;
+        this.validatorMap = {};
+        for (let validator of validators) {
+            this.validatorMap[validator.format] = validator;
         }
     }
     _ensureTables() {
@@ -36,7 +36,7 @@ export class StoreSqlite implements IStore {
         // but for now the schema disallows that by having this particular primary key.
         this.db.prepare(`
             CREATE TABLE IF NOT EXISTS items (
-                codec TEXT NOT NULL,
+                format TEXT NOT NULL,
                 workspace TEXT NOT NULL,
                 key TEXT NOT NULL,
                 value TEXT NOT NULL,
@@ -101,7 +101,7 @@ export class StoreSqlite implements IStore {
         } else {
             // when not including history, only get the latest item per key (from any author)
             queryString = `
-                SELECT codec, workspace, key, value, author, MAX(timestamp) as timestamp, signature FROM items
+                SELECT format, workspace, key, value, author, MAX(timestamp) as timestamp, signature FROM items
                 ${combinedFilters}
                 GROUP BY key
                 ORDER BY key ASC, timestamp DESC, signature DESC  -- break ties with signature
@@ -169,13 +169,13 @@ export class StoreSqlite implements IStore {
         log(`---- ingestItem`);
         log('item:', item);
 
-        let codec = this.codecMap[item.codec];
-        if (codec === undefined) {
-            logWarning(`ingestItem: unrecognized codec ${item.codec}`);
+        let validator = this.validatorMap[item.format];
+        if (validator === undefined) {
+            logWarning(`ingestItem: unrecognized format ${item.format}`);
             return false;
         }
 
-        if (!codec.itemIsValid(item, futureCutoff)) {
+        if (!validator.itemIsValid(item, futureCutoff)) {
             logWarning(`ingestItem: item is not valid`);
             return false;
         }
@@ -208,8 +208,8 @@ export class StoreSqlite implements IStore {
 
         // Insert new item, replacing old item if there is one
         this.db.prepare(`
-            INSERT OR REPLACE INTO items (codec, workspace, key, value, author, timestamp, signature)
-            VALUES (:codec, :workspace, :key, :value, :author, :timestamp, :signature);
+            INSERT OR REPLACE INTO items (format, workspace, key, value, author, timestamp, signature)
+            VALUES (:format, :workspace, :key, :value, :author, :timestamp, :signature);
         `).run(item);
         return true;
     }
@@ -222,15 +222,15 @@ export class StoreSqlite implements IStore {
         // unit testing or if you're importing old data.)
         log(`---- set(${JSON.stringify(itemToSet.key)}, ${JSON.stringify(itemToSet.value)}, ...)`);
 
-        let codec = this.codecMap[itemToSet.codec];
-        if (codec === undefined) {
-            logWarning(`set: unrecognized codec ${itemToSet.codec}`);
+        let validator = this.validatorMap[itemToSet.format];
+        if (validator === undefined) {
+            logWarning(`set: unrecognized format ${itemToSet.format}`);
             return false;
         }
 
         itemToSet.timestamp = itemToSet.timestamp || 0;
         let item : Item = {
-            codec: itemToSet.codec || 'kw.1',  // TODO: make KW_LATEST var
+            format: itemToSet.format,
             workspace: this.workspace,
             key: itemToSet.key,
             value: itemToSet.value,
@@ -246,7 +246,7 @@ export class StoreSqlite implements IStore {
         let existingItemTimestamp = this.getItem(item.key)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
-        let signedItem = codec.signItem(item, itemToSet.authorSecret);
+        let signedItem = validator.signItem(item, itemToSet.authorSecret);
         return this.ingestItem(signedItem, item.timestamp);
     }
 

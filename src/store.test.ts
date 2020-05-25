@@ -1,7 +1,7 @@
 import t = require('tap');
 import { addSigilToKey, generateKeypair } from './crypto';
-import { SyncOpts, Item, CodecName, AuthorKey, IStore, ICodec } from './types';
-import { CodecKw1 } from "./codecs";
+import { SyncOpts, Item, FormatName, AuthorKey, IStore, IValidator } from './types';
+import { ValidatorKw1 } from "./validatorKw1";
 import { StoreMemory } from './storeMemory';
 import { StoreSqlite } from './storeSqlite';
 
@@ -9,8 +9,9 @@ import { StoreSqlite } from './storeSqlite';
 // prepare for test scenarios
 
 let WORKSPACE = 'gardenclub';
-let CODECS : ICodec[] = [CodecKw1];
-let CODEC : CodecName = 'kw.1';
+
+let FORMAT : FormatName = 'kw.1';
+let VALIDATORS : IValidator[] = [ValidatorKw1];
 
 let keypair1 = generateKeypair();
 let keypair2 = generateKeypair();
@@ -22,11 +23,11 @@ let now = 1500000000000000;
 
 let scenarios = [
     {
-        constructor: () : IStore => new StoreMemory(CODECS, WORKSPACE),
+        constructor: () : IStore => new StoreMemory(VALIDATORS, WORKSPACE),
         description: 'StoreMemory',
     },
     {
-        constructor: () : IStore => new StoreSqlite(CODECS, WORKSPACE, ':memory:'),
+        constructor: () : IStore => new StoreSqlite(VALIDATORS, WORKSPACE, ':memory:'),
         description: "StoreSqlite(':memory:')",
     },
 ];
@@ -49,11 +50,11 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.test(scenario.description + ': store rejects invalid items', (t: any) => {
+    t.test(scenario.description + ': store ingestItem rejects invalid items', (t: any) => {
         let kw = scenario.constructor();
 
         let item1: Item = {
-            codec: CODEC,
+            format: FORMAT,
             workspace: WORKSPACE,
             key: 'k1',
             value: 'v1',
@@ -61,7 +62,7 @@ for (let scenario of scenarios) {
             author: author1,
             signature: 'xxx',
         };
-        let signedItem = CodecKw1.signItem(item1, keypair1.secret);
+        let signedItem = ValidatorKw1.signItem(item1, keypair1.secret);
 
         t.notOk(kw.ingestItem(item1), "don't ingest: bad signature");
         t.notOk(kw.ingestItem({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
@@ -69,7 +70,7 @@ for (let scenario of scenarios) {
         t.notOk(kw.ingestItem({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
         t.notOk(kw.ingestItem({...signedItem, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
 
-        let signedItemDifferentWorkspace = CodecKw1.signItem({...item1, workspace: 'xxx'}, keypair1.secret);
+        let signedItemDifferentWorkspace = ValidatorKw1.signItem({...item1, workspace: 'xxx'}, keypair1.secret);
         t.notOk(kw.ingestItem(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
 
         t.ok(kw.ingestItem(signedItem), "successful ingestion");
@@ -84,18 +85,18 @@ for (let scenario of scenarios) {
         t.equal(kw.getValue('key2'), undefined, 'nonexistant keys are undefined');
 
         // set a decoy key to make sure the later tests return the correct key
-        t.ok(kw.set({codec: CODEC, key: 'decoy', value:'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key');
+        t.ok(kw.set({format: FORMAT, key: 'decoy', value:'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key');
 
-        t.ok(kw.set({codec: CODEC, key: 'key1', value: 'val1.0', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
+        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'val1.0', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
         t.equal(kw.getValue('key1'), 'val1.0');
 
-        t.ok(kw.set({codec: CODEC, key: 'key1', value: 'val1.2', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'overwrite key with newer time');
+        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'val1.2', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'overwrite key with newer time');
         t.equal(kw.getValue('key1'), 'val1.2');
 
         // write with an old timestamp - this timestamp should be overridden to the existing timestamp + 1.
         // note that on ingest() the newer timestamp wins, but on set() we adjust the newly created timestamp
         // so it's always greater than the existing ones.
-        t.ok(kw.set({codec: CODEC, key: 'key1', value: 'val1.1', author: author1, authorSecret: keypair1.secret, timestamp: now-99}), 'automatically supercede previous timestamp');
+        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'val1.1', author: author1, authorSecret: keypair1.secret, timestamp: now-99}), 'automatically supercede previous timestamp');
         t.equal(kw.getValue('key1'), 'val1.1', 'superceded newer existing value');
         t.equal(kw.getItem('key1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
 
@@ -115,7 +116,7 @@ for (let scenario of scenarios) {
         let keys = 'zzz aaa dir dir/ q qq qqq dir/a dir/b dir/c'.split(' ');
         let ii = 0;
         for (let key of keys) {
-            t.ok(kw.set({codec: CODEC, key: key, value: 'true', author: author1, authorSecret: keypair1.secret, timestamp: now + ii}), 'set key: ' + key),
+            t.ok(kw.set({format: FORMAT, key: key, value: 'true', author: author1, authorSecret: keypair1.secret, timestamp: now + ii}), 'set key: ' + key),
                 ii += 1;
         }
         let sortedKeys = [...keys];
@@ -136,20 +137,20 @@ for (let scenario of scenarios) {
         let kw = scenario.constructor();
 
         // set decoy keys to make sure the later tests return the correct key
-        t.ok(kw.set({codec: CODEC, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 2');
-        t.ok(kw.set({codec: CODEC, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 1');
+        t.ok(kw.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 2');
+        t.ok(kw.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 1');
 
-        t.ok(kw.set({codec: CODEC, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
+        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
         t.equal(kw.getValue('key1'), 'one');
 
         // this will overwrite 'one' but the item for 'one' will remain in history.
         // history will have 2 items for this key.
-        t.ok(kw.set({codec: CODEC, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'update from a second author');
+        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'update from a second author');
         t.equal(kw.getValue('key1'), 'two');
 
         // this will replace the old original item 'one' from this author.
         // history will have 2 items for this key.
-        t.ok(kw.set({codec: CODEC, key: 'key1', value: 'three', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'update from original author again');
+        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'three', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'update from original author again');
         t.equal(kw.getValue('key1'), 'three');
 
         //log('_items:', JSON.stringify(kw._items, null, 4));
@@ -178,10 +179,10 @@ for (let scenario of scenarios) {
         let kw2 = scenario.constructor();
 
         // set up some keys
-        t.ok(kw1.set({codec: CODEC, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
-        t.ok(kw1.set({codec: CODEC, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
-        t.ok(kw1.set({codec: CODEC, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');
-        t.ok(kw1.set({codec: CODEC, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');
+        t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
+        t.ok(kw1.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
+        t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');
+        t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');
 
         // sync
         let syncResults = kw1.sync(kw2, { direction: 'push', existing: true, live: false });
@@ -224,19 +225,19 @@ for (let scenario of scenarios) {
             let kw2 = scenario.constructor();
 
             // set up some keys
-            t.ok(kw1.set({codec: CODEC, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
-            t.ok(kw1.set({codec: CODEC, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push 2)
-            t.ok(kw1.set({codec: CODEC, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');      // becomes history  (push 3)
-            t.ok(kw1.set({codec: CODEC, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');  // winner  (push 4)
+            t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
+            t.ok(kw1.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push 2)
+            t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');      // becomes history  (push 3)
+            t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');  // winner  (push 4)
 
-            t.ok(kw2.set({codec: CODEC, key: 'latestOnKw1', value: '221', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
-            t.ok(kw1.set({codec: CODEC, key: 'latestOnKw1', value: '111', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (push 5)
+            t.ok(kw2.set({format: FORMAT, key: 'latestOnKw1', value: '221', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
+            t.ok(kw1.set({format: FORMAT, key: 'latestOnKw1', value: '111', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (push 5)
 
-            t.ok(kw1.set({codec: CODEC, key: 'latestOnKw2', value: '11', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
-            t.ok(kw2.set({codec: CODEC, key: 'latestOnKw2', value: '22', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (pull 1)
+            t.ok(kw1.set({format: FORMAT, key: 'latestOnKw2', value: '11', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
+            t.ok(kw2.set({format: FORMAT, key: 'latestOnKw2', value: '22', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (pull 1)
 
-            t.ok(kw1.set({codec: CODEC, key: 'authorConflict', value: 'author1kw1', author: author1, authorSecret: keypair1.secret, timestamp: now}));      // becomes history  (push 6)
-            t.ok(kw2.set({codec: CODEC, key: 'authorConflict', value: 'author2kw2', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}));  // winner  (pull 2)
+            t.ok(kw1.set({format: FORMAT, key: 'authorConflict', value: 'author1kw1', author: author1, authorSecret: keypair1.secret, timestamp: now}));      // becomes history  (push 6)
+            t.ok(kw2.set({format: FORMAT, key: 'authorConflict', value: 'author2kw2', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}));  // winner  (pull 2)
 
             // sync
             let syncResults = kw1.sync(kw2, opts);
@@ -268,7 +269,7 @@ for (let scenario of scenarios) {
         let kw = scenario.constructor();
 
         // this time let's omit schema and timestamp
-        t.ok(kw.set({codec: CODEC, key: 'foo', value: 'bar', author: author1, authorSecret: keypair1.secret}));
+        t.ok(kw.set({format: FORMAT, key: 'foo', value: 'bar', author: author1, authorSecret: keypair1.secret}));
 
         // live mode (not implemented yet)
         t.throws(() => kwEmpty1.sync(kwEmpty2, {live: true}), 'live is not implemented yet and should throw');
