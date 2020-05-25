@@ -1,43 +1,44 @@
 import t = require('tap');
 import { addSigilToKey, generateKeypair } from './crypto';
 import { Item, AuthorKey } from './types';
+import { ValidatorKw1 } from './validatorKw1';
 
 let log = console.log;
 
 let keypair1 = generateKeypair();
 let author1: AuthorKey = addSigilToKey(keypair1.public);
 let now = 1500000000000000;
+let Val = ValidatorKw1;
 
-/*
 t.test('keyIsValid', (t: any) => {
-    t.ok(keyIsValid('hello'), 'regular public key');
-    t.ok(keyIsValid('hello/there'), 'regular public key');
-    t.ok(keyIsValid('(@aaa.ed25519)/foo/bar'), 'valid key with write permission');
+    t.ok(Val.keyIsValid('hello'), 'regular public key');
+    t.ok(Val.keyIsValid('hello/there'), 'regular public key');
+    t.ok(Val.keyIsValid('(@aaa.ed25519)/foo/bar'), 'valid key with write permission');
 
-    t.notOk(keyIsValid(''), 'empty key');
-    t.notOk(keyIsValid('hello\n'), 'contains \\n');
+    t.notOk(Val.keyIsValid(''), 'empty key');
+    t.notOk(Val.keyIsValid('hello\n'), 'contains \\n');
 
     t.done();
 });
 
 t.test('authorCanWriteToKey', (t: any) => {
     let author = '@aaa.ed25519';
-    t.ok(authorCanWriteToKey(author, 'public'), 'regular public key');
-    t.ok(authorCanWriteToKey(author, author + '/about'), 'public key containing author');
-    t.ok(authorCanWriteToKey(author, '(' + author + ')/about'), 'only writable by author');
-    t.ok(authorCanWriteToKey(author, '(@notme.ed25519)(' + author + ')/about'), 'writable by me and someone else');
+    t.ok(Val.authorCanWriteToKey(author, 'public'), 'regular public key');
+    t.ok(Val.authorCanWriteToKey(author, author + '/about'), 'public key containing author');
+    t.ok(Val.authorCanWriteToKey(author, '(' + author + ')/about'), 'only writable by author');
+    t.ok(Val.authorCanWriteToKey(author, '(@notme.ed25519)(' + author + ')/about'), 'writable by me and someone else');
 
-    t.notOk(authorCanWriteToKey(author, '(@notme.ed25519)/about'), 'only writable by someone else');
-    t.notOk(authorCanWriteToKey(author, 'zzz()zzz'), 'nobody can write to this key: ()');
-    t.notOk(authorCanWriteToKey(author, 'zzz)zzz'), 'nobody can write to this key: )');
-    t.notOk(authorCanWriteToKey(author, 'zzz(zzz'), 'nobody can write to this key: (');
+    t.notOk(Val.authorCanWriteToKey(author, '(@notme.ed25519)/about'), 'only writable by someone else');
+    t.notOk(Val.authorCanWriteToKey(author, 'zzz()zzz'), 'nobody can write to this key: ()');
+    t.notOk(Val.authorCanWriteToKey(author, 'zzz)zzz'), 'nobody can write to this key: )');
+    t.notOk(Val.authorCanWriteToKey(author, 'zzz(zzz'), 'nobody can write to this key: (');
 
     t.done();
 });
 
 t.test('hashItem', (t: any) => {
     let item1: Item = {
-        codec: 'kw.1',
+        format: 'kw.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -45,13 +46,13 @@ t.test('hashItem', (t: any) => {
         author: '@me.ed25519',
         signature: 'xxx.sig.ed25519',
     };
-    t.equal(hashItem(item1), '54bd2c273bbeecabf773e155456bb166ffb68e897db3aabd5eca239b1efc4cfb');
+    t.equal(Val.hashItem(item1), '54bd2c273bbeecabf773e155456bb166ffb68e897db3aabd5eca239b1efc4cfb');
     t.done();
 });
 
 t.test('signItem and itemSignatureIsValid', (t: any) => {
     let item1: Item = {
-        codec: 'kw.1',
+        format: 'kw.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -59,45 +60,47 @@ t.test('signItem and itemSignatureIsValid', (t: any) => {
         author: author1,
         signature: '',
     };
-    let signedItem = signItem(item1, keypair1.secret);
+    let signedItem = Val.signItem(item1, keypair1.secret);
 
     t.ok(signedItem.signature.endsWith('.sig.ed25519'), 'item looks like it has a signature');
-    t.ok(itemSignatureIsValid(signedItem), 'signature is valid');
+    t.ok(Val.itemSignatureIsValid(signedItem), 'signature is valid');
 
-    t.notOk(itemSignatureIsValid(item1), 'empty sig is not valid');
+    t.notOk(Val.itemSignatureIsValid(item1), 'empty sig is not valid');
 
     // TODO: once sigs are working, enable these tests
     t.notOk(
-        itemSignatureIsValid({...signedItem, signature: 'xxx.sig.ed25519'}),
+        Val.itemSignatureIsValid({...signedItem, signature: 'xxx.sig.ed25519'}),
         'garbage sig is not valid'
     );
     t.notOk(
-        itemSignatureIsValid({...signedItem, schema: 'xxx' as any}),
+        Val.itemSignatureIsValid({...signedItem, format: 'xxx' as any}),
         'sig not valid if schema changes'
     );
     t.notOk(
-        itemSignatureIsValid({...signedItem, key: 'xxx'}),
+        Val.itemSignatureIsValid({...signedItem, key: 'xxx'}),
         'sig not valid if key changes'
     );
     t.notOk(
-        itemSignatureIsValid({...signedItem, value: 'xxx'}),
+        Val.itemSignatureIsValid({...signedItem, value: 'xxx'}),
         'sig not valid if value changes'
     );
     t.notOk(
-        itemSignatureIsValid({...signedItem, timestamp: 9999}),
+        Val.itemSignatureIsValid({...signedItem, timestamp: 9999}),
         'sig not valid if timestamp changes'
     );
     t.notOk(
-        itemSignatureIsValid({...signedItem, author: '@notme.ed25519'}),
+        Val.itemSignatureIsValid({...signedItem, author: '@notme.ed25519'}),
         'sig not valid if author changes'
     );
 
     t.done();
 });
 
+/*
+// this was moved to storeMemory.ts
 t.test('historySortFn', (t: any) => {
     let item1: Item = {
-        codec: 'kw.1',
+        format: 'kw.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -106,7 +109,7 @@ t.test('historySortFn', (t: any) => {
         signature: 'xxx',
     };
     let item2a: Item = {
-        codec: 'kw.1',
+        format: 'kw.1',
         workspace: 'gardenclub',
         key: 'k2',
         value: 'v2',
@@ -115,7 +118,7 @@ t.test('historySortFn', (t: any) => {
         signature: 'aaa',
     };
     let item2b: Item = {
-        codec: 'kw.1',
+        format: 'kw.1',
         workspace: 'gardenclub',
         key: 'k2',
         value: 'v2',
@@ -129,10 +132,11 @@ t.test('historySortFn', (t: any) => {
     t.same(input, correct, 'historySortFn: sort order is correct');
     t.done();
 });
+*/
 
 t.test('itemIsValid', (t: any) => {
     let item1: Item = {
-        codec: 'kw.1',
+        format: 'kw.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -140,33 +144,32 @@ t.test('itemIsValid', (t: any) => {
         author: author1,
         signature: 'xxx',
     };
-    let signedItem = signItem(item1, keypair1.secret);
+    let signedItem = Val.signItem(item1, keypair1.secret);
 
-    t.ok(itemIsValid(signedItem), 'valid item');
+    t.ok(Val.itemIsValid(signedItem), 'valid item');
 
-    t.notOk(itemIsValid({...signedItem, schema: false as any}), 'schema wrong datatype');
-    t.notOk(itemIsValid({...signedItem, key: false as any}), 'key wrong datatype');
-    t.notOk(itemIsValid({...signedItem, value: false as any}), 'value wrong datatype');
-    t.notOk(itemIsValid({...signedItem, timestamp: false as any}), 'timestamp wrong datatype');
-    t.notOk(itemIsValid({...signedItem, author: false as any}), 'author wrong datatype');
-    t.notOk(itemIsValid({...signedItem, signature: false as any}), 'signature wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, format: false as any}), 'schema wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, key: false as any}), 'key wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, value: false as any}), 'value wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, timestamp: false as any}), 'timestamp wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, author: false as any}), 'author wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, signature: false as any}), 'signature wrong datatype');
 
-    t.notOk(itemIsValid({...signedItem, schema: 'kw.1\n' as any}), 'newline in schema');
-    t.notOk(itemIsValid({...signedItem, schema: 'xxxxxx' as any}), 'invalid schema');
+    t.notOk(Val.itemIsValid({...signedItem, format: 'kw.1\n' as any}), 'newline in schema');
+    t.notOk(Val.itemIsValid({...signedItem, format: 'xxxxxx' as any}), 'invalid schema');
 
     let missingKey = {...signedItem};
     delete missingKey.key;
-    t.notOk(itemIsValid(missingKey), 'missing key');
+    t.notOk(Val.itemIsValid(missingKey), 'missing key');
 
-    t.notOk(itemIsValid({...signedItem, author: 'a\nb'}), 'newline in author');
-    t.notOk(itemIsValid({...signedItem, key: '\n'}), 'invalid key');
-    t.notOk(itemIsValid({...signedItem, key: '{}'}), 'no write permission');
+    t.notOk(Val.itemIsValid({...signedItem, author: 'a\nb'}), 'newline in author');
+    t.notOk(Val.itemIsValid({...signedItem, key: '\n'}), 'invalid key');
+    t.notOk(Val.itemIsValid({...signedItem, key: '{}'}), 'no write permission');
 
-    t.notOk(itemIsValid(item1), 'bad signature');
-    t.notOk(itemIsValid({...signedItem, timestamp: now / 1000}), 'timestamp too small, probably in milliseconds');
-    t.notOk(itemIsValid({...signedItem, timestamp: now * 2}), 'timestamp in future');
-    t.notOk(itemIsValid({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), 'timestamp way too large');
+    t.notOk(Val.itemIsValid(item1), 'bad signature');
+    t.notOk(Val.itemIsValid({...signedItem, timestamp: now / 1000}), 'timestamp too small, probably in milliseconds');
+    t.notOk(Val.itemIsValid({...signedItem, timestamp: now * 2}), 'timestamp in future');
+    t.notOk(Val.itemIsValid({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), 'timestamp way too large');
 
     t.done();
 });
-*/
