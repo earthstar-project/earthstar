@@ -1,5 +1,5 @@
 import crypto = require('crypto');
-import { AuthorKey, Keypair, RawCryptKey } from './keywingTypes';
+import { AuthorKey, Keypair, RawCryptKey } from './types';
 
 let log = console.log;
 

@@ -1,11 +1,11 @@
 
 # Keywing
 
-# A distributed, syncable key-value store
+Status: early alpha
 
-It's Legos for building distributed apps.
+## A distributed, syncable key-value store
 
-It's like leveldb but it syncs!
+It's like leveldb but it syncs.
 
 It's like Couchdb but with signatures and encryption, so untrusted nodes can help move data around without tampering.
 

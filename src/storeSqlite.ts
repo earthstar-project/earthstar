@@ -3,23 +3,23 @@ import {
     Database as SqliteDatabase
 } from 'better-sqlite3';
 import {
-    IKeywingStore,
+    IStore,
     ItemToSet,
     Item,
     QueryOpts,
     SyncOpts,
     SyncResults,
     WorkspaceId,
-} from './keywingTypes';
+} from './types';
 import {
     itemIsValid,
     signItem
-} from './keywingStoreUtils';
+} from './storeUtils';
 
 let log = console.log;
 log = (...args : any[]) => void {};  // turn off logging for now
 
-export class KeywingStoreSqlite implements IKeywingStore {
+export class StoreSqlite implements IStore {
     db : SqliteDatabase;
     workspace : WorkspaceId;
     constructor(workspace : WorkspaceId, dbFilename : string = ':memory:') {
@@ -226,8 +226,8 @@ export class KeywingStoreSqlite implements IKeywingStore {
         return this.ingestItem(signedItem, item.timestamp);
     }
 
-    _syncFrom(otherStore : IKeywingStore, existing : boolean, live : boolean) : number {
-        // Pull all items from the other KeywingStore and ingest them one by one.
+    _syncFrom(otherStore : IStore, existing : boolean, live : boolean) : number {
+        // Pull all items from the other Store and ingest them one by one.
         let numSuccess = 0;
         if (live) {
             // TODO
@@ -242,8 +242,8 @@ export class KeywingStoreSqlite implements IKeywingStore {
         return numSuccess;
     }
 
-    sync(otherStore : IKeywingStore, opts? : SyncOpts) : SyncResults {
-        // Sync with another KeywingStore.
+    sync(otherStore : IStore, opts? : SyncOpts) : SyncResults {
+        // Sync with another Store.
         //   opts.direction: 'push', 'pull', or 'both'
         //   opts.existing: Sync existing values.  Default true.
         //   opts.live (not implemented yet): Continue streaming new changes forever

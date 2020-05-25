@@ -1,4 +1,4 @@
-export * from './keywingTypes';
+export * from './types';
 export {
     sha256,
     generateKeypair,
@@ -6,11 +6,12 @@ export {
     removeSigilFromKey,
     sign,
     isSignatureValid,
-} from './cryptoUtils';
-export * from './keywingStoreUtils';
+} from './crypto';
+export * from './storeUtils';
 export {
-    KeywingStoreMemory
-} from './keywingStoreMemory';
+    StoreMemory
+} from './storeMemory';
 export {
-    KeywingStoreSqlite
-} from './keywingStoreSqlite';
+    StoreSqlite
+} from './storeSqlite';
+0

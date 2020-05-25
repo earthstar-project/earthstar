@@ -1,5 +1,5 @@
-import { AuthorKey, Item, Key, RawCryptKey } from './keywingTypes';
-import { isSignatureValid, removeSigilFromKey, sha256, sign } from './cryptoUtils';
+import { AuthorKey, Item, Key, RawCryptKey } from './types';
+import { isSignatureValid, removeSigilFromKey, sha256, sign } from './crypto';
 
 export let keyIsValid = (key: Key): boolean => {
     // TODO: check for valid utf8?

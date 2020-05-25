@@ -1,7 +1,7 @@
 import t = require('tap');
-import { addSigilToKey, generateKeypair } from './cryptoUtils';
-import { Item, AuthorKey } from './keywingTypes';
-import { itemIsValid, itemSignatureIsValid, signItem, hashItem, authorCanWriteToKey, historySortFn, keyIsValid } from "./keywingStoreUtils";
+import { addSigilToKey, generateKeypair } from './crypto';
+import { Item, AuthorKey } from './types';
+import { itemIsValid, itemSignatureIsValid, signItem, hashItem, authorCanWriteToKey, historySortFn, keyIsValid } from "./storeUtils";
 
 let log = console.log;
 

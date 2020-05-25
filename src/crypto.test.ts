@@ -1,6 +1,6 @@
 import t = require('tap');
 
-import { Keypair } from './keywingTypes';
+import { Keypair } from './types';
 import {
     sha256,
     generateKeypair,
@@ -15,7 +15,7 @@ import {
     _makeKeypairDerBuffers,
     _derPrefixPublic,
     _derPrefixSecret,
-} from './cryptoUtils';
+} from './crypto';
 
 let log = console.log;
 

@@ -1,19 +1,19 @@
 import t = require('tap');
-import { addSigilToKey, generateKeypair, sign } from './cryptoUtils';
-import { SyncOpts, Item, AuthorKey, IKeywingStore } from './keywingTypes';
-import { KeywingStoreMemory } from './keywingStoreMemory';
-import { signItem } from "./keywingStoreUtils";
-import { KeywingStoreSqlite } from './keywingStoreSqlite';
+import { addSigilToKey, generateKeypair } from './crypto';
+import { SyncOpts, Item, AuthorKey, IStore } from './types';
+import { StoreMemory } from './storeMemory';
+import { signItem } from "./storeUtils";
+import { StoreSqlite } from './storeSqlite';
 
 let WORKSPACE = 'gardenclub';
 let scenarios = [
     {
-        constructor: () : IKeywingStore => new KeywingStoreMemory(WORKSPACE),
-        description: 'KeywingStoreMemory',
+        constructor: () : IStore => new StoreMemory(WORKSPACE),
+        description: 'StoreMemory',
     },
     {
-        constructor: () : IKeywingStore => new KeywingStoreSqlite(WORKSPACE, ':memory:'),
-        description: "KeywingStoreSqlite(':memory:')",
+        constructor: () : IStore => new StoreSqlite(WORKSPACE, ':memory:'),
+        description: "StoreSqlite(':memory:')",
     },
 ];
 
@@ -30,7 +30,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.test(scenario.description + ': empty keywing', (t: any) => {
+    t.test(scenario.description + ': empty store', (t: any) => {
         let kw = scenario.constructor();
         t.same(kw.keys(), [], 'no keys');
         t.same(kw.items(), [], 'no items');
@@ -66,7 +66,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.test(scenario.description + ': one-author keywing', (t: any) => {
+    t.test(scenario.description + ': one-author store', (t: any) => {
         let kw = scenario.constructor();
         t.equal(kw.getValue('key1'), undefined, 'nonexistant keys are undefined');
         t.equal(kw.getValue('key2'), undefined, 'nonexistant keys are undefined');
@@ -161,7 +161,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.test(scenario.description + ': sync: push to empty keywing', (t: any) => {
+    t.test(scenario.description + ': sync: push to empty store', (t: any) => {
         let kw1 = scenario.constructor();
         let kw2 = scenario.constructor();
 
@@ -261,16 +261,16 @@ for (let scenario of scenarios) {
         // live mode (not implemented yet)
         t.throws(() => kwEmpty1.sync(kwEmpty2, {live: true}), 'live is not implemented yet and should throw');
 
-        // sync with empty keywings
-        t.same(kwEmpty1.sync(kwEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty keywings');
-        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'sync with empty keywings');
-        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'sync with empty keywings');
-        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'both'}), { numPushed: 0, numPulled: 0 }, 'sync with empty keywings');
-        t.same(kwEmpty1.sync(kwEmpty2, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with empty keywings');
+        // sync with empty stores
+        t.same(kwEmpty1.sync(kwEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'both'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(kwEmpty1.sync(kwEmpty2, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
 
-        // sync with empty keywings
-        t.same(kw.sync(kwEmpty1, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'pull from empty keywing');
-        t.same(kwEmpty1.sync(kw, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'push to empty keywing');
+        // sync with empty stores
+        t.same(kw.sync(kwEmpty1, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'pull from empty store');
+        t.same(kwEmpty1.sync(kw, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'push to empty store');
 
         // sync with self
         t.same(kw.sync(kw), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');

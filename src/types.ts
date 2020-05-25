@@ -67,7 +67,7 @@ export interface SyncResults {
     numPulled : number,
 }
 
-export interface IKeywingStore {
+export interface IStore {
     // the constructor should accept a workspace
     // constructor(workspace, ...);
     workspace : WorkspaceId;
@@ -84,8 +84,8 @@ export interface IKeywingStore {
 
     ingestItem(item : Item) : boolean;
 
-    _syncFrom(otherKeywing : IKeywingStore, existing : boolean, live : boolean) : number;
-    sync(otherKeywing : IKeywingStore, opts? : SyncOpts) : SyncResults;
+    _syncFrom(otherStore : IStore, existing : boolean, live : boolean) : number;
+    sync(otherStore : IStore, opts? : SyncOpts) : SyncResults;
 
     // TODO: change feed
     // onChange(cb);

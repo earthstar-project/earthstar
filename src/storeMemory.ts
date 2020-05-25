@@ -1,22 +1,22 @@
 import {
-    IKeywingStore,
+    IStore,
     Item,
     ItemToSet,
     QueryOpts,
     SyncOpts,
     SyncResults,
     WorkspaceId,
-} from './keywingTypes';
+} from './types';
 import {
     historySortFn,
     itemIsValid,
     signItem
-} from './keywingStoreUtils';
+} from './storeUtils';
 
 let log = console.log;
 log = (...args : any[]) => void {};  // turn off logging for now
 
-export class KeywingStoreMemory implements IKeywingStore {
+export class StoreMemory implements IStore {
     /*
     This uses an in-memory data structure:
     _items:
@@ -192,8 +192,8 @@ export class KeywingStoreMemory implements IKeywingStore {
         return this.ingestItem(signedItem, item.timestamp);
     }
 
-    _syncFrom(otherStore : IKeywingStore, existing : boolean, live : boolean) : number {
-        // Pull all items from the other KeywingStore and ingest them one by one.
+    _syncFrom(otherStore : IStore, existing : boolean, live : boolean) : number {
+        // Pull all items from the other Store and ingest them one by one.
 
         let numSuccess = 0;
         if (live) {
@@ -209,8 +209,8 @@ export class KeywingStoreMemory implements IKeywingStore {
         return numSuccess;
     }
 
-    sync(otherStore : IKeywingStore, opts? : SyncOpts) : SyncResults {
-        // Sync with another KeywingStore.
+    sync(otherStore : IStore, opts? : SyncOpts) : SyncResults {
+        // Sync with another Store.
         //   opts.direction: 'push', 'pull', or 'both'
         //   opts.existing: Sync existing values.  Default true.
         //   opts.live (not implemented yet): Continue streaming new changes forever
