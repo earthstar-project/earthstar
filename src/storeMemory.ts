@@ -4,17 +4,34 @@ import {
     ItemToSet,
     QueryOpts,
     SyncOpts,
+    ICodec,
     SyncResults,
     WorkspaceId,
 } from './types';
-import {
-    historySortFn,
-    itemIsValid,
-    signItem
-} from './storeUtils';
 
-let log = console.log;
-log = (...args : any[]) => void {};  // turn off logging for now
+//let log = console.log;
+//let logWarning = console.log;
+let log = (...args : any[]) => void {};  // turn off logging for now
+let logWarning = (...args : any[]) => void {};  // turn off logging for now
+
+export let _historySortFn = (a: Item, b: Item): number => {
+    // Sorts items within one key from multiple authors,
+    // so that the winning item is first.
+    // timestamp DESC (newest first), signature DESC (to break timestamp ties)
+    if (a.timestamp < b.timestamp) {
+        return 1;
+    }
+    if (a.timestamp > b.timestamp) {
+        return -1;
+    }
+    if (a.signature < b.signature) {
+        return 1;
+    }
+    if (a.signature > b.signature) {
+        return -1;
+    }
+    return 0;
+};
 
 export class StoreMemory implements IStore {
     /*
@@ -38,8 +55,13 @@ export class StoreMemory implements IStore {
     */
     _items : {[key:string] : {[author:string] : Item}} = {};
     workspace : WorkspaceId;
-    constructor(workspace : WorkspaceId) {
+    codecMap : {[codecName: string] : ICodec};
+    constructor(codecs : ICodec[], workspace : WorkspaceId) {
         this.workspace = workspace;
+        this.codecMap = {};
+        for (let codec of codecs) {
+            this.codecMap[codec.getName()] = codec;
+        }
     }
 
     keys(query? : QueryOpts) : string[] {
@@ -89,7 +111,7 @@ export class StoreMemory implements IStore {
             // sort by timestamp etc
             //log(JSON.stringify(keyHistoryItems, null, 4));
             //log('sorting newest first...');
-            keyHistoryItems.sort(historySortFn);
+            keyHistoryItems.sort(_historySortFn);
             //log(JSON.stringify(keyHistoryItems, null, 4));
             if (includeHistory) {
                 items = items.concat(keyHistoryItems);
@@ -112,7 +134,7 @@ export class StoreMemory implements IStore {
         // to get history items for a key, do items({key: 'foo', includeHistory: true})
         if (this._items[key] === undefined) { return undefined; }
         let keyHistoryItems = Object.values(this._items[key]);
-        keyHistoryItems.sort(historySortFn);
+        keyHistoryItems.sort(_historySortFn);
         return keyHistoryItems[0];
     }
     getValue(key : string) : string | undefined {
@@ -137,10 +159,22 @@ export class StoreMemory implements IStore {
         // Defaults to now + 10 minutes.
         // This prevents malicious peers from sending very high timestamps.
 
-        if (!itemIsValid(item, futureCutoff)) { return false; }
+        let codec = this.codecMap[item.codec];
+        if (codec === undefined) {
+            logWarning(`ingestItem: unrecognized codec ${item.codec}`);
+            return false;
+        }
+
+        if (!codec.itemIsValid(item, futureCutoff)) {
+            logWarning(`ingestItem: item is not valid`);
+            return false;
+        }
 
         // Only accept items from the same workspace.
-        if (item.workspace !== this.workspace) { return false; }
+        if (item.workspace !== this.workspace) {
+            logWarning(`ingestItem: item from different workspace`);
+            return false;
+        }
 
         let existingItemsByKey = this._items[item.key] || {};
         let existingFromSameAuthor = existingItemsByKey[item.author];
@@ -152,6 +186,7 @@ export class StoreMemory implements IStore {
             <= [existingFromSameAuthor.timestamp, existingFromSameAuthor.signature]
             ) {
             // incoming item is older or identical.  ignore it.
+            logWarning(`ingestItem: item older or identical`);
             return false;
         }
 
@@ -162,16 +197,20 @@ export class StoreMemory implements IStore {
 
     set(itemToSet : ItemToSet) : boolean {
         // Store a value.
-        // schema should normally be omitted so it takes on the default
-        // value of the latest version of 'kw.#'.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
 
+        let codec = this.codecMap[itemToSet.codec];
+        if (codec === undefined) {
+            logWarning(`set: unrecognized codec ${itemToSet.codec}`);
+            return false;
+        }
+
         itemToSet.timestamp = itemToSet.timestamp || 0;
         let item : Item = {
-            schema: itemToSet.schema || 'kw.1',  // TODO: make KW_LATEST var
+            codec: itemToSet.codec,  // TODO: make KW_LATEST var
             workspace: this.workspace,
             key: itemToSet.key,
             value: itemToSet.value,
@@ -188,7 +227,7 @@ export class StoreMemory implements IStore {
         let existingItemTimestamp = this.getItem(item.key)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
-        let signedItem = signItem(item, itemToSet.authorSecret);
+        let signedItem = codec.signItem(item, itemToSet.authorSecret);
         return this.ingestItem(signedItem, item.timestamp);
     }
 

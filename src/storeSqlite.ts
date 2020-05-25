@@ -8,36 +8,40 @@ import {
     Item,
     QueryOpts,
     SyncOpts,
+    ICodec,
     SyncResults,
     WorkspaceId,
 } from './types';
-import {
-    itemIsValid,
-    signItem
-} from './storeUtils';
 
-let log = console.log;
-log = (...args : any[]) => void {};  // turn off logging for now
+//let log = console.log;
+//let logWarning = console.log;
+let log = (...args : any[]) => void {};  // turn off logging for now
+let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
 export class StoreSqlite implements IStore {
     db : SqliteDatabase;
     workspace : WorkspaceId;
-    constructor(workspace : WorkspaceId, dbFilename : string = ':memory:') {
+    codecMap : {[codecName: string] : ICodec};
+    constructor(codecs : ICodec[], workspace : WorkspaceId, dbFilename : string = ':memory:') {
         this.workspace = workspace;
         this.db = sqlite(dbFilename);
         this._ensureTables();
+        this.codecMap = {};
+        for (let codec of codecs) {
+            this.codecMap[codec.getName()] = codec;
+        }
     }
     _ensureTables() {
         // later we might decide to allow multiple items in a key history for a single author,
         // but for now the schema disallows that by having this particular primary key.
         this.db.prepare(`
             CREATE TABLE IF NOT EXISTS items (
-                schema TEXT NOT NULL,
+                codec TEXT NOT NULL,
                 workspace TEXT NOT NULL,
                 key TEXT NOT NULL,
                 value TEXT NOT NULL,
-                timestamp NUMBER NOT NULL,
                 author TEXT NOT NULL,
+                timestamp NUMBER NOT NULL,
                 signature TEXT NOT NULL,
                 PRIMARY KEY(key, author)
             );
@@ -97,7 +101,7 @@ export class StoreSqlite implements IStore {
         } else {
             // when not including history, only get the latest item per key (from any author)
             queryString = `
-                SELECT schema, workspace, key, author, value, MAX(timestamp) as timestamp, signature FROM items
+                SELECT codec, workspace, key, value, author, MAX(timestamp) as timestamp, signature FROM items
                 ${combinedFilters}
                 GROUP BY key
                 ORDER BY key ASC, timestamp DESC, signature DESC  -- break ties with signature
@@ -165,7 +169,22 @@ export class StoreSqlite implements IStore {
         log(`---- ingestItem`);
         log('item:', item);
 
-        if (!itemIsValid(item, futureCutoff)) { return false; }
+        let codec = this.codecMap[item.codec];
+        if (codec === undefined) {
+            logWarning(`ingestItem: unrecognized codec ${item.codec}`);
+            return false;
+        }
+
+        if (!codec.itemIsValid(item, futureCutoff)) {
+            logWarning(`ingestItem: item is not valid`);
+            return false;
+        }
+
+        // Only accept items from the same workspace.
+        if (item.workspace !== this.workspace) {
+            logWarning(`ingestItem: item from different workspace`);
+            return false;
+        }
 
         // check if it's newer than existing item from same author, same key
         let existingSameAuthorSameKey = this.db.prepare(`
@@ -183,30 +202,35 @@ export class StoreSqlite implements IStore {
             <= [existingSameAuthorSameKey.timestamp, existingSameAuthorSameKey.signature]
             ) {
             // incoming item is older or identical.  ignore it.
+            logWarning(`ingestItem: item older or identical`);
             return false;
         }
 
         // Insert new item, replacing old item if there is one
         this.db.prepare(`
-            INSERT OR REPLACE INTO items (schema, workspace, key, value, timestamp, author, signature)
-            VALUES (:schema, :workspace, :key, :value, :timestamp, :author, :signature);
+            INSERT OR REPLACE INTO items (codec, workspace, key, value, author, timestamp, signature)
+            VALUES (:codec, :workspace, :key, :value, :author, :timestamp, :signature);
         `).run(item);
         return true;
     }
 
     set(itemToSet : ItemToSet) : boolean {
         // Store a value.
-        // schema should normally be omitted so it takes on the default
-        // value of the latest version of 'kw.#'.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
         log(`---- set(${JSON.stringify(itemToSet.key)}, ${JSON.stringify(itemToSet.value)}, ...)`);
 
+        let codec = this.codecMap[itemToSet.codec];
+        if (codec === undefined) {
+            logWarning(`set: unrecognized codec ${itemToSet.codec}`);
+            return false;
+        }
+
         itemToSet.timestamp = itemToSet.timestamp || 0;
         let item : Item = {
-            schema: itemToSet.schema || 'kw.1',  // TODO: make KW_LATEST var
+            codec: itemToSet.codec || 'kw.1',  // TODO: make KW_LATEST var
             workspace: this.workspace,
             key: itemToSet.key,
             value: itemToSet.value,
@@ -222,7 +246,7 @@ export class StoreSqlite implements IStore {
         let existingItemTimestamp = this.getItem(item.key)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
-        let signedItem = signItem(item, itemToSet.authorSecret);
+        let signedItem = codec.signItem(item, itemToSet.authorSecret);
         return this.ingestItem(signedItem, item.timestamp);
     }
 

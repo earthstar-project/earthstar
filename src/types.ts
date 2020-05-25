@@ -10,9 +10,9 @@ export type Keypair = {
 
 export type WorkspaceId = string;
 
-type Schema = 'kw.1';
+export type CodecName = 'kw.1';
 export type Item = {
-    schema : Schema,
+    codec : CodecName,
     workspace : WorkspaceId,
     // workspace : string,
     key : string,
@@ -25,7 +25,7 @@ export type Item = {
 // These options are passed to the set() method.
 // We don't know the signature yet, but we do need the author secret.
 export type ItemToSet = {
-    schema? : Schema,  // schema defaults to latest version of kw.N
+    codec : CodecName,
     // workspace : string,
     key : string,
     value : string,
@@ -65,6 +65,17 @@ export interface SyncOpts {
 export interface SyncResults {
     numPushed : number,
     numPulled : number,
+}
+
+export interface ICodec {
+    // this should be implemented as an abstract class, not a regular class
+    getName(): string;
+    keyIsValid(key: Key): boolean;
+    authorCanWriteToKey(author: AuthorKey, key: Key): boolean;
+    hashItem(item: Item): string;
+    signItem(item: Item, secret: RawCryptKey): Item;
+    itemSignatureIsValid(item: Item): boolean;
+    itemIsValid(item: Item, futureCutoff?: number): boolean;
 }
 
 export interface IStore {

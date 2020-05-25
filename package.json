@@ -5,7 +5,7 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
-    "clean": "rm -rf build/*.js .nyc_output coverage",
+    "clean": "rm -rf build/*.{js,ts} .nyc_output coverage",
     "build": "tsc",
     "watch-test": "onchange --initial --kill --delay 1000 src/*.ts -- npm run build-and-test",
     "start": "node build/main.js",
