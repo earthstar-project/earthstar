@@ -1,6 +1,6 @@
 {
   "name": "keywing",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A distributed, syncable key-value store",
   "main": "build/index.js",
   "types": "build/index.d.ts",
