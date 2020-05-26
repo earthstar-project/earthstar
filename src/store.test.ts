@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import t = require('tap');
 import { addSigilToKey, generateKeypair } from './crypto';
 import { SyncOpts, Item, FormatName, AuthorKey, IStore, IValidator } from './types';
@@ -21,19 +22,206 @@ let author2: AuthorKey = addSigilToKey(keypair2.public);
 let author3: AuthorKey = addSigilToKey(keypair3.public);
 let now = 1500000000000000;
 
-let scenarios : any[] = [
+interface Scenario {
+    makeStore: (workspace : string) => IStore,
+    description: string,
+}
+let scenarios : Scenario[] = [
     {
-        makeStore: () : IStore => new StoreMemory(VALIDATORS, WORKSPACE),
+        makeStore: (workspace : string) : IStore => new StoreMemory(VALIDATORS, workspace),
         description: 'StoreMemory',
     },
     {
-        makeStore: () : IStore => new StoreSqlite(VALIDATORS, WORKSPACE, ':memory:'),
+        makeStore: (workspace : string) : IStore => new StoreSqlite({
+            mode: 'create',
+            workspace: workspace,
+            validators: VALIDATORS,
+            filename: ':memory:'
+        }),
         description: "StoreSqlite(':memory:')",
     },
 ];
 
 //================================================================================
-// run the scenarios
+// memory specific tests
+
+t.test(`StoreMemory: constructor`, (t: any) => {
+    t.throws(() => new StoreMemory([], WORKSPACE), 'throws when no validators are provided');
+    t.done();
+});
+
+//================================================================================
+// sqlite specific tests
+
+// TODO: test constructor with different opts
+
+t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
+    let fn : string;
+    let clearFn = (fn : string) => {
+        if (fs.existsSync(fn)) { fs.unlinkSync(fn); }
+    }
+
+    // create with :memory:
+    t.throws(() => new StoreSqlite({
+        mode: 'create',
+        workspace: null,
+        validators: VALIDATORS,
+        filename: ':memory:'
+    }), 'create mode throws when workspace is null, :memory:');
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'create',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: ':memory:'
+    }), 'create mode works when workspace is provided, :memory:');
+    t.throws(() => new StoreSqlite({
+        mode: 'create',
+        workspace: WORKSPACE,
+        validators: [],
+        filename: ':memory:'
+    }), 'create mode fails when no validators are provided');
+
+    // create with real filename
+    fn = 'testtesttest1.db';
+    clearFn(fn);
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'create',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'create mode works when workspace is provided and a real filename');
+    t.ok(fs.existsSync(fn), 'create mode created a file');
+    clearFn(fn);
+
+    // open and :memory:
+    t.throws(() => new StoreSqlite({
+        mode: 'open',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: ':memory:',
+    }), 'open mode throws with :memory: and a workspace');
+    t.throws(() => new StoreSqlite({
+        mode: 'open',
+        workspace: null,
+        validators: VALIDATORS,
+        filename: ':memory:',
+    }), 'open mode throws with :memory: and null workspace');
+
+    // open missing filename
+    t.throws(() => new StoreSqlite({
+        mode: 'open',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: 'xxx',
+    }), 'open mode throws when file does not exist');
+
+    // open and real but missing filename
+    fn = 'testtesttest2.db';
+    clearFn(fn);
+    t.throws(() => new StoreSqlite({
+        mode: 'open',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'open mode throws when workspace is provided and file does not exist');
+    clearFn(fn);
+    t.throws(() => new StoreSqlite({
+        mode: 'open',
+        workspace: null,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'open mode throws when workspace is null and file does not exist');
+    clearFn(fn);
+
+    // create-or-open :memory:
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'create-or-open',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: ':memory:'
+    }), 'create-or-open mode works when workspace is provided');
+    t.throws(() => new StoreSqlite({
+        mode: 'create-or-open',
+        workspace: null,
+        validators: VALIDATORS,
+        filename: ':memory:'
+    }), 'create-or-open mode throws when workspace is null');
+
+    // create-or-open: create then open real file
+    fn = 'testtesttest3.db';
+    clearFn(fn);
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'create-or-open',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'create-or-open mode works when creating a real file');
+    t.ok(fs.existsSync(fn), 'create-or-open mode created a file');
+    t.throws(() => new StoreSqlite({
+        mode: 'create-or-open',
+        workspace: 'xxx',
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'create-or-open mode fails when opening existing file with mismatched workspace');
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'create-or-open',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'create-or-open mode works when opening a real file with matching workspace');
+    clearFn(fn);
+
+    // open: create then open real file
+    fn = 'testtesttest4.db';
+    clearFn(fn);
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'create',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'creating a real file');
+    t.ok(fs.existsSync(fn), 'file was created');
+    t.throws(() => new StoreSqlite({
+        mode: 'open',
+        workspace: 'xxx',
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'open throws when workspace does not match');
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'open',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'open works when workspace matches');
+    t.doesNotThrow(() => new StoreSqlite({
+        mode: 'open',
+        workspace: null,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'open works when workspace is null');
+    clearFn(fn);
+
+    t.done();
+});
+
+t.test(`StoreSqlite: config`, (t: any) => {
+    let kw = new StoreSqlite({
+        mode: 'create',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: ':memory:'
+    });
+    t.equal(kw._getConfig('foo'), null);
+    kw._setConfig('foo', 'bar');
+    t.equal(kw._getConfig('foo'), 'bar');
+    kw._setConfig('foo', 'baz');
+    t.equal(kw._getConfig('foo'), 'baz');
+    t.done();
+});
+
+
+//================================================================================
+// run the standard store tests on each scenario
 
 for (let scenario of scenarios) {
     t.test(`==== starting test of ====${scenario.description}`, (t: any) => {
@@ -41,7 +229,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': empty store', (t: any) => {
-        let kw = scenario.makeStore();
+        let kw = scenario.makeStore(WORKSPACE);
         t.same(kw.keys(), [], 'no keys');
         t.same(kw.items(), [], 'no items');
         t.same(kw.values(), [], 'no values');
@@ -52,7 +240,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': store ingestItem rejects invalid items', (t: any) => {
-        let kw = scenario.makeStore();
+        let kw = scenario.makeStore(WORKSPACE);
 
         let item1: Item = {
             format: FORMAT,
@@ -68,6 +256,7 @@ for (let scenario of scenarios) {
         t.equal(kw.getValue('k1'), 'v1', "getValue worked");
 
         t.notOk(kw.ingestItem(item1), "don't ingest: bad signature");
+        t.notOk(kw.ingestItem({...signedItem, format: 'xxx'}), "don't ingest: unknown format");
         t.notOk(kw.ingestItem({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
         t.notOk(kw.ingestItem({...signedItem, timestamp: now * 2}), "don't ingest: timestamp in future");
         t.notOk(kw.ingestItem({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
@@ -75,6 +264,14 @@ for (let scenario of scenarios) {
 
         let signedItemDifferentWorkspace = ValidatorKw1.signItem({...item1, workspace: 'xxx'}, keypair1.secret);
         t.notOk(kw.ingestItem(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
+
+        t.notOk(kw.set({
+            format: 'xxx',
+            key: 'k1',
+            value: 'v1',
+            author: author1,
+            authorSecret: keypair1.secret,
+        }), 'set rejects unknown format');
 
         let writableKeys = [
             'hello',
@@ -108,7 +305,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': one-author store', (t: any) => {
-        let kw = scenario.makeStore();
+        let kw = scenario.makeStore(WORKSPACE);
         t.equal(kw.getValue('key1'), undefined, 'nonexistant keys are undefined');
         t.equal(kw.getValue('key2'), undefined, 'nonexistant keys are undefined');
 
@@ -142,7 +339,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': key queries', (t: any) => {
-        let kw = scenario.makeStore();
+        let kw = scenario.makeStore(WORKSPACE);
         let keys = 'zzz aaa dir dir/ q qq qqq dir/a dir/b dir/c'.split(' ');
         let ii = 0;
         for (let key of keys) {
@@ -164,7 +361,7 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': multi-author writes', (t: any) => {
-        let kw = scenario.makeStore();
+        let kw = scenario.makeStore(WORKSPACE);
 
         // set decoy keys to make sure the later tests return the correct key
         t.ok(kw.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 2');
@@ -209,8 +406,8 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': sync: push to empty store', (t: any) => {
-        let kw1 = scenario.makeStore();
-        let kw2 = scenario.makeStore();
+        let kw1 = scenario.makeStore(WORKSPACE);
+        let kw2 = scenario.makeStore(WORKSPACE);
 
         // set up some keys
         t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
@@ -255,8 +452,8 @@ for (let scenario of scenarios) {
         ];
 
         for (let opts of optsToTry) {
-            let kw1 = scenario.makeStore();
-            let kw2 = scenario.makeStore();
+            let kw1 = scenario.makeStore(WORKSPACE);
+            let kw2 = scenario.makeStore(WORKSPACE);
 
             // set up some keys
             t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
@@ -297,10 +494,24 @@ for (let scenario of scenarios) {
         t.done();
     });
 
+    t.test(scenario.description + ': sync: mismatched workspaces', (t: any) => {
+        let kwA1 = scenario.makeStore('a');
+        let kwA2 = scenario.makeStore('a');
+        let kwB = scenario.makeStore('b');
+        t.ok(kwA1.set({format: FORMAT, key: 'a1', value: 'a1', author: author1, authorSecret: keypair1.secret}));
+        t.ok(kwA2.set({format: FORMAT, key: 'a2', value: 'a2', author: author1, authorSecret: keypair1.secret}));
+        t.ok(kwB.set({format: FORMAT, key: 'b', value: 'b', author: author1, authorSecret: keypair1.secret}));
+
+        t.same(kwA1.sync(kwB), { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
+        t.same(kwA1.sync(kwA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
+
+        t.done();
+    });
+
     t.test(scenario.description + ': sync: misc other options', (t: any) => {
-        let kwEmpty1 = scenario.makeStore();
-        let kwEmpty2 = scenario.makeStore();
-        let kw = scenario.makeStore();
+        let kwEmpty1 = scenario.makeStore(WORKSPACE);
+        let kwEmpty2 = scenario.makeStore(WORKSPACE);
+        let kw = scenario.makeStore(WORKSPACE);
 
         // this time let's omit schema and timestamp
         t.ok(kw.set({format: FORMAT, key: 'foo', value: 'bar', author: author1, authorSecret: keypair1.secret}));

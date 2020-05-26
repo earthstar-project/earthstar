@@ -2,15 +2,14 @@ export type Key = string;
 export type AuthorKey = string;  // @xxxxx.ed25519
 export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
 export type Signature = string;  // xxxxxxxxxxxx.sig.ed25519
+export type WorkspaceId = string;
+export type FormatName = string;
 
 export type Keypair = {
     public: RawCryptKey,
     secret: RawCryptKey,
 }
 
-export type WorkspaceId = string;
-
-export type FormatName = 'kw.1';
 export type Item = {
     format : FormatName,
     workspace : WorkspaceId,

@@ -59,6 +59,10 @@ export class StoreMemory implements IStore {
     validatorMap : {[format: string] : IValidator};
     constructor(validators : IValidator[], workspace : WorkspaceId) {
         this.workspace = workspace;
+
+        if (validators.length === 0) {
+            throw "must provide at least one validator";
+        }
         this.validatorMap = {};
         for (let validator of validators) {
             this.validatorMap[validator.format] = validator;
@@ -229,7 +233,6 @@ export class StoreMemory implements IStore {
             timestamp: itemToSet.timestamp > 0 ? itemToSet.timestamp : Date.now()*1000,
             signature: '',
         }
-        log(item.timestamp);
 
         // If there's an existing item from anyone,
         // make sure our timestamp is greater

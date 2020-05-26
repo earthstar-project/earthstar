@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import sqlite = require('better-sqlite3');
 import {
     Database as SqliteDatabase
@@ -13,22 +14,104 @@ import {
     SyncResults,
     WorkspaceId,
 } from './types';
+import { fstat } from 'fs';
 
 //let log = console.log;
 //let logWarning = console.log;
 let log = (...args : any[]) => void {};  // turn off logging for now
 let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
+export interface StoreSqliteOpts {
+    // mode: create
+    // workspace: required
+    // file must not exist yet
+    //
+    // mode: open
+    // workspace: optional
+    // file must exist
+    //
+    // mode: create-or-open  (ensure it exists, create if necessary)
+    // workspace: required
+    // file may or may not exist
+    //
+    mode: 'open' | 'create' | 'create-or-open',
+    workspace: WorkspaceId | null,
+    validators: IValidator[],  // must provide at least one
+    filename: string,
+}
+
 export class StoreSqlite implements IStore {
     db : SqliteDatabase;
     workspace : WorkspaceId;
     validatorMap : {[format: string] : IValidator};
-    constructor(validators : IValidator[], workspace : WorkspaceId, dbFilename : string = ':memory:') {
-        this.workspace = workspace;
-        this.db = sqlite(dbFilename);
-        this._ensureTables();
+    constructor(opts : StoreSqliteOpts) {
+        if (opts.validators.length === 0) {
+            throw "must provide at least one validator";
+        }
+
+        // in each mode we need to
+        // A. check opts for validity
+        // B. open/create the sqlite file
+        // C. check and/or set the workspace
+        if (opts.mode === 'create') {
+            // A. check opts for validity
+            // file must not exist, workspace must be provided
+            if (opts.filename !== ':memory:' && fs.existsSync(opts.filename)) { throw "create mode: file shouldn't already exist but it does: " + opts.filename; }
+            if (opts.workspace === null) { throw "create mode: workspace cannot be null"; }
+
+            // B. open/create the sqlite file
+            this.db = sqlite(opts.filename);
+            this._ensureTables();
+
+            // C. set workspace
+            this._setConfig('workspace', opts.workspace);
+            this.workspace = opts.workspace
+
+        } else if (opts.mode === 'open') {
+            // A. check opts for validity
+            // file must exist, workspace is optional
+            if (opts.filename === ':memory:') { throw "can't use open mode with ':memory:'" }
+            if (!fs.existsSync(opts.filename)) { throw "open mode: file not found: " + opts.filename; }
+
+            // B. open/create the sqlite file
+            this.db = sqlite(opts.filename);
+            this._ensureTables();
+
+            // C. get existing workspace, and assert the workspace matches
+            let existingWorkspace = this._getConfig('workspace');
+            if (existingWorkspace === null) { throw "open mode: somehow the db file has no existing workspace"; }
+            if (opts.workspace !== null && opts.workspace !== existingWorkspace) {
+                throw `open mode: provided workspace ${opts.workspace} doesn't match existing workspace ${existingWorkspace}`;
+            }
+            this.workspace = existingWorkspace
+
+        } else if (opts.mode === 'create-or-open') {
+            // A. check opts for validity
+            // file may or may not exist, workspace must be provided
+            if (opts.workspace === null) { throw "create-or-open mode: workspace cannot be null"; }
+
+            // B. open/create the sqlite file
+            this.db = sqlite(opts.filename);
+            this._ensureTables();
+
+            // C. set workspace if needed; assert it matches
+            let existingWorkspace = this._getConfig('workspace');
+            if (existingWorkspace === null) {
+                // we just created a file
+                this._setConfig('workspace', opts.workspace);
+            } else {
+                // we're opening an existing file.  assert it matches
+                if (opts.workspace !== existingWorkspace) {
+                    throw `create-or-open mode: provided workspace ${opts.workspace} doesn't match existing workspace ${existingWorkspace}`;
+                }
+            }
+            this.workspace = opts.workspace;
+        } else {
+            throw "unrecognized mode: " + opts.mode;
+        }
+
         this.validatorMap = {};
-        for (let validator of validators) {
+        for (let validator of opts.validators) {
             this.validatorMap[validator.format] = validator;
         }
     }
@@ -47,6 +130,26 @@ export class StoreSqlite implements IStore {
                 PRIMARY KEY(key, author)
             );
         `).run();
+        // the config table is used to store these variables:
+        //     workspace - the workspace this store was created for
+        this.db.prepare(`
+            CREATE TABLE IF NOT EXISTS config (
+                key TEXT NOT NULL PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+        `).run();
+    }
+    _setConfig(key : string, value : string) {
+        this.db.prepare(`
+            INSERT OR REPLACE INTO config (key, value) VALUES (:key, :value);
+        `).run({ key: key, value: value });
+    }
+    _getConfig(key : string) : string | null {
+        let result = this.db.prepare(`
+            SELECT value FROM config WHERE key = :key
+        `).get({ key: key });
+        if (result === undefined) { return null; }
+        return result.value;
     }
 
     items(query? : QueryOpts) : Item[] {

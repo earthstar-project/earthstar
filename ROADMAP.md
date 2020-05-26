@@ -6,10 +6,13 @@
 * In-memory store
 * SQLite store
 * Tests
+* Better README
 
 ## Todo
 
-* Better README
+### Immediate tasks
+* check if workspace matches existing database in constructor
+* set default format & validator in constructor
 
 ### Demos
 * Shopping list
