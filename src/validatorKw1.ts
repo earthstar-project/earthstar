@@ -119,6 +119,8 @@ export const ValidatorKw1 : IValidator = class {
         }
 
         // No non-printable ascii characters or unicode (except item.value)
+        // (the format is caught earlier by checking if item.format === this.format)
+        /* istanbul ignore next */
         if (!isOnlyPrintableAscii(item.format)) {
             logWarning('itemIsValid: format contains non-printable ascii characters');
             return false;

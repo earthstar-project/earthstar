@@ -161,15 +161,29 @@ t.test('itemIsValid', (t: any) => {
 
     t.ok(Val.itemIsValid(signedItem), 'valid item');
 
-    t.notOk(Val.itemIsValid({...signedItem, format: false as any}), 'schema wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, format: false as any}), 'format wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, workspace: false as any}), 'workspace wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, key: false as any}), 'key wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, value: false as any}), 'value wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, timestamp: false as any}), 'timestamp wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, author: false as any}), 'author wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, signature: false as any}), 'signature wrong datatype');
 
-    t.notOk(Val.itemIsValid({...signedItem, format: 'kw.1\n' as any}), 'newline in schema');
-    t.notOk(Val.itemIsValid({...signedItem, format: 'xxxxxx' as any}), 'invalid schema');
+    t.notOk(Val.itemIsValid({...signedItem, extra: 'xxx'} as any), 'extra property in object');
+
+    t.notOk(Val.itemIsValid({...signedItem, format: snowmanJsString}), 'format non-ascii');
+    t.notOk(Val.itemIsValid({...signedItem, workspace: snowmanJsString}), 'workspace non-ascii');
+    t.notOk(Val.itemIsValid({...signedItem, key: snowmanJsString}), 'key non-ascii');
+    t.notOk(Val.itemIsValid({...signedItem, author: snowmanJsString}), 'author non-ascii');
+    t.notOk(Val.itemIsValid({...signedItem, signature: snowmanJsString}), 'signature non-ascii');
+
+    t.notOk(Val.itemIsValid({...signedItem, format: '\n'}), 'newline in format');
+    t.notOk(Val.itemIsValid({...signedItem, workspace: '\n'}), 'newline in workspace');
+    t.notOk(Val.itemIsValid({...signedItem, key: '\n'}), 'newline in key');
+    t.notOk(Val.itemIsValid({...signedItem, author: '\n'}), 'newline in author');
+    t.notOk(Val.itemIsValid({...signedItem, signature: '\n'}), 'newline in signature');
+
+    t.notOk(Val.itemIsValid({...signedItem, format: 'xxxxxx' as any}), 'unknown format');
 
     let missingKey = {...signedItem};
     delete missingKey.key;
