@@ -6,6 +6,7 @@ import {
     IStore,
     ItemToSet,
     Item,
+    AuthorKey,
     QueryOpts,
     SyncOpts,
     IValidator,
@@ -128,6 +129,17 @@ export class StoreSqlite implements IStore {
         // If you set includeHistory you'll get historical values mixed in.
         log(`---- values(${JSON.stringify(query)})`);
         return this.items(query).map(item => item.value);
+    }
+
+    authors() : AuthorKey[] {
+        // TODO: query the db directly
+        let authorSet : Set<AuthorKey> = new Set();
+        for (let item of this.items({ includeHistory: true })) {
+            authorSet.add(item.author);
+        }
+        let authors = [...authorSet];
+        authors.sort();
+        return authors;
     }
 
     getItem(key : string) : Item | undefined {

@@ -7,6 +7,7 @@ import {
     IValidator,
     SyncResults,
     WorkspaceId,
+    AuthorKey,
 } from './types';
 
 //let log = console.log;
@@ -126,6 +127,16 @@ export class StoreMemory implements IStore {
         // TODO: note that opts.limit applies to the number of keys,
         //   not the number of unique history items
         return this.items(query).map(item => item.value);
+    }
+
+    authors() : AuthorKey[] {
+        let authorSet : Set<AuthorKey> = new Set();
+        for (let item of this.items({ includeHistory: true })) {
+            authorSet.add(item.author);
+        }
+        let authors = [...authorSet];
+        authors.sort();
+        return authors;
     }
 
     getItem(key : string) : Item | undefined {

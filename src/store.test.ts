@@ -47,6 +47,7 @@ for (let scenario of scenarios) {
         t.same(kw.values(), [], 'no values');
         t.equal(kw.getItem('xxx'), undefined, 'getItem undefined');
         t.equal(kw.getValue('xxx'), undefined, 'getValue undefined');
+        t.same(kw.authors(), [], 'no authors');
         t.done();
     });
 
@@ -135,6 +136,8 @@ for (let scenario of scenarios) {
         // order of values should match order of keys
         t.same(kw.values(), ['zzz', 'val1.1'], 'values() are correct');
 
+        t.same(kw.authors(), [author1], 'author');
+
         t.done();
     });
 
@@ -195,6 +198,10 @@ for (let scenario of scenarios) {
             [author1, author1, author1, author2],
             'items with history, newest first, items should have correct authors'
         );
+
+        let sortedAuthors = [author1, author2];
+        sortedAuthors.sort();
+        t.same(kw.authors(), sortedAuthors, 'authors');
 
         // TODO: test 2 authors, same timestamps, different signatures
 

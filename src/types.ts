@@ -88,6 +88,8 @@ export interface IStore {
     values(query? : QueryOpts) : string[];
     // TODO: convenience method to parse value from string to JSON?
 
+    authors() : AuthorKey[]
+
     getItem(key : string) : Item | undefined;
     getValue(key : string) : string | undefined;
 

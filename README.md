@@ -127,6 +127,9 @@ items(query? : QueryOpts) : Item[];
 keys(query? : QueryOpts) : string[];
 values(query? : QueryOpts) : string[];
 
+// list all authors who have written
+authors() : AuthorKey[]
+
 // write a key-value pair to the database, which will be signed by your author key.
 set(itemToSet : ItemToSet) : boolean;
 
