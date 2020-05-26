@@ -8,6 +8,10 @@
 Implementations so far:
 * Typescript (node, browsers)
 
+Related tools:
+* [keywing-cli](https://github.com/cinnamon-bun/keywing-cli)
+* [keywing-pub](https://github.com/cinnamon-bun/keywing-pub)
+
 ### Data model
 
 A Keywing database holds mutable key-value pairs, similar to leveldb or CouchDb.  Keys and values are strings.  If you want to store JSON in the values, you can stringify/parse it yourself.
