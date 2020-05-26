@@ -307,23 +307,27 @@ primary key: (key, author) -- one item per key per author.
 * typically you will think of them like file paths or URL paths
 * requirements:
     * printable ASCII characters only
-    * tilde `~` has special mening for giving author write permissions
+    * tilde `~` has special meaning for giving author write permissions
 * recommendations:
     * preferred to limit to url-safe characters `'()-._~$&+,/:;=?@` so browsers won't percent-escape them
     * be aware using `/` will affect links in the browser (e.g. your content within a wiki) - you may need to set a <base> path.
 * max length: TODO.  has to be pretty long to allow several authors to have write permissions.
 
 ### Key permissions
-* a key is writable by an author if their key appears in curly brackets
-* a key which contains no parens is publicy writable
-* if it contains at least one paren `(` or `)`, it has limited permissions
-* if it contains multiple authors `(@a)(@b)`, they can all write
-```
-(@a)/follows/@b        // only @a can write to this key
-(@a)(@b)/wiki/cucumber   // @a and @b can write here
-rooms/gardening/members/(@a)   // it can go at the end, or anywhere
-public/foo   // no curly brackets, so anyone can write here
-```
+Keys can specify which authors are allowed to write to them.
+Only authors that occur prefixed by a tilde `~` in a key can write to that key.
+
+Public:
+* `@aaa.ed25519/wall`  -- no tilde, so anyone can write here
+* `wiki/kittens`  -- no tilde, so anyone can write here
+
+One author write permission:
+* `~@aaa.ed25519/about`  -- tilde means only @aaa can write here.
+* `~@aaa.ed25519/follows/@bbb.ed25519`  -- only @aaa can write here
+* `about/~@aaa.ed25519`  -- tilde does not have to be at the beginning of the key
+
+Multiple authors:
+* `whiteboard/~@aaa.ed25519~@bbb.ed25519`  -- both @aaa and @bbb can write here; nobody else can
 
 ### Encoding of crypto keys, signatures, etc
 * TODO: choose an encoding
