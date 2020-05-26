@@ -60,6 +60,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     let clearFn = (fn : string) => {
         if (fs.existsSync(fn)) { fs.unlinkSync(fn); }
     }
+    let touchFn = (fn : string) => { fs.writeFileSync(fn, 'foo'); }
 
     // create with :memory:
     t.throws(() => new StoreSqlite({
@@ -91,6 +92,17 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         filename: fn,
     }), 'create mode works when workspace is provided and a real filename');
     t.ok(fs.existsSync(fn), 'create mode created a file');
+    clearFn(fn);
+
+    // create with existing filename
+    fn = 'testtesttest1b.db';
+    touchFn(fn);
+    t.throws(() => new StoreSqlite({
+        mode: 'create',
+        workspace: WORKSPACE,
+        validators: VALIDATORS,
+        filename: fn,
+    }), 'create mode throws when pointed at existing file');
     clearFn(fn);
 
     // open and :memory:
@@ -200,6 +212,14 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         filename: fn,
     }), 'open works when workspace is null');
     clearFn(fn);
+
+    // unrecognized mode
+    t.throws(() => new StoreSqlite({
+        mode: 'xxx' as any,
+        workspace: null,
+        validators: VALIDATORS,
+        filename: ':memory:'
+    }), 'constructor throws with unrecognized mode');
 
     t.done();
 });

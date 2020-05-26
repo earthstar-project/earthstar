@@ -79,7 +79,11 @@ export class StoreSqlite implements IStore {
 
             // C. get existing workspace, and assert the workspace matches
             let existingWorkspace = this._getConfig('workspace');
-            if (existingWorkspace === null) { throw "open mode: somehow the db file has no existing workspace"; }
+            if (existingWorkspace === null) {
+                /* istanbul ignore next */
+                // this should never happen with a valid db file
+                throw "open mode: somehow the db file has no existing workspace";
+            }
             if (opts.workspace !== null && opts.workspace !== existingWorkspace) {
                 throw `open mode: provided workspace ${opts.workspace} doesn't match existing workspace ${existingWorkspace}`;
             }
