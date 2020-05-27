@@ -1,5 +1,5 @@
 
-# Keywing
+# Earthstar
 
 *Early alpha - do not use for important data yet*
 
@@ -9,18 +9,18 @@ Implementations so far:
 * Typescript (node, browsers)
 
 Related tools:
-* [keywing-cli](https://github.com/cinnamon-bun/keywing-cli)
-* [keywing-pub](https://github.com/cinnamon-bun/keywing-pub)
+* [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli)
+* [earthstar-pub](https://github.com/cinnamon-bun/earthstar-pub)
 
 ### Data model
 
-A Keywing database holds mutable key-value pairs, similar to leveldb or CouchDb.  Keys and values are strings.  If you want to store JSON in the values, you can stringify/parse it yourself.
+A Earthstar database holds mutable key-value pairs, similar to leveldb or CouchDb.  Keys and values are strings.  If you want to store JSON in the values, you can stringify/parse it yourself.
 
 There are no transactions.  The unit of atomic change is writing a value to one key.  Causal order is not preserved for edits across multiple keys.
 
 ### Scope
 
-Each user will have their own instance of a Keywing database, maybe in their browser or embedded in an Electron app.  There might also be some on cloud servers.  These databases can sync with each other across HTTP or duplex stream connections.
+Each user will have their own instance of a Earthstar database, maybe in their browser or embedded in an Electron app.  There might also be some on cloud servers.  These databases can sync with each other across HTTP or duplex stream connections.
 
 Each database instance can hold a subset of the entire data, specified by a query such as "keys starting with a certain substring", "keys written after a certain timestamp", etc.
 
@@ -55,7 +55,7 @@ Malicious peers cannot:
 * Alter key-value pairs from another author
 * Forge new key-value pairs signed by another author
 
-Because it allows partial sync and mutation of data, Keywing doesn't cryptographically guarantee that you have a complete dataset with no gaps from a certain author.  Authors could chose to use sequential keys or embed a blockchain of hash backlinks into their messages, and you could verify these in your app (outside of Keywing).
+Because it allows partial sync and mutation of data, Earthstar doesn't cryptographically guarantee that you have a complete dataset with no gaps from a certain author.  Authors could chose to use sequential keys or embed a blockchain of hash backlinks into their messages, and you could verify these in your app (outside of Earthstar).
 
 ## Comparisons
 
@@ -85,9 +85,9 @@ Sometimes immutability is needed, like if you're running a package registry or w
 
 ## Use cases
 
-Keywing can be used for small invite-only tools (think Slack) and large open-world tools (think Facebook).  Apps can decide which authors to replicate, ensuring you download the people you care about and not the entire world.
+Earthstar can be used for small invite-only tools (think Slack) and large open-world tools (think Facebook).  Apps can decide which authors to replicate, ensuring you download the people you care about and not the entire world.
 
-These styles of app could be built on top of Keywing:
+These styles of app could be built on top of Earthstar:
 * Wikis
 * End-to-end encrypted chat
 * chat: Slack, IRC
@@ -99,15 +99,15 @@ These styles of app could be built on top of Keywing:
 
 ## What doesn't it do?
 
-Keywing doesn't handle multi-user text editing like Google Docs.  This is a different challenge.  You could probably use a CRDT like Automerge and rely on Keywing to move and sync the patches it produces.
+Earthstar doesn't handle multi-user text editing like Google Docs.  This is a different challenge.  You could probably use a CRDT like Automerge and rely on Earthstar to move and sync the patches it produces.
 
 It's not real-time yet - changes propagate over a few minutes.  This will improve but might not ever get below 1s latency.
 
 The crypto is not audited or bulletproof yet.
 
-Keywing is not focused on anonymity -- more on autonomy.  You could use it over Tor or something.
+Earthstar is not focused on anonymity -- more on autonomy.  You could use it over Tor or something.
 
-Keywing doesn't provide transactions or causality guarantees across keys.
+Earthstar doesn't provide transactions or causality guarantees across keys.
 
 ## Example
 
@@ -271,7 +271,7 @@ kw.onChange(cb);  // -> new data events, changed data events
     * StreamSyncer -- sync over a duplex stream
     * PeerFinder -- find peers and connect to them
     * EncryptedStore -- make it easier to store encrypted items
-    * your app -- tell Keywing which data and which peers you are interested in so it knows what to fetch
+    * your app -- tell Earthstar which data and which peers you are interested in so it knows what to fetch
 
 ### Planned features:
 * Workspaces - Like a Slack workspace / Discord server / scuttleverse.  Control who joins, block people, invitations, etc.
@@ -301,7 +301,7 @@ primary key: (key, author) -- one item per key per author.
     * Signing outgoing messages
     * Setting rules about keys (not pubkeys, k-v keys), for example enforcing url-safe characters
     * Encoding and decoding author pubkeys between raw buffers and a string format such as `'@'+base64(key)`
-* There will eventually be a `ssb` feed format, which encapsulates SSB messages as key-value pairs.  It will be able to validate existing `ssb` signatures.  It will not enforce the hash chain backlinks because Keywing can do partial syncs or sync in any order.
+* There will eventually be a `ssb` feed format, which encapsulates SSB messages as key-value pairs.  It will be able to validate existing `ssb` signatures.  It will not enforce the hash chain backlinks because Earthstar can do partial syncs or sync in any order.
 
 ### All about keys
 * typically you will think of them like file paths or URL paths
@@ -411,7 +411,7 @@ LIMIT 1
 When the app wants to delete a key:
 * write it the usual way using `"null"` as the value
 * this acts as a tombstone
-* this tombstone value may be app-dependent, it's not part of the core keywing spec (TODO?)
+* this tombstone value may be app-dependent, it's not part of the core Earthstar spec (TODO?)
 * tombstones will be returned from queries just like other values
 
 ### Sync over duplex streams:

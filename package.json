@@ -1,12 +1,12 @@
 {
-  "name": "keywing",
+  "name": "earthstar",
   "version": "0.5.1",
   "description": "A distributed, syncable key-value store",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/cinnamon-bun/keywing.git"
+    "url": "git+ssh://git@github.com/cinnamon-bun/earthstar.git"
   },
   "scripts": {
     "clean": "rm -rf build/*.{js,ts} .nyc_output coverage",
