@@ -17,9 +17,11 @@ Related tools:
 
 ### Data model
 
-A Earthstar database holds mutable key-value pairs, similar to leveldb or CouchDb.  Keys and values are strings.  If you want to store JSON in the values, you can stringify/parse it yourself.
+An Earthstar workspace holds mutable key-value pairs, similar to leveldb or CouchDb.  Keys and values are strings.  If you want to store JSON in the values, you can stringify/parse it yourself.
 
 There are no transactions.  The unit of atomic change is writing a value to one key.  Causal order is not preserved for edits across multiple keys.
+
+![](earthstar-data-model.png)
 
 ### Scope
 
