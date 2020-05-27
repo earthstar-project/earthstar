@@ -1,12 +1,15 @@
 
 # Earthstar
 
+![](earthstar-logo.png)
+
+
 *Early alpha - do not use for important data yet*
 
 ## An offline-first, distributed, syncable key-value store for use in p2p software
 
 Implementations so far:
-* Typescript (node, browsers)
+* Typescript (node, browsers) - this repo
 
 Related tools:
 * [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli)
@@ -141,7 +144,7 @@ set(itemToSet : ItemToSet) : boolean;
 ingestItem(item : Item) : boolean;
 
 // basic sync algorithm.  a faster one will be made later.
-sync(otherStore : IKeywingStore, opts? : SyncOpts) : SyncResults;
+sync(otherStore : IStore, opts? : SyncOpts) : SyncResults;
 ```
 
 Usage example:
