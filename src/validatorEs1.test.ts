@@ -1,14 +1,14 @@
 import t = require('tap');
 import { addSigilToKey, generateKeypair } from './crypto';
 import { Item, AuthorKey } from './types';
-import { ValidatorKw1 } from './validatorKw1';
+import { ValidatorEs1 } from './validatorEs1';
 
 let log = console.log;
 
 let keypair1 = generateKeypair();
 let author1: AuthorKey = addSigilToKey(keypair1.public);
 let now = 1500000000000000;
-let Val = ValidatorKw1;
+let Val = ValidatorEs1;
 
 let snowmanJsString = '☃';
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
@@ -51,7 +51,7 @@ t.test('authorCanWriteToKey', (t: any) => {
 
 t.test('hashItem', (t: any) => {
     let item1: Item = {
-        format: 'kw.1',
+        format: 'es.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -59,13 +59,13 @@ t.test('hashItem', (t: any) => {
         author: '@me.ed25519',
         signature: 'xxx.sig.ed25519',
     };
-    t.equal(Val.hashItem(item1), '54bd2c273bbeecabf773e155456bb166ffb68e897db3aabd5eca239b1efc4cfb');
+    t.equal(Val.hashItem(item1), 'de4620b3b17e327f1153166241f26669391baf5180c0e28e5c196ea3781fe961');
     t.done();
 });
 
 t.test('signItem and itemSignatureIsValid', (t: any) => {
     let item1: Item = {
-        format: 'kw.1',
+        format: 'es.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -113,7 +113,7 @@ t.test('signItem and itemSignatureIsValid', (t: any) => {
 // this was moved to storeMemory.ts
 t.test('historySortFn', (t: any) => {
     let item1: Item = {
-        format: 'kw.1',
+        format: 'es.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -122,7 +122,7 @@ t.test('historySortFn', (t: any) => {
         signature: 'xxx',
     };
     let item2a: Item = {
-        format: 'kw.1',
+        format: 'es.1',
         workspace: 'gardenclub',
         key: 'k2',
         value: 'v2',
@@ -131,7 +131,7 @@ t.test('historySortFn', (t: any) => {
         signature: 'aaa',
     };
     let item2b: Item = {
-        format: 'kw.1',
+        format: 'es.1',
         workspace: 'gardenclub',
         key: 'k2',
         value: 'v2',
@@ -149,7 +149,7 @@ t.test('historySortFn', (t: any) => {
 
 t.test('itemIsValid', (t: any) => {
     let item1: Item = {
-        format: 'kw.1',
+        format: 'es.1',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',

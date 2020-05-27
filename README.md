@@ -152,8 +152,8 @@ sync(otherStore : IStore, opts? : SyncOpts) : SyncResults;
 Usage example:
 ```ts
 // Create a database for a particular workspace, 'gardening-pals'
-// We've chosen to use the 'kw.1' feed format so we supply the matching validator
-let kw = new StoreMemory([ValidatorKw1], 'gardening-pals');
+// We've chosen to use the main 'es.1' feed format so we supply the matching validator
+let es = new StoreMemory([ValidatorEs1], 'gardening-pals');
 
 // Make up some authors for testing
 let keypair1 = generateKeypair();  // { public, secret } as base64 strings
@@ -162,30 +162,30 @@ let author1 = addSigilToKey(keypair1.public); // "xxx" => "@xxx.ed25519"
 let author2 = addSigilToKey(keypair2.public);
 
 // It's a key-value store.  Keys and values are strings.
-kw.set('wiki/Strawberry', 'Tasty', author1, keypair1.secret);
-kw.getValue('wiki/Strawberry') // --> 'Tasty'
+es.set('wiki/Strawberry', 'Tasty', author1, keypair1.secret);
+es.getValue('wiki/Strawberry') // --> 'Tasty'
 
 // One author can use multiple devices with no problems.
 // Conflicts are resolved by timestamp.
 // Here the same author overwrites their previous value,
 // which is forgotten from the database.
-kw.set('wiki/Strawberry', 'Tasty!!', author1, keypair1.secret);
-kw.getValue('wiki/Strawberry') // --> 'Tasty!!'
+es.set('wiki/Strawberry', 'Tasty!!', author1, keypair1.secret);
+es.getValue('wiki/Strawberry') // --> 'Tasty!!'
 
 // Multiple authors can overwrite each other (also by timestamp).
-kw.set('wiki/Strawberry', 'Yum', author2, keypair2.secret);
-kw.getValue('wiki/Strawberry') // --> 'Yum'
+es.set('wiki/Strawberry', 'Yum', author2, keypair2.secret);
+es.getValue('wiki/Strawberry') // --> 'Yum'
 
 // We keep the one most recent value from each author, in case
 // you need to do better conflict resolution later.
 // To see the old values, use a query:
-kw.values({ key='wiki/Strawberry', includeHistory: true })
+es.values({ key='wiki/Strawberry', includeHistory: true })
     // --> ['Yum', 'Tasty!!']  // newest first
 
 // Get more context about an item, besides just the value.
-kw.getItem('wiki/Strawberry')
+es.getItem('wiki/Strawberry')
 /* {
-    format: 'kw.1',
+    format: 'es.1',
     workspace: 'gardening-pals',
     key: 'wiki/Strawberry',
     value: 'Yum.',
@@ -209,7 +209,7 @@ kw.getItem('wiki/Strawberry')
 // Multiple authors:
 //   'whiteboard/~@aaa.ed25519~@bbb.ed25519'  -- both @aaa and @bbb can write here
 //
-kw.set('~' + author1 + '/about', '{name: ""}', author1, keypair1.secret);
+es.set('~' + author1 + '/about', '{name: ""}', author1, keypair1.secret);
 
 // Coming soon, the workspace can also have members with
 // read or read-write permissions in general.
@@ -221,27 +221,27 @@ kw.set('~' + author1 + '/about', '{name: ""}', author1, keypair1.secret);
 // This may improve later.
 
 // You can do leveldb style queries.
-kw.keys()
-kw.keys({ lowKey: 'abc', limit: 100 })
-kw.keys({ prefix: 'wiki/' })
+es.keys()
+es.keys({ lowKey: 'abc', limit: 100 })
+es.keys({ prefix: 'wiki/' })
 
 // You can sync to another Store
-let kw2 = new StoreMemory();
-kw.sync(kw2);
-// Now kw and kw2 are identical.
+let es2 = new StoreMemory();
+es.sync(es2);
+// Now es and es2 are identical.
 
 //------------------------------
 // Upcoming features
 
 // Soon you can provide some queries and only sync items matching
 // one or more of those queries.
-kw.sync(kw2, [
+es.sync(es2, [
     { prefix: 'about/' },
     { prefix: 'wiki/' },
 ]);
 
 // Soon you can subscribe to changes from a Store:
-kw.onChange(cb);  // -> new data events, changed data events
+es.onChange(cb);  // -> new data events, changed data events
 
 // Soon you can control who can join, read, and write in a workspace, but details TBD.
 
@@ -249,7 +249,7 @@ kw.onChange(cb);  // -> new data events, changed data events
 // This will provide a general-purpose way of querying so apps don't
 // have to index messages themselves.
 /* {
-    format: 'kw.1',
+    format: 'es.1',
     workspace: 'gardening-pals',
     key: 'wiki/Strawberry',
     value: 'Yum.',
@@ -287,7 +287,7 @@ kw.onChange(cb);  // -> new data events, changed data events
 ### Items table schema
 ```
 {
-    schema: 'kw.1'  // for future updates
+    schema: 'es.1'  // for future updates
     workspace: utf-8 string, no '\n'
     key: utf-8 string, no '\n'
     value: utf-8 string
@@ -299,7 +299,7 @@ primary key: (key, author) -- one item per key per author.
 ```
 
 ### Feed formats
-* The main feed format is called `kw`.  It's versioned, like `kw.1`.
+* The main feed format is called `es`.  It's versioned, like `es.1`.
 * Feed formats are responsible for:
     * Validating incoming messages
     * Checking signatures

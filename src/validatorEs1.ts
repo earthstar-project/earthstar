@@ -15,8 +15,8 @@ let isOnlyPrintableAscii = (s : string) : boolean => {
     return true;
 }
 
-export const ValidatorKw1 : IValidator = class {
-    static format : FormatName = 'kw.1';
+export const ValidatorEs1 : IValidator = class {
+    static format : FormatName = 'es.1';
     static keyIsValid(key: Key): boolean {
         if (!isOnlyPrintableAscii(key)) {
             logWarning('invalid key: contains non-printable or non-ascii characters');

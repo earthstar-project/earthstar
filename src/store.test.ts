@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import t = require('tap');
 import { addSigilToKey, generateKeypair } from './crypto';
 import { SyncOpts, Item, FormatName, AuthorKey, IStore, IValidator } from './types';
-import { ValidatorKw1 } from "./validatorKw1";
+import { ValidatorEs1 } from "./validatorEs1";
 import { StoreMemory } from './storeMemory';
 import { StoreSqlite } from './storeSqlite';
 
@@ -11,8 +11,8 @@ import { StoreSqlite } from './storeSqlite';
 
 let WORKSPACE = 'gardenclub';
 
-let FORMAT : FormatName = 'kw.1';
-let VALIDATORS : IValidator[] = [ValidatorKw1];
+let FORMAT : FormatName = 'es.1';
+let VALIDATORS : IValidator[] = [ValidatorEs1];
 
 let keypair1 = generateKeypair();
 let keypair2 = generateKeypair();
@@ -225,17 +225,17 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
 });
 
 t.test(`StoreSqlite: config`, (t: any) => {
-    let kw = new StoreSqlite({
+    let es = new StoreSqlite({
         mode: 'create',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: ':memory:'
     });
-    t.equal(kw._getConfig('foo'), null);
-    kw._setConfig('foo', 'bar');
-    t.equal(kw._getConfig('foo'), 'bar');
-    kw._setConfig('foo', 'baz');
-    t.equal(kw._getConfig('foo'), 'baz');
+    t.equal(es._getConfig('foo'), null);
+    es._setConfig('foo', 'bar');
+    t.equal(es._getConfig('foo'), 'bar');
+    es._setConfig('foo', 'baz');
+    t.equal(es._getConfig('foo'), 'baz');
     t.done();
 });
 
@@ -249,18 +249,18 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': empty store', (t: any) => {
-        let kw = scenario.makeStore(WORKSPACE);
-        t.same(kw.keys(), [], 'no keys');
-        t.same(kw.items(), [], 'no items');
-        t.same(kw.values(), [], 'no values');
-        t.equal(kw.getItem('xxx'), undefined, 'getItem undefined');
-        t.equal(kw.getValue('xxx'), undefined, 'getValue undefined');
-        t.same(kw.authors(), [], 'no authors');
+        let es = scenario.makeStore(WORKSPACE);
+        t.same(es.keys(), [], 'no keys');
+        t.same(es.items(), [], 'no items');
+        t.same(es.values(), [], 'no values');
+        t.equal(es.getItem('xxx'), undefined, 'getItem undefined');
+        t.equal(es.getValue('xxx'), undefined, 'getValue undefined');
+        t.same(es.authors(), [], 'no authors');
         t.done();
     });
 
     t.test(scenario.description + ': store ingestItem rejects invalid items', (t: any) => {
-        let kw = scenario.makeStore(WORKSPACE);
+        let es = scenario.makeStore(WORKSPACE);
 
         let item1: Item = {
             format: FORMAT,
@@ -271,21 +271,21 @@ for (let scenario of scenarios) {
             author: author1,
             signature: 'xxx',
         };
-        let signedItem = ValidatorKw1.signItem(item1, keypair1.secret);
-        t.ok(kw.ingestItem(signedItem), "successful ingestion");
-        t.equal(kw.getValue('k1'), 'v1', "getValue worked");
+        let signedItem = ValidatorEs1.signItem(item1, keypair1.secret);
+        t.ok(es.ingestItem(signedItem), "successful ingestion");
+        t.equal(es.getValue('k1'), 'v1', "getValue worked");
 
-        t.notOk(kw.ingestItem(item1), "don't ingest: bad signature");
-        t.notOk(kw.ingestItem({...signedItem, format: 'xxx'}), "don't ingest: unknown format");
-        t.notOk(kw.ingestItem({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
-        t.notOk(kw.ingestItem({...signedItem, timestamp: now * 2}), "don't ingest: timestamp in future");
-        t.notOk(kw.ingestItem({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
-        t.notOk(kw.ingestItem({...signedItem, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
+        t.notOk(es.ingestItem(item1), "don't ingest: bad signature");
+        t.notOk(es.ingestItem({...signedItem, format: 'xxx'}), "don't ingest: unknown format");
+        t.notOk(es.ingestItem({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
+        t.notOk(es.ingestItem({...signedItem, timestamp: now * 2}), "don't ingest: timestamp in future");
+        t.notOk(es.ingestItem({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
+        t.notOk(es.ingestItem({...signedItem, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
 
-        let signedItemDifferentWorkspace = ValidatorKw1.signItem({...item1, workspace: 'xxx'}, keypair1.secret);
-        t.notOk(kw.ingestItem(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
+        let signedItemDifferentWorkspace = ValidatorEs1.signItem({...item1, workspace: 'xxx'}, keypair1.secret);
+        t.notOk(es.ingestItem(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
 
-        t.notOk(kw.set({
+        t.notOk(es.set({
             format: 'xxx',
             key: 'k1',
             value: 'v1',
@@ -299,8 +299,8 @@ for (let scenario of scenarios) {
             'chat/~@notme.ed25519~' + author1,
         ];
         for (let key of writableKeys) {
-            t.ok(kw.ingestItem(
-                ValidatorKw1.signItem(
+            t.ok(es.ingestItem(
+                ValidatorEs1.signItem(
                     {...item1, key: key},
                     keypair1.secret
                 )),
@@ -312,8 +312,8 @@ for (let scenario of scenarios) {
             '~',
         ];
         for (let key of notWritableKeys) {
-            t.notOk(kw.ingestItem(
-                ValidatorKw1.signItem(
+            t.notOk(es.ingestItem(
+                ValidatorEs1.signItem(
                     {...item1, key: key},
                     keypair1.secret
                 )),
@@ -325,100 +325,100 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': one-author store', (t: any) => {
-        let kw = scenario.makeStore(WORKSPACE);
-        t.equal(kw.getValue('key1'), undefined, 'nonexistant keys are undefined');
-        t.equal(kw.getValue('key2'), undefined, 'nonexistant keys are undefined');
+        let es = scenario.makeStore(WORKSPACE);
+        t.equal(es.getValue('key1'), undefined, 'nonexistant keys are undefined');
+        t.equal(es.getValue('key2'), undefined, 'nonexistant keys are undefined');
 
         // set a decoy key to make sure the later tests return the correct key
-        t.ok(kw.set({format: FORMAT, key: 'decoy', value:'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key');
+        t.ok(es.set({format: FORMAT, key: 'decoy', value:'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key');
 
-        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'val1.0', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
-        t.equal(kw.getValue('key1'), 'val1.0');
+        t.ok(es.set({format: FORMAT, key: 'key1', value: 'val1.0', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
+        t.equal(es.getValue('key1'), 'val1.0');
 
-        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'val1.2', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'overwrite key with newer time');
-        t.equal(kw.getValue('key1'), 'val1.2');
+        t.ok(es.set({format: FORMAT, key: 'key1', value: 'val1.2', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'overwrite key with newer time');
+        t.equal(es.getValue('key1'), 'val1.2');
 
         // write with an old timestamp - this timestamp should be overridden to the existing timestamp + 1.
         // note that on ingest() the newer timestamp wins, but on set() we adjust the newly created timestamp
         // so it's always greater than the existing ones.
-        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'val1.1', author: author1, authorSecret: keypair1.secret, timestamp: now-99}), 'automatically supercede previous timestamp');
-        t.equal(kw.getValue('key1'), 'val1.1', 'superceded newer existing value');
-        t.equal(kw.getItem('key1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
+        t.ok(es.set({format: FORMAT, key: 'key1', value: 'val1.1', author: author1, authorSecret: keypair1.secret, timestamp: now-99}), 'automatically supercede previous timestamp');
+        t.equal(es.getValue('key1'), 'val1.1', 'superceded newer existing value');
+        t.equal(es.getItem('key1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
 
-        //log('_items:', JSON.stringify(kw._items, null, 4));
+        //log('_items:', JSON.stringify(es._items, null, 4));
 
         // should be alphabetical
-        t.same(kw.keys(), ['decoy', 'key1'], 'keys() are correct');
+        t.same(es.keys(), ['decoy', 'key1'], 'keys() are correct');
 
         // order of values should match order of keys
-        t.same(kw.values(), ['zzz', 'val1.1'], 'values() are correct');
+        t.same(es.values(), ['zzz', 'val1.1'], 'values() are correct');
 
-        t.same(kw.authors(), [author1], 'author');
+        t.same(es.authors(), [author1], 'author');
 
         t.done();
     });
 
     t.test(scenario.description + ': key queries', (t: any) => {
-        let kw = scenario.makeStore(WORKSPACE);
+        let es = scenario.makeStore(WORKSPACE);
         let keys = 'zzz aaa dir dir/ q qq qqq dir/a dir/b dir/c'.split(' ');
         let ii = 0;
         for (let key of keys) {
-            t.ok(kw.set({format: FORMAT, key: key, value: 'true', author: author1, authorSecret: keypair1.secret, timestamp: now + ii}), 'set key: ' + key),
+            t.ok(es.set({format: FORMAT, key: key, value: 'true', author: author1, authorSecret: keypair1.secret, timestamp: now + ii}), 'set key: ' + key),
                 ii += 1;
         }
         let sortedKeys = [...keys];
         sortedKeys.sort();
-        let kwKeys = kw.keys();
-        t.same(keys.length, kwKeys.length, 'same number of keys');
-        t.same(sortedKeys, kwKeys, 'keys are sorted');
-        t.same(kw.keys({ key: 'q' }), ['q'], 'query for specific key');
-        t.same(kw.keys({ key: 'nope' }), [], 'query for missing key');
-        t.same(kw.keys({ lowKey: 'q', highKey: 'qqq' }), ['q', 'qq'], 'lowKey <= k < highKey');
-        t.same(kw.keys({ lowKey: 'q', highKey: 'qqq', limit: 1 }), ['q'], 'lowKey, highKey with limit');
-        t.same(kw.keys({ prefix: 'dir/' }), ['dir/', 'dir/a', 'dir/b', 'dir/c'], 'prefix');
-        t.same(kw.keys({ prefix: 'dir/', limit: 2 }), ['dir/', 'dir/a'], 'prefix with limit');
+        let esKeys = es.keys();
+        t.same(keys.length, esKeys.length, 'same number of keys');
+        t.same(sortedKeys, esKeys, 'keys are sorted');
+        t.same(es.keys({ key: 'q' }), ['q'], 'query for specific key');
+        t.same(es.keys({ key: 'nope' }), [], 'query for missing key');
+        t.same(es.keys({ lowKey: 'q', highKey: 'qqq' }), ['q', 'qq'], 'lowKey <= k < highKey');
+        t.same(es.keys({ lowKey: 'q', highKey: 'qqq', limit: 1 }), ['q'], 'lowKey, highKey with limit');
+        t.same(es.keys({ prefix: 'dir/' }), ['dir/', 'dir/a', 'dir/b', 'dir/c'], 'prefix');
+        t.same(es.keys({ prefix: 'dir/', limit: 2 }), ['dir/', 'dir/a'], 'prefix with limit');
         t.done();
     });
 
     t.test(scenario.description + ': multi-author writes', (t: any) => {
-        let kw = scenario.makeStore(WORKSPACE);
+        let es = scenario.makeStore(WORKSPACE);
 
         // set decoy keys to make sure the later tests return the correct key
-        t.ok(kw.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 2');
-        t.ok(kw.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 1');
+        t.ok(es.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 2');
+        t.ok(es.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set decoy key 1');
 
-        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
-        t.equal(kw.getValue('key1'), 'one');
+        t.ok(es.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'set new key');
+        t.equal(es.getValue('key1'), 'one');
 
         // this will overwrite 'one' but the item for 'one' will remain in history.
         // history will have 2 items for this key.
-        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'update from a second author');
-        t.equal(kw.getValue('key1'), 'two');
+        t.ok(es.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'update from a second author');
+        t.equal(es.getValue('key1'), 'two');
 
         // this will replace the old original item 'one' from this author.
         // history will have 2 items for this key.
-        t.ok(kw.set({format: FORMAT, key: 'key1', value: 'three', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'update from original author again');
-        t.equal(kw.getValue('key1'), 'three');
+        t.ok(es.set({format: FORMAT, key: 'key1', value: 'three', author: author1, authorSecret: keypair1.secret, timestamp: now + 2}), 'update from original author again');
+        t.equal(es.getValue('key1'), 'three');
 
-        //log('_items:', JSON.stringify(kw._items, null, 4));
+        //log('_items:', JSON.stringify(es._items, null, 4));
 
-        t.equal(kw.keys().length, 3, '3 keys');
-        t.equal(kw.values().length, 3, '3 values');
-        t.equal(kw.values({ includeHistory: true }).length, 4, '4 values with history');
+        t.equal(es.keys().length, 3, '3 keys');
+        t.equal(es.values().length, 3, '3 values');
+        t.equal(es.values({ includeHistory: true }).length, 4, '4 values with history');
 
-        t.same(kw.keys(), ['decoy1', 'decoy2', 'key1'], 'keys()');
-        t.same(kw.values(), ['aaa', 'zzz', 'three'], 'values()');
-        t.same(kw.values({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'values with history, newest first');
+        t.same(es.keys(), ['decoy1', 'decoy2', 'key1'], 'keys()');
+        t.same(es.values(), ['aaa', 'zzz', 'three'], 'values()');
+        t.same(es.values({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'values with history, newest first');
 
         t.same(
-            kw.items({ includeHistory: true }).map((item : Item) => item.author),
+            es.items({ includeHistory: true }).map((item : Item) => item.author),
             [author1, author1, author1, author2],
             'items with history, newest first, items should have correct authors'
         );
 
         let sortedAuthors = [author1, author2];
         sortedAuthors.sort();
-        t.same(kw.authors(), sortedAuthors, 'authors');
+        t.same(es.authors(), sortedAuthors, 'authors');
 
         // TODO: test 2 authors, same timestamps, different signatures
 
@@ -426,40 +426,40 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': sync: push to empty store', (t: any) => {
-        let kw1 = scenario.makeStore(WORKSPACE);
-        let kw2 = scenario.makeStore(WORKSPACE);
+        let es1 = scenario.makeStore(WORKSPACE);
+        let es2 = scenario.makeStore(WORKSPACE);
 
         // set up some keys
-        t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
-        t.ok(kw1.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
-        t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');
-        t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');
+        t.ok(es1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
+        t.ok(es1.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');
+        t.ok(es1.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');
+        t.ok(es1.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');
 
         // sync
-        let syncResults = kw1.sync(kw2, { direction: 'push', existing: true, live: false });
+        let syncResults = es1.sync(es2, { direction: 'push', existing: true, live: false });
         //log('sync results', syncResults);
         t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 items (includes history items).  pulled 0.');
 
         // check results
-        t.same(kw1.keys(), kw2.keys(), 'kw1.keys() == kw2.keys()');
-        t.same(kw1.values(), kw2.values(), 'kw1 values == kw2');
-        t.same(kw1.values({ includeHistory: true }), kw2.values({ includeHistory: true }), 'kw1 values with history == kw2');
+        t.same(es1.keys(), es2.keys(), 'es1.keys() == es2.keys()');
+        t.same(es1.values(), es2.values(), 'es1 values == es2');
+        t.same(es1.values({ includeHistory: true }), es2.values({ includeHistory: true }), 'es1 values with history == es2');
 
-        t.same(kw2.keys(), ['decoy1', 'decoy2', 'key1'], 'keys are as expected');
-        t.same(kw2.getValue('key1'), 'two', 'latest item for a key wins on kw2');
-        t.same(kw2.getItem('key1')?.value, 'two', 'getItem has correct value');
-        t.same(kw2.values(), ['aaa', 'zzz', 'two'], 'kw2 values are as expected');
-        t.same(kw2.values({ includeHistory: true }), ['aaa', 'zzz', 'two', 'one'], 'values with history are as expected');
+        t.same(es2.keys(), ['decoy1', 'decoy2', 'key1'], 'keys are as expected');
+        t.same(es2.getValue('key1'), 'two', 'latest item for a key wins on es2');
+        t.same(es2.getItem('key1')?.value, 'two', 'getItem has correct value');
+        t.same(es2.values(), ['aaa', 'zzz', 'two'], 'es2 values are as expected');
+        t.same(es2.values({ includeHistory: true }), ['aaa', 'zzz', 'two', 'one'], 'values with history are as expected');
 
         // sync again.  nothing should happen.
-        let syncResults2 = kw1.sync(kw2, { direction: 'push', existing: true, live: false });
+        let syncResults2 = es1.sync(es2, { direction: 'push', existing: true, live: false });
         //log('sync results 2', syncResults2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing should happen if syncing again');
 
-        //log('kw1._items:', JSON.stringify(kw1._items, null, 4));
-        //log('kw1.keys()', kw1.keys());
-        //log('kw1.values()', kw1.values());
-        //log('kw1.getItem("key1")', kw1.getItem('key1'));
+        //log('es1._items:', JSON.stringify(es1._items, null, 4));
+        //log('es1.keys()', es1.keys());
+        //log('es1.values()', es1.values());
+        //log('es1.getItem("key1")', es1.getItem('key1'));
 
         t.done();
     });
@@ -472,94 +472,94 @@ for (let scenario of scenarios) {
         ];
 
         for (let opts of optsToTry) {
-            let kw1 = scenario.makeStore(WORKSPACE);
-            let kw2 = scenario.makeStore(WORKSPACE);
+            let es1 = scenario.makeStore(WORKSPACE);
+            let es2 = scenario.makeStore(WORKSPACE);
 
             // set up some keys
-            t.ok(kw1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
-            t.ok(kw1.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push 2)
-            t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');      // becomes history  (push 3)
-            t.ok(kw1.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');  // winner  (push 4)
+            t.ok(es1.set({format: FORMAT, key: 'decoy2', value: 'zzz', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
+            t.ok(es1.set({format: FORMAT, key: 'decoy1', value: 'aaa', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set decoy key');  // winner  (push 2)
+            t.ok(es1.set({format: FORMAT, key: 'key1', value: 'one', author: author1, authorSecret: keypair1.secret, timestamp: now}), 'author1 set key1');      // becomes history  (push 3)
+            t.ok(es1.set({format: FORMAT, key: 'key1', value: 'two', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}), 'author2 set key1');  // winner  (push 4)
 
-            t.ok(kw2.set({format: FORMAT, key: 'latestOnKw1', value: '221', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
-            t.ok(kw1.set({format: FORMAT, key: 'latestOnKw1', value: '111', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (push 5)
+            t.ok(es2.set({format: FORMAT, key: 'latestOnEs1', value: '221', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
+            t.ok(es1.set({format: FORMAT, key: 'latestOnEs1', value: '111', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (push 5)
 
-            t.ok(kw1.set({format: FORMAT, key: 'latestOnKw2', value: '11', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
-            t.ok(kw2.set({format: FORMAT, key: 'latestOnKw2', value: '22', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (pull 1)
+            t.ok(es1.set({format: FORMAT, key: 'latestOnEs2', value: '11', author: author1, authorSecret: keypair1.secret, timestamp: now}));       // dropped
+            t.ok(es2.set({format: FORMAT, key: 'latestOnEs2', value: '22', author: author1, authorSecret: keypair1.secret, timestamp: now + 10}));  // winner  (pull 1)
 
-            t.ok(kw1.set({format: FORMAT, key: 'authorConflict', value: 'author1kw1', author: author1, authorSecret: keypair1.secret, timestamp: now}));      // becomes history  (push 6)
-            t.ok(kw2.set({format: FORMAT, key: 'authorConflict', value: 'author2kw2', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}));  // winner  (pull 2)
+            t.ok(es1.set({format: FORMAT, key: 'authorConflict', value: 'author1es1', author: author1, authorSecret: keypair1.secret, timestamp: now}));      // becomes history  (push 6)
+            t.ok(es2.set({format: FORMAT, key: 'authorConflict', value: 'author2es2', author: author2, authorSecret: keypair2.secret, timestamp: now + 1}));  // winner  (pull 2)
 
             // sync
-            let syncResults = kw1.sync(kw2, opts);
+            let syncResults = es1.sync(es2, opts);
             //log('sync results', syncResults);
             t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 items, pulled 2 (including history)');
 
-            t.equal(kw1.keys().length, 6, '6 keys');
-            t.equal(kw1.items().length, 6, '6 items');
-            t.equal(kw1.items({ includeHistory: true }).length, 8, '8 items with history');
-            t.equal(kw1.values().length, 6, '6 values');
-            t.equal(kw1.values({ includeHistory: true }).length, 8, '8 values with history');
+            t.equal(es1.keys().length, 6, '6 keys');
+            t.equal(es1.items().length, 6, '6 items');
+            t.equal(es1.items({ includeHistory: true }).length, 8, '8 items with history');
+            t.equal(es1.values().length, 6, '6 values');
+            t.equal(es1.values({ includeHistory: true }).length, 8, '8 values with history');
 
-            t.same(kw1.keys(), 'authorConflict decoy1 decoy2 key1 latestOnKw1 latestOnKw2'.split(' '), 'correct keys on kw1');
-            t.same(kw1.values(), 'author2kw2 aaa zzz two 111 22'.split(' '), 'correct values on kw1');
+            t.same(es1.keys(), 'authorConflict decoy1 decoy2 key1 latestOnEs1 latestOnEs2'.split(' '), 'correct keys on es1');
+            t.same(es1.values(), 'author2es2 aaa zzz two 111 22'.split(' '), 'correct values on es1');
 
-            t.same(kw1.keys(), kw2.keys(), 'keys match');
-            t.same(kw1.items(), kw2.items(), 'items match');
-            t.same(kw1.items({ includeHistory: true }), kw2.items({ includeHistory: true }), 'items with history: match');
-            t.same(kw1.values(), kw2.values(), 'values match');
-            t.same(kw1.values({ includeHistory: true }), kw2.values({ includeHistory: true }), 'values with history: match');
+            t.same(es1.keys(), es2.keys(), 'keys match');
+            t.same(es1.items(), es2.items(), 'items match');
+            t.same(es1.items({ includeHistory: true }), es2.items({ includeHistory: true }), 'items with history: match');
+            t.same(es1.values(), es2.values(), 'values match');
+            t.same(es1.values({ includeHistory: true }), es2.values({ includeHistory: true }), 'values with history: match');
         }
 
         t.done();
     });
 
     t.test(scenario.description + ': sync: mismatched workspaces', (t: any) => {
-        let kwA1 = scenario.makeStore('a');
-        let kwA2 = scenario.makeStore('a');
-        let kwB = scenario.makeStore('b');
-        t.ok(kwA1.set({format: FORMAT, key: 'a1', value: 'a1', author: author1, authorSecret: keypair1.secret}));
-        t.ok(kwA2.set({format: FORMAT, key: 'a2', value: 'a2', author: author1, authorSecret: keypair1.secret}));
-        t.ok(kwB.set({format: FORMAT, key: 'b', value: 'b', author: author1, authorSecret: keypair1.secret}));
+        let esA1 = scenario.makeStore('a');
+        let esA2 = scenario.makeStore('a');
+        let esB = scenario.makeStore('b');
+        t.ok(esA1.set({format: FORMAT, key: 'a1', value: 'a1', author: author1, authorSecret: keypair1.secret}));
+        t.ok(esA2.set({format: FORMAT, key: 'a2', value: 'a2', author: author1, authorSecret: keypair1.secret}));
+        t.ok(esB.set({format: FORMAT, key: 'b', value: 'b', author: author1, authorSecret: keypair1.secret}));
 
-        t.same(kwA1.sync(kwB), { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
-        t.same(kwA1.sync(kwA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
+        t.same(esA1.sync(esB), { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
+        t.same(esA1.sync(esA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
 
         t.done();
     });
 
     t.test(scenario.description + ': sync: misc other options', (t: any) => {
-        let kwEmpty1 = scenario.makeStore(WORKSPACE);
-        let kwEmpty2 = scenario.makeStore(WORKSPACE);
-        let kw = scenario.makeStore(WORKSPACE);
+        let esEmpty1 = scenario.makeStore(WORKSPACE);
+        let esEmpty2 = scenario.makeStore(WORKSPACE);
+        let es = scenario.makeStore(WORKSPACE);
 
         // this time let's omit schema and timestamp
-        t.ok(kw.set({format: FORMAT, key: 'foo', value: 'bar', author: author1, authorSecret: keypair1.secret}));
+        t.ok(es.set({format: FORMAT, key: 'foo', value: 'bar', author: author1, authorSecret: keypair1.secret}));
 
         // live mode (not implemented yet)
-        t.throws(() => kwEmpty1.sync(kwEmpty2, {live: true}), 'live is not implemented yet and should throw');
+        t.throws(() => esEmpty1.sync(esEmpty2, {live: true}), 'live is not implemented yet and should throw');
 
         // sync with empty stores
-        t.same(kwEmpty1.sync(kwEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
-        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
-        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
-        t.same(kwEmpty1.sync(kwEmpty2, {direction: 'both'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
-        t.same(kwEmpty1.sync(kwEmpty2, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(esEmpty1.sync(esEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(esEmpty1.sync(esEmpty2, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(esEmpty1.sync(esEmpty2, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(esEmpty1.sync(esEmpty2, {direction: 'both'}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(esEmpty1.sync(esEmpty2, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
 
         // sync with empty stores
-        t.same(kw.sync(kwEmpty1, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'pull from empty store');
-        t.same(kwEmpty1.sync(kw, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'push to empty store');
+        t.same(es.sync(esEmpty1, {direction: 'pull'}), { numPushed: 0, numPulled: 0 }, 'pull from empty store');
+        t.same(esEmpty1.sync(es, {direction: 'push'}), { numPushed: 0, numPulled: 0 }, 'push to empty store');
 
         // sync with self
-        t.same(kw.sync(kw), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
+        t.same(es.sync(es), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
 
         // existing: false
-        t.same(kw.sync(kwEmpty1, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with existing: false does nothing');
-        t.same(kwEmpty1.sync(kw, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with existing: false does nothing');
+        t.same(es.sync(esEmpty1, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with existing: false does nothing');
+        t.same(esEmpty1.sync(es, {existing: false}), { numPushed: 0, numPulled: 0 }, 'sync with existing: false does nothing');
 
         // successful sync
-        t.same(kw.sync(kwEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
-        t.same(kwEmpty2.sync(kw), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
+        t.same(es.sync(esEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
+        t.same(esEmpty2.sync(es), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
 
         t.done();
     });
