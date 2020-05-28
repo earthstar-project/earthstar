@@ -8,6 +8,10 @@
     "type": "git",
     "url": "git+ssh://git@github.com/cinnamon-bun/earthstar.git"
   },
+  "browser": {
+    "./build/index.js": "./build/index.browser.js",
+    "./build/storeSqlite.js": false
+  },
   "scripts": {
     "clean": "rm -rf build/*.{js,ts} .nyc_output coverage",
     "build": "tsc",

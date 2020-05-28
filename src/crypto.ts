@@ -64,6 +64,14 @@ export const _derToStringKeypair = (bufPair : KeypairBuffers): Keypair => {
 export const generateKeypair = (): Keypair =>
     _derToStringKeypair(_makeKeypairDerBuffers());
 
+export const generateFakeKeypair = (): Keypair => ({
+    // Generate random strings that look like keys.
+    // This is useful for testing, or for use with ValidatorUnsigned.
+    // Don't use this in the real world.
+    public: 'fakekey' + crypto.randomBytes(32).toString('base64').slice(7),
+    secret: 'fakekey' + crypto.randomBytes(32).toString('base64').slice(7),
+});
+
 export let addSigilToKey = (key: RawCryptKey): AuthorKey => {
     return '@' + key + '.ed25519';
 };
