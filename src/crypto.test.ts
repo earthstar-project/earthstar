@@ -1,21 +1,25 @@
 import t = require('tap');
+import { Keypair, RawCryptKey } from './types';
+import { Crypto } from './crypto';
+import { encode, decode, encodePair, decodePair } from './cryptoUtil';
 
-import { Keypair } from './types';
-import {
-    sha256,
-    generateKeypair,
-    addSigilToKey,
-    removeSigilFromKey,
-    sign,
-    isSignatureValid,
-    _derToStringPublic,
-    _derToStringSecret,
-    _stringToDerPublic,
-    _stringToDerSecret,
-    _makeKeypairDerBuffers,
-    _derPrefixPublic,
-    _derPrefixSecret,
-} from './crypto';
+//import {
+//    sha256,
+//    generateKeypair,
+//    addSigilToKey,
+//    removeSigilFromKey,
+//    sign,
+//    isSignatureValid,
+//    /*
+//    _derToStringPublic,
+//    _derToStringSecret,
+//    _stringToDerPublic,
+//    _stringToDerSecret,
+//    _makeKeypairDerBuffers,
+//    _derPrefixPublic,
+//    _derPrefixSecret,
+//    */
+//} from './crypto';
 
 let log = console.log;
 
@@ -37,7 +41,7 @@ t.test('sha256 of strings', (t: any) => {
         [snowmanJsString, '51643361c79ecaef25a8de802de24f570ba25d9c2df1d22d94fade11b4f466cc'],
     ];
     for (let [input, output] of vectors) {
-        t.equal(sha256(input), output, `hash of ${JSON.stringify(input)}`);
+        t.equal(Crypto.sha256(input), output, `hash of ${JSON.stringify(input)}`);
     }
     t.end();
 });
@@ -55,7 +59,7 @@ t.test('sha256 of buffers', (t: any) => {
     ];
     for (let [input, output] of vectors) {
         t.equal(
-            sha256(input),
+            Crypto.sha256(input),
             output,
             `hash of buffer with bytes: ${JSON.stringify(Array.from(input))}`
         );
@@ -64,108 +68,65 @@ t.test('sha256 of buffers', (t: any) => {
 });
 
 t.test('generateKeypair', (t: any) => {
-    let keypair = generateKeypair();
+    let keypair = Crypto.generateKeypair();
     t.equal(typeof keypair.public, 'string', 'keypair has public');
     t.equal(typeof keypair.secret, 'string', 'keypair has secret');
     t.notEqual(keypair.public[0], '@', 'keypair does not have sigils');
     t.end();
 });
 
-t.test('key conversion from buffer to string and back', (t: any) => {
-    let bufPair = _makeKeypairDerBuffers();
+t.test('encode / decode', (t: any) => {
+    let buf = new Buffer([0, 10, 20, 122, 123, 124]);
+    let str = encode(buf);
+    let buf2 = decode(str);
+    let str2 = encode(buf2);
 
-    let pubBuf = bufPair.public;
-    let pubStr = _derToStringPublic(pubBuf);
-    let pubBuf2 = _stringToDerPublic(pubStr);
-    let pubStr2 = _derToStringPublic(pubBuf2);
-    t.same(pubBuf, pubBuf2, 'public key: buffer roundtrip to string and back');
-    t.same(pubStr, pubStr2, 'public key: string roundtrip to buffer and back');
-    t.equal(pubStr.length, 44, 'public key: string length 44');
-
-    let secBuf = bufPair.secret;
-    let secStr = _derToStringPublic(secBuf);
-    let secBuf2 = _stringToDerSecret(secStr);
-    let secStr2 = _derToStringPublic(secBuf2);
-    t.same(secBuf, secBuf2, 'secret key: buffer roundtrip to string and back');
-    t.same(secStr, secStr2, 'secret key: string roundtrip to buffer and back');
-    t.equal(secStr.length, 44, 'secret key: string length 44');
-    /*
-    log('bufPair    ', bufPair);
-    log('.'),
-    log('sec prefix ', _secretPrefix);
-    log('sec prefix ', _secretPrefix.toString('base64'));
-    log('.'),
-    log('secBuf     ', secBuf);
-    log('secBuf.b64 ', secBuf.toString('base64'));
-    log('.'),
-    log('secStr     ', Buffer.from(secStr, 'base64'));
-    log('secStr.b64 ', secStr);
-    log('.'),
-    log('secBuf2    ', secBuf2);
-    log('secBuf2.b64', secBuf2.toString('base64'));
-    log('.'),
-    log('secStr2    ', Buffer.from(secStr2, 'base64'));
-    log('secStr2.b64', secStr2);
-    */
+    t.same(buf, buf2, 'encode roundtrip: buffer');
+    t.same(str, str2, 'encode roundtrip: string');
 
     t.done();
 });
 
-let exampleKeypair: Keypair = {
-    public: 'IoFHLOqJc8/2F9PUgxY7M4n5733r3wT/w3ZAXGYoyH4=',
-    secret: '+W1lx7/jbsO8KiXz4LrKYjswbO8vjFYczG0KokpFoME=',
-};
+t.test('key conversion from buffer to string and back', (t: any) => {
+    let keypair = Crypto.generateKeypair();
+    let keypairB = decodePair(keypair);
+    let keypair2 = encodePair(keypairB);
+    let keypairB2 = decodePair(keypair);
 
-t.test('key sigils', (t: any) => {
-    let raw = exampleKeypair.public;
-    let sigilified = addSigilToKey(raw);
-    let raw2 = removeSigilFromKey(sigilified);
-    let sigilified2 = addSigilToKey(raw2);
-    t.notEqual(raw[0], '@', 'raw does not start with "@"');
-    t.equal(sigilified[0], '@', 'sigilified starts with "@"');
-    t.equal(raw, raw2, 'roundtrip from raw');
-    t.equal(sigilified, sigilified2, 'roundtrip from sigilified');
+    t.same(keypair, keypair2, 'keypair encoding/decoding roundtrip 1');
+    t.same(keypairB, keypairB2, 'keypair encoding/decoding roundtrip 2');
 
-    t.throws(() => removeSigilFromKey('xxx'));
-    t.throws(() => removeSigilFromKey('@xxx'));
-    t.throws(() => removeSigilFromKey('xxx.ed25519'));
-
-    t.end();
+    t.done();
 });
 
 t.test('signatures', (t: any) => {
     let input = 'abc';
-    let keypair = exampleKeypair;
-    let keypair2 = generateKeypair();
-    let sig = sign(input, keypair.secret);
+    let keypair = Crypto.generateKeypair();
+    let keypair2 = Crypto.generateKeypair();
+    let sig = Crypto.sign(keypair, input);
+    let sig2 = Crypto.sign(keypair2, input);
 
-    t.ok(sig.endsWith('.sig.ed25519'), 'signature ends with .sig.ed25519');
-    t.equal(sig.length, 100, 'signature string length 100 including .sig.ed25519');
-
-    t.ok(isSignatureValid(input, sig, keypair.public), 'real signature is valid');
+    t.ok(Crypto.verify(keypair.public, sig, input), 'real signature is valid');
 
     // ways a signature should fail
-    t.notOk(
-        isSignatureValid(input, 'xxx', keypair.public),
-        'signature missing .ed.25519 is not valid'
-    );
-    t.notOk(isSignatureValid(input, 'xxx.sig.ed25519', keypair.public), 'altered signature is not valid');
-    t.notOk(isSignatureValid('otherInput', sig, keypair.public), 'signature is not valid with different input');
-    t.notOk(isSignatureValid(input, sig, 'wrongKey'), 'signature is not valid with garbage key');
-    t.notOk(isSignatureValid(input, sig, keypair2.secret), 'signature is not valid with different key');
+    t.notOk(Crypto.verify(keypair.public, 'otherSig', input), 'garbage signature is not valid');
+    t.notOk(Crypto.verify(keypair.public, sig2, input), 'signature from another key is not valid');
+    t.notOk(Crypto.verify(keypair.public, sig, 'otherInput'), 'signature is not valid with different input');
+    t.notOk(Crypto.verify('otherKey', sig, input), 'signature is not valid with garbage key');
 
     // changing input should change signature
-    t.notEqual(sign('aaa', keypair.secret), sign('x', keypair.secret), 'different inputs should make different signature');
-    t.notEqual(sign('aaa', keypair.secret), sign('aaa', keypair2.secret), 'different keys should make different signature');
+    t.notEqual(Crypto.sign(keypair, 'aaa'), Crypto.sign(keypair, 'xxx'), 'different inputs should make different signature');
+    t.notEqual(Crypto.sign(keypair, 'aaa'), Crypto.sign(keypair2, 'aaa'), 'different keys should make different signature');
 
     // determinism
-    t.equal(sign('aaa', keypair.secret), sign('aaa', keypair.secret), 'signatures should be deterministic');
+    t.equal(Crypto.sign(keypair, 'aaa'), Crypto.sign(keypair, 'aaa'), 'signatures should be deterministic');
 
     // encoding
-    let snowmanStringSig = sign(snowmanJsString, keypair.secret);
-    t.ok(isSignatureValid(snowmanJsString, snowmanStringSig, keypair.public), 'signature roundtrip works on snowman utf-8 string');
-    let snowmanBufferSig = sign(snowmanBufferUtf8, keypair.secret);
-    t.ok(isSignatureValid(snowmanBufferUtf8, snowmanBufferSig, keypair.public), 'signature roundtrip works on snowman buffer');
+    let snowmanStringSig = Crypto.sign(keypair, snowmanJsString);
+    t.ok(Crypto.verify(keypair.public, snowmanStringSig, snowmanJsString), 'signature roundtrip works on snowman utf-8 string');
+    let snowmanBufferSig = Crypto.sign(keypair, snowmanBufferUtf8);
+    t.ok(Crypto.verify(keypair.public, snowmanBufferSig, snowmanBufferUtf8), 'signature roundtrip works on snowman buffer');
 
     t.end();
 });
+//

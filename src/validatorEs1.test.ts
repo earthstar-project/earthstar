@@ -1,12 +1,12 @@
 import t = require('tap');
-import { addSigilToKey, generateKeypair } from './crypto';
-import { Item, AuthorKey } from './types';
+import { Crypto } from './crypto';
+import { Item, RawCryptKey } from './types';
 import { ValidatorEs1 } from './validatorEs1';
 
 let log = console.log;
 
-let keypair1 = generateKeypair();
-let author1: AuthorKey = addSigilToKey(keypair1.public);
+let keypair1 = Crypto.generateKeypair();
+let author1: RawCryptKey = keypair1.public;
 let now = 1500000000000000;
 let Val = ValidatorEs1;
 
@@ -75,10 +75,9 @@ t.test('signItem and itemSignatureIsValid', (t: any) => {
     };
     t.notOk(Val.itemSignatureIsValid(item1), 'item with empty sig is not valid');
 
-    let signedItem = Val.signItem(item1, keypair1.secret);
-
-    t.ok(signedItem.signature.endsWith('.sig.ed25519'), 'item looks like it has a signature');
-    t.ok(Val.itemSignatureIsValid(signedItem), 'signature is valid');
+    let signedItem = Val.signItem(keypair1, item1);
+    t.ok(signedItem.signature.length > 10, 'item looks like it has some kind of signature');
+    t.ok(Val.itemSignatureIsValid(signedItem), 'signature is actually valid');
 
     // modify various things and ensure the signature becomes invalid
     t.notOk(
@@ -157,7 +156,7 @@ t.test('itemIsValid', (t: any) => {
         author: author1,
         signature: 'xxx',
     };
-    let signedItem = Val.signItem(item1, keypair1.secret);
+    let signedItem = Val.signItem(keypair1, item1);
 
     t.ok(Val.itemIsValid(signedItem), 'valid item');
 

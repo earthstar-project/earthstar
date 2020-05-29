@@ -1,5 +1,6 @@
-import { AuthorKey, FormatName, Item, IValidator, Key, RawCryptKey } from './types';
-import { isSignatureValid, removeSigilFromKey, sha256, sign } from './crypto';
+import { Keypair, FormatName, Item, IValidator, Key, RawCryptKey } from './types';
+import { Crypto } from './crypto';
+import { sign } from 'crypto';
 
 let log = console.log;
 let logWarning = console.log;
@@ -24,7 +25,7 @@ export const ValidatorEs1 : IValidator = class {
         }
         return true;
     }
-    static authorCanWriteToKey(author: AuthorKey, key: Key): boolean {
+    static authorCanWriteToKey(author: RawCryptKey, key: Key): boolean {
         // no tilde: it's public
         if (key.indexOf('~') === -1) {
             return true;
@@ -46,23 +47,27 @@ export const ValidatorEs1 : IValidator = class {
         // except for value, but value is hashed, so it's safe to
         // use newlines as a field separator.
         // We enforce the no-newlines rules in itemIsValid() and keyIsValid().
-        return sha256([
+        return Crypto.sha256([
             item.format,
             item.workspace,
             item.key,
-            sha256(item.value),
+            Crypto.sha256(item.value),
             '' + item.timestamp,
             item.author,
         ].join('\n'));
     }
-    static signItem(item: Item, secret: RawCryptKey): Item {
+    static signItem(keypair : Keypair, item: Item): Item {
         return {
             ...item,
-            signature: sign(this.hashItem(item), secret),
+            signature: Crypto.sign(keypair, this.hashItem(item)),
         };
     }
     static itemSignatureIsValid(item: Item): boolean {
-        return isSignatureValid(this.hashItem(item), item.signature, removeSigilFromKey(item.author));
+        try {
+            return Crypto.verify(item.author, item.signature, this.hashItem(item));
+        } catch (e) {
+            return false;
+        }
     }
     static itemIsValid(item: Item, futureCutoff?: number): boolean {
         // "futureCutoff" is a time in microseconds (milliseconds * 1000).

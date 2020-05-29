@@ -1,10 +1,13 @@
 export type Key = string;
-export type AuthorKey = string;  // @xxxxx.ed25519
 export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
-export type Signature = string;  // xxxxxxxxxxxx.sig.ed25519
+export type Signature = string;  // xxxxxxxxxxxx
 export type WorkspaceId = string;
 export type FormatName = string;
 
+export interface KeypairBuffers {
+    public: Buffer,
+    secret: Buffer,
+}
 export type Keypair = {
     public: RawCryptKey,
     secret: RawCryptKey,
@@ -16,7 +19,7 @@ export type Item = {
     // workspace : string,
     key : string,
     value : string,
-    author : AuthorKey,
+    author : RawCryptKey,
     timestamp : number,
     signature : Signature,
 }
@@ -28,10 +31,9 @@ export type ItemToSet = {
     // workspace : string,
     key : string,
     value : string,
-    author : AuthorKey,
-    authorSecret : RawCryptKey,
-    timestamp? : number,  // timestamp only for testing
-    // no signature
+    // no author - the whole keypair is provided separately when setting
+    timestamp? : number,  // timestamp only for testing, usually omitted
+    // no signature - it's generated during setting
 }
 
 export interface QueryOpts {
@@ -70,9 +72,9 @@ export interface IValidator {
     // this should be implemented as an abstract class, not a regular class
     format: FormatName;
     keyIsValid(key: Key): boolean;
-    authorCanWriteToKey(author: AuthorKey, key: Key): boolean;
+    authorCanWriteToKey(author: RawCryptKey, key: Key): boolean;
     hashItem(item: Item): string;
-    signItem(item: Item, secret: RawCryptKey): Item;
+    signItem(keypair : Keypair, item: Item): Item;
     itemSignatureIsValid(item: Item): boolean;
     itemIsValid(item: Item, futureCutoff?: number): boolean;
 }
@@ -87,12 +89,12 @@ export interface IStore {
     values(query? : QueryOpts) : string[];
     // TODO: convenience method to parse value from string to JSON?
 
-    authors() : AuthorKey[]
+    authors() : RawCryptKey[]
 
     getItem(key : string) : Item | undefined;
     getValue(key : string) : string | undefined;
 
-    set(itemToSet : ItemToSet) : boolean;  // leave timestamp at 0 and it will be set to now() for you
+    set(keypair : Keypair, itemToSet : ItemToSet) : boolean;  // leave timestamp at 0 and it will be set to now() for you
 
     ingestItem(item : Item) : boolean;
 

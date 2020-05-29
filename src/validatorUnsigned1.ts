@@ -1,5 +1,5 @@
-import { AuthorKey, FormatName, Item, IValidator, Key, RawCryptKey } from './types';
-import { sha256 } from './crypto';
+import { Keypair, FormatName, Item, IValidator, Key, RawCryptKey } from './types';
+import { Crypto } from './crypto';
 
 /*
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -35,7 +35,7 @@ export const ValidatorUnsigned1 : IValidator = class {
         }
         return true;
     }
-    static authorCanWriteToKey(author: AuthorKey, key: Key): boolean {
+    static authorCanWriteToKey(author: RawCryptKey, key: Key): boolean {
         // no tilde: it's public
         if (key.indexOf('~') === -1) {
             return true;
@@ -57,16 +57,16 @@ export const ValidatorUnsigned1 : IValidator = class {
         // except for value, but value is hashed, so it's safe to
         // use newlines as a field separator.
         // We enforce the no-newlines rules in itemIsValid() and keyIsValid().
-        return sha256([
+        return Crypto.sha256([
             item.format,
             item.workspace,
             item.key,
-            sha256(item.value),
+            Crypto.sha256(item.value),
             '' + item.timestamp,
             item.author,
         ].join('\n'));
     }
-    static signItem(item: Item, secret: RawCryptKey): Item {
+    static signItem(keypair : Keypair, item: Item): Item {
         return {
             ...item,
             signature: 'unsigned',

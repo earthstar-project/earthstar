@@ -20,6 +20,7 @@
     "prettier": "prettier --write src/*",
     "test": "tap -Rspecy --jobs=1 build/*.test.js",
     "test-sqlite": "tap -Rspecy --jobs=1 build/keywingStoreSqlite.test.js",
+    "test-crypto": "tap -Rspecy --jobs=1 build/crypto.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",
     "build-and-test": "npm run build && npm run test",
     "prepublishOnly": "npm run clean && npm run build && npm test"
@@ -28,6 +29,7 @@
   "license": "AGPL-3.0",
   "devDependencies": {
     "@types/better-sqlite3": "^5.4.0",
+    "@types/multibase": "^0.6.0",
     "@types/node": "^14.0.3",
     "@types/tap": "^14.10.0",
     "onchange": "^7.0.2",
@@ -38,6 +40,8 @@
   "dependencies": {
     "better-sqlite3": "^7.0.1",
     "chalk": "^3.0.0",
+    "chloride": "^2.2.14",
+    "multibase": "^0.7.0",
     "tslib": "^2.0.0"
   }
 }

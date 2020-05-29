@@ -5,16 +5,16 @@ import {
 } from 'better-sqlite3';
 import {
     IStore,
-    ItemToSet,
-    Item,
-    AuthorKey,
-    QueryOpts,
-    SyncOpts,
     IValidator,
+    Item,
+    ItemToSet,
+    Keypair,
+    QueryOpts,
+    RawCryptKey,
+    SyncOpts,
     SyncResults,
     WorkspaceId,
 } from './types';
-import { fstat } from 'fs';
 
 //let log = console.log;
 //let logWarning = console.log;
@@ -238,9 +238,9 @@ export class StoreSqlite implements IStore {
         return this.items(query).map(item => item.value);
     }
 
-    authors() : AuthorKey[] {
+    authors() : RawCryptKey[] {
         // TODO: query the db directly
-        let authorSet : Set<AuthorKey> = new Set();
+        let authorSet : Set<RawCryptKey> = new Set();
         for (let item of this.items({ includeHistory: true })) {
             authorSet.add(item.author);
         }
@@ -333,7 +333,7 @@ export class StoreSqlite implements IStore {
         return true;
     }
 
-    set(itemToSet : ItemToSet) : boolean {
+    set(keypair : Keypair, itemToSet : ItemToSet) : boolean {
         // Store a value.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
@@ -353,7 +353,7 @@ export class StoreSqlite implements IStore {
             workspace: this.workspace,
             key: itemToSet.key,
             value: itemToSet.value,
-            author: itemToSet.author,
+            author: keypair.public,
             timestamp: itemToSet.timestamp > 0 ? itemToSet.timestamp : Date.now()*1000,
             signature: '',
         }
@@ -365,7 +365,7 @@ export class StoreSqlite implements IStore {
         let existingItemTimestamp = this.getItem(item.key)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
-        let signedItem = validator.signItem(item, itemToSet.authorSecret);
+        let signedItem = validator.signItem(keypair, item);
         return this.ingestItem(signedItem, item.timestamp);
     }
 
