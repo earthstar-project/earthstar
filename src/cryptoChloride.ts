@@ -1,7 +1,7 @@
 import crypto = require('crypto');
 import sodium = require('chloride')
 import { Keypair, KeypairBuffers } from './types';
-import { ICrypto, encode, decode, encodePair } from './cryptoUtil';
+import { ICrypto, encodePair, decodePubkey, decodeSecret, decodeSig, encodeSig } from './cryptoUtil';
 
 export const CryptoChloride : ICrypto = class {
     static sha256(input: string | Buffer) : string {
@@ -26,9 +26,9 @@ export const CryptoChloride : ICrypto = class {
         };
     };
     static sign(keypair : Keypair, msg : string | Buffer) : string {
-        let secretBuf = Buffer.concat([decode(keypair.secret), decode(keypair.public)]);
+        let secretBuf = Buffer.concat([decodeSecret(keypair.secret), decodePubkey(keypair.public)]);
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
-        return encode(
+        return encodeSig(
             sodium.crypto_sign_detached(msg, secretBuf)
         );
     }
@@ -36,9 +36,9 @@ export const CryptoChloride : ICrypto = class {
         try {
             if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
             return sodium.crypto_sign_verify_detached(
-                decode(sig),
+                decodeSig(sig),
                 msg,
-                decode(publicKey),
+                decodePubkey(publicKey),
             );
         } catch (e) {
             return false;

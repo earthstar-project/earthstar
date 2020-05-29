@@ -34,7 +34,7 @@ export const ValidatorEs1 : IValidator = class {
         if (key.indexOf('~' + author) !== -1) {
             return true;
         }
-        // key contains at least one tilde but not ~author.  The author can't write here.
+        // key contains at least one tilde but not ~@author.  The author can't write here.
         logWarning(`author ${author} can't write to key ${key}`);
         return false;
     }
@@ -146,6 +146,12 @@ export const ValidatorEs1 : IValidator = class {
         // Key must be valid (only printable ascii, etc)
         if (!this.keyIsValid(item.key)) {
             logWarning('itemIsValid: key not valid');
+            return false;
+        }
+
+        // Author must start with '@'
+        if (!item.author.startsWith('@')) {
+            logWarning('itemIsValid: author must start with @');
             return false;
         }
 

@@ -9,23 +9,39 @@ export interface ICrypto {
     verify(publicKey : string, sig : string, msg : string | Buffer) : boolean;
 }
 
-export let encode = (b : Buffer) : string =>
+let encode = (b : Buffer) : string =>
     mb.encode('base58btc', b).toString().slice(1);  // take off the 'z' prefix that means base58btc
-export let decode = (s : string) : Buffer =>
+let decode = (s : string) : Buffer =>
     mb.decode('z' + s);
 //export let encode = (b : Buffer) : string =>
 //    b.toString('base64');
 //export let decode = (s : string) : Buffer =>
 //    Buffer.from(s, 'base64');
 
+export let encodeSecret = encode;
+export let encodeSig = encode;
+export let decodeSecret = decode;
+export let decodeSig = decode;
+
+export let encodePubkey = (b : Buffer) : string =>
+    '@' + encode(b);
+export let decodePubkey = (s : string) : Buffer => {
+    if (!s.startsWith('@')) {
+        console.log('warning: public key does not start with @: ' + s);
+    }
+    return decode(s.slice(1));
+}
+
 export let encodePair = (pair : KeypairBuffers) : Keypair => ({
-    public: encode(pair.public),
-    secret: encode(pair.secret),
+    public: encodePubkey(pair.public),
+    secret: encodeSecret(pair.secret),
 });
-export let decodePair = (pair : Keypair) : KeypairBuffers => ({
-    public: decode(pair.public),
-    secret: decode(pair.secret),
-});
+export let decodePair = (pair : Keypair) : KeypairBuffers => {
+    return {
+        public: decodePubkey(pair.public),
+        secret: decodeSecret(pair.secret),
+    }
+};
 
 /*
 export const generateFakeKeypair = (): Keypair => ({

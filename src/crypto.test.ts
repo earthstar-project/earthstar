@@ -1,7 +1,16 @@
 import t = require('tap');
 import { Keypair, RawCryptKey } from './types';
 import { Crypto } from './crypto';
-import { encode, decode, encodePair, decodePair } from './cryptoUtil';
+import {
+    encodePubkey,
+    decodePubkey,
+    encodeSecret,
+    decodeSecret,
+    encodeSig,
+    decodeSig,
+    encodePair,
+    decodePair
+} from './cryptoUtil';
 
 //import {
 //    sha256,
@@ -71,18 +80,30 @@ t.test('generateKeypair', (t: any) => {
     let keypair = Crypto.generateKeypair();
     t.equal(typeof keypair.public, 'string', 'keypair has public');
     t.equal(typeof keypair.secret, 'string', 'keypair has secret');
-    t.notEqual(keypair.public[0], '@', 'keypair does not have sigils');
+    t.equal(keypair.public[0], '@', 'keypair.public starts with @');
+    t.notEqual(keypair.secret[0], '@', 'keypair.secret does not start with @');
     t.end();
 });
 
 t.test('encode / decode', (t: any) => {
     let buf = new Buffer([0, 10, 20, 122, 123, 124]);
-    let str = encode(buf);
-    let buf2 = decode(str);
-    let str2 = encode(buf2);
+    let str = encodeSig(buf);
+    let buf2 = decodeSig(str);
+    let str2 = encodeSig(buf2);
+    t.same(buf, buf2, 'encodeSig roundtrip: buffer');
+    t.same(str, str2, 'encodeSig roundtrip: string');
 
-    t.same(buf, buf2, 'encode roundtrip: buffer');
-    t.same(str, str2, 'encode roundtrip: string');
+    str = encodeSecret(buf);
+    buf2 = decodeSecret(str);
+    str2 = encodeSecret(buf2);
+    t.same(buf, buf2, 'encodeSecret roundtrip: buffer');
+    t.same(str, str2, 'encodeSecret roundtrip: string');
+
+    str = encodePubkey(buf);
+    buf2 = decodePubkey(str);
+    str2 = encodePubkey(buf2);
+    t.same(buf, buf2, 'encodePubkey roundtrip: buffer');
+    t.same(str, str2, 'encodePubkey roundtrip: string');
 
     t.done();
 });

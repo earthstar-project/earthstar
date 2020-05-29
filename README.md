@@ -140,7 +140,7 @@ values(query? : QueryOpts) : string[];
 authors() : AuthorKey[]
 
 // write a key-value pair to the database, which will be signed by your author key.
-set(itemToSet : ItemToSet) : boolean;
+set(keypair : Keypair, itemToSet : ItemToSet) : boolean;
 
 // try to import an item from another Store.
 ingestItem(item : Item) : boolean;
@@ -156,10 +156,12 @@ Usage example:
 let es = new StoreMemory([ValidatorEs1], 'gardening-pals');
 
 // Make up some authors for testing
-let keypair1 = generateKeypair();  // { public, secret } as base64 strings
+// a keypair is { public: '@aaa', secret: 'xxx' }.
+// they are encoded using base58btc
+let keypair1 = generateKeypair();
 let keypair2 = generateKeypair();
-let author1 = addSigilToKey(keypair1.public); // "xxx" => "@xxx.ed25519"
-let author2 = addSigilToKey(keypair2.public);
+let author1 = keypair1.public;
+let author2 = keypair2.public;
 
 // It's a key-value store.  Keys and values are strings.
 es.set('wiki/Strawberry', 'Tasty', author1, keypair1.secret);
@@ -189,7 +191,7 @@ es.getItem('wiki/Strawberry')
     workspace: 'gardening-pals',
     key: 'wiki/Strawberry',
     value: 'Yum.',
-    author: '@author2.ed25519',
+    author: 'aaa',
     timestamp: 1503982037239,  // it's microseconds: Date.now()*1000
     signature: 'xxxxxxxx.sig.ed25519',
 } */
@@ -201,15 +203,15 @@ es.getItem('wiki/Strawberry')
 //
 // Examples:
 // One author write permission:
-//   '~@aaa.ed25519/about'  -- only @aaa can write here.
-//   '~@aaa.ed25519/follows/@bbb.ed25519'  -- only @aaa can write here
+//   '~@aaa/about'  -- only @aaa can write here.
+//   '~@aaa/follows/@bbb'  -- only @aaa can write here
 // Public:
-//   '@aaa.ed25519/wall'  -- no tilde, so anyone can write here
+//   '@aaa/wall'  -- no tilde, so anyone can write here
 //   'wiki/kittens'  -- no tilde, so anyone can write here
 // Multiple authors:
-//   'whiteboard/~@aaa.ed25519~@bbb.ed25519'  -- both @aaa and @bbb can write here
+//   'whiteboard/~@aaa~@bbb'  -- both @aaa and @bbb can write here
 //
-es.set('~' + author1 + '/about', '{name: ""}', author1, keypair1.secret);
+es.set(keypair1, '~' + author1 + '/about', '{name: ""}');
 
 // Coming soon, the workspace can also have members with
 // read or read-write permissions in general.
@@ -305,7 +307,7 @@ primary key: (key, author) -- one item per key per author.
     * Checking signatures
     * Signing outgoing messages
     * Setting rules about keys (not pubkeys, k-v keys), for example enforcing url-safe characters
-    * Encoding and decoding author pubkeys between raw buffers and a string format such as `'@'+base64(key)`
+    * Encoding and decoding author pubkeys between raw buffers and a string format such as `'@'+base58(key)`
 * There will eventually be a `ssb` feed format, which encapsulates SSB messages as key-value pairs.  It will be able to validate existing `ssb` signatures.  It will not enforce the hash chain backlinks because Earthstar can do partial syncs or sync in any order.
 
 ### All about keys
@@ -335,17 +337,17 @@ Multiple authors:
 * `whiteboard/~@aaa.ed25519~@bbb.ed25519`  -- both @aaa and @bbb can write here; nobody else can
 
 ### Encoding of crypto keys, signatures, etc
-* TODO: choose an encoding
+* For now, keys and signatures are encoded using base58btc.
 * goals: URL safe, filename safe, no punctuation for easy doubleclicking, not case sensitive, widely supported by stdlibs, easy to implement, short enough for url location component (63 chars), sigils make sense, easy to regex, works as a link in markdown, works well in HTML
 * base64url
     * https://github.com/commenthol/url-safe-base64#readme
-* base58check - used by Bitcoin and IPFS
+* base58 and base58check - used by Bitcoin and IPFS
     * multibase - https://github.com/multiformats/multibase
 * base32
 * https://tools.ietf.org/html/rfc4648 - base 16, 32, 64
 * sigils
-    * author: `'@' + baseXX(pubkey) + '.ed25519'`
-    * signature: `baseXX(sig) + '.sig.ed25519'`
+    * author: `'@' + baseXX(pubkey)
+    * signature: `baseXX(sig)`
     * pointer to a key: ?
     * pointer to a specific key version: `hash(message)`?
     * blobs are not used in this system.  Put your blobs under the key `blobs/xxxx` or something.
@@ -362,7 +364,7 @@ There's a simple canonical way to hash an item: mostly you just concat all the f
         sha256(item.value),
         '' + item.timestamp,
         item.author,
-    ].join('\n'));
+    ].join('\n')).hexDigest();
 ```
 None of those fields are allowed to contain newlines (except value, which is hashed for that reason) so newlines are safe to use as a delimiter.
 
@@ -372,7 +374,7 @@ Note that items only ever have to get transformed INTO this representation just 
 
 There is no canonical "feed encoding" - only the canonical way to hash an item, above.  Databases and network code can represent the item in any way they want.
 
-The hash and signature specification may change as the schema evolves beyond `kp.1`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
+The hash and signature specification may change as the schema evolves beyond `es.1`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
 
 ### To validate incoming items:
 * check all the fields exist, have correct data types and no `\n`
@@ -467,14 +469,14 @@ POST /batch-ingest-items    items=[ {...}, {...} ]
 # TODO
 
 ### Encoding of values:
-* Currently everything is a utf8 string
+* Currently values are just utf8 strings
 * Do we want to make it easier to hold other things, and encode/decode for the user?
 * Maybe a prefix:
 ```
 b:....  binary as base64
 u:....  utf-8
 j:....  json
-t:      tombstone for deleted items
+d:      tombstone for deleted items
 ```
 
 ### Key shorthand

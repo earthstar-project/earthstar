@@ -525,7 +525,6 @@ for (let scenario of scenarios) {
 
         t.done();
     });
-    /*
 
     t.test(scenario.description + ': sync: misc other options', (t: any) => {
         let esEmpty1 = scenario.makeStore(WORKSPACE);
@@ -533,7 +532,7 @@ for (let scenario of scenarios) {
         let es = scenario.makeStore(WORKSPACE);
 
         // this time let's omit schema and timestamp
-        t.ok(es.set({format: FORMAT, key: 'foo', value: 'bar', author: author1, authorSecret: keypair1.secret}));
+        t.ok(es.set(keypair1, {format: FORMAT, key: 'foo', value: 'bar'}));
 
         // live mode (not implemented yet)
         t.throws(() => esEmpty1.sync(esEmpty2, {live: true}), 'live is not implemented yet and should throw');
@@ -562,5 +561,4 @@ for (let scenario of scenarios) {
 
         t.done();
     });
-    */
 }

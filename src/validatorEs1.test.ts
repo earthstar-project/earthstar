@@ -34,17 +34,17 @@ t.test('keyIsValid', (t: any) => {
 });
 
 t.test('authorCanWriteToKey', (t: any) => {
-    let author = '@aaa.ed25519';
+    let author = 'abcdefg';  // no '@'
     t.ok(Val.authorCanWriteToKey(author, 'public'), 'regular public key');
     t.ok(Val.authorCanWriteToKey(author, author + '/about'), 'public key containing author');
     t.ok(Val.authorCanWriteToKey(author, '~' + author + '/about'), 'only writable by author');
-    t.ok(Val.authorCanWriteToKey(author, '~@notme.ed25519~' + author + '/about'), 'writable by me and someone else');
+    t.ok(Val.authorCanWriteToKey(author, '~notme' + '~' + author + '/about'), 'writable by me and someone else');
 
     t.ok(Val.authorCanWriteToKey(author, '~' + author + '/about/~'), 'extra tilde');
     t.ok(Val.authorCanWriteToKey(author, '~' + author + '/about/~@notme.ed25519'), 'second author');
 
-    t.notOk(Val.authorCanWriteToKey(author, '~@notme.ed25519/about'), 'only writable by someone else');
-    t.notOk(Val.authorCanWriteToKey(author, 'zzz~zzz'), 'nobody can write to a key with a bare ~');
+    t.notOk(Val.authorCanWriteToKey(author, '~notme.ed25519/about'), 'only writable by someone else');
+    t.notOk(Val.authorCanWriteToKey(author, 'zzz/~/zzz'), 'nobody can write to a key with a bare ~');
 
     t.done();
 });

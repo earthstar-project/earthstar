@@ -1,6 +1,6 @@
 import crypto = require('crypto');
 import { Keypair, KeypairBuffers } from './types';
-import { ICrypto, encode, decode, encodePair } from './cryptoUtil';
+import { ICrypto, encodePair, encodeSig, decodeSecret, decodePubkey, decodeSig } from './cryptoUtil';
 
 const _generateKeypairDerBuffers = () : KeypairBuffers => {
     // Typescript has outdated definitions, doesn't know about ed25519
@@ -49,11 +49,11 @@ export const CryptoNode : ICrypto = class {
     static sign(keypair : Keypair, msg : string | Buffer) : string {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         // prettier-ignore
-        return encode(crypto.sign(
+        return encodeSig(crypto.sign(
             null,
             msg,
             {
-                key: _lengthenDerSecret(decode(keypair.secret)),
+                key: _lengthenDerSecret(decodeSecret(keypair.secret)),
                 format: 'der',
                 type: 'pkcs8',
             }
@@ -67,11 +67,11 @@ export const CryptoNode : ICrypto = class {
                 null,
                 msg,
                 {
-                    key: _lengthenDerPublic(decode(publicKey)),
+                    key: _lengthenDerPublic(decodePubkey(publicKey)),
                     format: 'der',
                     type: 'spki',
                 } as any,
-                decode(sig),
+                decodeSig(sig),
             );
         } catch (e) {
             return false;
