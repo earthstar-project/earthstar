@@ -77,24 +77,24 @@ Like Scuttlebutt, but:
 * uses a key-value data model instead of event-sourcing, to reduce the need for custom indexing
 * supports partial replication
 * will sync over HTTP, so it's easy to host in places like Glitch.com
+* has less strict data guarantees -- you can't tell if you have someone's entire dataset or not
 
 Like DAT, but:
 * multi-author, multi-device
-* simpler code and algorithms, easier to implement
+* simpler
 
 Like IPFS, but:
-* mutable
 * multi-author, multi-device
+* mutable
 
-Sometimes immutability is needed, like if you're running a package registry or want an audit log.  For social-network style use cases, though, immutability is a privacy liability instead of a desirable guarantee.
+Sometimes immutability is needed, like if you're running a package registry or want an audit log.  For social-network style use cases, though, immutability can be a privacy liability instead of a desirable guarantee.
 
 ## Use cases
 
-Earthstar can be used for small invite-only tools (think Slack) and large open-world tools (think Facebook).  Apps can decide which authors to replicate, ensuring you download the people you care about and not the entire world.
+Earthstar can be used for invite-only tools where you have all the data (think Slack) and large open-world tools where you only replicate part of the entire dataset (think SSB).  Apps tell Earthstar what keys and what authors to replicate.
 
 These styles of app could be built on top of Earthstar:
-* Wikis
-* End-to-end encrypted chat
+* wikis
 * chat: Slack, IRC
 * social: Facebook, Scuttlebutt, Discourse, LiveJournal, Forums
 * microblogging: Twitter, Mastodon
@@ -108,11 +108,13 @@ Earthstar doesn't handle multi-user text editing like Google Docs.  This is a di
 
 It's not real-time yet - changes propagate over a few minutes.  This will improve but might not ever get below 1s latency.
 
-The crypto is not audited or bulletproof yet.
+The cryptography is not audited or bulletproof yet.
 
 Earthstar is not focused on anonymity -- more on autonomy.  You could use it over Tor or something.
 
 Earthstar doesn't provide transactions or causality guarantees across keys.
+
+Moderation and blocking support is not built in, but apps can build it on top of Earthstar.
 
 ## Example
 
@@ -124,6 +126,9 @@ The API for a Store:
 // You also choose which feed formats you want to support
 // by supplying validators (one for each format).
 constructor(validators : IValidator[], workspace : string)
+
+// subscribe to changes.  returns a function you can use to unsubscribe.
+onChange.subscribe(cb : () => void | Promise<void>) : () => void;
 
 // look up a key and get the corresponding value...
 getValue(key : string) : string | undefined;
@@ -232,6 +237,12 @@ let es2 = new StoreMemory();
 es.sync(es2);
 // Now es and es2 are identical.
 
+// Get notified when anything changes.
+let unsub = es.onChange.subscribe(yourCallback);
+
+// Later, you can turn off your subscription
+unsub();
+
 //------------------------------
 // Upcoming features
 
@@ -241,9 +252,6 @@ es.sync(es2, [
     { prefix: 'about/' },
     { prefix: 'wiki/' },
 ]);
-
-// Soon you can subscribe to changes from a Store:
-es.onChange(cb);  // -> new data events, changed data events
 
 // Soon you can control who can join, read, and write in a workspace, but details TBD.
 
@@ -273,12 +281,6 @@ es.onChange(cb);  // -> new data events, changed data events
 ### Classes
 * Store -- responsible for holding and querying the data.
 * Validator -- for a specific feed format, checks validity of incoming messages and signs outgoing messages.
-* Coming soon:
-    * HTTPSyncer -- run HTTP server, and sync over HTTP
-    * StreamSyncer -- sync over a duplex stream
-    * PeerFinder -- find peers and connect to them
-    * EncryptedStore -- make it easier to store encrypted items
-    * your app -- tell Earthstar which data and which peers you are interested in so it knows what to fetch
 
 ### Planned features:
 * Workspaces - Like a Slack workspace / Discord server / scuttleverse.  Control who joins, block people, invitations, etc.

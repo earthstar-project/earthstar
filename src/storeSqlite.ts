@@ -15,6 +15,7 @@ import {
     SyncResults,
     WorkspaceId,
 } from './types';
+import { Emitter } from './emitter';
 
 //let log = console.log;
 //let logWarning = console.log;
@@ -44,7 +45,10 @@ export class StoreSqlite implements IStore {
     db : SqliteDatabase;
     workspace : WorkspaceId;
     validatorMap : {[format: string] : IValidator};
+    onChange : Emitter<undefined>;
     constructor(opts : StoreSqliteOpts) {
+        this.onChange = new Emitter<undefined>();
+
         if (opts.validators.length === 0) {
             throw "must provide at least one validator";
         }
@@ -330,6 +334,7 @@ export class StoreSqlite implements IStore {
             INSERT OR REPLACE INTO items (format, workspace, key, value, author, timestamp, signature)
             VALUES (:format, :workspace, :key, :value, :author, :timestamp, :signature);
         `).run(item);
+        this.onChange.send(undefined);
         return true;
     }
 

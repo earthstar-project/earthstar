@@ -10,6 +10,7 @@ import {
     SyncResults,
     WorkspaceId,
 } from './types';
+import { Emitter } from './emitter';
 
 //let log = console.log;
 //let logWarning = console.log;
@@ -58,8 +59,11 @@ export class StoreMemory implements IStore {
     _items : {[key:string] : {[author:string] : Item}} = {};
     workspace : WorkspaceId;
     validatorMap : {[format: string] : IValidator};
+    onChange : Emitter<undefined>;
     constructor(validators : IValidator[], workspace : WorkspaceId) {
         this.workspace = workspace;
+
+        this.onChange = new Emitter<undefined>();
 
         if (validators.length === 0) {
             throw "must provide at least one validator";
@@ -208,6 +212,7 @@ export class StoreMemory implements IStore {
 
         existingItemsByKey[item.author] = item;
         this._items[item.key] = existingItemsByKey;
+        this.onChange.send(undefined);
         return true;
     }
 

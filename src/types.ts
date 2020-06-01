@@ -1,3 +1,5 @@
+import { Emitter } from './emitter';
+
 export type Key = string;
 export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
 export type Signature = string;  // xxxxxxxxxxxx
@@ -84,6 +86,11 @@ export interface IStore {
     // constructor(workspace, ...);
     workspace : WorkspaceId;
 
+    // onChange is called whenever any data changes.
+    // it doesn't yet send any details about the changes.
+    // subscribe with onChange.subscribe(...cb...);
+    onChange : Emitter<undefined>;
+
     items(query? : QueryOpts) : Item[];
     keys(query? : QueryOpts) : string[];
     values(query? : QueryOpts) : string[];
@@ -100,9 +107,6 @@ export interface IStore {
 
     _syncFrom(otherStore : IStore, existing : boolean, live : boolean) : number;
     sync(otherStore : IStore, opts? : SyncOpts) : SyncResults;
-
-    // TODO: change feed
-    // onChange(cb);
 
     // TODO: Delete data locally.  This deletion will not propagate.
     // forget(query : QueryOpts) : void;  // same query options as keys()

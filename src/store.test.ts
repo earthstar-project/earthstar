@@ -6,6 +6,8 @@ import { ValidatorEs1 } from "./validatorEs1";
 import { StoreMemory } from './storeMemory';
 import { StoreSqlite } from './storeSqlite';
 
+//t.runOnly = true;
+
 //================================================================================
 // prepare for test scenarios
 
@@ -558,6 +560,27 @@ for (let scenario of scenarios) {
         // successful sync
         t.same(es.sync(esEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
         t.same(esEmpty2.sync(es), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
+
+        t.done();
+    });
+
+    t.test(scenario.description + ': onChange', (t: any) => {
+        let es = scenario.makeStore(WORKSPACE);
+
+        let numCalled = 0;
+        let cb = () => { numCalled += 1; }
+        let unsub = es.onChange.subscribe(cb);
+
+        t.ok(es.set(keypair1, {format: FORMAT, key: 'key1', value: 'val1.0', timestamp: now}), 'set new key');
+        t.notOk(es.set(keypair1, {format: 'xxx', key: 'key1', value: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
+        t.equal(es.getValue('key1'), 'val1.0', 'second set was ignored');
+
+        t.equal(numCalled, 1, 'callback was called once');
+        unsub();
+
+        t.ok(es.set(keypair1, {format: FORMAT, key: 'key2', value: 'val2.0', timestamp: now + 1}), 'set another key');
+
+        t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 
         t.done();
     });
