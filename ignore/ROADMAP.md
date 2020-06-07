@@ -136,7 +136,15 @@ reserved
     gen-delims  :/?#[]@
 
 allowed           0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
-allowed           '()-._~  and reserved somehow: !*
+
+unchanged by encodeURLComponent:
+                  '()-._~  and reserved somehow: !*
+
+unchanged by browsers, in paths:
+                   $&+,/: =?@
+not ok in paths:
+                  #        ? 
+
 used by URLs      #$&+,/:;=?@
 forbidden in URLs  "<>[\]^`{|}  and % except used for percent-encoding
 
@@ -166,7 +174,171 @@ btih: "bittorrent info hash"
 
 Unicode identifier and pattern syntax, and unicode hashtags
 https://unicode.org/reports/tr31/
-
 ```
 
-TODO: if doing conflict resolution by hand, do we need a `supercedes` field for backlinks to other old values that we're overriding?
+URI types
+```
+ALNUM = azAZ09
+WSNAME = ALNUM+ between 1 and 15 characters inclusive
+B58KEY = azAZ09 * 43
+UUID = azAZ09 * 20
+
+// WS needs to look like a hostname.
+// The name seperator needs to be one of "_" | "-" | "." but "." seems to work best.
+// Total length not counting "//" needs to be <= 63 chars between periods
+
+WS = "//" WSNAME "." B58KEY     // access-controlled group
+WS = "//" WSNAME "." UUID    // secret group
+     .........1.........2.........3.........4.........5.........6...
+                .........1.........2.........3.........4...
+   = //solarpunk.mVkCjHbAcjEBddaZwxFVSiQdVFuvXSiH3B5K5bH7Hcx
+   = //solarpunk.mVkCjHbAcjEBddaZwxFV
+
+// A way to include the workspace secret to use in invitations
+WSSECRET = WS ("." B58SECRET)?
+   = //solarpunk.mVkCjHbAcjEBddaZwxFV.secrethere
+
+
+// AUTHOR has many options for its name separator like -_:.
+// But let's use "." to match WS
+
+AUTHOR = "@" ALNUM*4 "." B58KEY
+   = @cinn.xjAHzdJHgMvJBqgD4iUNhmuwQbuMzPuDkntLi1sjjz
+
+
+// FOLDERSEP could be any of "/" | ":" | "." but period is taken.
+// let's use "/" to be like regular URL paths
+
+FOLDERSEP = "/"
+KEYCHAR = any of ALNUM  FOLDERSEP  '()-._~  !*  $&+,:=?@  %
+KEY = "/" KEYCHAR*
+    /wiki/shared/Solar%20Panels
+    /about/~@cinn.xjAHzdJ/name
+
+
+COMBO = WSSECRET "/" (AUTHOR | KEY)
+    //solarpunk.mVkCjHbAcj/@cinn.xjAHzdJh
+    //solarpunk.mVkCjHbAcj//key/wiki/shared/Farming
+    //solarpunk.mVkCjHbAcj.secrethere//key/wiki/shared/Farming
+
+PUBURL = ORIGIN COMBO
+    http://mypub.com:8000//solarpunk.mVkCjHbAc
+    http://mypub.com:8000//solarpunk.mVkCjHbAc//wiki/shared/Farming
+    http://mypub.com:8000//solarpunk.mVkCjHbAcj/@cinn.xjAHzdJh
+    http://mypub.com:8000//solarpunk.mVkCjHbAcj.secrethere/@cinn.xjAHzdJh
+
+PUB_SYNC_API =
+    http://mypub.com:8000//solarpunk.mVkCjHbAc/sync/v1/...
+
+DHT = PROTOCOL "://" SWARMKEY COMBO
+    hyperswarm://swarmkey//solarpunk.mVkCjHbAc
+    libp2p://swarmkey//solarpunk.mVkCjHbAc.secrethere
+```
+
+wikilinks
+```
+wiki page links: these get "/wiki/shared/" put in front, or "/wiki/~@foo/"
+
+    #with%20space   url-encode hashtags
+    [[with space]]
+
+    #sharedorpersonal   with no sigil where does it go?
+    [[sharedorpersonal]]
+
+    #+sharedpage   maybe a sigil for shared pages: "+" "&" ":"
+    [[+sharedpage]]
+
+    #~mypage     has just a tilde so it's my personal link.  should it have a slash too?  ~/foo
+    [[~mypage]]
+
+    #~@aaa/mypage    has a tilde so it's a personal link
+    [[~@aaa/mypage]]
+
+    #@aaa    just a user
+    [[@aaa]]
+
+regular markdown links to any earthstar key or author
+    [a         key    link](/wiki/shared/page%20title)
+    [a         author link](@cinn.fjaoeiJFOEF)
+    [another     workspace](//gardening.aAbBcC)
+    [a distant key    link](//gardening.aAbBcC//@cinn.fjaoeiJFOEF)
+    [a distant author link](//gardening.aAbBcC//wiki/shared/Ladybug)
+
+bare author
+    @cinn_fjaoeiJFOEF
+
+bare key
+    /wiki/shared/page%20title
+
+bare workspace
+    //solarpunk.JoiaJDOajd
+```
+
+### TODO
+
+if doing conflict resolution by hand, do we need a `supercedes` field for backlinks to other old values that we're overriding?
+## Markdown parsing experiment
+
+http://www.google.com
+
+[xxx](http://www.google.com)
+
+---
+
+//google.com
+
+[xxx](//google.com)
+
+---
+
+//solarpunk.aAaAa0011
+
+[xxx](//solarpunk.aAaAa0011)
+
+---
+
+//solarpunk_aAaAa0011
+
+[xxx](//solarpunk_aAaAa0011)
+
+---
+
+/abspath
+
+[xxx](/abspath)
+
+---
+
+relpath/x
+
+[xxx](relpath/x)
+
+---
+
+url()url
+
+[xxx](url()url) ok
+
+---
+
+url url
+
+[xxx](url url)
+
+---
+
+[xxx]
+
+(yyy)
+
+[[xxx]]
+
+((yyy))
+
+[/aaa]
+
+(/aaa)
+
+[aa aa]
+
+(aa aa)
