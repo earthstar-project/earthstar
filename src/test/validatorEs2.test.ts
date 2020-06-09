@@ -53,7 +53,7 @@ t.test('hashItem', (t: any) => {
     let item1: Item = {
         format: 'es.2',
         workspace: 'gardenclub',
-        key: 'k1',
+        path: 'k1',
         value: 'v1',
         timestamp: 1,
         author: '@me.ed25519',
@@ -67,7 +67,7 @@ t.test('signItem and itemSignatureIsValid', (t: any) => {
     let item1: Item = {
         format: 'es.2',
         workspace: 'gardenclub',
-        key: 'k1',
+        path: 'k1',
         value: 'v1',
         timestamp: 1,
         author: author1,
@@ -89,7 +89,7 @@ t.test('signItem and itemSignatureIsValid', (t: any) => {
         'sig not valid if schema changes'
     );
     t.notOk(
-        Val.itemSignatureIsValid({...signedItem, key: 'xxx'}),
+        Val.itemSignatureIsValid({...signedItem, path: 'xxx'}),
         'sig not valid if key changes'
     );
     t.notOk(
@@ -150,7 +150,7 @@ t.test('itemIsValid', (t: any) => {
     let item1: Item = {
         format: 'es.2',
         workspace: 'gardenclub',
-        key: 'k1',
+        path: 'k1',
         value: 'v1',
         timestamp: now,
         author: author1,
@@ -162,7 +162,7 @@ t.test('itemIsValid', (t: any) => {
 
     t.notOk(Val.itemIsValid({...signedItem, format: false as any}), 'format wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, workspace: false as any}), 'workspace wrong datatype');
-    t.notOk(Val.itemIsValid({...signedItem, key: false as any}), 'key wrong datatype');
+    t.notOk(Val.itemIsValid({...signedItem, path: false as any}), 'key wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, value: false as any}), 'value wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, timestamp: false as any}), 'timestamp wrong datatype');
     t.notOk(Val.itemIsValid({...signedItem, author: false as any}), 'author wrong datatype');
@@ -172,25 +172,25 @@ t.test('itemIsValid', (t: any) => {
 
     t.notOk(Val.itemIsValid({...signedItem, format: snowmanJsString}), 'format non-ascii');
     t.notOk(Val.itemIsValid({...signedItem, workspace: snowmanJsString}), 'workspace non-ascii');
-    t.notOk(Val.itemIsValid({...signedItem, key: snowmanJsString}), 'key non-ascii');
+    t.notOk(Val.itemIsValid({...signedItem, path: snowmanJsString}), 'key non-ascii');
     t.notOk(Val.itemIsValid({...signedItem, author: snowmanJsString}), 'author non-ascii');
     t.notOk(Val.itemIsValid({...signedItem, signature: snowmanJsString}), 'signature non-ascii');
 
     t.notOk(Val.itemIsValid({...signedItem, format: '\n'}), 'newline in format');
     t.notOk(Val.itemIsValid({...signedItem, workspace: '\n'}), 'newline in workspace');
-    t.notOk(Val.itemIsValid({...signedItem, key: '\n'}), 'newline in key');
+    t.notOk(Val.itemIsValid({...signedItem, path: '\n'}), 'newline in key');
     t.notOk(Val.itemIsValid({...signedItem, author: '\n'}), 'newline in author');
     t.notOk(Val.itemIsValid({...signedItem, signature: '\n'}), 'newline in signature');
 
     t.notOk(Val.itemIsValid({...signedItem, format: 'xxxxxx' as any}), 'unknown format');
 
     let missingKey = {...signedItem};
-    delete missingKey.key;
+    delete missingKey.path;
     t.notOk(Val.itemIsValid(missingKey), 'missing key');
 
     t.notOk(Val.itemIsValid({...signedItem, author: 'a\nb'}), 'newline in author');
-    t.notOk(Val.itemIsValid({...signedItem, key: '\n'}), 'invalid key');
-    t.notOk(Val.itemIsValid({...signedItem, key: '{}'}), 'no write permission');
+    t.notOk(Val.itemIsValid({...signedItem, path: '\n'}), 'invalid key');
+    t.notOk(Val.itemIsValid({...signedItem, path: '{}'}), 'no write permission');
 
     t.notOk(Val.itemIsValid(item1), 'bad signature');
     t.notOk(Val.itemIsValid({...signedItem, timestamp: now / 1000}), 'timestamp too small, probably in milliseconds');

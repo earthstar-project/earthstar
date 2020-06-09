@@ -13,7 +13,7 @@ import {
     RawCryptKey,
     SyncOpts,
     SyncResults,
-    WorkspaceId,
+    WorkspaceAddress,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 
@@ -36,14 +36,14 @@ export interface StorageSqliteOpts {
     // file may or may not exist
     //
     mode: 'open' | 'create' | 'create-or-open',
-    workspace: WorkspaceId | null,
+    workspace: WorkspaceAddress | null,
     validators: IValidator[],  // must provide at least one
     filename: string,
 }
 
 export class StorageSqlite implements IStorage {
     db : SqliteDatabase;
-    workspace : WorkspaceId;
+    workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
     constructor(opts : StorageSqliteOpts) {
@@ -233,7 +233,7 @@ export class StorageSqlite implements IStorage {
         // expected in the case of keys.
         log(`---- keys(${JSON.stringify(query)})`);
         return this.items({...query, includeHistory: false})
-            .map(item => item.key);
+            .map(item => item.path);
     }
     values(query? : QueryOpts) : string[] {
         // get items that match the query, sort by key, and return their values.
@@ -316,7 +316,7 @@ export class StorageSqlite implements IStorage {
             AND author = :author
             ORDER BY timestamp DESC
             LIMIT 1;
-        `).get({ key: item.key, author: item.author });
+        `).get({ key: item.path, author: item.author });
         
         // Compare timestamps.
         // Compare signature to break timestamp ties.
@@ -356,7 +356,7 @@ export class StorageSqlite implements IStorage {
         let item : Item = {
             format: itemToSet.format,
             workspace: this.workspace,
-            key: itemToSet.key,
+            path: itemToSet.key,
             value: itemToSet.value,
             author: keypair.public,
             timestamp: itemToSet.timestamp > 0 ? itemToSet.timestamp : Date.now()*1000,
@@ -367,7 +367,7 @@ export class StorageSqlite implements IStorage {
         // make sure our timestamp is greater
         // even if this puts us slightly into the future.
         // (We know about the existing item so let's assume we want to supercede it.)
-        let existingItemTimestamp = this.getItem(item.key)?.timestamp || 0;
+        let existingItemTimestamp = this.getItem(item.path)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
         let signedItem = validator.signItem(keypair, item);

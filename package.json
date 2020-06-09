@@ -13,7 +13,7 @@
     "./build/storeSqlite.js": false
   },
   "scripts": {
-    "clean": "rm -rf build/*.{js,ts} .nyc_output coverage",
+    "clean": "rm -rf build/* .nyc_output coverage",
     "build": "tsc",
     "watch-test": "onchange --initial --kill --delay 1000 src/*.ts -- npm run build-and-test",
     "start": "node build/main.js",

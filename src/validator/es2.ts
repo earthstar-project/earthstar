@@ -41,7 +41,7 @@ export const ValidatorEs1 : IValidator = class {
         return Crypto.sha256([
             item.format,
             item.workspace,
-            item.key,
+            item.path,
             Crypto.sha256(item.value),
             '' + item.timestamp,
             item.author,
@@ -69,7 +69,7 @@ export const ValidatorEs1 : IValidator = class {
 
         if (   typeof item.format !== 'string'
             || typeof item.workspace !== 'string'
-            || typeof item.key !== 'string'
+            || typeof item.path !== 'string'
             || typeof item.value !== 'string'
             || typeof item.author !== 'string'
             || typeof item.timestamp !== 'number'
@@ -135,7 +135,7 @@ export const ValidatorEs1 : IValidator = class {
         }
 
         // Key must be valid (only printable ascii, etc)
-        if (!this.keyIsValid(item.key)) {
+        if (!this.keyIsValid(item.path)) {
             logWarning('itemIsValid: key not valid');
             return false;
         }
@@ -147,7 +147,7 @@ export const ValidatorEs1 : IValidator = class {
         }
 
         // Author must have write permission
-        if (!this.authorCanWriteToKey(item.author, item.key)) {
+        if (!this.authorCanWriteToKey(item.author, item.path)) {
             logWarning('itemIsValid: author can\'t write to key');
             return false;
         }

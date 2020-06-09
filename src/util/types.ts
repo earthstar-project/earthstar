@@ -19,30 +19,28 @@ export type WorkspaceParsed = {
     pubkey: EncodedKey,
 }
 
-//================================================================================
-
-export type Key = string;
-export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
-export type Signature = string;  // xxxxxxxxxxxx
-export type WorkspaceId = string;
-export type FormatName = string;
-
 export interface KeypairBuffers {
     public: Buffer,
     secret: Buffer,
 }
 export type Keypair = {
-    public: RawCryptKey,
-    secret: RawCryptKey,
+    public: EncodedKey,
+    secret: EncodedKey,
 }
+
+//================================================================================
+
+export type Key = string;
+export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
+export type Signature = string;  // xxxxxxxxxxxx
+export type FormatName = string;
 
 export type Item = {
     format : FormatName,
-    workspace : WorkspaceId,
-    // workspace : string,
-    key : string,
+    workspace : WorkspaceAddress,
+    path : Path,
     value : string,
-    author : RawCryptKey,
+    author : AuthorAddress,
     timestamp : number,
     signature : Signature,
 }
@@ -105,7 +103,7 @@ export interface IValidator {
 export interface IStorage {
     // the constructor should accept a workspace
     // constructor(workspace, ...);
-    workspace : WorkspaceId;
+    workspace : WorkspaceAddress;
 
     // onChange is called whenever any data changes.
     // it doesn't yet send any details about the changes.

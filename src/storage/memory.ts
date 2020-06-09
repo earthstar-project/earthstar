@@ -8,7 +8,7 @@ import {
     RawCryptKey,
     SyncOpts,
     SyncResults,
-    WorkspaceId,
+    WorkspaceAddress,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 
@@ -57,10 +57,10 @@ export class StorageMemory implements IStorage {
       (with the highest timestamp).
     */
     _items : {[key:string] : {[author:string] : Item}} = {};
-    workspace : WorkspaceId;
+    workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
-    constructor(validators : IValidator[], workspace : WorkspaceId) {
+    constructor(validators : IValidator[], workspace : WorkspaceAddress) {
         this.workspace = workspace;
 
         this.onChange = new Emitter<undefined>();
@@ -196,7 +196,7 @@ export class StorageMemory implements IStorage {
             return false;
         }
 
-        let existingItemsByKey = this._items[item.key] || {};
+        let existingItemsByKey = this._items[item.path] || {};
         let existingFromSameAuthor = existingItemsByKey[item.author];
 
         // Compare timestamps.
@@ -211,7 +211,7 @@ export class StorageMemory implements IStorage {
         }
 
         existingItemsByKey[item.author] = item;
-        this._items[item.key] = existingItemsByKey;
+        this._items[item.path] = existingItemsByKey;
         this.onChange.send(undefined);
         return true;
     }
@@ -233,7 +233,7 @@ export class StorageMemory implements IStorage {
         let item : Item = {
             format: itemToSet.format,
             workspace: this.workspace,
-            key: itemToSet.key,
+            path: itemToSet.key,
             value: itemToSet.value,
             author: keypair.public,
             timestamp: itemToSet.timestamp > 0 ? itemToSet.timestamp : Date.now()*1000,
@@ -244,7 +244,7 @@ export class StorageMemory implements IStorage {
         // make sure our timestamp is greater
         // even if this puts us slightly into the future.
         // (We know about the existing item so let's assume we want to supercede it.)
-        let existingItemTimestamp = this.getItem(item.key)?.timestamp || 0;
+        let existingItemTimestamp = this.getItem(item.path)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
         let signedItem = validator.signItem(keypair, item);
