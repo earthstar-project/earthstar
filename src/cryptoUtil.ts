@@ -1,5 +1,5 @@
 import mb = require('multibase');
-import { Keypair, KeypairBuffers } from './types';
+import { Keypair, KeypairBuffers } from './util/types';
 
 export interface ICrypto {
     sha256(input: string | Buffer) : string ;

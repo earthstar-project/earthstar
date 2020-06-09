@@ -1,5 +1,5 @@
 import t = require('tap');
-import { Keypair, RawCryptKey } from '../types';
+import { Keypair, RawCryptKey } from '../util/types';
 import { Crypto } from '../crypto';
 import {
     encodePubkey,

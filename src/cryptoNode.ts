@@ -1,5 +1,5 @@
 import crypto = require('crypto');
-import { Keypair, KeypairBuffers } from './types';
+import { Keypair, KeypairBuffers } from './util/types';
 import { ICrypto, encodePair, encodeSig, decodeSecret, decodePubkey, decodeSig } from './cryptoUtil';
 
 const _generateKeypairDerBuffers = () : KeypairBuffers => {

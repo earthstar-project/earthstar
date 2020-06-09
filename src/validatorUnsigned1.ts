@@ -1,4 +1,4 @@
-import { Keypair, FormatName, Item, IValidator, Key, RawCryptKey } from './types';
+import { Keypair, FormatName, Item, IValidator, Key, RawCryptKey } from './util/types';
 import { Crypto } from './crypto';
 
 /*

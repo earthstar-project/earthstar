@@ -9,8 +9,8 @@ import {
     SyncOpts,
     SyncResults,
     WorkspaceId,
-} from './types';
-import { Emitter } from './emitter';
+} from './util/types';
+import { Emitter } from './util/emitter';
 
 //let log = console.log;
 //let logWarning = console.log;

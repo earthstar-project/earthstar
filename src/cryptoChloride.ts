@@ -1,6 +1,6 @@
 import crypto = require('crypto');
 import sodium = require('chloride')
-import { Keypair, KeypairBuffers } from './types';
+import { Keypair, KeypairBuffers } from './util/types';
 import { ICrypto, encodePair, decodePubkey, decodeSecret, decodeSig, encodeSig } from './cryptoUtil';
 
 export const CryptoChloride : ICrypto = class {
