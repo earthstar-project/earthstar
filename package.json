@@ -21,6 +21,8 @@
     "test": "tap -Rspecy --jobs=1 build/test/*.test.js",
     "test-crypto": "tap -Rspecy --jobs=1 build/test/crypto.test.js",
     "test-parse": "tap -Rspecy --jobs=1 build/test/parse.test.js",
+    "test-format": "tap -Rspecy --jobs=1 build/test/validatorEs2.test.js",
+    "test-storage": "tap -Rspecy --jobs=1 build/test/storage.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",
     "build-and-test": "npm run build && npm run test",
     "prepublishOnly": "npm run clean && npm run build && npm test"

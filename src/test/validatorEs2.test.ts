@@ -59,7 +59,7 @@ t.test('hashItem', (t: any) => {
         author: '@me.ed25519',
         signature: 'xxx.sig.ed25519',
     };
-    t.equal(Val.hashItem(item1), 'de4620b3b17e327f1153166241f26669391baf5180c0e28e5c196ea3781fe961');
+    t.equal(Val.hashItem(item1), '89b37cdfb52ac4c6d85599cdb19d1ff0d6340b924478ea7db36cce3912839db3');
     t.done();
 });
 
