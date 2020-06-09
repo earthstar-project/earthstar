@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import t = require('tap');
-import { Crypto } from '../crypto';
+import { Crypto } from '../crypto/crypto';
 import { SyncOpts, Item, FormatName, RawCryptKey, IStorage, IValidator } from '../util/types';
 import { ValidatorEs1 } from '../validatorEs1';
 import { StorageMemory } from '../storage/memory';

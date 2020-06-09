@@ -1,6 +1,6 @@
-import { CryptoChloride } from '../cryptoChloride';
-import { CryptoNode } from '../cryptoNode';
-import { encodePair } from '../cryptoUtil';
+import { CryptoChloride } from '../crypto/cryptoChloride';
+import { CryptoNode } from '../crypto/cryptoNode';
+import { encodePair } from '../crypto/cryptoUtil';
 let log = console.log;
 
 let msg = 'hello';

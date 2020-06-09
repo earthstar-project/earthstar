@@ -1,5 +1,5 @@
 import t = require('tap');
-import { Crypto } from '../crypto';
+import { Crypto } from '../crypto/crypto';
 import { Item, RawCryptKey } from '../util/types';
 import { ValidatorEs1 } from '../validatorEs1';
 

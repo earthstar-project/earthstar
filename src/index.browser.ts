@@ -1,5 +1,5 @@
-export * from './crypto';
-export * from './cryptoUtil';
+export * from './crypto/crypto';
+export * from './crypto/cryptoUtil';
 export * from './storage/memory';
 export * from './util/types';
 export * from './validatorEs1';
