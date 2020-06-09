@@ -24,6 +24,10 @@ const digits = '0123456789';
 const authorShortnameChars = alphaLower;
 const workspaceNameChars = alphaLower;
 const b58chars = alphaLower + alphaUpper + digits;  // todo: make this match b58 charset
+const pathChars = alphaLower + alphaUpper + digits + "/'()-._~!*$&+,:=?@%";
+
+export let isValidPath = (path : string) : boolean =>
+    path.startsWith('/') && onlyHasChars(path, pathChars);
 
 export let parseWorkspaceAddress = (addr : string) : {workspace: Workspace | null, err : string | null} => {
     // example: //solarpunk.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP

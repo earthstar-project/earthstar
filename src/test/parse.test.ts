@@ -7,6 +7,7 @@ import {
 import {
     parseWorkspaceAddress,
     parseAuthorAddress,
+    isValidPath,
 } from '../util/parse';
 
 let log = console.log;
@@ -165,6 +166,170 @@ t.test('parse workspace address', (t: any) => {
             log(actualOutput.err);
             t.same(v.output, actualOutput, v.note || 'vector should succeed');
         }
+    }
+    t.end();
+});
+
+type AuthorVector = {
+    note?: string,
+    input : WorkspaceAddress,
+    output: {author: Author | null, err: string | boolean | null},
+};
+t.test('parse author address', (t: any) => {
+    let vectors : AuthorVector[] = [
+        //----------------------------------------
+        // normal cases
+        {
+            note: 'ok: regular address',
+            input: '@suzy.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: {
+                author: {
+                    address: '@suzy.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    shortname: 'suzy',
+                    pubkey: '2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                },
+                err: null,
+            }
+        },
+
+        //----------------------------------------
+        // overall shape
+        {
+            note: 'x: empty string',
+            input: '', 
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: no leading @',
+            input: 'suzy.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: empty key',
+            input: '@suzy.',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: no key',
+            input: '@suzy',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: just a word',
+            input: 'suzy',
+            output: { author: null, err: true, }
+        },
+
+        //----------------------------------------
+        // characters
+        {
+            note: 'x: uppercase letters in name',
+            input: '//SUZY.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: emoji in name',
+            input: '//suz' + sparkleEmoji + '.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: snowman in name',
+            input: '//suz' + snowmanJsString + '.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: newline in name',
+            input: '//su\nz.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: newline in key',
+            input: '//suzy.2F2jmsq\nfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: ! in key',
+            input: '//suzy.2!2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: space in name',
+            input: '//su z.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: dash in name',
+            input: '//su-z.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: number in name',
+            input: '//su00.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        },
+
+        //----------------------------------------
+        // periods
+        {
+            note: 'x: too many periods',
+            input: '//suzy.foo.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: no periods',
+            input: '//suzy2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: no name',
+            input: '//2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            output: { author: null, err: true, }
+        },
+
+        //----------------------------------------
+        // name length
+        {
+            note: 'x: empty name',
+            input: '//.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: name 1 char long',
+            input: '//a.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: name 3 chars long',
+            input: '//abc.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            output: { author: null, err: true, }
+        }, {
+            note: 'x: name 5 chars long',
+            input: '//abcde.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            output: { author: null, err: true, }
+        }
+    ];
+    for (let v of vectors) {
+        let actualOutput = parseAuthorAddress(v.input);
+        if (actualOutput.err) {
+            t.same(!!v.output.err, !!actualOutput.err, v.note || 'vector should have error but does not');
+        } else {
+            log(actualOutput.err);
+            t.same(v.output, actualOutput, v.note || 'vector should succeed');
+        }
+    }
+    t.end();
+});
+
+
+type IsValidPathVector = {
+    note?: string,
+    path : string,
+    valid : boolean,
+};
+t.test('isValidPath', (t: any) => {
+    let vectors : IsValidPathVector[] = [
+        { valid: false, path: '' },
+        { valid: false, path: 'not-starting-with-slash' },
+        { valid: false,  path: '/with space' },
+        { valid: false,  path: '/with"' },
+        { valid: false,  path: '/with<' },
+        { valid: false,  path: '/with\nnewline' },
+
+        { valid: true,  path: '/' },
+        { valid: true,  path: '/foo' },
+        { valid: true,  path: '/FOO' },
+        { valid: true,  path: '/foo/' },
+        { valid: true,  path: '/foo/1234' },
+        { valid: true,  path: '/about/~@suzy.abc/name' },
+        { valid: true,  path: '/wiki/shared/Garden%20Gnome' },
+    ]
+    for (let v of vectors) {
+        t.same(v.valid, isValidPath(v.path),
+            v.note || `${v.valid}: ${v.path}`);
     }
     t.end();
 });

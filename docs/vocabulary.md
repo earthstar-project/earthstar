@@ -109,7 +109,7 @@ Must start with `/`.  Can contain numbers, letters, and these characters:
 ```
 /'()-._~!*$&+,:=?@%
 ```
-No spaces.  No unicode characters or unprintable ASCII.  Use percent-encoding to embed those characters.
+Case sensitive.  No spaces.  No unicode characters or unprintable ASCII.  Use percent-encoding to embed those characters.
 
 Typically the first folder component of the path represents the type of document, or the application used to make it.  When syncing data you can choose which paths to replicate (like `/wiki/*`).
 
