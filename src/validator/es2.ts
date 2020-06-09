@@ -8,7 +8,7 @@ let logWarning = console.log;
 //let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
 export const ValidatorEs1 : IValidator = class {
-    static format : FormatName = 'es.1';
+    static format : FormatName = 'es.2';
     static keyIsValid(key: Key): boolean {
         if (!isOnlyPrintableAscii(key)) {
             logWarning('invalid key: contains non-printable or non-ascii characters');

@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import t = require('tap');
 import { Crypto } from '../crypto/crypto';
 import { SyncOpts, Item, FormatName, RawCryptKey, IStorage, IValidator } from '../util/types';
-import { ValidatorEs1 } from '../validator/es1';
+import { ValidatorEs1 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
 
@@ -13,7 +13,7 @@ import { StorageSqlite } from '../storage/sqlite';
 
 let WORKSPACE = 'gardenclub';
 
-let FORMAT : FormatName = 'es.1';
+let FORMAT : FormatName = 'es.2';
 let VALIDATORS : IValidator[] = [ValidatorEs1];
 
 let keypair1 = Crypto.generateKeypair();

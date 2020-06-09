@@ -1,7 +1,7 @@
 import t = require('tap');
 import { Crypto } from '../crypto/crypto';
 import { Item, RawCryptKey } from '../util/types';
-import { ValidatorEs1 } from '../validator/es1';
+import { ValidatorEs1 } from '../validator/es2';
 
 let log = console.log;
 
@@ -51,7 +51,7 @@ t.test('authorCanWriteToKey', (t: any) => {
 
 t.test('hashItem', (t: any) => {
     let item1: Item = {
-        format: 'es.1',
+        format: 'es.2',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -65,7 +65,7 @@ t.test('hashItem', (t: any) => {
 
 t.test('signItem and itemSignatureIsValid', (t: any) => {
     let item1: Item = {
-        format: 'es.1',
+        format: 'es.2',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -112,7 +112,7 @@ t.test('signItem and itemSignatureIsValid', (t: any) => {
 // this was moved to storeMemory.ts
 t.test('historySortFn', (t: any) => {
     let item1: Item = {
-        format: 'es.1',
+        format: 'es.2',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
@@ -121,7 +121,7 @@ t.test('historySortFn', (t: any) => {
         signature: 'xxx',
     };
     let item2a: Item = {
-        format: 'es.1',
+        format: 'es.2',
         workspace: 'gardenclub',
         key: 'k2',
         value: 'v2',
@@ -130,7 +130,7 @@ t.test('historySortFn', (t: any) => {
         signature: 'aaa',
     };
     let item2b: Item = {
-        format: 'es.1',
+        format: 'es.2',
         workspace: 'gardenclub',
         key: 'k2',
         value: 'v2',
@@ -148,7 +148,7 @@ t.test('historySortFn', (t: any) => {
 
 t.test('itemIsValid', (t: any) => {
     let item1: Item = {
-        format: 'es.1',
+        format: 'es.2',
         workspace: 'gardenclub',
         key: 'k1',
         value: 'v1',
