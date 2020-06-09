@@ -1,5 +1,26 @@
 import { Emitter } from './emitter';
 
+export type Path = string;
+export type WorkspaceAddress = string;
+export type WorkspaceName = string;
+export type AuthorAddress = string;
+export type AuthorShortname = string;
+export type EncodedKey = string; // base58 public or secret key
+
+export type Author = {
+    address: AuthorAddress,
+    shortname: AuthorShortname,
+    pubkey: EncodedKey,
+};
+
+export type Workspace = {
+    address: WorkspaceAddress,
+    name: WorkspaceName,
+    pubkey: EncodedKey,
+}
+
+//================================================================================
+
 export type Key = string;
 export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
 export type Signature = string;  // xxxxxxxxxxxx

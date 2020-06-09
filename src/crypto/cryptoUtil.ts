@@ -13,10 +13,6 @@ let encode = (b : Buffer) : string =>
     mb.encode('base58btc', b).toString().slice(1);  // take off the 'z' prefix that means base58btc
 let decode = (s : string) : Buffer =>
     mb.decode('z' + s);
-//export let encode = (b : Buffer) : string =>
-//    b.toString('base64');
-//export let decode = (s : string) : Buffer =>
-//    Buffer.from(s, 'base64');
 
 export let encodeSecret = encode;
 export let encodeSig = encode;
@@ -42,29 +38,3 @@ export let decodePair = (pair : Keypair) : KeypairBuffers => {
         secret: decodeSecret(pair.secret),
     }
 };
-
-/*
-export const generateFakeKeypair = (): Keypair => ({
-    // Generate random strings that look like keys.
-    // This is useful for testing, or for use with ValidatorUnsigned.
-    // Don't use this in the real world.
-    public: 'fakekey' + crypto.randomBytes(32).toString('base64').slice(7),
-    secret: 'fakekey' + crypto.randomBytes(32).toString('base64').slice(7),
-});
-*/
-
-
-/*
-export let addSigilToKey = (key: RawCryptKey): AuthorKey => {
-    return '@' + key + '.ed25519';
-};
-export let removeSigilFromKey = (key: AuthorKey): RawCryptKey => {
-    if (!key.startsWith('@')) {
-        throw 'invalid author key';
-    }
-    if (!key.endsWith('.ed25519')) {
-        throw 'invalid author key';
-    }
-    return key.slice(1, -8);
-};
-*/

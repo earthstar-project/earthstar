@@ -1,20 +1,11 @@
 import { Keypair, FormatName, Item, IValidator, Key, RawCryptKey } from '../util/types';
 import { Crypto } from '../crypto/crypto';
-import { sign } from 'crypto';
+import { isOnlyPrintableAscii } from '../util/parse';
 
 let log = console.log;
 let logWarning = console.log;
 //let log = (...args : any[]) => void {};  // turn off logging for now
 //let logWarning = (...args : any[]) => void {};  // turn off logging for now
-
-let isOnlyPrintableAscii = (s : string) : boolean => {
-    let buf = Buffer.from(s, 'utf8');
-    for (let char of buf) {
-        // char must be between ' ' (space) and '~' inclusive
-        if (char < 32 || char > 126) { return false; }
-    }
-    return true;
-}
 
 export const ValidatorEs1 : IValidator = class {
     static format : FormatName = 'es.1';
