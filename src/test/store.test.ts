@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import t = require('tap');
 import { Crypto } from '../crypto';
-import { SyncOpts, Item, FormatName, RawCryptKey, IStore, IValidator } from '../util/types';
+import { SyncOpts, Item, FormatName, RawCryptKey, IStorage, IValidator } from '../util/types';
 import { ValidatorEs1 } from '../validatorEs1';
-import { StoreMemory } from '../storeMemory';
-import { StoreSqlite } from '../storeSqlite';
+import { StorageMemory } from '../storage/memory';
+import { StorageSqlite } from '../storage/sqlite';
 
 //t.runOnly = true;
 
@@ -25,16 +25,16 @@ let author3: RawCryptKey = keypair3.public;
 let now = 1500000000000000;
 
 interface Scenario {
-    makeStore: (workspace : string) => IStore,
+    makeStore: (workspace : string) => IStorage,
     description: string,
 }
 let scenarios : Scenario[] = [
     {
-        makeStore: (workspace : string) : IStore => new StoreMemory(VALIDATORS, workspace),
+        makeStore: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
         description: 'StoreMemory',
     },
     {
-        makeStore: (workspace : string) : IStore => new StoreSqlite({
+        makeStore: (workspace : string) : IStorage => new StorageSqlite({
             mode: 'create',
             workspace: workspace,
             validators: VALIDATORS,
@@ -48,7 +48,7 @@ let scenarios : Scenario[] = [
 // memory specific tests
 
 t.test(`StoreMemory: constructor`, (t: any) => {
-    t.throws(() => new StoreMemory([], WORKSPACE), 'throws when no validators are provided');
+    t.throws(() => new StorageMemory([], WORKSPACE), 'throws when no validators are provided');
     t.done();
 });
 
@@ -65,19 +65,19 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     let touchFn = (fn : string) => { fs.writeFileSync(fn, 'foo'); }
 
     // create with :memory:
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'create',
         workspace: null,
         validators: VALIDATORS,
         filename: ':memory:'
     }), 'create mode throws when workspace is null, :memory:');
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'create',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: ':memory:'
     }), 'create mode works when workspace is provided, :memory:');
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'create',
         workspace: WORKSPACE,
         validators: [],
@@ -87,7 +87,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     // create with real filename
     fn = 'testtesttest1.db';
     clearFn(fn);
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'create',
         workspace: WORKSPACE,
         validators: VALIDATORS,
@@ -99,7 +99,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     // create with existing filename
     fn = 'testtesttest1b.db';
     touchFn(fn);
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'create',
         workspace: WORKSPACE,
         validators: VALIDATORS,
@@ -108,13 +108,13 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     clearFn(fn);
 
     // open and :memory:
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'open',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: ':memory:',
     }), 'open mode throws with :memory: and a workspace');
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'open',
         workspace: null,
         validators: VALIDATORS,
@@ -122,7 +122,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     }), 'open mode throws with :memory: and null workspace');
 
     // open missing filename
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'open',
         workspace: WORKSPACE,
         validators: VALIDATORS,
@@ -132,14 +132,14 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     // open and real but missing filename
     fn = 'testtesttest2.db';
     clearFn(fn);
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'open',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: fn,
     }), 'open mode throws when workspace is provided and file does not exist');
     clearFn(fn);
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'open',
         workspace: null,
         validators: VALIDATORS,
@@ -148,13 +148,13 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     clearFn(fn);
 
     // create-or-open :memory:
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'create-or-open',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: ':memory:'
     }), 'create-or-open mode works when workspace is provided');
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'create-or-open',
         workspace: null,
         validators: VALIDATORS,
@@ -164,20 +164,20 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     // create-or-open: create then open real file
     fn = 'testtesttest3.db';
     clearFn(fn);
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'create-or-open',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: fn,
     }), 'create-or-open mode works when creating a real file');
     t.ok(fs.existsSync(fn), 'create-or-open mode created a file');
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'create-or-open',
         workspace: 'xxx',
         validators: VALIDATORS,
         filename: fn,
     }), 'create-or-open mode fails when opening existing file with mismatched workspace');
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'create-or-open',
         workspace: WORKSPACE,
         validators: VALIDATORS,
@@ -188,26 +188,26 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     // open: create then open real file
     fn = 'testtesttest4.db';
     clearFn(fn);
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'create',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: fn,
     }), 'creating a real file');
     t.ok(fs.existsSync(fn), 'file was created');
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'open',
         workspace: 'xxx',
         validators: VALIDATORS,
         filename: fn,
     }), 'open throws when workspace does not match');
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'open',
         workspace: WORKSPACE,
         validators: VALIDATORS,
         filename: fn,
     }), 'open works when workspace matches');
-    t.doesNotThrow(() => new StoreSqlite({
+    t.doesNotThrow(() => new StorageSqlite({
         mode: 'open',
         workspace: null,
         validators: VALIDATORS,
@@ -216,7 +216,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     clearFn(fn);
 
     // unrecognized mode
-    t.throws(() => new StoreSqlite({
+    t.throws(() => new StorageSqlite({
         mode: 'xxx' as any,
         workspace: null,
         validators: VALIDATORS,
@@ -227,7 +227,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
 });
 
 t.test(`StoreSqlite: config`, (t: any) => {
-    let es = new StoreSqlite({
+    let es = new StorageSqlite({
         mode: 'create',
         workspace: WORKSPACE,
         validators: VALIDATORS,

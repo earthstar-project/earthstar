@@ -4,7 +4,7 @@ import {
     Database as SqliteDatabase
 } from 'better-sqlite3';
 import {
-    IStore,
+    IStorage,
     IValidator,
     Item,
     ItemToSet,
@@ -14,15 +14,15 @@ import {
     SyncOpts,
     SyncResults,
     WorkspaceId,
-} from './util/types';
-import { Emitter } from './util/emitter';
+} from '../util/types';
+import { Emitter } from '../util/emitter';
 
 //let log = console.log;
 //let logWarning = console.log;
 let log = (...args : any[]) => void {};  // turn off logging for now
 let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
-export interface StoreSqliteOpts {
+export interface StorageSqliteOpts {
     // mode: create
     // workspace: required
     // file must not exist yet
@@ -41,12 +41,12 @@ export interface StoreSqliteOpts {
     filename: string,
 }
 
-export class StoreSqlite implements IStore {
+export class StorageSqlite implements IStorage {
     db : SqliteDatabase;
     workspace : WorkspaceId;
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
-    constructor(opts : StoreSqliteOpts) {
+    constructor(opts : StorageSqliteOpts) {
         this.onChange = new Emitter<undefined>();
 
         if (opts.validators.length === 0) {
@@ -374,7 +374,7 @@ export class StoreSqlite implements IStore {
         return this.ingestItem(signedItem, item.timestamp);
     }
 
-    _syncFrom(otherStore : IStore, existing : boolean, live : boolean) : number {
+    _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
         // Pull all items from the other Store and ingest them one by one.
         let numSuccess = 0;
         if (live) {
@@ -390,7 +390,7 @@ export class StoreSqlite implements IStore {
         return numSuccess;
     }
 
-    sync(otherStore : IStore, opts? : SyncOpts) : SyncResults {
+    sync(otherStore : IStorage, opts? : SyncOpts) : SyncResults {
         // Sync with another Store.
         //   opts.direction: 'push', 'pull', or 'both'
         //   opts.existing: Sync existing values.  Default true.

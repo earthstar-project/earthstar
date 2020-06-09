@@ -1,5 +1,5 @@
 import {
-    IStore,
+    IStorage,
     IValidator,
     Item,
     ItemToSet,
@@ -9,8 +9,8 @@ import {
     SyncOpts,
     SyncResults,
     WorkspaceId,
-} from './util/types';
-import { Emitter } from './util/emitter';
+} from '../util/types';
+import { Emitter } from '../util/emitter';
 
 //let log = console.log;
 //let logWarning = console.log;
@@ -36,7 +36,7 @@ export let _historySortFn = (a: Item, b: Item): number => {
     return 0;
 };
 
-export class StoreMemory implements IStore {
+export class StorageMemory implements IStorage {
     /*
     This uses an in-memory data structure:
     _items:
@@ -251,7 +251,7 @@ export class StoreMemory implements IStore {
         return this.ingestItem(signedItem, item.timestamp);
     }
 
-    _syncFrom(otherStore : IStore, existing : boolean, live : boolean) : number {
+    _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
         // Pull all items from the other Store and ingest them one by one.
 
         let numSuccess = 0;
@@ -268,7 +268,7 @@ export class StoreMemory implements IStore {
         return numSuccess;
     }
 
-    sync(otherStore : IStore, opts? : SyncOpts) : SyncResults {
+    sync(otherStore : IStorage, opts? : SyncOpts) : SyncResults {
         // Sync with another Store.
         //   opts.direction: 'push', 'pull', or 'both'
         //   opts.existing: Sync existing values.  Default true.

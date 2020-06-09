@@ -81,7 +81,7 @@ export interface IValidator {
     itemIsValid(item: Item, futureCutoff?: number): boolean;
 }
 
-export interface IStore {
+export interface IStorage {
     // the constructor should accept a workspace
     // constructor(workspace, ...);
     workspace : WorkspaceId;
@@ -105,8 +105,8 @@ export interface IStore {
 
     ingestItem(item : Item) : boolean;
 
-    _syncFrom(otherStore : IStore, existing : boolean, live : boolean) : number;
-    sync(otherStore : IStore, opts? : SyncOpts) : SyncResults;
+    _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number;
+    sync(otherStore : IStorage, opts? : SyncOpts) : SyncResults;
 
     // TODO: Delete data locally.  This deletion will not propagate.
     // forget(query : QueryOpts) : void;  // same query options as keys()
