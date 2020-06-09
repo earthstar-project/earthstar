@@ -124,7 +124,7 @@ export class StorageSqlite implements IStorage {
         }
     }
     _ensureTables() {
-        // later we might decide to allow multiple items in a key history for a single author,
+        // later we might decide to allow multiple items in a path history for a single author,
         // but for now the schema disallows that by having this particular primary key.
         this.db.prepare(`
             CREATE TABLE IF NOT EXISTS items (
@@ -168,19 +168,19 @@ export class StorageSqlite implements IStorage {
         let filters : string[] = [];
         let params : {[k:string] : any} = {};
         if (query.path !== undefined) {
-            filters.push('key = :key');
-            params.key = query.path;
+            filters.push('path = :path');
+            params.path = query.path;
         }
         if (query.lowPath !== undefined) {
-            filters.push(':lowKey <= key');
-            params.lowKey = query.lowPath;
+            filters.push(':lowPath <= path');
+            params.lowPath = query.lowPath;
         }
         if (query.highPath !== undefined) {
-            filters.push('key < :highKey');
-            params.highKey = query.highPath;
+            filters.push('path < :highPath');
+            params.highPath = query.highPath;
         }
         if (query.pathPrefix !== undefined) {
-            filters.push("key LIKE (:prefix || '%') ESCAPE '\\'");
+            filters.push("path LIKE (:prefix || '%') ESCAPE '\\'");
             // escape existing % and _ in the prefix
             // so they don't count as wildcards for LIKE
             params.prefix = query.pathPrefix
@@ -207,16 +207,16 @@ export class StorageSqlite implements IStorage {
             queryString = `
                 SELECT * FROM ITEMS
                 ${combinedFilters}
-                ORDER BY key ASC, timestamp DESC, signature DESC  -- break ties with signature
+                ORDER BY path ASC, timestamp DESC, signature DESC  -- break ties with signature
                 ${limitClause};
             `;
         } else {
-            // when not including history, only get the latest item per key (from any author)
+            // when not including history, only get the latest item per path (from any author)
             queryString = `
-                SELECT format, workspace, key, value, author, MAX(timestamp) as timestamp, signature FROM items
+                SELECT format, workspace, path, value, author, MAX(timestamp) as timestamp, signature FROM items
                 ${combinedFilters}
-                GROUP BY key
-                ORDER BY key ASC, timestamp DESC, signature DESC  -- break ties with signature
+                GROUP BY path
+                ORDER BY path ASC, timestamp DESC, signature DESC  -- break ties with signature
                 ${limitClause};
             `;
         }
@@ -229,14 +229,14 @@ export class StorageSqlite implements IStorage {
     }
     paths(query? : QueryOpts) : string[] {
         // do query without including history, so we get one
-        // item per key.  this way the limit parameter works as
-        // expected in the case of keys.
-        log(`---- keys(${JSON.stringify(query)})`);
+        // item per path.  this way the limit parameter works as
+        // expected in the case of paths.
+        log(`---- paths(${JSON.stringify(query)})`);
         return this.items({...query, includeHistory: false})
             .map(item => item.path);
     }
     values(query? : QueryOpts) : string[] {
-        // get items that match the query, sort by key, and return their values.
+        // get items that match the query, sort by path, and return their values.
         // If you set includeHistory you'll get historical values mixed in.
         log(`---- values(${JSON.stringify(query)})`);
         return this.items(query).map(item => item.value);
@@ -253,24 +253,24 @@ export class StorageSqlite implements IStorage {
         return authors;
     }
 
-    getDocument(key : string) : Document | undefined {
-        // look up the winning value for a single key.
+    getDocument(path : string) : Document | undefined {
+        // look up the winning value for a single path.
         // return undefined if not found.
-        // to get history items for a key, do items({key: 'foo', includeHistory: true})
-        log(`---- getItem(${JSON.stringify(key)})`);
+        // to get history items for a path, do items({path: 'foo', includeHistory: true})
+        log(`---- getItem(${JSON.stringify(path)})`);
         let result : any = this.db.prepare(`
             SELECT * FROM items
-            WHERE key = :key 
+            WHERE path = :path 
             ORDER BY timestamp DESC, signature DESC  -- break ties with signature
             LIMIT 1;
-        `).get({ key: key });
+        `).get({ path: path });
         log('getItem result:', result);
         return result;
     }
-    getValue(key : string) : string | undefined {
+    getValue(path : string) : string | undefined {
         // same as getItem, but just returns the value, not the whole item object.
-        log(`---- getValue(${JSON.stringify(key)})`);
-        return this.getDocument(key)?.value;
+        log(`---- getValue(${JSON.stringify(path)})`);
+        return this.getDocument(path)?.value;
     }
 
     ingestDocument(item : Document, futureCutoff? : number) : boolean {
@@ -280,9 +280,9 @@ export class StorageSqlite implements IStorage {
         // It can be rejected if it's not the latest one from the same author,
         // or if the item is invalid (signature, etc).
 
-        // Within a single key we keep the one latest item from each author.
+        // Within a single path we keep the one latest item from each author.
         // So this overwrites older items from the same author - they are forgotten.
-        // If it's from a new author for this key, we keep it no matter the timestamp.
+        // If it's from a new author for this path, we keep it no matter the timestamp.
         // The winning item is chosen at get time, not write time.
 
         // futureCutoff is a timestamp in microseconds.
@@ -309,20 +309,20 @@ export class StorageSqlite implements IStorage {
             return false;
         }
 
-        // check if it's newer than existing item from same author, same key
-        let existingSameAuthorSameKey = this.db.prepare(`
+        // check if it's newer than existing item from same author, same path
+        let existingSameAuthorSamePath = this.db.prepare(`
             SELECT * FROM items
-            WHERE key = :key
+            WHERE path = :path
             AND author = :author
             ORDER BY timestamp DESC
             LIMIT 1;
-        `).get({ key: item.path, author: item.author });
+        `).get({ path: item.path, author: item.author });
         
         // Compare timestamps.
         // Compare signature to break timestamp ties.
-        if (existingSameAuthorSameKey !== undefined
+        if (existingSameAuthorSamePath !== undefined
             && [item.timestamp, item.signature]
-            <= [existingSameAuthorSameKey.timestamp, existingSameAuthorSameKey.signature]
+            <= [existingSameAuthorSamePath.timestamp, existingSameAuthorSamePath.signature]
             ) {
             // incoming item is older or identical.  ignore it.
             logWarning(`ingestItem: item older or identical`);
@@ -331,8 +331,8 @@ export class StorageSqlite implements IStorage {
 
         // Insert new item, replacing old item if there is one
         this.db.prepare(`
-            INSERT OR REPLACE INTO items (format, workspace, key, value, author, timestamp, signature)
-            VALUES (:format, :workspace, :key, :value, :author, :timestamp, :signature);
+            INSERT OR REPLACE INTO items (format, workspace, path, value, author, timestamp, signature)
+            VALUES (:format, :workspace, :path, :value, :author, :timestamp, :signature);
         `).run(item);
         this.onChange.send(undefined);
         return true;

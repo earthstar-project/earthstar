@@ -33,15 +33,15 @@ let scenarios : Scenario[] = [
         makeStore: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
         description: 'StoreMemory',
     },
-    //{
-    //    makeStore: (workspace : string) : IStorage => new StorageSqlite({
-    //        mode: 'create',
-    //        workspace: workspace,
-    //        validators: VALIDATORS,
-    //        filename: ':memory:'
-    //    }),
-    //    description: "StoreSqlite(':memory:')",
-    //},
+    {
+        makeStore: (workspace : string) : IStorage => new StorageSqlite({
+            mode: 'create',
+            workspace: workspace,
+            validators: VALIDATORS,
+            filename: ':memory:'
+        }),
+        description: "StoreSqlite(':memory:')",
+    },
 ];
 
 //================================================================================
@@ -52,7 +52,6 @@ t.test(`StoreMemory: constructor`, (t: any) => {
     t.done();
 });
 
-/*
 //================================================================================
 // sqlite specific tests
 
@@ -241,7 +240,6 @@ t.test(`StoreSqlite: config`, (t: any) => {
     t.equal(es._getConfig('foo'), 'baz');
     t.done();
 });
-*/
 
 
 //================================================================================
