@@ -1,6 +1,6 @@
 import t = require('tap');
-import { Keypair, RawCryptKey } from './types';
-import { Crypto } from './crypto';
+import { Keypair, RawCryptKey } from '../types';
+import { Crypto } from '../crypto';
 import {
     encodePubkey,
     decodePubkey,
@@ -10,7 +10,7 @@ import {
     decodeSig,
     encodePair,
     decodePair
-} from './cryptoUtil';
+} from '../cryptoUtil';
 
 //import {
 //    sha256,

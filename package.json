@@ -18,7 +18,7 @@
     "watch-test": "onchange --initial --kill --delay 1000 src/*.ts -- npm run build-and-test",
     "start": "node build/main.js",
     "prettier": "prettier --write src/*",
-    "test": "tap -Rspecy --jobs=1 build/*.test.js",
+    "test": "tap -Rspecy --jobs=1 build/test/*.test.js",
     "test-sqlite": "tap -Rspecy --jobs=1 build/keywingStoreSqlite.test.js",
     "test-crypto": "tap -Rspecy --jobs=1 build/crypto.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",

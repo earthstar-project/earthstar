@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import t = require('tap');
-import { Crypto } from './crypto';
-import { SyncOpts, Item, FormatName, RawCryptKey, IStore, IValidator } from './types';
-import { ValidatorEs1 } from "./validatorEs1";
-import { StoreMemory } from './storeMemory';
-import { StoreSqlite } from './storeSqlite';
+import { Crypto } from '../crypto';
+import { SyncOpts, Item, FormatName, RawCryptKey, IStore, IValidator } from '../types';
+import { ValidatorEs1 } from '../validatorEs1';
+import { StoreMemory } from '../storeMemory';
+import { StoreSqlite } from '../storeSqlite';
 
 //t.runOnly = true;
 
