@@ -1,6 +1,6 @@
 import {
-    Author,
-    Workspace,
+    AuthorParsed,
+    WorkspaceParsed,
 } from './types';
 
 export let onlyHasChars = (str : string, allowedChars : string) : boolean => {
@@ -29,33 +29,33 @@ const pathChars = alphaLower + alphaUpper + digits + "/'()-._~!*$&+,:=?@%";
 export let isValidPath = (path : string) : boolean =>
     path.startsWith('/') && onlyHasChars(path, pathChars);
 
-export let parseWorkspaceAddress = (addr : string) : {workspace: Workspace | null, err : string | null} => {
+export let parseWorkspaceAddress = (addr : string) : {workspaceParsed: WorkspaceParsed | null, err : string | null} => {
     // example: //solarpunk.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
     if (!isOnlyPrintableAscii(addr)) {
-        return { workspace: null, err: 'workspace address has nonprintable characters' };
+        return { workspaceParsed: null, err: 'workspace address has nonprintable characters' };
     }
     if (!addr.startsWith('//')) {
-        return { workspace: null, err: 'workspace address does not start with "@"' };
+        return { workspaceParsed: null, err: 'workspace address does not start with "@"' };
     }
     let parts = addr.slice(2).split('.');
     if (parts.length !== 2) {
-        return { workspace: null, err: 'workspace address does not have two parts separated by "."' };
+        return { workspaceParsed: null, err: 'workspace address does not have two parts separated by "."' };
     }
     let [name, pubkey] = parts;
     if (name.length < 1 || name.length > 15) {
-        return { workspace: null, err: `workspace shortname ${JSON.stringify(name)} is not between 1 and 15 chars long` };
+        return { workspaceParsed: null, err: `workspace shortname ${JSON.stringify(name)} is not between 1 and 15 chars long` };
     }
     if (pubkey.length < 1 || pubkey.length > 44) {
-        return { workspace: null, err: `workspace pubkey ${JSON.stringify(name)} is not between 1 and 44 chars long` };
+        return { workspaceParsed: null, err: `workspace pubkey ${JSON.stringify(name)} is not between 1 and 44 chars long` };
     }
     if (!onlyHasChars(name, workspaceNameChars)) {
-        return { workspace: null, err: `workspace name ${JSON.stringify(name)} uses disallowed chars` };
+        return { workspaceParsed: null, err: `workspace name ${JSON.stringify(name)} uses disallowed chars` };
     }
     if (!onlyHasChars(pubkey, b58chars)) {
-        return { workspace: null, err: `workspace pubkey ${JSON.stringify(name)} uses disallowed chars` };
+        return { workspaceParsed: null, err: `workspace pubkey ${JSON.stringify(name)} uses disallowed chars` };
     }
     return {
-        workspace: {
+        workspaceParsed: {
             address: addr,
             name: name,
             pubkey: pubkey,
@@ -64,33 +64,33 @@ export let parseWorkspaceAddress = (addr : string) : {workspace: Workspace | nul
     }
 }
 
-export let parseAuthorAddress = (addr : string) : {author: Author | null, err : string | null} => {
+export let parseAuthorAddress = (addr : string) : {authorParsed: AuthorParsed | null, err : string | null} => {
     // example: @suzy.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
     if (!isOnlyPrintableAscii(addr)) {
-        return { author: null, err: 'author address has nonprintable characters' };
+        return { authorParsed: null, err: 'author address has nonprintable characters' };
     }
     if (!addr.startsWith('@')) {
-        return { author: null, err: 'author address does not start with "@"' };
+        return { authorParsed: null, err: 'author address does not start with "@"' };
     }
     let parts = addr.slice(1).split('.');
     if (parts.length !== 2) {
-        return { author: null, err: 'author address does not have two parts separated by "."' };
+        return { authorParsed: null, err: 'author address does not have two parts separated by "."' };
     }
     let [shortname, pubkey] = parts;
     if (shortname.length !== 4) {
-        return { author: null, err: `author shortname ${JSON.stringify(shortname)} is not 4 chars long` };
+        return { authorParsed: null, err: `author shortname ${JSON.stringify(shortname)} is not 4 chars long` };
     }
     if (pubkey.length < 40 || pubkey.length > 44) {
-        return { author: null, err: `author pubkey ${JSON.stringify(shortname)} is not between 40 and 44 chars long` };
+        return { authorParsed: null, err: `author pubkey ${JSON.stringify(shortname)} is not between 40 and 44 chars long` };
     }
     if (!onlyHasChars(shortname, authorShortnameChars)) {
-        return { author: null, err: `author shortname ${JSON.stringify(shortname)} uses disallowed chars` };
+        return { authorParsed: null, err: `author shortname ${JSON.stringify(shortname)} uses disallowed chars` };
     }
     if (!onlyHasChars(pubkey, b58chars)) {
-        return { author: null, err: `author pubkey ${JSON.stringify(shortname)} uses disallowed chars` };
+        return { authorParsed: null, err: `author pubkey ${JSON.stringify(shortname)} uses disallowed chars` };
     }
     return {
-        author: {
+        authorParsed: {
             address: addr,
             shortname: shortname,
             pubkey: pubkey,

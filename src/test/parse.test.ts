@@ -1,8 +1,9 @@
 import t = require('tap');
 import {
-    Author,
-    Workspace,
+    AuthorParsed,
+    WorkspaceParsed,
     WorkspaceAddress,
+    AuthorAddress,
 } from '../util/types';
 import {
     parseWorkspaceAddress,
@@ -24,8 +25,8 @@ t.test('snowman test data', (t: any) => {
 
 type WorkspaceVector = {
     note?: string,
-    input : WorkspaceAddress,
-    output: {workspace: Workspace | null, err: string | boolean | null},
+    input: WorkspaceAddress,
+    output: { workspaceParsed: WorkspaceParsed | null, err: string | boolean | null; },
 };
 t.test('parse workspace address', (t: any) => {
     let vectors : WorkspaceVector[] = [
@@ -35,7 +36,7 @@ t.test('parse workspace address', (t: any) => {
             note: 'ok: regular address',
             input: '//solarpunk.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
             output: {
-                workspace: {
+                workspaceParsed: {
                     address: '//solarpunk.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
                     name: 'solarpunk',
                     pubkey: '2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
@@ -49,23 +50,23 @@ t.test('parse workspace address', (t: any) => {
         {
             note: 'x: empty string',
             input: '', 
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: no leading slashes',
             input: 'solarpunk.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: empty key',
             input: '//solarpunk.',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: no key',
             input: '//solarpunk',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: just a word',
             input: 'solarpunk',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         },
 
         //----------------------------------------
@@ -73,39 +74,39 @@ t.test('parse workspace address', (t: any) => {
         {
             note: 'x: uppercase letters in name',
             input: '//solarPUNK.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: emoji in name',
             input: '//solar' + sparkleEmoji + '.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: snowman in name',
             input: '//solar' + snowmanJsString + '.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: newline in name',
             input: '//solar\npunk.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: newline in key',
             input: '//solarpunk.2F2jmsq\nfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: ! in key',
             input: '//solarpunk.2!2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: space in name',
             input: '//solar punk.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: dash in name',
             input: '//solar-punk.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: number in name',
             input: '//solar0000.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         },
 
         //----------------------------------------
@@ -113,15 +114,15 @@ t.test('parse workspace address', (t: any) => {
         {
             note: 'x: too many periods',
             input: '//solar.punk.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: no periods',
             input: '//solarpunk2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: no name',
             input: '//2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         },
 
         //----------------------------------------
@@ -129,12 +130,12 @@ t.test('parse workspace address', (t: any) => {
         {
             note: 'x: empty name',
             input: '//.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         }, {
             note: 'ok: name 1 char long',
             input: '//x.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
             output: {
-                workspace: {
+                workspaceParsed: {
                     address: '//x.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
                     name: 'x',
                     pubkey: '2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
@@ -145,7 +146,7 @@ t.test('parse workspace address', (t: any) => {
             note: 'ok: name 15 chars long',
             input: '//aaaaabbbbbccccc.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
             output: {
-                workspace: {
+                workspaceParsed: {
                     address: '//aaaaabbbbbccccc.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
                     name: 'aaaaabbbbbccccc',
                     pubkey: '2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
@@ -155,7 +156,7 @@ t.test('parse workspace address', (t: any) => {
         }, {
             note: 'x: name 16 chars long',
             input: '//aaaaabbbbbcccccd.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { workspace: null, err: true, }
+            output: { workspaceParsed: null, err: true, }
         },
     ];
     for (let v of vectors) {
@@ -172,8 +173,8 @@ t.test('parse workspace address', (t: any) => {
 
 type AuthorVector = {
     note?: string,
-    input : WorkspaceAddress,
-    output: {author: Author | null, err: string | boolean | null},
+    input: AuthorAddress,
+    output: { authorParsed: AuthorParsed | null, err: string | boolean | null; },
 };
 t.test('parse author address', (t: any) => {
     let vectors : AuthorVector[] = [
@@ -183,7 +184,7 @@ t.test('parse author address', (t: any) => {
             note: 'ok: regular address',
             input: '@suzy.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
             output: {
-                author: {
+                authorParsed: {
                     address: '@suzy.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
                     shortname: 'suzy',
                     pubkey: '2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
@@ -197,23 +198,23 @@ t.test('parse author address', (t: any) => {
         {
             note: 'x: empty string',
             input: '', 
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: no leading @',
             input: 'suzy.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: empty key',
             input: '@suzy.',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: no key',
             input: '@suzy',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: just a word',
             input: 'suzy',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         },
 
         //----------------------------------------
@@ -221,39 +222,39 @@ t.test('parse author address', (t: any) => {
         {
             note: 'x: uppercase letters in name',
             input: '//SUZY.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: emoji in name',
             input: '//suz' + sparkleEmoji + '.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: snowman in name',
             input: '//suz' + snowmanJsString + '.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: newline in name',
             input: '//su\nz.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: newline in key',
             input: '//suzy.2F2jmsq\nfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: ! in key',
             input: '//suzy.2!2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: space in name',
             input: '//su z.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: dash in name',
             input: '//su-z.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: number in name',
             input: '//su00.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         },
 
         //----------------------------------------
@@ -261,15 +262,15 @@ t.test('parse author address', (t: any) => {
         {
             note: 'x: too many periods',
             input: '//suzy.foo.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: no periods',
             input: '//suzy2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: no name',
             input: '//2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         },
 
         //----------------------------------------
@@ -277,19 +278,19 @@ t.test('parse author address', (t: any) => {
         {
             note: 'x: empty name',
             input: '//.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: name 1 char long',
             input: '//a.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: name 3 chars long',
             input: '//abc.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }, {
             note: 'x: name 5 chars long',
             input: '//abcde.2F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
-            output: { author: null, err: true, }
+            output: { authorParsed: null, err: true, }
         }
     ];
     for (let v of vectors) {
@@ -314,18 +315,18 @@ t.test('isValidPath', (t: any) => {
     let vectors : IsValidPathVector[] = [
         { valid: false, path: '' },
         { valid: false, path: 'not-starting-with-slash' },
-        { valid: false,  path: '/with space' },
-        { valid: false,  path: '/with"' },
-        { valid: false,  path: '/with<' },
-        { valid: false,  path: '/with\nnewline' },
+        { valid: false, path: '/with space' },
+        { valid: false, path: '/with"' },
+        { valid: false, path: '/with<' },
+        { valid: false, path: '/with\nnewline' },
 
-        { valid: true,  path: '/' },
-        { valid: true,  path: '/foo' },
-        { valid: true,  path: '/FOO' },
-        { valid: true,  path: '/foo/' },
-        { valid: true,  path: '/foo/1234' },
-        { valid: true,  path: '/about/~@suzy.abc/name' },
-        { valid: true,  path: '/wiki/shared/Garden%20Gnome' },
+        { valid: true, path: '/' },
+        { valid: true, path: '/foo' },
+        { valid: true, path: '/FOO' },
+        { valid: true, path: '/foo/' },
+        { valid: true, path: '/foo/1234' },
+        { valid: true, path: '/about/~@suzy.abc/name' },
+        { valid: true, path: '/wiki/shared/Garden%20Gnome' },
     ]
     for (let v of vectors) {
         t.same(v.valid, isValidPath(v.path),

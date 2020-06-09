@@ -7,13 +7,13 @@ export type AuthorAddress = string;
 export type AuthorShortname = string;
 export type EncodedKey = string; // base58 public or secret key
 
-export type Author = {
+export type AuthorParsed = {
     address: AuthorAddress,
     shortname: AuthorShortname,
     pubkey: EncodedKey,
 };
 
-export type Workspace = {
+export type WorkspaceParsed = {
     address: WorkspaceAddress,
     name: WorkspaceName,
     pubkey: EncodedKey,
