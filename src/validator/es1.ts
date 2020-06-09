@@ -1,5 +1,5 @@
-import { Keypair, FormatName, Item, IValidator, Key, RawCryptKey } from './util/types';
-import { Crypto } from './crypto/crypto';
+import { Keypair, FormatName, Item, IValidator, Key, RawCryptKey } from '../util/types';
+import { Crypto } from '../crypto/crypto';
 import { sign } from 'crypto';
 
 let log = console.log;

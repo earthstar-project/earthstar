@@ -3,5 +3,4 @@ export * from './crypto/cryptoUtil';
 export * from './storage/memory';
 export * from './storage/sqlite';
 export * from './util/types';
-export * from './validatorEs1';
-export * from './validatorUnsigned1';
+export * from './validator/es1';
