@@ -1,7 +1,7 @@
 import {
     IStorage,
     IValidator,
-    Item,
+    Document,
     ItemToSet,
     Keypair,
     QueryOpts,
@@ -17,7 +17,7 @@ import { Emitter } from '../util/emitter';
 let log = (...args : any[]) => void {};  // turn off logging for now
 let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
-export let _historySortFn = (a: Item, b: Item): number => {
+export let _historySortFn = (a: Document, b: Document): number => {
     // Sorts items within one key from multiple authors,
     // so that the winning item is first.
     // timestamp DESC (newest first), signature DESC (to break timestamp ties)
@@ -56,7 +56,7 @@ export class StorageMemory implements IStorage {
     Public keys can have multiple authors, but one is considered the winner
       (with the highest timestamp).
     */
-    _items : {[key:string] : {[author:string] : Item}} = {};
+    _items : {[key:string] : {[author:string] : Document}} = {};
     workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
@@ -74,14 +74,14 @@ export class StorageMemory implements IStorage {
         }
     }
 
-    keys(query? : QueryOpts) : string[] {
+    paths(query? : QueryOpts) : string[] {
         // return sorted keys that match the query
         if (query === undefined) { query = {}; }
 
         // if asking for a single key, check if it exists and return it by itself
-        if (query.key !== undefined) {
-            if (this._items[query.key] !== undefined) {
-                return [query.key];
+        if (query.path !== undefined) {
+            if (this._items[query.path] !== undefined) {
+                return [query.path];
             } else {
                 return [];
             }
@@ -91,12 +91,12 @@ export class StorageMemory implements IStorage {
         keys.sort();
 
         // filter the keys in various ways
-        if (query.lowKey !== undefined && query.highKey !== undefined) {
+        if (query.lowPath !== undefined && query.highPath !== undefined) {
             keys = keys.filter(k =>
-                (query?.lowKey as string) <= k && k < (query?.highKey as string));
+                (query?.lowPath as string) <= k && k < (query?.highPath as string));
         }
-        if (query.prefix !== undefined) {
-            keys = keys.filter(k => k.startsWith(query?.prefix as string));
+        if (query.pathPrefix !== undefined) {
+            keys = keys.filter(k => k.startsWith(query?.pathPrefix as string));
         }
         if (query.limit) {
             keys = keys.slice(0, query.limit);
@@ -104,7 +104,7 @@ export class StorageMemory implements IStorage {
         // opts.includeHistory has no effect for keys()
         return keys;
     }
-    items(query? : QueryOpts) : Item[] {
+    items(query? : QueryOpts) : Document[] {
         // return items that match the query, sorted by keys.
         // TODO: note that opts.limit applies to the number of keys,
         //   not the number of unique history items
@@ -112,9 +112,9 @@ export class StorageMemory implements IStorage {
         //log('------------------------------------------ ITEMS');
         //log('query', JSON.stringify(query));
         let includeHistory = query?.includeHistory === true;  // default to false
-        let keys = this.keys(query);
+        let keys = this.paths(query);
         //log('keys', keys);
-        let items : Item[] = [];
+        let items : Document[] = [];
         for (let key of keys) {
             //log('key', key);
             let keyHistoryItems = Object.values(this._items[key]);
@@ -148,7 +148,7 @@ export class StorageMemory implements IStorage {
         return authors;
     }
 
-    getItem(key : string) : Item | undefined {
+    getDocument(key : string) : Document | undefined {
         // look up the winning value for a single key.
         // return undefined if not found.
         // to get history items for a key, do items({key: 'foo', includeHistory: true})
@@ -159,10 +159,10 @@ export class StorageMemory implements IStorage {
     }
     getValue(key : string) : string | undefined {
         // same as getItem, but just returns the value, not the whole item object.
-        return this.getItem(key)?.value;
+        return this.getDocument(key)?.value;
     }
 
-    ingestItem(item : Item, futureCutoff? : number) : boolean {
+    ingestDocument(item : Document, futureCutoff? : number) : boolean {
         // Given an item from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
@@ -185,7 +185,7 @@ export class StorageMemory implements IStorage {
             return false;
         }
 
-        if (!validator.itemIsValid(item, futureCutoff)) {
+        if (!validator.documentIsValid(item, futureCutoff)) {
             logWarning(`ingestItem: item is not valid`);
             return false;
         }
@@ -230,10 +230,10 @@ export class StorageMemory implements IStorage {
         }
 
         itemToSet.timestamp = itemToSet.timestamp || 0;
-        let item : Item = {
+        let item : Document = {
             format: itemToSet.format,
             workspace: this.workspace,
-            path: itemToSet.key,
+            path: itemToSet.path,
             value: itemToSet.value,
             author: keypair.public,
             timestamp: itemToSet.timestamp > 0 ? itemToSet.timestamp : Date.now()*1000,
@@ -244,11 +244,11 @@ export class StorageMemory implements IStorage {
         // make sure our timestamp is greater
         // even if this puts us slightly into the future.
         // (We know about the existing item so let's assume we want to supercede it.)
-        let existingItemTimestamp = this.getItem(item.path)?.timestamp || 0;
+        let existingItemTimestamp = this.getDocument(item.path)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
-        let signedItem = validator.signItem(keypair, item);
-        return this.ingestItem(signedItem, item.timestamp);
+        let signedItem = validator.signDocument(keypair, item);
+        return this.ingestDocument(signedItem, item.timestamp);
     }
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
@@ -261,7 +261,7 @@ export class StorageMemory implements IStorage {
         }
         if (existing) {
             for (let item of otherStore.items({includeHistory: true})) {
-                let success = this.ingestItem(item);
+                let success = this.ingestDocument(item);
                 if (success) { numSuccess += 1; }
             }
         }

@@ -6,7 +6,7 @@ import {
 import {
     IStorage,
     IValidator,
-    Item,
+    Document,
     ItemToSet,
     Keypair,
     QueryOpts,
@@ -130,12 +130,12 @@ export class StorageSqlite implements IStorage {
             CREATE TABLE IF NOT EXISTS items (
                 format TEXT NOT NULL,
                 workspace TEXT NOT NULL,
-                key TEXT NOT NULL,
+                path TEXT NOT NULL,
                 value TEXT NOT NULL,
                 author TEXT NOT NULL,
                 timestamp NUMBER NOT NULL,
                 signature TEXT NOT NULL,
-                PRIMARY KEY(key, author)
+                PRIMARY KEY(path, author)
             );
         `).run();
         // the config table is used to store these variables:
@@ -160,30 +160,30 @@ export class StorageSqlite implements IStorage {
         return result.value;
     }
 
-    items(query? : QueryOpts) : Item[] {
+    items(query? : QueryOpts) : Document[] {
         if (query === undefined) { query = {}; }
         log(`---- items(${JSON.stringify(query)})`);
 
         // convert the query into an array of SQL clauses
         let filters : string[] = [];
         let params : {[k:string] : any} = {};
-        if (query.key !== undefined) {
+        if (query.path !== undefined) {
             filters.push('key = :key');
-            params.key = query.key;
+            params.key = query.path;
         }
-        if (query.lowKey !== undefined) {
+        if (query.lowPath !== undefined) {
             filters.push(':lowKey <= key');
-            params.lowKey = query.lowKey;
+            params.lowKey = query.lowPath;
         }
-        if (query.highKey !== undefined) {
+        if (query.highPath !== undefined) {
             filters.push('key < :highKey');
-            params.highKey = query.highKey;
+            params.highKey = query.highPath;
         }
-        if (query.prefix !== undefined) {
+        if (query.pathPrefix !== undefined) {
             filters.push("key LIKE (:prefix || '%') ESCAPE '\\'");
             // escape existing % and _ in the prefix
             // so they don't count as wildcards for LIKE
-            params.prefix = query.prefix
+            params.prefix = query.pathPrefix
                 .split('_').join('\\_')
                 .split('%').join('\\%');
         }
@@ -227,7 +227,7 @@ export class StorageSqlite implements IStorage {
         log('result:', items);
         return items;
     }
-    keys(query? : QueryOpts) : string[] {
+    paths(query? : QueryOpts) : string[] {
         // do query without including history, so we get one
         // item per key.  this way the limit parameter works as
         // expected in the case of keys.
@@ -253,7 +253,7 @@ export class StorageSqlite implements IStorage {
         return authors;
     }
 
-    getItem(key : string) : Item | undefined {
+    getDocument(key : string) : Document | undefined {
         // look up the winning value for a single key.
         // return undefined if not found.
         // to get history items for a key, do items({key: 'foo', includeHistory: true})
@@ -270,10 +270,10 @@ export class StorageSqlite implements IStorage {
     getValue(key : string) : string | undefined {
         // same as getItem, but just returns the value, not the whole item object.
         log(`---- getValue(${JSON.stringify(key)})`);
-        return this.getItem(key)?.value;
+        return this.getDocument(key)?.value;
     }
 
-    ingestItem(item : Item, futureCutoff? : number) : boolean {
+    ingestDocument(item : Document, futureCutoff? : number) : boolean {
         // Given an item from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
@@ -298,7 +298,7 @@ export class StorageSqlite implements IStorage {
             return false;
         }
 
-        if (!validator.itemIsValid(item, futureCutoff)) {
+        if (!validator.documentIsValid(item, futureCutoff)) {
             logWarning(`ingestItem: item is not valid`);
             return false;
         }
@@ -344,7 +344,7 @@ export class StorageSqlite implements IStorage {
         // in which case it will be set to now().
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
-        log(`---- set(${JSON.stringify(itemToSet.key)}, ${JSON.stringify(itemToSet.value)}, ...)`);
+        log(`---- set(${JSON.stringify(itemToSet.path)}, ${JSON.stringify(itemToSet.value)}, ...)`);
 
         let validator = this.validatorMap[itemToSet.format];
         if (validator === undefined) {
@@ -353,10 +353,10 @@ export class StorageSqlite implements IStorage {
         }
 
         itemToSet.timestamp = itemToSet.timestamp || 0;
-        let item : Item = {
+        let item : Document = {
             format: itemToSet.format,
             workspace: this.workspace,
-            path: itemToSet.key,
+            path: itemToSet.path,
             value: itemToSet.value,
             author: keypair.public,
             timestamp: itemToSet.timestamp > 0 ? itemToSet.timestamp : Date.now()*1000,
@@ -367,11 +367,11 @@ export class StorageSqlite implements IStorage {
         // make sure our timestamp is greater
         // even if this puts us slightly into the future.
         // (We know about the existing item so let's assume we want to supercede it.)
-        let existingItemTimestamp = this.getItem(item.path)?.timestamp || 0;
+        let existingItemTimestamp = this.getDocument(item.path)?.timestamp || 0;
         item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
 
-        let signedItem = validator.signItem(keypair, item);
-        return this.ingestItem(signedItem, item.timestamp);
+        let signedItem = validator.signDocument(keypair, item);
+        return this.ingestDocument(signedItem, item.timestamp);
     }
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
@@ -383,7 +383,7 @@ export class StorageSqlite implements IStorage {
         }
         if (existing) {
             for (let item of otherStore.items({includeHistory: true})) {
-                let success = this.ingestItem(item);
+                let success = this.ingestDocument(item);
                 if (success) { numSuccess += 1; }
             }
         }

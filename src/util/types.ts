@@ -30,12 +30,11 @@ export type Keypair = {
 
 //================================================================================
 
-export type Key = string;
 export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
 export type Signature = string;  // xxxxxxxxxxxx
 export type FormatName = string;
 
-export type Item = {
+export type Document = {
     format : FormatName,
     workspace : WorkspaceAddress,
     path : Path,
@@ -50,7 +49,7 @@ export type Item = {
 export type ItemToSet = {
     format : FormatName,
     // workspace : string,
-    key : string,
+    path : Path,
     value : string,
     // no author - the whole keypair is provided separately when setting
     timestamp? : number,  // timestamp only for testing, usually omitted
@@ -58,24 +57,25 @@ export type ItemToSet = {
 }
 
 export interface QueryOpts {
-    // An empty query object returns all keys.
+    // An empty query object returns all documents.
 
     // Each of the following adds an additional filter,
     // narrowing down the results further.
 
-    key?: string,  // one specific key only.
+    path?: string,  // one specific path only.
 
-    lowKey?: string,  // lowKey <= k
-    highKey?: string,  // k < highKey
+    lowPath?: string,  // lowPath <= p 
+    highPath?: string,  // p < highPath
 
-    prefix?: string,  // keys starting with prefix.
+    pathPrefix?: string,  // paths starting with prefix.
 
-    limit?: number,  // there's no offset; use lowKey as a cursor instead
-
-    // author?: AuthorKey  // TODO: does this include the author's obsolete history items?
+    limit?: number,  // there's no offset; use lowPath as a cursor instead
 
     // include old versions of this item from different authors?
     includeHistory?: boolean, // default false
+
+    // author?: AuthorKey  // TODO: does this include the author's obsolete history items?
+    // timestamp before and after // TODO
 }
 
 export interface SyncOpts {
@@ -92,12 +92,12 @@ export interface SyncResults {
 export interface IValidator {
     // this should be implemented as an abstract class, not a regular class
     format: FormatName;
-    keyIsValid(key: Key): boolean;
-    authorCanWriteToKey(author: RawCryptKey, key: Key): boolean;
-    hashItem(item: Item): string;
-    signItem(keypair : Keypair, item: Item): Item;
-    itemSignatureIsValid(item: Item): boolean;
-    itemIsValid(item: Item, futureCutoff?: number): boolean;
+    pathIsValid(path: Path): boolean;
+    authorCanWriteToPath(author: RawCryptKey, path: Path): boolean;
+    hashDocument(doc: Document): string;
+    signDocument(keypair : Keypair, doc: Document): Document;
+    documentSignatureIsValid(doc: Document): boolean;
+    documentIsValid(doc: Document, futureCutoff?: number): boolean;
 }
 
 export interface IStorage {
@@ -110,23 +110,23 @@ export interface IStorage {
     // subscribe with onChange.subscribe(...cb...);
     onChange : Emitter<undefined>;
 
-    items(query? : QueryOpts) : Item[];
-    keys(query? : QueryOpts) : string[];
+    items(query? : QueryOpts) : Document[];
+    paths(query? : QueryOpts) : string[];
     values(query? : QueryOpts) : string[];
     // TODO: convenience method to parse value from string to JSON?
 
     authors() : RawCryptKey[]
 
-    getItem(key : string) : Item | undefined;
-    getValue(key : string) : string | undefined;
+    getDocument(path : string) : Document | undefined;
+    getValue(path : string) : string | undefined;
 
     set(keypair : Keypair, itemToSet : ItemToSet) : boolean;  // leave timestamp at 0 and it will be set to now() for you
 
-    ingestItem(item : Item) : boolean;
+    ingestDocument(doc : Document) : boolean;
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number;
     sync(otherStore : IStorage, opts? : SyncOpts) : SyncResults;
 
     // TODO: Delete data locally.  This deletion will not propagate.
-    // forget(query : QueryOpts) : void;  // same query options as keys()
+    // forget(query : QueryOpts) : void;  // same query options as paths()
 }

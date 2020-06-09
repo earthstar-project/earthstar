@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import t = require('tap');
 import { Crypto } from '../crypto/crypto';
-import { SyncOpts, Item, FormatName, RawCryptKey, IStorage, IValidator } from '../util/types';
-import { ValidatorEs1 } from '../validator/es2';
+import { SyncOpts, Document, FormatName, RawCryptKey, IStorage, IValidator } from '../util/types';
+import { ValidatorEs2 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
 
@@ -14,7 +14,7 @@ import { StorageSqlite } from '../storage/sqlite';
 let WORKSPACE = 'gardenclub';
 
 let FORMAT : FormatName = 'es.2';
-let VALIDATORS : IValidator[] = [ValidatorEs1];
+let VALIDATORS : IValidator[] = [ValidatorEs2];
 
 let keypair1 = Crypto.generateKeypair();
 let keypair2 = Crypto.generateKeypair();
@@ -254,10 +254,10 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': empty store', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
-        t.same(es.keys(), [], 'no keys');
+        t.same(es.paths(), [], 'no keys');
         t.same(es.items(), [], 'no items');
         t.same(es.values(), [], 'no values');
-        t.equal(es.getItem('xxx'), undefined, 'getItem undefined');
+        t.equal(es.getDocument('xxx'), undefined, 'getItem undefined');
         t.equal(es.getValue('xxx'), undefined, 'getValue undefined');
         t.same(es.authors(), [], 'no authors');
         t.done();
@@ -266,7 +266,7 @@ for (let scenario of scenarios) {
     t.test(scenario.description + ': store ingestItem rejects invalid items', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
-        let item1: Item = {
+        let item1: Document = {
             format: FORMAT,
             workspace: WORKSPACE,
             path: 'k1',
@@ -275,23 +275,23 @@ for (let scenario of scenarios) {
             author: author1,
             signature: 'xxx',
         };
-        let signedItem = ValidatorEs1.signItem(keypair1, item1);
-        t.ok(es.ingestItem(signedItem), "successful ingestion");
+        let signedItem = ValidatorEs2.signDocument(keypair1, item1);
+        t.ok(es.ingestDocument(signedItem), "successful ingestion");
         t.equal(es.getValue('k1'), 'v1', "getValue worked");
 
-        t.notOk(es.ingestItem(item1), "don't ingest: bad signature");
-        t.notOk(es.ingestItem({...signedItem, format: 'xxx'}), "don't ingest: unknown format");
-        t.notOk(es.ingestItem({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
-        t.notOk(es.ingestItem({...signedItem, timestamp: now * 2}), "don't ingest: timestamp in future");
-        t.notOk(es.ingestItem({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
-        t.notOk(es.ingestItem({...signedItem, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
+        t.notOk(es.ingestDocument(item1), "don't ingest: bad signature");
+        t.notOk(es.ingestDocument({...signedItem, format: 'xxx'}), "don't ingest: unknown format");
+        t.notOk(es.ingestDocument({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
+        t.notOk(es.ingestDocument({...signedItem, timestamp: now * 2}), "don't ingest: timestamp in future");
+        t.notOk(es.ingestDocument({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
+        t.notOk(es.ingestDocument({...signedItem, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
 
-        let signedItemDifferentWorkspace = ValidatorEs1.signItem(keypair1, {...item1, workspace: 'xxx'});
-        t.notOk(es.ingestItem(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
+        let signedItemDifferentWorkspace = ValidatorEs2.signDocument(keypair1, {...item1, workspace: 'xxx'});
+        t.notOk(es.ingestDocument(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
 
         t.notOk(es.set(keypair1, {
             format: 'xxx',
-            key: 'k1',
+            path: 'k1',
             value: 'v1',
         }), 'set rejects unknown format');
 
@@ -301,8 +301,8 @@ for (let scenario of scenarios) {
             'chat/~@notme.ed25519~' + author1,
         ];
         for (let key of writableKeys) {
-            t.ok(es.ingestItem(
-                ValidatorEs1.signItem(
+            t.ok(es.ingestDocument(
+                ValidatorEs2.signDocument(
                     keypair1,
                     {...item1, path: key}
                 )),
@@ -314,8 +314,8 @@ for (let scenario of scenarios) {
             '~',
         ];
         for (let key of notWritableKeys) {
-            t.notOk(es.ingestItem(
-                ValidatorEs1.signItem(
+            t.notOk(es.ingestDocument(
+                ValidatorEs2.signDocument(
                     keypair1,
                     {...item1, path: key}
                 )),
@@ -332,25 +332,25 @@ for (let scenario of scenarios) {
         t.equal(es.getValue('key2'), undefined, 'nonexistant keys are undefined');
 
         // set a decoy key to make sure the later tests return the correct key
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'decoy', value:'zzz', timestamp: now}), 'set decoy key');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'decoy', value:'zzz', timestamp: now}), 'set decoy key');
 
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'key1', value: 'val1.0', timestamp: now}), 'set new key');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'val1.0', timestamp: now}), 'set new key');
         t.equal(es.getValue('key1'), 'val1.0');
 
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'key1', value: 'val1.2', timestamp: now + 2}), 'overwrite key with newer time');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'val1.2', timestamp: now + 2}), 'overwrite key with newer time');
         t.equal(es.getValue('key1'), 'val1.2');
 
         // write with an old timestamp - this timestamp should be overridden to the existing timestamp + 1.
         // note that on ingest() the newer timestamp wins, but on set() we adjust the newly created timestamp
         // so it's always greater than the existing ones.
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'key1', value: 'val1.1', timestamp: now-99}), 'automatically supercede previous timestamp');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'val1.1', timestamp: now-99}), 'automatically supercede previous timestamp');
         t.equal(es.getValue('key1'), 'val1.1', 'superceded newer existing value');
-        t.equal(es.getItem('key1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
+        t.equal(es.getDocument('key1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
 
         //log('_items:', JSON.stringify(es._items, null, 4));
 
         // should be alphabetical
-        t.same(es.keys(), ['decoy', 'key1'], 'keys() are correct');
+        t.same(es.paths(), ['decoy', 'key1'], 'keys() are correct');
 
         // order of values should match order of keys
         t.same(es.values(), ['zzz', 'val1.1'], 'values() are correct');
@@ -365,20 +365,20 @@ for (let scenario of scenarios) {
         let keys = 'zzz aaa dir dir/ q qq qqq dir/a dir/b dir/c'.split(' ');
         let ii = 0;
         for (let key of keys) {
-            t.ok(es.set(keypair1, {format: FORMAT, key: key, value: 'true', timestamp: now + ii}), 'set key: ' + key),
+            t.ok(es.set(keypair1, {format: FORMAT, path: key, value: 'true', timestamp: now + ii}), 'set key: ' + key),
                 ii += 1;
         }
         let sortedKeys = [...keys];
         sortedKeys.sort();
-        let esKeys = es.keys();
+        let esKeys = es.paths();
         t.same(keys.length, esKeys.length, 'same number of keys');
         t.same(sortedKeys, esKeys, 'keys are sorted');
-        t.same(es.keys({ key: 'q' }), ['q'], 'query for specific key');
-        t.same(es.keys({ key: 'nope' }), [], 'query for missing key');
-        t.same(es.keys({ lowKey: 'q', highKey: 'qqq' }), ['q', 'qq'], 'lowKey <= k < highKey');
-        t.same(es.keys({ lowKey: 'q', highKey: 'qqq', limit: 1 }), ['q'], 'lowKey, highKey with limit');
-        t.same(es.keys({ prefix: 'dir/' }), ['dir/', 'dir/a', 'dir/b', 'dir/c'], 'prefix');
-        t.same(es.keys({ prefix: 'dir/', limit: 2 }), ['dir/', 'dir/a'], 'prefix with limit');
+        t.same(es.paths({ path: 'q' }), ['q'], 'query for specific key');
+        t.same(es.paths({ path: 'nope' }), [], 'query for missing key');
+        t.same(es.paths({ lowPath: 'q', highPath: 'qqq' }), ['q', 'qq'], 'lowKey <= k < highKey');
+        t.same(es.paths({ lowPath: 'q', highPath: 'qqq', limit: 1 }), ['q'], 'lowKey, highKey with limit');
+        t.same(es.paths({ pathPrefix: 'dir/' }), ['dir/', 'dir/a', 'dir/b', 'dir/c'], 'prefix');
+        t.same(es.paths({ pathPrefix: 'dir/', limit: 2 }), ['dir/', 'dir/a'], 'prefix with limit');
         t.done();
     });
 
@@ -386,34 +386,34 @@ for (let scenario of scenarios) {
         let es = scenario.makeStore(WORKSPACE);
 
         // set decoy keys to make sure the later tests return the correct key
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'decoy2', value: 'zzz', timestamp: now}), 'set decoy key 2');
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'decoy1', value: 'aaa', timestamp: now}), 'set decoy key 1');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'decoy2', value: 'zzz', timestamp: now}), 'set decoy key 2');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'decoy1', value: 'aaa', timestamp: now}), 'set decoy key 1');
 
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'key1', value: 'one', timestamp: now}), 'set new key');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'one', timestamp: now}), 'set new key');
         t.equal(es.getValue('key1'), 'one');
 
         // this will overwrite 'one' but the item for 'one' will remain in history.
         // history will have 2 items for this key.
-        t.ok(es.set(keypair2, {format: FORMAT, key: 'key1', value: 'two', timestamp: now + 1}), 'update from a second author');
+        t.ok(es.set(keypair2, {format: FORMAT, path: 'key1', value: 'two', timestamp: now + 1}), 'update from a second author');
         t.equal(es.getValue('key1'), 'two');
 
         // this will replace the old original item 'one' from this author.
         // history will have 2 items for this key.
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'key1', value: 'three', timestamp: now + 2}), 'update from original author again');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'three', timestamp: now + 2}), 'update from original author again');
         t.equal(es.getValue('key1'), 'three');
 
         //log('_items:', JSON.stringify(es._items, null, 4));
 
-        t.equal(es.keys().length, 3, '3 keys');
+        t.equal(es.paths().length, 3, '3 keys');
         t.equal(es.values().length, 3, '3 values');
         t.equal(es.values({ includeHistory: true }).length, 4, '4 values with history');
 
-        t.same(es.keys(), ['decoy1', 'decoy2', 'key1'], 'keys()');
+        t.same(es.paths(), ['decoy1', 'decoy2', 'key1'], 'keys()');
         t.same(es.values(), ['aaa', 'zzz', 'three'], 'values()');
         t.same(es.values({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'values with history, newest first');
 
         t.same(
-            es.items({ includeHistory: true }).map((item : Item) => item.author),
+            es.items({ includeHistory: true }).map((item : Document) => item.author),
             [author1, author1, author1, author2],
             'items with history, newest first, items should have correct authors'
         );
@@ -432,10 +432,10 @@ for (let scenario of scenarios) {
         let es2 = scenario.makeStore(WORKSPACE);
 
         // set up some keys
-        t.ok(es1.set(keypair1, {format: FORMAT, key: 'decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy key');
-        t.ok(es1.set(keypair1, {format: FORMAT, key: 'decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy key');
-        t.ok(es1.set(keypair1, {format: FORMAT, key: 'key1', value: 'one', timestamp: now}), 'author1 set key1');
-        t.ok(es1.set(keypair2, {format: FORMAT, key: 'key1', value: 'two', timestamp: now + 1}), 'author2 set key1');
+        t.ok(es1.set(keypair1, {format: FORMAT, path: 'decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy key');
+        t.ok(es1.set(keypair1, {format: FORMAT, path: 'decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy key');
+        t.ok(es1.set(keypair1, {format: FORMAT, path: 'key1', value: 'one', timestamp: now}), 'author1 set key1');
+        t.ok(es1.set(keypair2, {format: FORMAT, path: 'key1', value: 'two', timestamp: now + 1}), 'author2 set key1');
 
         // sync
         let syncResults = es1.sync(es2, { direction: 'push', existing: true, live: false });
@@ -443,13 +443,13 @@ for (let scenario of scenarios) {
         t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 items (includes history items).  pulled 0.');
 
         // check results
-        t.same(es1.keys(), es2.keys(), 'es1.keys() == es2.keys()');
+        t.same(es1.paths(), es2.paths(), 'es1.keys() == es2.keys()');
         t.same(es1.values(), es2.values(), 'es1 values == es2');
         t.same(es1.values({ includeHistory: true }), es2.values({ includeHistory: true }), 'es1 values with history == es2');
 
-        t.same(es2.keys(), ['decoy1', 'decoy2', 'key1'], 'keys are as expected');
+        t.same(es2.paths(), ['decoy1', 'decoy2', 'key1'], 'keys are as expected');
         t.same(es2.getValue('key1'), 'two', 'latest item for a key wins on es2');
-        t.same(es2.getItem('key1')?.value, 'two', 'getItem has correct value');
+        t.same(es2.getDocument('key1')?.value, 'two', 'getItem has correct value');
         t.same(es2.values(), ['aaa', 'zzz', 'two'], 'es2 values are as expected');
         t.same(es2.values({ includeHistory: true }), ['aaa', 'zzz', 'two', 'one'], 'values with history are as expected');
 
@@ -478,35 +478,35 @@ for (let scenario of scenarios) {
             let es2 = scenario.makeStore(WORKSPACE);
 
             // set up some keys
-            t.ok(es1.set(keypair1, {format: FORMAT, key: 'decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
-            t.ok(es1.set(keypair1, {format: FORMAT, key: 'decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy key');  // winner  (push 2)
-            t.ok(es1.set(keypair1, {format: FORMAT, key: 'key1', value: 'one', timestamp: now}), 'author1 set key1');      // becomes history  (push 3)
-            t.ok(es1.set(keypair2, {format: FORMAT, key: 'key1', value: 'two', timestamp: now + 1}), 'author2 set key1');  // winner  (push 4)
+            t.ok(es1.set(keypair1, {format: FORMAT, path: 'decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
+            t.ok(es1.set(keypair1, {format: FORMAT, path: 'decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy key');  // winner  (push 2)
+            t.ok(es1.set(keypair1, {format: FORMAT, path: 'key1', value: 'one', timestamp: now}), 'author1 set key1');      // becomes history  (push 3)
+            t.ok(es1.set(keypair2, {format: FORMAT, path: 'key1', value: 'two', timestamp: now + 1}), 'author2 set key1');  // winner  (push 4)
 
-            t.ok(es2.set(keypair1, {format: FORMAT, key: 'latestOnEs1', value: '221', timestamp: now}));       // dropped
-            t.ok(es1.set(keypair1, {format: FORMAT, key: 'latestOnEs1', value: '111', timestamp: now + 10}));  // winner  (push 5)
+            t.ok(es2.set(keypair1, {format: FORMAT, path: 'latestOnEs1', value: '221', timestamp: now}));       // dropped
+            t.ok(es1.set(keypair1, {format: FORMAT, path: 'latestOnEs1', value: '111', timestamp: now + 10}));  // winner  (push 5)
 
-            t.ok(es1.set(keypair1, {format: FORMAT, key: 'latestOnEs2', value: '11', timestamp: now}));       // dropped
-            t.ok(es2.set(keypair1, {format: FORMAT, key: 'latestOnEs2', value: '22', timestamp: now + 10}));  // winner  (pull 1)
+            t.ok(es1.set(keypair1, {format: FORMAT, path: 'latestOnEs2', value: '11', timestamp: now}));       // dropped
+            t.ok(es2.set(keypair1, {format: FORMAT, path: 'latestOnEs2', value: '22', timestamp: now + 10}));  // winner  (pull 1)
 
-            t.ok(es1.set(keypair1, {format: FORMAT, key: 'authorConflict', value: 'author1es1', timestamp: now}));      // becomes history  (push 6)
-            t.ok(es2.set(keypair2, {format: FORMAT, key: 'authorConflict', value: 'author2es2', timestamp: now + 1}));  // winner  (pull 2)
+            t.ok(es1.set(keypair1, {format: FORMAT, path: 'authorConflict', value: 'author1es1', timestamp: now}));      // becomes history  (push 6)
+            t.ok(es2.set(keypair2, {format: FORMAT, path: 'authorConflict', value: 'author2es2', timestamp: now + 1}));  // winner  (pull 2)
 
             // sync
             let syncResults = es1.sync(es2, opts);
             //log('sync results', syncResults);
             t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 items, pulled 2 (including history)');
 
-            t.equal(es1.keys().length, 6, '6 keys');
+            t.equal(es1.paths().length, 6, '6 keys');
             t.equal(es1.items().length, 6, '6 items');
             t.equal(es1.items({ includeHistory: true }).length, 8, '8 items with history');
             t.equal(es1.values().length, 6, '6 values');
             t.equal(es1.values({ includeHistory: true }).length, 8, '8 values with history');
 
-            t.same(es1.keys(), 'authorConflict decoy1 decoy2 key1 latestOnEs1 latestOnEs2'.split(' '), 'correct keys on es1');
+            t.same(es1.paths(), 'authorConflict decoy1 decoy2 key1 latestOnEs1 latestOnEs2'.split(' '), 'correct keys on es1');
             t.same(es1.values(), 'author2es2 aaa zzz two 111 22'.split(' '), 'correct values on es1');
 
-            t.same(es1.keys(), es2.keys(), 'keys match');
+            t.same(es1.paths(), es2.paths(), 'keys match');
             t.same(es1.items(), es2.items(), 'items match');
             t.same(es1.items({ includeHistory: true }), es2.items({ includeHistory: true }), 'items with history: match');
             t.same(es1.values(), es2.values(), 'values match');
@@ -520,9 +520,9 @@ for (let scenario of scenarios) {
         let esA1 = scenario.makeStore('a');
         let esA2 = scenario.makeStore('a');
         let esB = scenario.makeStore('b');
-        t.ok(esA1.set(keypair1, {format: FORMAT, key: 'a1', value: 'a1'}));
-        t.ok(esA2.set(keypair1, {format: FORMAT, key: 'a2', value: 'a2'}));
-        t.ok(esB.set(keypair1, {format: FORMAT, key: 'b', value: 'b'}));
+        t.ok(esA1.set(keypair1, {format: FORMAT, path: 'a1', value: 'a1'}));
+        t.ok(esA2.set(keypair1, {format: FORMAT, path: 'a2', value: 'a2'}));
+        t.ok(esB.set(keypair1, {format: FORMAT, path: 'b', value: 'b'}));
 
         t.same(esA1.sync(esB), { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
         t.same(esA1.sync(esA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
@@ -536,7 +536,7 @@ for (let scenario of scenarios) {
         let es = scenario.makeStore(WORKSPACE);
 
         // this time let's omit schema and timestamp
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'foo', value: 'bar'}));
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'foo', value: 'bar'}));
 
         // live mode (not implemented yet)
         t.throws(() => esEmpty1.sync(esEmpty2, {live: true}), 'live is not implemented yet and should throw');
@@ -573,14 +573,14 @@ for (let scenario of scenarios) {
         let cb = () => { numCalled += 1; }
         let unsub = es.onChange.subscribe(cb);
 
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'key1', value: 'val1.0', timestamp: now}), 'set new key');
-        t.notOk(es.set(keypair1, {format: 'xxx', key: 'key1', value: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'val1.0', timestamp: now}), 'set new key');
+        t.notOk(es.set(keypair1, {format: 'xxx', path: 'key1', value: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
         t.equal(es.getValue('key1'), 'val1.0', 'second set was ignored');
 
         t.equal(numCalled, 1, 'callback was called once');
         unsub();
 
-        t.ok(es.set(keypair1, {format: FORMAT, key: 'key2', value: 'val2.0', timestamp: now + 1}), 'set another key');
+        t.ok(es.set(keypair1, {format: FORMAT, path: 'key2', value: 'val2.0', timestamp: now + 1}), 'set another key');
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 
