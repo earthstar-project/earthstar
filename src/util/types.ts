@@ -17,7 +17,7 @@ export type WorkspaceParsed = {
     address: WorkspaceAddress,
     name: WorkspaceName,
     pubkey: EncodedKey,
-}
+};
 
 export interface KeypairBuffers {
     public: Buffer,
@@ -26,7 +26,7 @@ export interface KeypairBuffers {
 export type Keypair = {
     public: EncodedKey,
     secret: EncodedKey,
-}
+};
 
 //================================================================================
 
@@ -35,26 +35,26 @@ export type Signature = string;  // xxxxxxxxxxxx
 export type FormatName = string;
 
 export type Document = {
-    format : FormatName,
-    workspace : WorkspaceAddress,
-    path : Path,
-    value : string,
-    author : AuthorAddress,
-    timestamp : number,
-    signature : Signature,
-}
+    format: FormatName,
+    workspace: WorkspaceAddress,
+    path: Path,
+    value: string,
+    author: AuthorAddress,
+    timestamp: number,
+    signature: Signature,
+};
 
 // These options are passed to the set() method.
 // We don't know the signature yet, but we do need the author secret.
 export type DocToSet = {
-    format : FormatName,
+    format: FormatName,
     // workspace : string,
-    path : Path,
-    value : string,
+    path: Path,
+    value: string,
     // no author - the whole keypair is provided separately when setting
-    timestamp? : number,  // timestamp only for testing, usually omitted
+    timestamp?: number,  // timestamp only for testing, usually omitted
     // no signature - it's generated during setting
-}
+};
 
 export interface QueryOpts {
     // An empty query object returns all documents.
@@ -85,8 +85,8 @@ export interface SyncOpts {
 }
 
 export interface SyncResults {
-    numPushed : number,
-    numPulled : number,
+    numPushed: number,
+    numPulled: number,
 }
 
 export interface IValidator {
@@ -95,7 +95,7 @@ export interface IValidator {
     pathIsValid(path: Path): boolean;
     authorCanWriteToPath(author: RawCryptKey, path: Path): boolean;
     hashDocument(doc: Document): string;
-    signDocument(keypair : Keypair, doc: Document): Document;
+    signDocument(keypair: Keypair, doc: Document): Document;
     documentSignatureIsValid(doc: Document): boolean;
     documentIsValid(doc: Document, futureCutoff?: number): boolean;
 }
@@ -103,28 +103,28 @@ export interface IValidator {
 export interface IStorage {
     // the constructor should accept a workspace
     // constructor(workspace, ...);
-    workspace : WorkspaceAddress;
+    workspace: WorkspaceAddress;
 
     // onChange is called whenever any data changes.
     // it doesn't yet send any details about the changes.
     // subscribe with onChange.subscribe(...cb...);
-    onChange : Emitter<undefined>;
+    onChange: Emitter<undefined>;
 
-    documents(query? : QueryOpts) : Document[];
-    paths(query? : QueryOpts) : string[];
-    values(query? : QueryOpts) : string[];
+    documents(query?: QueryOpts): Document[];
+    paths(query?: QueryOpts): string[];
+    values(query?: QueryOpts): string[];
 
-    authors() : RawCryptKey[]
+    authors(): RawCryptKey[];
 
-    getDocument(path : string) : Document | undefined;
-    getValue(path : string) : string | undefined;
+    getDocument(path: string): Document | undefined;
+    getValue(path: string): string | undefined;
 
-    set(keypair : Keypair, itemToSet : DocToSet) : boolean;  // leave timestamp at 0 and it will be set to now() for you
+    set(keypair: Keypair, docToSet: DocToSet): boolean;  // leave timestamp at 0 and it will be set to now() for you
 
-    ingestDocument(doc : Document) : boolean;
+    ingestDocument(doc: Document): boolean;
 
-    _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number;
-    sync(otherStore : IStorage, opts? : SyncOpts) : SyncResults;
+    _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;
+    sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
 
     // TODO: Delete data locally.  This deletion will not propagate.
     // forget(query : QueryOpts) : void;  // same query options as paths()
