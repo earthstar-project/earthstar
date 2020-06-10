@@ -57,7 +57,6 @@ t.test('keyIsValid', (t: any) => {
     t.end();
 });
 
-
 t.test('authorCanWriteToKey', (t: any) => {
     let author = 'abcdefg';  // no '@'
     t.ok(Val.authorCanWriteToPath(author, 'public'), 'regular public key');
@@ -77,22 +76,22 @@ t.test('authorCanWriteToKey', (t: any) => {
 t.test('hashDocument', (t: any) => {
     let doc1: Document = {
         format: 'es.2',
-        workspace: 'gardenclub',
-        path: 'k1',
+        workspace: '//gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/k1',
         value: 'v1',
         timestamp: 1,
         author: '@me.ed25519',
         signature: 'xxx.sig.ed25519',
     };
-    t.equal(Val.hashDocument(doc1), '89b37cdfb52ac4c6d85599cdb19d1ff0d6340b924478ea7db36cce3912839db3');
+    t.equal(Val.hashDocument(doc1), '38f7d6d6de5b3fcd2abf52e03dc4eab8a32d7ca3e1c2ab30486598aa645a687f');
     t.done();
 });
 
 t.test('signDocument and documentSignatureIsValid', (t: any) => {
     let doc1: Document = {
         format: 'es.2',
-        workspace: 'gardenclub',
-        path: 'k1',
+        workspace: '//gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/k1',
         value: 'v1',
         timestamp: 1,
         author: author1,
@@ -136,8 +135,8 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
 t.test('documentIsValid', (t: any) => {
     let doc1: Document = {
         format: 'es.2',
-        workspace: 'gardenclub',
-        path: 'k1',
+        workspace: '//gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/k1',
         value: 'v1',
         timestamp: now,
         author: author1,
