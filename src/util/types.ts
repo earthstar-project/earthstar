@@ -1,8 +1,8 @@
 import { Emitter } from './emitter';
 
 export type Path = string;
-export type WorkspaceAddress = string;
-export type WorkspaceName = string;
+export type WorkspaceAddress = string;  // sometimes just called "workspace"
+export type WorkspaceName = string;  // sometimes just called "author"
 export type AuthorAddress = string;
 export type AuthorShortname = string;
 export type EncodedKey = string; // base58 public or secret key
@@ -28,8 +28,6 @@ export type Keypair = {
     secret: EncodedKey,
 };
 
-//================================================================================
-
 export type Signature = string;  // xxxxxxxxxxxx
 export type FormatName = string;
 
@@ -47,11 +45,11 @@ export type Document = {
 // We don't know the signature yet, but we do need the author secret.
 export type DocToSet = {
     format: FormatName,
-    // workspace : string,
     path: Path,
     value: string,
-    // no author - the whole keypair is provided separately when setting
     timestamp?: number,  // timestamp only for testing, usually omitted
+    // workspace is implied by the storage we put it into
+    // no author - the whole keypair is provided separately when setting
     // no signature - it's generated during setting
 };
 
@@ -100,7 +98,7 @@ export interface IValidator {
 }
 
 export interface IStorage {
-    // the constructor should accept a workspace
+    // the constructor should accept a workspace address
     // constructor(workspace, ...);
     workspace: WorkspaceAddress;
 
