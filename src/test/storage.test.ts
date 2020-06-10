@@ -367,53 +367,53 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.only(scenario.description + ': key queries', (t: any) => {
+    t.test(scenario.description + ': path queries', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
-        let keys = 'zzz aaa dir dir/ q qq qqq dir/a dir/b dir/c'.split(' ');
+        let paths = '/zzz /aaa /dir /dir/ /q /qq /qqq /dir/a /dir/b /dir/c'.split(' ');
         let ii = 0;
-        for (let key of keys) {
-            t.ok(es.set(keypair1, {format: FORMAT, path: key, value: 'true', timestamp: now + ii}), 'set key: ' + key),
+        for (let path of paths) {
+            t.ok(es.set(keypair1, {format: FORMAT, path: path, value: 'true', timestamp: now + ii}), 'set path: ' + path),
                 ii += 1;
         }
-        let sortedKeys = [...keys];
-        sortedKeys.sort();
-        let esKeys = es.paths();
-        t.same(keys.length, esKeys.length, 'same number of keys');
-        t.same(sortedKeys, esKeys, 'keys are sorted');
-        t.same(es.paths({ path: '/q' }), ['q'], 'query for specific key');
-        t.same(es.paths({ path: '/nope' }), [], 'query for missing key');
-        t.same(es.paths({ lowPath: 'q', highPath: 'qqq' }), ['q', 'qq'], 'lowKey <= k < highKey');
-        t.same(es.paths({ lowPath: 'q', highPath: 'qqq', limit: 1 }), ['q'], 'lowKey, highKey with limit');
-        t.same(es.paths({ pathPrefix: 'dir/' }), ['dir/', 'dir/a', 'dir/b', 'dir/c'], 'prefix');
-        t.same(es.paths({ pathPrefix: 'dir/', limit: 2 }), ['dir/', 'dir/a'], 'prefix with limit');
+        let sortedPaths = [...paths];
+        sortedPaths.sort();
+        let esPaths = es.paths();
+        t.same(paths.length, esPaths.length, 'same number of paths');
+        t.same(sortedPaths, esPaths, 'paths are sorted');
+        t.same(es.paths({ path: '/q' }), ['/q'], 'query for specific path');
+        t.same(es.paths({ path: '/nope' }), [], 'query for missing path');
+        t.same(es.paths({ lowPath: '/q', highPath: '/qqq' }), ['/q', '/qq'], 'lowPath <= k < highPath');
+        t.same(es.paths({ lowPath: '/q', highPath: '/qqq', limit: 1 }), ['/q'], 'lowPath, highPath with limit');
+        t.same(es.paths({ pathPrefix: '/dir/' }), ['/dir/', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
+        t.same(es.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/', '/dir/a'], 'pathPrefix with limit');
         t.done();
     });
 
-    t.test(scenario.description + ': multi-author writes', (t: any) => {
+    t.only(scenario.description + ': multi-author writes', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
-        // set decoy keys to make sure the later tests return the correct key
-        t.ok(es.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'set decoy key 2');
-        t.ok(es.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'set decoy key 1');
+        // set decoy paths to make sure the later tests return the correct path
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'set decoy path 2');
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'set decoy path 1');
 
-        t.ok(es.set(keypair1, {format: FORMAT, path: '/key1', value: 'one', timestamp: now}), 'set new key');
-        t.equal(es.getValue('key1'), 'one');
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/path1', value: 'one', timestamp: now}), 'set new path');
+        t.equal(es.getValue('/path1'), 'one');
 
         // this will overwrite 'one' but the doc for 'one' will remain in history.
-        // history will have 2 docs for this key.
-        t.ok(es.set(keypair2, {format: FORMAT, path: '/key1', value: 'two', timestamp: now + 1}), 'update from a second author');
-        t.equal(es.getValue('key1'), 'two');
+        // history will have 2 docs for this path.
+        t.ok(es.set(keypair2, {format: FORMAT, path: '/path1', value: 'two', timestamp: now + 1}), 'update from a second author');
+        t.equal(es.getValue('/path1'), 'two');
 
         // this will replace the old original doc 'one' from this author.
-        // history will have 2 docs for this key.
-        t.ok(es.set(keypair1, {format: FORMAT, path: '/key1', value: 'three', timestamp: now + 2}), 'update from original author again');
-        t.equal(es.getValue('key1'), 'three');
+        // history will have 2 docs for this path.
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/path1', value: 'three', timestamp: now + 2}), 'update from original author again');
+        t.equal(es.getValue('/path1'), 'three');
 
-        t.equal(es.paths().length, 3, '3 keys');
+        t.equal(es.paths().length, 3, '3 paths');
         t.equal(es.values().length, 3, '3 values');
         t.equal(es.values({ includeHistory: true }).length, 4, '4 values with history');
 
-        t.same(es.paths(), ['decoy1', 'decoy2', 'key1'], 'keys()');
+        t.same(es.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths()');
         t.same(es.values(), ['aaa', 'zzz', 'three'], 'values()');
         t.same(es.values({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'values with history, newest first');
 
