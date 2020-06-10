@@ -10,7 +10,7 @@ import {
     DocToSet,
     Keypair,
     QueryOpts,
-    RawCryptKey,
+    EncodedKey,
     SyncOpts,
     SyncResults,
     WorkspaceAddress,
@@ -242,9 +242,9 @@ export class StorageSqlite implements IStorage {
         return this.documents(query).map(doc => doc.value);
     }
 
-    authors() : RawCryptKey[] {
+    authors() : EncodedKey[] {
         // TODO: query the db directly
-        let authorSet : Set<RawCryptKey> = new Set();
+        let authorSet : Set<EncodedKey> = new Set();
         for (let doc of this.documents({ includeHistory: true })) {
             authorSet.add(doc.author);
         }

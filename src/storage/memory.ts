@@ -5,7 +5,7 @@ import {
     DocToSet,
     Keypair,
     QueryOpts,
-    RawCryptKey,
+    EncodedKey,
     SyncOpts,
     SyncResults,
     WorkspaceAddress,
@@ -138,8 +138,8 @@ export class StorageMemory implements IStorage {
         return this.documents(query).map(doc => doc.value);
     }
 
-    authors() : RawCryptKey[] {
-        let authorSet : Set<RawCryptKey> = new Set();
+    authors() : EncodedKey[] {
+        let authorSet : Set<EncodedKey> = new Set();
         for (let doc of this.documents({ includeHistory: true })) {
             authorSet.add(doc.author);
         }

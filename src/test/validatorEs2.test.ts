@@ -1,12 +1,12 @@
 import t = require('tap');
 import { Crypto } from '../crypto/crypto';
-import { Document, RawCryptKey } from '../util/types';
+import { Document, EncodedKey } from '../util/types';
 import { ValidatorEs2 } from '../validator/es2';
 
 let log = console.log;
 
 let keypair1 = Crypto.generateKeypair();
-let author1: RawCryptKey = keypair1.public;
+let author1: EncodedKey = keypair1.public;
 let now = 1500000000000000;
 let Val = ValidatorEs2;
 

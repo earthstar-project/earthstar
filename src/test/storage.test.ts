@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import t = require('tap');
 import { Crypto } from '../crypto/crypto';
-import { SyncOpts, Document, FormatName, RawCryptKey, IStorage, IValidator } from '../util/types';
+import { SyncOpts, Document, FormatName, EncodedKey, IStorage, IValidator } from '../util/types';
 import { ValidatorEs2 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
@@ -19,9 +19,9 @@ let VALIDATORS : IValidator[] = [ValidatorEs2];
 let keypair1 = Crypto.generateKeypair();
 let keypair2 = Crypto.generateKeypair();
 let keypair3 = Crypto.generateKeypair();
-let author1: RawCryptKey = keypair1.public;
-let author2: RawCryptKey = keypair2.public;
-let author3: RawCryptKey = keypair3.public;
+let author1: EncodedKey = keypair1.public;
+let author2: EncodedKey = keypair2.public;
+let author3: EncodedKey = keypair3.public;
 let now = 1500000000000000;
 
 interface Scenario {

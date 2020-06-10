@@ -1,4 +1,4 @@
-import { Keypair, FormatName, Document, IValidator, Path, RawCryptKey } from '../util/types';
+import { Keypair, FormatName, Document, IValidator, Path, EncodedKey } from '../util/types';
 import { Crypto } from '../crypto/crypto';
 import { isOnlyPrintableAscii } from '../util/parse';
 
@@ -16,7 +16,7 @@ export const ValidatorEs2 : IValidator = class {
         }
         return true;
     }
-    static authorCanWriteToPath(author: RawCryptKey, key: Path): boolean {
+    static authorCanWriteToPath(author: EncodedKey, key: Path): boolean {
         // no tilde: it's public
         if (key.indexOf('~') === -1) {
             return true;

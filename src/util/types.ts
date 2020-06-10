@@ -30,7 +30,6 @@ export type Keypair = {
 
 //================================================================================
 
-export type RawCryptKey = string;  // xxxxx, in base64, just the integer (not der)
 export type Signature = string;  // xxxxxxxxxxxx
 export type FormatName = string;
 
@@ -93,7 +92,7 @@ export interface IValidator {
     // this should be implemented as an abstract class, not a regular class
     format: FormatName;
     pathIsValid(path: Path): boolean;
-    authorCanWriteToPath(author: RawCryptKey, path: Path): boolean;
+    authorCanWriteToPath(author: EncodedKey, path: Path): boolean;
     hashDocument(doc: Document): string;
     signDocument(keypair: Keypair, doc: Document): Document;
     documentSignatureIsValid(doc: Document): boolean;
@@ -114,7 +113,7 @@ export interface IStorage {
     paths(query?: QueryOpts): string[];
     values(query?: QueryOpts): string[];
 
-    authors(): RawCryptKey[];
+    authors(): EncodedKey[];
 
     getDocument(path: string): Document | undefined;
     getValue(path: string): string | undefined;
