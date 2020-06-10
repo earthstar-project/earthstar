@@ -11,6 +11,7 @@ import {
     workspaceNameChars,
     b58chars,
     authorShortnameChars,
+    digits,
 } from './characters';
 
 export let makeAuthorAddress = (shortname : AuthorShortname, encodedPubkey : string) : AuthorAddress =>
@@ -67,8 +68,11 @@ export let parseAuthorAddress = (addr : string) : {authorParsed: AuthorParsed | 
     if (shortname.length !== 4) {
         return { authorParsed: null, err: `author shortname ${JSON.stringify(shortname)} is not 4 chars long` };
     }
-    if (pubkey.length < 40 || pubkey.length > 44) {
-        return { authorParsed: null, err: `author pubkey ${JSON.stringify(shortname)} is not between 40 and 44 chars long` };
+    if (pubkey.length !== 44) {
+        return { authorParsed: null, err: `author pubkey ${JSON.stringify(shortname)} is not 44 chars long` };
+    }
+    if (digits.indexOf(pubkey[0]) !== -1) {
+        return { authorParsed: null, err: `author pubkey ${JSON.stringify(shortname)} starts with a number` };
     }
     if (!onlyHasChars(shortname, authorShortnameChars)) {
         return { authorParsed: null, err: `author shortname ${JSON.stringify(shortname)} uses disallowed chars` };
