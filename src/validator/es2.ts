@@ -30,14 +30,14 @@ export const ValidatorEs2 : IValidator = class {
         return false;
     }
     static hashDocument(doc: Document): string {
-        // This is used for signatures and references to specific items.
+        // This is used for signatures and references to specific docs.
         // We use the hash of the value so we can drop the actual value
         // and only keep the hash around for verifying signatures,
         // though we're not using that ability yet.
         // None of these fields are allowed to contain newlines
         // except for value, but value is hashed, so it's safe to
         // use newlines as a field separator.
-        // We enforce the no-newlines rules in itemIsValid() and keyIsValid().
+        // We enforce the no-newlines rules in documentIsValid() and keyIsValid().
         return Crypto.sha256([
             doc.format,
             doc.workspace,
@@ -75,20 +75,20 @@ export const ValidatorEs2 : IValidator = class {
             || typeof doc.timestamp !== 'number'
             || typeof doc.signature !== 'string'
         ) {
-            logWarning('itemIsValid: item properties have wrong type(s)');
+            logWarning('documentIsValid: doc properties have wrong type(s)');
             return false;
         }
 
         // Don't allow extra properties in the object
         if (Object.keys(doc).length !== 7) {
-            logWarning('itemIsValid: item has extra properties');
+            logWarning('documentIsValid: doc has extra properties');
             return false;
         }
 
-        // item.format should have already been checked by the store, when it decides
+        // doc.format should have already been checked by the store, when it decides
         // which validator to use.  But let's check it anyway.
         if (doc.format !== this.format) {
-            logWarning('itemIsValid: format does not match');
+            logWarning('documentIsValid: format does not match');
             return false;
         }
 
@@ -100,62 +100,62 @@ export const ValidatorEs2 : IValidator = class {
         // accidentally created with milliseconds or seconds,
         // the message is invalid.
         if (doc.timestamp <= 9999999999999) {
-            logWarning('itemIsValid: timestamp too small');
+            logWarning('documentIsValid: timestamp too small');
             return false;
         }
         // Timestamp must be less than Number.MAX_SAFE_INTEGER.
         if (doc.timestamp > 9007199254740991) {
-            logWarning('itemIsValid: timestamp too large');
+            logWarning('documentIsValid: timestamp too large');
             return false;
         }
         // Timestamp must not be from the future.
         if (doc.timestamp > futureCutoff) {
-            logWarning('itemIsValid: timestamp is in the future');
+            logWarning('documentIsValid: timestamp is in the future');
             return false;
         }
 
-        // No non-printable ascii characters or unicode (except item.value)
-        // (the format is caught earlier by checking if item.format === this.format)
+        // No non-printable ascii characters or unicode (except doc.value)
+        // (the format is caught earlier by checking if doc.format === this.format)
         /* istanbul ignore next */
         if (!isOnlyPrintableAscii(doc.format)) {
-            logWarning('itemIsValid: format contains non-printable ascii characters');
+            logWarning('documentIsValid: format contains non-printable ascii characters');
             return false;
         }
         if (!isOnlyPrintableAscii(doc.workspace)) {
-            logWarning('itemIsValid: workspace contains non-printable ascii characters');
+            logWarning('documentIsValid: workspace contains non-printable ascii characters');
             return false;
         }
         if (!isOnlyPrintableAscii(doc.author)) {
-            logWarning('itemIsValid: author contains non-printable ascii characters');
+            logWarning('documentIsValid: author contains non-printable ascii characters');
             return false;
         }
         if (!isOnlyPrintableAscii(doc.signature)) {
-            logWarning('itemIsValid: signature contains non-printable ascii characters');
+            logWarning('documentIsValid: signature contains non-printable ascii characters');
             return false;
         }
 
         // Key must be valid (only printable ascii, etc)
         if (!this.pathIsValid(doc.path)) {
-            logWarning('itemIsValid: key not valid');
+            logWarning('documentIsValid: key not valid');
             return false;
         }
 
         // Author must start with '@'
         if (!doc.author.startsWith('@')) {
-            logWarning('itemIsValid: author must start with @');
+            logWarning('documentIsValid: author must start with @');
             return false;
         }
 
         // Author must have write permission
         if (!this.authorCanWriteToPath(doc.author, doc.path)) {
-            logWarning('itemIsValid: author can\'t write to key');
+            logWarning('documentIsValid: author can\'t write to key');
             return false;
         }
 
         // Check signature last since it's slow and all the above checks
         // are simple and safe enough to do on untrusted data.
         if (!this.documentSignatureIsValid(doc)) {
-            logWarning('itemIsValid: invalid signature');
+            logWarning('documentIsValid: invalid signature');
             return false;
         }
 
