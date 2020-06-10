@@ -274,7 +274,7 @@ export class StorageSqlite implements IStorage {
     }
 
     ingestDocument(doc : Document, futureCutoff? : number) : boolean {
-        // Given an doc from elsewhere, validate, decide if we want it, and possibly store it.
+        // Given a doc from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
         // It can be rejected if it's not the latest one from the same author,
