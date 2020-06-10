@@ -17,8 +17,6 @@ import { ValidatorEs2 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
 
-//t.runOnly = true;
-
 //================================================================================
 // prepare for test scenarios
 
@@ -389,7 +387,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.only(scenario.description + ': multi-author writes', (t: any) => {
+    t.test(scenario.description + ': multi-author writes', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
         // set decoy paths to make sure the later tests return the correct path
@@ -436,11 +434,11 @@ for (let scenario of scenarios) {
         let es1 = scenario.makeStore(WORKSPACE);
         let es2 = scenario.makeStore(WORKSPACE);
 
-        // set up some keys
-        t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy key');
-        t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy key');
-        t.ok(es1.set(keypair1, {format: FORMAT, path: '/key1', value: 'one', timestamp: now}), 'author1 set key1');
-        t.ok(es1.set(keypair2, {format: FORMAT, path: '/key1', value: 'two', timestamp: now + 1}), 'author2 set key1');
+        // set up some paths
+        t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy path');
+        t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy path');
+        t.ok(es1.set(keypair1, {format: FORMAT, path: '/path1', value: 'one', timestamp: now}), 'author1 set path1');
+        t.ok(es1.set(keypair2, {format: FORMAT, path: '/path1', value: 'two', timestamp: now + 1}), 'author2 set path1');
 
         // sync
         let syncResults = es1.sync(es2, { direction: 'push', existing: true, live: false });
@@ -448,13 +446,13 @@ for (let scenario of scenarios) {
         t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 docs (includes history docs).  pulled 0.');
 
         // check results
-        t.same(es1.paths(), es2.paths(), 'es1.keys() == es2.keys()');
+        t.same(es1.paths(), es2.paths(), 'es1.paths() == es2.paths()');
         t.same(es1.values(), es2.values(), 'es1 values == es2');
         t.same(es1.values({ includeHistory: true }), es2.values({ includeHistory: true }), 'es1 values with history == es2');
 
-        t.same(es2.paths(), ['decoy1', 'decoy2', 'key1'], 'keys are as expected');
-        t.same(es2.getValue('key1'), 'two', 'latest doc for a key wins on es2');
-        t.same(es2.getDocument('key1')?.value, 'two', 'getDocument has correct value');
+        t.same(es2.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths are as expected');
+        t.same(es2.getValue('/path1'), 'two', 'latest doc for a path wins on es2');
+        t.same(es2.getDocument('/path1')?.value, 'two', 'getDocument has correct value');
         t.same(es2.values(), ['aaa', 'zzz', 'two'], 'es2 values are as expected');
         t.same(es2.values({ includeHistory: true }), ['aaa', 'zzz', 'two', 'one'], 'values with history are as expected');
 
@@ -466,10 +464,9 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.test(scenario.description + ': sync: two-way', (t: any) => {
-
+    t.only(scenario.description + ': sync: two-way', (t: any) => {
         let optsToTry : SyncOpts[] = [
-            {},
+            {},  // use the defaults
             { direction: 'both', existing: true, live: false },  // these are the defaults
         ];
 
@@ -477,11 +474,11 @@ for (let scenario of scenarios) {
             let es1 = scenario.makeStore(WORKSPACE);
             let es2 = scenario.makeStore(WORKSPACE);
 
-            // set up some keys
-            t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy key');  // winner  (push #1)
-            t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy key');  // winner  (push 2)
-            t.ok(es1.set(keypair1, {format: FORMAT, path: '/key1', value: 'one', timestamp: now}), 'author1 set key1');      // becomes history  (push 3)
-            t.ok(es1.set(keypair2, {format: FORMAT, path: '/key1', value: 'two', timestamp: now + 1}), 'author2 set key1');  // winner  (push 4)
+            // set up some paths
+            t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy path');  // winner  (push #1)
+            t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy path');  // winner  (push 2)
+            t.ok(es1.set(keypair1, {format: FORMAT, path: '/path1', value: 'one', timestamp: now}), 'author1 set path1');      // becomes history  (push 3)
+            t.ok(es1.set(keypair2, {format: FORMAT, path: '/path1', value: 'two', timestamp: now + 1}), 'author2 set path1');  // winner  (push 4)
 
             t.ok(es2.set(keypair1, {format: FORMAT, path: '/latestOnEs1', value: '221', timestamp: now}));       // dropped
             t.ok(es1.set(keypair1, {format: FORMAT, path: '/latestOnEs1', value: '111', timestamp: now + 10}));  // winner  (push 5)
@@ -497,16 +494,16 @@ for (let scenario of scenarios) {
             //log('sync results', syncResults);
             t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
-            t.equal(es1.paths().length, 6, '6 keys');
+            t.equal(es1.paths().length, 6, '6 paths');
             t.equal(es1.documents().length, 6, '6 docs');
             t.equal(es1.documents({ includeHistory: true }).length, 8, '8 docs with history');
             t.equal(es1.values().length, 6, '6 values');
             t.equal(es1.values({ includeHistory: true }).length, 8, '8 values with history');
 
-            t.same(es1.paths(), 'authorConflict decoy1 decoy2 key1 latestOnEs1 latestOnEs2'.split(' '), 'correct keys on es1');
-            t.same(es1.values(), 'author2es2 aaa zzz two 111 22'.split(' '), 'correct values on es1');
+            t.same(es1.paths(), '/authorConflict /decoy1 /decoy2 /latestOnEs1 /latestOnEs2 /path1'.split(' '), 'correct paths on es1');
+            t.same(es1.values(), 'author2es2 aaa zzz 111 22 two'.split(' '), 'correct values on es1');
 
-            t.same(es1.paths(), es2.paths(), 'keys match');
+            t.same(es1.paths(), es2.paths(), 'paths match');
             t.same(es1.documents(), es2.documents(), 'docs match');
             t.same(es1.documents({ includeHistory: true }), es2.documents({ includeHistory: true }), 'docs with history: match');
             t.same(es1.values(), es2.values(), 'values match');
