@@ -1,33 +1,20 @@
 import {
+    AuthorAddress,
     AuthorParsed,
+    AuthorShortname,
     WorkspaceParsed,
 } from './types';
+import {
+    onlyHasChars,
+    pathChars,
+    isOnlyPrintableAscii,
+    workspaceNameChars,
+    b58chars,
+    authorShortnameChars,
+} from './characters';
 
-export let onlyHasChars = (str : string, allowedChars : string) : boolean => {
-    for (let s of str) {
-        if (allowedChars.indexOf(s) === -1) { return false; }
-    }
-    return true;
-}
-export let isOnlyPrintableAscii = (s : string) : boolean => {
-    let buf = Buffer.from(s, 'utf8');
-    for (let char of buf) {
-        // char must be between ' ' (space) and '~' inclusive
-        if (char < 32 || char > 126) { return false; }
-    }
-    return true;
-}
-
-const alphaLower = 'abcdefghijklmnopqrstuvwxyz';
-const alphaUpper = alphaLower.toUpperCase();
-const digits = '0123456789';
-const authorShortnameChars = alphaLower;
-const workspaceNameChars = alphaLower;
-const b58chars = alphaLower + alphaUpper + digits;  // todo: make this match b58 charset
-const pathChars = alphaLower + alphaUpper + digits + "/'()-._~!*$&+,:=?@%";
-
-export let isValidPath = (path : string) : boolean =>
-    path.startsWith('/') && onlyHasChars(path, pathChars);
+export let makeAuthorAddress = (shortname : AuthorShortname, encodedPubkey : string) : AuthorAddress =>
+    `@${shortname}.${encodedPubkey}`;
 
 export let parseWorkspaceAddress = (addr : string) : {workspaceParsed: WorkspaceParsed | null, err : string | null} => {
     // example: //solarpunk.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP

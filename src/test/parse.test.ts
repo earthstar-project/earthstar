@@ -8,8 +8,7 @@ import {
 import {
     parseWorkspaceAddress,
     parseAuthorAddress,
-    isValidPath,
-} from '../util/parse';
+} from '../util/addresses';
 
 let log = console.log;
 
@@ -306,31 +305,3 @@ t.test('parse author address', (t: any) => {
 });
 
 
-type IsValidPathVector = {
-    note?: string,
-    path : string,
-    valid : boolean,
-};
-t.test('isValidPath', (t: any) => {
-    let vectors : IsValidPathVector[] = [
-        { valid: false, path: '' },
-        { valid: false, path: 'not-starting-with-slash' },
-        { valid: false, path: '/with space' },
-        { valid: false, path: '/with"' },
-        { valid: false, path: '/with<' },
-        { valid: false, path: '/with\nnewline' },
-
-        { valid: true, path: '/' },
-        { valid: true, path: '/foo' },
-        { valid: true, path: '/FOO' },
-        { valid: true, path: '/foo/' },
-        { valid: true, path: '/foo/1234' },
-        { valid: true, path: '/about/~@suzy.abc/name' },
-        { valid: true, path: '/wiki/shared/Garden%20Gnome' },
-    ]
-    for (let v of vectors) {
-        t.same(v.valid, isValidPath(v.path),
-            v.note || `${v.valid}: ${v.path}`);
-    }
-    t.end();
-});

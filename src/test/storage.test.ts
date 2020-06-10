@@ -1,7 +1,16 @@
 import * as fs from 'fs';
 import t = require('tap');
-import { Crypto } from '../crypto/crypto';
-import { SyncOpts, Document, FormatName, EncodedKey, IStorage, IValidator } from '../util/types';
+import {
+    AuthorAddress,
+    Document,
+    FormatName,
+    IStorage,
+    IValidator,
+    SyncOpts,
+} from '../util/types';
+import {
+    generateAuthorKeypair
+} from '../crypto/crypto';
 import { ValidatorEs2 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
@@ -16,12 +25,12 @@ let WORKSPACE = 'gardenclub';
 let FORMAT : FormatName = 'es.2';
 let VALIDATORS : IValidator[] = [ValidatorEs2];
 
-let keypair1 = Crypto.generateKeypair();
-let keypair2 = Crypto.generateKeypair();
-let keypair3 = Crypto.generateKeypair();
-let author1: EncodedKey = keypair1.public;
-let author2: EncodedKey = keypair2.public;
-let author3: EncodedKey = keypair3.public;
+let keypair1 = generateAuthorKeypair('test');
+let keypair2 = generateAuthorKeypair('twoo');
+let keypair3 = generateAuthorKeypair('thre');
+let author1: AuthorAddress = keypair1.address;
+let author2: AuthorAddress = keypair2.address;
+let author3: AuthorAddress = keypair3.address;
 let now = 1500000000000000;
 
 interface Scenario {

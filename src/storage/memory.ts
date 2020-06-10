@@ -1,11 +1,11 @@
 import {
+    AuthorAddress,
+    AuthorKeypair,
+    DocToSet,
+    Document,
     IStorage,
     IValidator,
-    Document,
-    DocToSet,
-    Keypair,
     QueryOpts,
-    EncodedKey,
     SyncOpts,
     SyncResults,
     WorkspaceAddress,
@@ -138,8 +138,8 @@ export class StorageMemory implements IStorage {
         return this.documents(query).map(doc => doc.value);
     }
 
-    authors() : EncodedKey[] {
-        let authorSet : Set<EncodedKey> = new Set();
+    authors() : AuthorAddress[] {
+        let authorSet : Set<AuthorAddress> = new Set();
         for (let doc of this.documents({ includeHistory: true })) {
             authorSet.add(doc.author);
         }
@@ -216,7 +216,7 @@ export class StorageMemory implements IStorage {
         return true;
     }
 
-    set(keypair : Keypair, docToSet : DocToSet) : boolean {
+    set(keypair : AuthorKeypair, docToSet : DocToSet) : boolean {
         // Store a value.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
@@ -235,7 +235,7 @@ export class StorageMemory implements IStorage {
             workspace: this.workspace,
             path: docToSet.path,
             value: docToSet.value,
-            author: keypair.public,
+            author: keypair.address,
             timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
             signature: '',
         }

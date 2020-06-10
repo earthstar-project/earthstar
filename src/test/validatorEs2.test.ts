@@ -1,12 +1,18 @@
 import t = require('tap');
-import { Crypto } from '../crypto/crypto';
-import { Document, EncodedKey } from '../util/types';
+
+import {
+    AuthorAddress,
+    Document,
+} from '../util/types';
+import {
+    generateAuthorKeypair
+} from '../crypto/crypto';
 import { ValidatorEs2 } from '../validator/es2';
 
 let log = console.log;
 
-let keypair1 = Crypto.generateKeypair();
-let author1: EncodedKey = keypair1.public;
+let keypair1 = generateAuthorKeypair('test');
+let author1: AuthorAddress = keypair1.address;
 let now = 1500000000000000;
 let Val = ValidatorEs2;
 
@@ -15,23 +21,42 @@ let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
 let snowmanJs2 = snowmanBufferUtf8.toString('utf8');
 let snowmanU = '\u2604';
 
+type IsValidPathVector = {
+    note?: string,
+    path : string,
+    valid : boolean,
+};
 t.test('keyIsValid', (t: any) => {
-    t.ok(Val.pathIsValid('hello'), 'regular public key');
-    t.ok(Val.pathIsValid('~@aaa.ed25519/foo/bar'), 'valid key with write permission');
+    let vectors : IsValidPathVector[] = [
+        { valid: false, path: '', note: 'empty string' },
+        { valid: false, path: ' ', note: 'just a space' },
+        { valid: false, path: '\x00', note: 'null byte' },
+        { valid: false, path: 'not-starting-with-slash' },
+        { valid: false, path: ' /starts-with-space' },
+        { valid: false, path: '/ends-with-space ' },
+        { valid: false, path: '/space in the middle' },
+        { valid: false, path: '/with"' },
+        { valid: false, path: '/with<' },
+        { valid: false, path: '/with\nnewline' },
+        { valid: false, path: '/' + snowmanJsString, note: 'snowman 1' },
+        { valid: false, path: '/' + snowmanJs2, note: 'snowman 2' },
+        { valid: false, path: '/' + snowmanU, note: 'snowman 3' },
 
-    t.ok(Val.pathIsValid(''), 'empty string');
-    t.ok(Val.pathIsValid(' '), 'space');
-
-    // forbidden: non-printable characters and utf-8
-    t.notOk(Val.pathIsValid('hello\n'), 'contains \\n');
-    t.notOk(Val.pathIsValid('aa\tbb'), 'contains \\t');
-    t.notOk(Val.pathIsValid('\x00'), 'null byte');
-    t.notOk(Val.pathIsValid(snowmanJsString), 'snowman');
-    t.notOk(Val.pathIsValid(snowmanJs2), 'snowman 2');
-    t.notOk(Val.pathIsValid(snowmanU), 'snowman 3');
-
-    t.done();
+        { valid: true, path: '/' },
+        { valid: true, path: '/foo' },
+        { valid: true, path: '/FOO' },
+        { valid: true, path: '/foo/' },
+        { valid: true, path: '/foo/1234' },
+        { valid: true, path: '/about/~@suzy.abc/name' },
+        { valid: true, path: '/wiki/shared/Garden%20Gnome' },
+    ]
+    for (let v of vectors) {
+        t.same(v.valid, Val.pathIsValid(v.path),
+            v.note || `${v.valid}: ${v.path}`);
+    }
+    t.end();
 });
+
 
 t.test('authorCanWriteToKey', (t: any) => {
     let author = 'abcdefg';  // no '@'

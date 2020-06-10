@@ -19,12 +19,8 @@ export type WorkspaceParsed = {
     pubkey: EncodedKey,
 };
 
-export interface KeypairBuffers {
-    public: Buffer,
-    secret: Buffer,
-}
-export type Keypair = {
-    public: EncodedKey,
+export type AuthorKeypair = {
+    address: AuthorAddress,
     secret: EncodedKey,
 };
 
@@ -90,9 +86,9 @@ export interface IValidator {
     // this should be implemented as an abstract class, not a regular class
     format: FormatName;
     pathIsValid(path: Path): boolean;
-    authorCanWriteToPath(author: EncodedKey, path: Path): boolean;
+    authorCanWriteToPath(author: AuthorAddress, path: Path): boolean;
     hashDocument(doc: Document): string;
-    signDocument(keypair: Keypair, doc: Document): Document;
+    signDocument(keypair: AuthorKeypair, doc: Document): Document;
     documentSignatureIsValid(doc: Document): boolean;
     documentIsValid(doc: Document, futureCutoff?: number): boolean;
 }
@@ -111,12 +107,12 @@ export interface IStorage {
     paths(query?: QueryOpts): string[];
     values(query?: QueryOpts): string[];
 
-    authors(): EncodedKey[];
+    authors(): AuthorAddress[];
 
     getDocument(path: string): Document | undefined;
     getValue(path: string): string | undefined;
 
-    set(keypair: Keypair, docToSet: DocToSet): boolean;  // leave timestamp at 0 and it will be set to now() for you
+    set(keypair: AuthorKeypair, docToSet: DocToSet): boolean;  // leave timestamp at 0 and it will be set to now() for you
 
     ingestDocument(doc: Document): boolean;
 

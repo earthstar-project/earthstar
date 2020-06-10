@@ -1,32 +1,52 @@
-import { Keypair, FormatName, Document, IValidator, Path, EncodedKey } from '../util/types';
-import { Crypto } from '../crypto/crypto';
-import { isOnlyPrintableAscii } from '../util/parse';
+import {
+    AuthorAddress,
+    Document,
+    FormatName,
+    IValidator,
+    Path,
+    AuthorKeypair,
+} from '../util/types';
+import {
+    sha256,
+    sign,
+    verify,
+} from '../crypto/crypto';
+import {
+    isOnlyPrintableAscii,
+    onlyHasChars,
+    pathChars,
+} from '../util/characters';
+import { parseAuthorAddress, parseWorkspaceAddress } from '../util/addresses';
 
 let log = console.log;
-let logWarning = console.log;
+let logWarning = console.warn;
 //let log = (...args : any[]) => void {};  // turn off logging for now
 //let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
 export const ValidatorEs2 : IValidator = class {
     static format : FormatName = 'es.2';
     static pathIsValid(path: Path): boolean {
-        if (!isOnlyPrintableAscii(path)) {
-            logWarning('invalid key: contains non-printable or non-ascii characters');
+        if (!path.startsWith('/')) {
+            logWarning('invalid path: does not start with /');
+            return false;
+        }
+        if (!onlyHasChars(path, pathChars)) {
+            logWarning('invalid path: contains disallowed characters');
             return false;
         }
         return true;
     }
-    static authorCanWriteToPath(author: EncodedKey, key: Path): boolean {
+    static authorCanWriteToPath(author: AuthorAddress, path: Path): boolean {
         // no tilde: it's public
-        if (key.indexOf('~') === -1) {
+        if (path.indexOf('~') === -1) {
             return true;
         }
         // key contains "~" + author.  the author can write here.
-        if (key.indexOf('~' + author) !== -1) {
+        if (path.indexOf('~' + author) !== -1) {
             return true;
         }
         // key contains at least one tilde but not ~@author.  The author can't write here.
-        logWarning(`author ${author} can't write to key ${key}`);
+        logWarning(`author ${author} can't write to key ${path}`);
         return false;
     }
     static hashDocument(doc: Document): string {
@@ -38,24 +58,24 @@ export const ValidatorEs2 : IValidator = class {
         // except for value, but value is hashed, so it's safe to
         // use newlines as a field separator.
         // We enforce the no-newlines rules in documentIsValid() and keyIsValid().
-        return Crypto.sha256([
+        return sha256([
             doc.format,
             doc.workspace,
             doc.path,
-            Crypto.sha256(doc.value),
+            sha256(doc.value),
             '' + doc.timestamp,
             doc.author,
         ].join('\n'));
     }
-    static signDocument(keypair : Keypair, doc: Document): Document {
+    static signDocument(keypair : AuthorKeypair, doc: Document): Document {
         return {
             ...doc,
-            signature: Crypto.sign(keypair, this.hashDocument(doc)),
+            signature: sign(keypair, this.hashDocument(doc)),
         };
     }
     static documentSignatureIsValid(doc: Document): boolean {
         try {
-            return Crypto.verify(doc.author, doc.signature, this.hashDocument(doc));
+            return verify(doc.author, doc.signature, this.hashDocument(doc));
         } catch (e) {
             return false;
         }
@@ -140,9 +160,17 @@ export const ValidatorEs2 : IValidator = class {
             return false;
         }
 
-        // Author must start with '@'
-        if (!doc.author.startsWith('@')) {
-            logWarning('documentIsValid: author must start with @');
+        // Author must be parsable (start with '@', etc)
+        let {authorParsed, err} = parseAuthorAddress(doc.author);
+        if (err || authorParsed === null) {
+            logWarning('documentIsValid: author could not be parsed: ' + err);
+            return false;
+        }
+
+        // Workspace must be parsable (start with '//', etc)
+        let {workspaceParsed, err: err2} = parseWorkspaceAddress(doc.workspace);
+        if (err2 || workspaceParsed === null) {
+            logWarning('documentIsValid: workspace could not be parsed: ' + err2);
             return false;
         }
 
