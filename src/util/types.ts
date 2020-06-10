@@ -46,7 +46,7 @@ export type Document = {
 
 // These options are passed to the set() method.
 // We don't know the signature yet, but we do need the author secret.
-export type ItemToSet = {
+export type DocToSet = {
     format : FormatName,
     // workspace : string,
     path : Path,
@@ -71,10 +71,10 @@ export interface QueryOpts {
 
     limit?: number,  // there's no offset; use lowPath as a cursor instead
 
-    // include old versions of this item from different authors?
+    // include old versions of this doc from different authors?
     includeHistory?: boolean, // default false
 
-    // author?: AuthorKey  // TODO: does this include the author's obsolete history items?
+    // author?: AuthorKey  // TODO: does this include the author's obsolete history docs?
     // timestamp before and after // TODO
 }
 
@@ -110,17 +110,16 @@ export interface IStorage {
     // subscribe with onChange.subscribe(...cb...);
     onChange : Emitter<undefined>;
 
-    items(query? : QueryOpts) : Document[];
+    documents(query? : QueryOpts) : Document[];
     paths(query? : QueryOpts) : string[];
     values(query? : QueryOpts) : string[];
-    // TODO: convenience method to parse value from string to JSON?
 
     authors() : RawCryptKey[]
 
     getDocument(path : string) : Document | undefined;
     getValue(path : string) : string | undefined;
 
-    set(keypair : Keypair, itemToSet : ItemToSet) : boolean;  // leave timestamp at 0 and it will be set to now() for you
+    set(keypair : Keypair, itemToSet : DocToSet) : boolean;  // leave timestamp at 0 and it will be set to now() for you
 
     ingestDocument(doc : Document) : boolean;
 

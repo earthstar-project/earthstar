@@ -7,7 +7,7 @@ import {
     IStorage,
     IValidator,
     Document,
-    ItemToSet,
+    DocToSet,
     Keypair,
     QueryOpts,
     RawCryptKey,
@@ -124,10 +124,10 @@ export class StorageSqlite implements IStorage {
         }
     }
     _ensureTables() {
-        // later we might decide to allow multiple items in a path history for a single author,
+        // later we might decide to allow multiple docs in a path history for a single author,
         // but for now the schema disallows that by having this particular primary key.
         this.db.prepare(`
-            CREATE TABLE IF NOT EXISTS items (
+            CREATE TABLE IF NOT EXISTS docs (
                 format TEXT NOT NULL,
                 workspace TEXT NOT NULL,
                 path TEXT NOT NULL,
@@ -160,9 +160,9 @@ export class StorageSqlite implements IStorage {
         return result.value;
     }
 
-    items(query? : QueryOpts) : Document[] {
+    documents(query? : QueryOpts) : Document[] {
         if (query === undefined) { query = {}; }
-        log(`---- items(${JSON.stringify(query)})`);
+        log(`---- documents(${JSON.stringify(query)})`);
 
         // convert the query into an array of SQL clauses
         let filters : string[] = [];
@@ -203,50 +203,50 @@ export class StorageSqlite implements IStorage {
 
         let queryString = '';
         if (query.includeHistory) {
-            // when including history, just get all items
+            // when including history, just get all docs
             queryString = `
-                SELECT * FROM ITEMS
+                SELECT * FROM docs
                 ${combinedFilters}
                 ORDER BY path ASC, timestamp DESC, signature DESC  -- break ties with signature
                 ${limitClause};
             `;
         } else {
-            // when not including history, only get the latest item per path (from any author)
+            // when not including history, only get the latest doc per path (from any author)
             queryString = `
-                SELECT format, workspace, path, value, author, MAX(timestamp) as timestamp, signature FROM items
+                SELECT format, workspace, path, value, author, MAX(timestamp) as timestamp, signature FROM docs
                 ${combinedFilters}
                 GROUP BY path
                 ORDER BY path ASC, timestamp DESC, signature DESC  -- break ties with signature
                 ${limitClause};
             `;
         }
-        log('items query', query);
-        log('items queryString', queryString);
-        log('items params', params);
-        let items = this.db.prepare(queryString).all(params);
-        log('result:', items);
-        return items;
+        log('docs query', query);
+        log('docs queryString', queryString);
+        log('docs params', params);
+        let docs = this.db.prepare(queryString).all(params);
+        log('result:', docs);
+        return docs;
     }
     paths(query? : QueryOpts) : string[] {
         // do query without including history, so we get one
-        // item per path.  this way the limit parameter works as
+        // doc per path.  this way the limit parameter works as
         // expected in the case of paths.
         log(`---- paths(${JSON.stringify(query)})`);
-        return this.items({...query, includeHistory: false})
-            .map(item => item.path);
+        return this.documents({...query, includeHistory: false})
+            .map(doc => doc.path);
     }
     values(query? : QueryOpts) : string[] {
-        // get items that match the query, sort by path, and return their values.
+        // get docs that match the query, sort by path, and return their values.
         // If you set includeHistory you'll get historical values mixed in.
         log(`---- values(${JSON.stringify(query)})`);
-        return this.items(query).map(item => item.value);
+        return this.documents(query).map(doc => doc.value);
     }
 
     authors() : RawCryptKey[] {
         // TODO: query the db directly
         let authorSet : Set<RawCryptKey> = new Set();
-        for (let item of this.items({ includeHistory: true })) {
-            authorSet.add(item.author);
+        for (let doc of this.documents({ includeHistory: true })) {
+            authorSet.add(doc.author);
         }
         let authors = [...authorSet];
         authors.sort();
@@ -256,134 +256,134 @@ export class StorageSqlite implements IStorage {
     getDocument(path : string) : Document | undefined {
         // look up the winning value for a single path.
         // return undefined if not found.
-        // to get history items for a path, do items({path: 'foo', includeHistory: true})
-        log(`---- getItem(${JSON.stringify(path)})`);
+        // to get history docs for a path, do docs({path: 'foo', includeHistory: true})
+        log(`---- getDocument(${JSON.stringify(path)})`);
         let result : any = this.db.prepare(`
-            SELECT * FROM items
+            SELECT * FROM docs
             WHERE path = :path 
             ORDER BY timestamp DESC, signature DESC  -- break ties with signature
             LIMIT 1;
         `).get({ path: path });
-        log('getItem result:', result);
+        log('getDocument result:', result);
         return result;
     }
     getValue(path : string) : string | undefined {
-        // same as getItem, but just returns the value, not the whole item object.
+        // same as getDocument, but just returns the value, not the whole doc object.
         log(`---- getValue(${JSON.stringify(path)})`);
         return this.getDocument(path)?.value;
     }
 
-    ingestDocument(item : Document, futureCutoff? : number) : boolean {
-        // Given an item from elsewhere, validate, decide if we want it, and possibly store it.
+    ingestDocument(doc : Document, futureCutoff? : number) : boolean {
+        // Given an doc from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
         // It can be rejected if it's not the latest one from the same author,
-        // or if the item is invalid (signature, etc).
+        // or if the doc is invalid (signature, etc).
 
-        // Within a single path we keep the one latest item from each author.
-        // So this overwrites older items from the same author - they are forgotten.
+        // Within a single path we keep the one latest doc from each author.
+        // So this overwrites older docs from the same author - they are forgotten.
         // If it's from a new author for this path, we keep it no matter the timestamp.
-        // The winning item is chosen at get time, not write time.
+        // The winning doc is chosen at get time, not write time.
 
         // futureCutoff is a timestamp in microseconds.
         // Messages from after that are ignored.
         // Defaults to now + 10 minutes.
         // This prevents malicious peers from sending very high timestamps.
-        log(`---- ingestItem`);
-        log('item:', item);
+        log(`---- ingestDocument`);
+        log('doc:', doc);
 
-        let validator = this.validatorMap[item.format];
+        let validator = this.validatorMap[doc.format];
         if (validator === undefined) {
-            logWarning(`ingestItem: unrecognized format ${item.format}`);
+            logWarning(`ingestDocument: unrecognized format ${doc.format}`);
             return false;
         }
 
-        if (!validator.documentIsValid(item, futureCutoff)) {
-            logWarning(`ingestItem: item is not valid`);
+        if (!validator.documentIsValid(doc, futureCutoff)) {
+            logWarning(`ingestDocument: doc is not valid`);
             return false;
         }
 
-        // Only accept items from the same workspace.
-        if (item.workspace !== this.workspace) {
-            logWarning(`ingestItem: item from different workspace`);
+        // Only accept docs from the same workspace.
+        if (doc.workspace !== this.workspace) {
+            logWarning(`ingestDocument: doc from different workspace`);
             return false;
         }
 
-        // check if it's newer than existing item from same author, same path
+        // check if it's newer than existing doc from same author, same path
         let existingSameAuthorSamePath = this.db.prepare(`
-            SELECT * FROM items
+            SELECT * FROM docs
             WHERE path = :path
             AND author = :author
             ORDER BY timestamp DESC
             LIMIT 1;
-        `).get({ path: item.path, author: item.author });
+        `).get({ path: doc.path, author: doc.author });
         
         // Compare timestamps.
         // Compare signature to break timestamp ties.
         if (existingSameAuthorSamePath !== undefined
-            && [item.timestamp, item.signature]
+            && [doc.timestamp, doc.signature]
             <= [existingSameAuthorSamePath.timestamp, existingSameAuthorSamePath.signature]
             ) {
-            // incoming item is older or identical.  ignore it.
-            logWarning(`ingestItem: item older or identical`);
+            // incoming doc is older or identical.  ignore it.
+            logWarning(`ingestDocument: doc older or identical`);
             return false;
         }
 
-        // Insert new item, replacing old item if there is one
+        // Insert new doc, replacing old doc if there is one
         this.db.prepare(`
-            INSERT OR REPLACE INTO items (format, workspace, path, value, author, timestamp, signature)
+            INSERT OR REPLACE INTO docs (format, workspace, path, value, author, timestamp, signature)
             VALUES (:format, :workspace, :path, :value, :author, :timestamp, :signature);
-        `).run(item);
+        `).run(doc);
         this.onChange.send(undefined);
         return true;
     }
 
-    set(keypair : Keypair, itemToSet : ItemToSet) : boolean {
+    set(keypair : Keypair, docToSet : DocToSet) : boolean {
         // Store a value.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
-        log(`---- set(${JSON.stringify(itemToSet.path)}, ${JSON.stringify(itemToSet.value)}, ...)`);
+        log(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.value)}, ...)`);
 
-        let validator = this.validatorMap[itemToSet.format];
+        let validator = this.validatorMap[docToSet.format];
         if (validator === undefined) {
-            logWarning(`set: unrecognized format ${itemToSet.format}`);
+            logWarning(`set: unrecognized format ${docToSet.format}`);
             return false;
         }
 
-        itemToSet.timestamp = itemToSet.timestamp || 0;
-        let item : Document = {
-            format: itemToSet.format,
+        docToSet.timestamp = docToSet.timestamp || 0;
+        let doc : Document = {
+            format: docToSet.format,
             workspace: this.workspace,
-            path: itemToSet.path,
-            value: itemToSet.value,
+            path: docToSet.path,
+            value: docToSet.value,
             author: keypair.public,
-            timestamp: itemToSet.timestamp > 0 ? itemToSet.timestamp : Date.now()*1000,
+            timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
             signature: '',
         }
 
-        // If there's an existing item from anyone,
+        // If there's an existing doc from anyone,
         // make sure our timestamp is greater
         // even if this puts us slightly into the future.
-        // (We know about the existing item so let's assume we want to supercede it.)
-        let existingItemTimestamp = this.getDocument(item.path)?.timestamp || 0;
-        item.timestamp = Math.max(item.timestamp, existingItemTimestamp+1);
+        // (We know about the existing doc so let's assume we want to supercede it.)
+        let existingDocTimestamp = this.getDocument(doc.path)?.timestamp || 0;
+        doc.timestamp = Math.max(doc.timestamp, existingDocTimestamp+1);
 
-        let signedItem = validator.signDocument(keypair, item);
-        return this.ingestDocument(signedItem, item.timestamp);
+        let signedDoc = validator.signDocument(keypair, doc);
+        return this.ingestDocument(signedDoc, doc.timestamp);
     }
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
-        // Pull all items from the other Store and ingest them one by one.
+        // Pull all docs from the other Store and ingest them one by one.
         let numSuccess = 0;
         if (live) {
             // TODO
             throw "live sync not implemented yet";
         }
         if (existing) {
-            for (let item of otherStore.items({includeHistory: true})) {
-                let success = this.ingestDocument(item);
+            for (let doc of otherStore.documents({includeHistory: true})) {
+                let success = this.ingestDocument(doc);
                 if (success) { numSuccess += 1; }
             }
         }
@@ -395,7 +395,7 @@ export class StorageSqlite implements IStorage {
         //   opts.direction: 'push', 'pull', or 'both'
         //   opts.existing: Sync existing values.  Default true.
         //   opts.live (not implemented yet): Continue streaming new changes forever
-        // Return the number of items pushed and pulled.
+        // Return the number of docs pushed and pulled.
         // This uses a simple and inefficient algorithm.  Fancier algorithm TBD.
 
         // don't sync with yourself

@@ -253,7 +253,7 @@ for (let scenario of scenarios) {
     t.test(scenario.description + ': empty store', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
         t.same(es.paths(), [], 'no keys');
-        t.same(es.items(), [], 'no items');
+        t.same(es.documents(), [], 'no items');
         t.same(es.values(), [], 'no values');
         t.equal(es.getDocument('xxx'), undefined, 'getItem undefined');
         t.equal(es.getValue('xxx'), undefined, 'getValue undefined');
@@ -411,7 +411,7 @@ for (let scenario of scenarios) {
         t.same(es.values({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'values with history, newest first');
 
         t.same(
-            es.items({ includeHistory: true }).map((item : Document) => item.author),
+            es.documents({ includeHistory: true }).map((item : Document) => item.author),
             [author1, author1, author1, author2],
             'items with history, newest first, items should have correct authors'
         );
@@ -496,8 +496,8 @@ for (let scenario of scenarios) {
             t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 items, pulled 2 (including history)');
 
             t.equal(es1.paths().length, 6, '6 keys');
-            t.equal(es1.items().length, 6, '6 items');
-            t.equal(es1.items({ includeHistory: true }).length, 8, '8 items with history');
+            t.equal(es1.documents().length, 6, '6 items');
+            t.equal(es1.documents({ includeHistory: true }).length, 8, '8 items with history');
             t.equal(es1.values().length, 6, '6 values');
             t.equal(es1.values({ includeHistory: true }).length, 8, '8 values with history');
 
@@ -505,8 +505,8 @@ for (let scenario of scenarios) {
             t.same(es1.values(), 'author2es2 aaa zzz two 111 22'.split(' '), 'correct values on es1');
 
             t.same(es1.paths(), es2.paths(), 'keys match');
-            t.same(es1.items(), es2.items(), 'items match');
-            t.same(es1.items({ includeHistory: true }), es2.items({ includeHistory: true }), 'items with history: match');
+            t.same(es1.documents(), es2.documents(), 'items match');
+            t.same(es1.documents({ includeHistory: true }), es2.documents({ includeHistory: true }), 'items with history: match');
             t.same(es1.values(), es2.values(), 'values match');
             t.same(es1.values({ includeHistory: true }), es2.values({ includeHistory: true }), 'values with history: match');
         }

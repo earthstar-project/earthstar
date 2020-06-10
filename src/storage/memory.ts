@@ -2,7 +2,7 @@ import {
     IStorage,
     IValidator,
     Document,
-    ItemToSet,
+    DocToSet,
     Keypair,
     QueryOpts,
     RawCryptKey,
@@ -104,7 +104,7 @@ export class StorageMemory implements IStorage {
         // opts.includeHistory has no effect for keys()
         return keys;
     }
-    items(query? : QueryOpts) : Document[] {
+    documents(query? : QueryOpts) : Document[] {
         // return items that match the query, sorted by keys.
         // TODO: note that opts.limit applies to the number of keys,
         //   not the number of unique history items
@@ -135,12 +135,12 @@ export class StorageMemory implements IStorage {
         // get items that match the query, sort by key, and return their values.
         // TODO: note that opts.limit applies to the number of keys,
         //   not the number of unique history items
-        return this.items(query).map(item => item.value);
+        return this.documents(query).map(item => item.value);
     }
 
     authors() : RawCryptKey[] {
         let authorSet : Set<RawCryptKey> = new Set();
-        for (let item of this.items({ includeHistory: true })) {
+        for (let item of this.documents({ includeHistory: true })) {
             authorSet.add(item.author);
         }
         let authors = [...authorSet];
@@ -216,7 +216,7 @@ export class StorageMemory implements IStorage {
         return true;
     }
 
-    set(keypair : Keypair, itemToSet : ItemToSet) : boolean {
+    set(keypair : Keypair, itemToSet : DocToSet) : boolean {
         // Store a value.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
@@ -260,7 +260,7 @@ export class StorageMemory implements IStorage {
             throw "live sync not implemented yet";
         }
         if (existing) {
-            for (let item of otherStore.items({includeHistory: true})) {
+            for (let item of otherStore.documents({includeHistory: true})) {
                 let success = this.ingestDocument(item);
                 if (success) { numSuccess += 1; }
             }
