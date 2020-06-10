@@ -253,18 +253,18 @@ for (let scenario of scenarios) {
     t.test(scenario.description + ': empty store', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
         t.same(es.paths(), [], 'no keys');
-        t.same(es.documents(), [], 'no items');
+        t.same(es.documents(), [], 'no docs');
         t.same(es.values(), [], 'no values');
-        t.equal(es.getDocument('xxx'), undefined, 'getItem undefined');
+        t.equal(es.getDocument('xxx'), undefined, 'getDocument undefined');
         t.equal(es.getValue('xxx'), undefined, 'getValue undefined');
         t.same(es.authors(), [], 'no authors');
         t.done();
     });
 
-    t.test(scenario.description + ': store ingestItem rejects invalid items', (t: any) => {
+    t.test(scenario.description + ': store ingestDocument rejects invalid docs', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
-        let item1: Document = {
+        let doc1: Document = {
             format: FORMAT,
             workspace: WORKSPACE,
             path: 'k1',
@@ -273,19 +273,19 @@ for (let scenario of scenarios) {
             author: author1,
             signature: 'xxx',
         };
-        let signedItem = ValidatorEs2.signDocument(keypair1, item1);
-        t.ok(es.ingestDocument(signedItem), "successful ingestion");
+        let signedDoc = ValidatorEs2.signDocument(keypair1, doc1);
+        t.ok(es.ingestDocument(signedDoc), "successful ingestion");
         t.equal(es.getValue('k1'), 'v1', "getValue worked");
 
-        t.notOk(es.ingestDocument(item1), "don't ingest: bad signature");
-        t.notOk(es.ingestDocument({...signedItem, format: 'xxx'}), "don't ingest: unknown format");
-        t.notOk(es.ingestDocument({...signedItem, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
-        t.notOk(es.ingestDocument({...signedItem, timestamp: now * 2}), "don't ingest: timestamp in future");
-        t.notOk(es.ingestDocument({...signedItem, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
-        t.notOk(es.ingestDocument({...signedItem, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
+        t.notOk(es.ingestDocument(doc1), "don't ingest: bad signature");
+        t.notOk(es.ingestDocument({...signedDoc, format: 'xxx'}), "don't ingest: unknown format");
+        t.notOk(es.ingestDocument({...signedDoc, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
+        t.notOk(es.ingestDocument({...signedDoc, timestamp: now * 2}), "don't ingest: timestamp in future");
+        t.notOk(es.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
+        t.notOk(es.ingestDocument({...signedDoc, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
 
-        let signedItemDifferentWorkspace = ValidatorEs2.signDocument(keypair1, {...item1, workspace: 'xxx'});
-        t.notOk(es.ingestDocument(signedItemDifferentWorkspace), "don't ingest: mismatch workspace");
+        let signedDocDifferentWorkspace = ValidatorEs2.signDocument(keypair1, {...doc1, workspace: 'xxx'});
+        t.notOk(es.ingestDocument(signedDocDifferentWorkspace), "don't ingest: mismatch workspace");
 
         t.notOk(es.set(keypair1, {
             format: 'xxx',
@@ -302,7 +302,7 @@ for (let scenario of scenarios) {
             t.ok(es.ingestDocument(
                 ValidatorEs2.signDocument(
                     keypair1,
-                    {...item1, path: key}
+                    {...doc1, path: key}
                 )),
                 "do ingest: writable key " + key
             );
@@ -315,7 +315,7 @@ for (let scenario of scenarios) {
             t.notOk(es.ingestDocument(
                 ValidatorEs2.signDocument(
                     keypair1,
-                    {...item1, path: key}
+                    {...doc1, path: key}
                 )),
                 "don't ingest: non-writable key " + key
             );
@@ -344,8 +344,6 @@ for (let scenario of scenarios) {
         t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'val1.1', timestamp: now-99}), 'automatically supercede previous timestamp');
         t.equal(es.getValue('key1'), 'val1.1', 'superceded newer existing value');
         t.equal(es.getDocument('key1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
-
-        //log('_items:', JSON.stringify(es._items, null, 4));
 
         // should be alphabetical
         t.same(es.paths(), ['decoy', 'key1'], 'keys() are correct');
@@ -390,17 +388,15 @@ for (let scenario of scenarios) {
         t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'one', timestamp: now}), 'set new key');
         t.equal(es.getValue('key1'), 'one');
 
-        // this will overwrite 'one' but the item for 'one' will remain in history.
-        // history will have 2 items for this key.
+        // this will overwrite 'one' but the doc for 'one' will remain in history.
+        // history will have 2 docs for this key.
         t.ok(es.set(keypair2, {format: FORMAT, path: 'key1', value: 'two', timestamp: now + 1}), 'update from a second author');
         t.equal(es.getValue('key1'), 'two');
 
-        // this will replace the old original item 'one' from this author.
-        // history will have 2 items for this key.
+        // this will replace the old original doc 'one' from this author.
+        // history will have 2 docs for this key.
         t.ok(es.set(keypair1, {format: FORMAT, path: 'key1', value: 'three', timestamp: now + 2}), 'update from original author again');
         t.equal(es.getValue('key1'), 'three');
-
-        //log('_items:', JSON.stringify(es._items, null, 4));
 
         t.equal(es.paths().length, 3, '3 keys');
         t.equal(es.values().length, 3, '3 values');
@@ -411,9 +407,9 @@ for (let scenario of scenarios) {
         t.same(es.values({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'values with history, newest first');
 
         t.same(
-            es.documents({ includeHistory: true }).map((item : Document) => item.author),
+            es.documents({ includeHistory: true }).map((doc : Document) => doc.author),
             [author1, author1, author1, author2],
-            'items with history, newest first, items should have correct authors'
+            'docs with history, newest first, docs should have correct authors'
         );
 
         let sortedAuthors = [author1, author2];
@@ -438,7 +434,7 @@ for (let scenario of scenarios) {
         // sync
         let syncResults = es1.sync(es2, { direction: 'push', existing: true, live: false });
         //log('sync results', syncResults);
-        t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 items (includes history items).  pulled 0.');
+        t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 docs (includes history docs).  pulled 0.');
 
         // check results
         t.same(es1.paths(), es2.paths(), 'es1.keys() == es2.keys()');
@@ -446,8 +442,8 @@ for (let scenario of scenarios) {
         t.same(es1.values({ includeHistory: true }), es2.values({ includeHistory: true }), 'es1 values with history == es2');
 
         t.same(es2.paths(), ['decoy1', 'decoy2', 'key1'], 'keys are as expected');
-        t.same(es2.getValue('key1'), 'two', 'latest item for a key wins on es2');
-        t.same(es2.getDocument('key1')?.value, 'two', 'getItem has correct value');
+        t.same(es2.getValue('key1'), 'two', 'latest doc for a key wins on es2');
+        t.same(es2.getDocument('key1')?.value, 'two', 'getDocument has correct value');
         t.same(es2.values(), ['aaa', 'zzz', 'two'], 'es2 values are as expected');
         t.same(es2.values({ includeHistory: true }), ['aaa', 'zzz', 'two', 'one'], 'values with history are as expected');
 
@@ -455,11 +451,6 @@ for (let scenario of scenarios) {
         let syncResults2 = es1.sync(es2, { direction: 'push', existing: true, live: false });
         //log('sync results 2', syncResults2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing should happen if syncing again');
-
-        //log('es1._items:', JSON.stringify(es1._items, null, 4));
-        //log('es1.keys()', es1.keys());
-        //log('es1.values()', es1.values());
-        //log('es1.getItem("key1")', es1.getItem('key1'));
 
         t.done();
     });
@@ -493,11 +484,11 @@ for (let scenario of scenarios) {
             // sync
             let syncResults = es1.sync(es2, opts);
             //log('sync results', syncResults);
-            t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 items, pulled 2 (including history)');
+            t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
             t.equal(es1.paths().length, 6, '6 keys');
-            t.equal(es1.documents().length, 6, '6 items');
-            t.equal(es1.documents({ includeHistory: true }).length, 8, '8 items with history');
+            t.equal(es1.documents().length, 6, '6 docs');
+            t.equal(es1.documents({ includeHistory: true }).length, 8, '8 docs with history');
             t.equal(es1.values().length, 6, '6 values');
             t.equal(es1.values({ includeHistory: true }).length, 8, '8 values with history');
 
@@ -505,8 +496,8 @@ for (let scenario of scenarios) {
             t.same(es1.values(), 'author2es2 aaa zzz two 111 22'.split(' '), 'correct values on es1');
 
             t.same(es1.paths(), es2.paths(), 'keys match');
-            t.same(es1.documents(), es2.documents(), 'items match');
-            t.same(es1.documents({ includeHistory: true }), es2.documents({ includeHistory: true }), 'items with history: match');
+            t.same(es1.documents(), es2.documents(), 'docs match');
+            t.same(es1.documents({ includeHistory: true }), es2.documents({ includeHistory: true }), 'docs with history: match');
             t.same(es1.values(), es2.values(), 'values match');
             t.same(es1.values({ includeHistory: true }), es2.values({ includeHistory: true }), 'values with history: match');
         }
