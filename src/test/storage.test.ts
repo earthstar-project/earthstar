@@ -57,17 +57,14 @@ let scenarios : Scenario[] = [
 //================================================================================
 // memory specific tests
 
-// TODO: makeStore should fail with invalid workspace address
-
 t.test(`StoreMemory: constructor`, (t: any) => {
     t.throws(() => new StorageMemory([], WORKSPACE), 'throws when no validators are provided');
+    t.throws(() => new StorageMemory(VALIDATORS, 'bad-workspace-address'), 'throws when workspace address is invalid');
     t.done();
 });
 
 //================================================================================
 // sqlite specific tests
-
-// TODO: makeStore should fail with invalid workspace address
 
 t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     let fn : string;
@@ -89,6 +86,12 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         validators: VALIDATORS,
         filename: ':memory:'
     }), 'create mode works when workspace is provided, :memory:');
+    t.throws(() => new StorageSqlite({
+        mode: 'create',
+        workspace: 'bad-workspace-address',
+        validators: VALIDATORS,
+        filename: ':memory:'
+    }), 'create mode throws when workspace address is invalid, :memory:');
     t.throws(() => new StorageSqlite({
         mode: 'create',
         workspace: WORKSPACE,

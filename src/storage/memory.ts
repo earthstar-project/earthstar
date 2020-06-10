@@ -11,6 +11,8 @@ import {
     WorkspaceAddress,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
+import { parseWorkspaceAddress } from '../util/addresses';
+import { workspaceNameChars } from '../util/characters';
 
 //let log = console.log;
 //let logWarning = console.log;
@@ -61,6 +63,9 @@ export class StorageMemory implements IStorage {
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
     constructor(validators : IValidator[], workspace : WorkspaceAddress) {
+        let {workspaceParsed, err} = parseWorkspaceAddress(workspace);
+        if (err || !workspaceParsed) { throw 'invalid workspace address: ' + err; }
+
         this.workspace = workspace;
 
         this.onChange = new Emitter<undefined>();

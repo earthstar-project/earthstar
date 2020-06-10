@@ -16,6 +16,7 @@ import {
     WorkspaceAddress,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
+import { parseWorkspaceAddress } from '../util/addresses';
 
 //let log = console.log;
 //let logWarning = console.log;
@@ -48,6 +49,11 @@ export class StorageSqlite implements IStorage {
     onChange : Emitter<undefined>;
     constructor(opts : StorageSqliteOpts) {
         this.onChange = new Emitter<undefined>();
+
+        if (opts.workspace) {
+            let {workspaceParsed, err} = parseWorkspaceAddress(opts.workspace);
+            if (err || !workspaceParsed) { throw 'invalid workspace address: ' + err; }
+        }
 
         if (opts.validators.length === 0) {
             throw "must provide at least one validator";
