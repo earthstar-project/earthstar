@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import t = require('tap');
-t.runOnly = true;
+//t.runOnly = true;
 
 import {
     AuthorAddress,
@@ -21,6 +21,7 @@ import { StorageSqlite } from '../storage/sqlite';
 // prepare for test scenarios
 
 let WORKSPACE = '//gardenclub.xxxxxxxxxxxxxxxxxxxx';
+let WORKSPACE2 = '//another.xxxxxxxxxxxxxxxxxxxx';
 
 let FORMAT : FormatName = 'es.2';
 let VALIDATORS : IValidator[] = [ValidatorEs2];
@@ -56,6 +57,8 @@ let scenarios : Scenario[] = [
 //================================================================================
 // memory specific tests
 
+// TODO: makeStore should fail with invalid workspace address
+
 t.test(`StoreMemory: constructor`, (t: any) => {
     t.throws(() => new StorageMemory([], WORKSPACE), 'throws when no validators are provided');
     t.done();
@@ -64,7 +67,7 @@ t.test(`StoreMemory: constructor`, (t: any) => {
 //================================================================================
 // sqlite specific tests
 
-// TODO: test constructor with different opts
+// TODO: makeStore should fail with invalid workspace address
 
 t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     let fn : string;
@@ -464,7 +467,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.only(scenario.description + ': sync: two-way', (t: any) => {
+    t.test(scenario.description + ': sync: two-way', (t: any) => {
         let optsToTry : SyncOpts[] = [
             {},  // use the defaults
             { direction: 'both', existing: true, live: false },  // these are the defaults
@@ -514,9 +517,9 @@ for (let scenario of scenarios) {
     });
 
     t.test(scenario.description + ': sync: mismatched workspaces', (t: any) => {
-        let esA1 = scenario.makeStore('a');
-        let esA2 = scenario.makeStore('a');
-        let esB = scenario.makeStore('b');
+        let esA1 = scenario.makeStore(WORKSPACE);
+        let esA2 = scenario.makeStore(WORKSPACE);
+        let esB = scenario.makeStore(WORKSPACE2);
         t.ok(esA1.set(keypair1, {format: FORMAT, path: '/a1', value: 'a1'}));
         t.ok(esA2.set(keypair1, {format: FORMAT, path: '/a2', value: 'a2'}));
         t.ok(esB.set(keypair1, {format: FORMAT, path: '/b', value: 'b'}));
@@ -570,14 +573,14 @@ for (let scenario of scenarios) {
         let cb = () => { numCalled += 1; }
         let unsub = es.onChange.subscribe(cb);
 
-        t.ok(es.set(keypair1, {format: FORMAT, path: '/key1', value: 'val1.0', timestamp: now}), 'set new key');
-        t.notOk(es.set(keypair1, {format: 'xxx', path: '/key1', value: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
-        t.equal(es.getValue('key1'), 'val1.0', 'second set was ignored');
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/path1', value: 'val1.0', timestamp: now}), 'set new path');
+        t.notOk(es.set(keypair1, {format: 'xxx', path: '/path1', value: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
+        t.equal(es.getValue('/path1'), 'val1.0', 'second set was ignored');
 
         t.equal(numCalled, 1, 'callback was called once');
         unsub();
 
-        t.ok(es.set(keypair1, {format: FORMAT, path: '/key2', value: 'val2.0', timestamp: now + 1}), 'set another key');
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/path2', value: 'val2.0', timestamp: now + 1}), 'set another path');
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 
