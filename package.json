@@ -21,7 +21,7 @@
     "test": "tap -Rspecy --jobs=1 build/test/*.test.js",
     "test-addresses": "tap -Rspecy --jobs=1 build/test/addresses.test.js",
     "test-crypto": "tap -Rspecy --jobs=1 build/test/crypto.test.js",
-    "test-layer": "tap -Rspecy --jobs=1 build/test/layers.*.test.js",
+    "test-layer": "tap -Rspecy --jobs=1 build/test/layers.wiki.test.js",
     "test-storage": "tap -Rspecy --jobs=1 build/test/storage.test.js",
     "test-validator": "tap -Rspecy --jobs=1 build/test/validator.es2.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",

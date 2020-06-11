@@ -50,7 +50,7 @@ t.test('with empty storage', (t: any) => {
     // add a dummy document.
     // this author should not be picked up by the about layer (TODO: is this a good decision?)
     storage.set(keypair2, {
-        format: 'es.2',
+        format: FORMAT,
         path: '/extra',
         value: 'whatever',
     });

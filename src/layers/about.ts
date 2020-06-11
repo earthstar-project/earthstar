@@ -1,11 +1,12 @@
 import {
-    IStorage,
-    AuthorKeypair,
     AuthorAddress,
+    AuthorKeypair,
     AuthorShortname,
-    EncodedKey,
+    IStorage,
 } from '../util/types';
-import { parseAuthorAddress } from '../util/addresses';
+import {
+    parseAuthorAddress
+} from '../util/addresses';
 
 export interface AuthorProfile {
     address : AuthorAddress,
@@ -16,9 +17,9 @@ export interface AuthorProfile {
 /*
     paths:
     ------
-    about/~@aaa/name
-    about/~@aaa/description    // coming soon
-    about/~@aaa/icon           // coming soon
+    /about/~@aaa/name
+    /about/~@aaa/description    // coming soon
+    /about/~@aaa/icon           // coming soon
 */
 export class AboutLayer {
     storage : IStorage;
@@ -27,7 +28,7 @@ export class AboutLayer {
         this.storage = storage;
         this.keypair = keypair;
     }
-    static _namePath(author : AuthorAddress) : string {
+    static makeNamePath(author : AuthorAddress) : string {
         return `/about/~${author}/name`;
     }
     listAuthorProfiles() : AuthorProfile[] {
@@ -48,7 +49,7 @@ export class AboutLayer {
     getAuthorProfile(author : AuthorAddress) : AuthorProfile | null {
         let {authorParsed, err} = parseAuthorAddress(author);
         if (err || !authorParsed) { return null; }
-        let nameDoc = this.storage.getDocument(AboutLayer._namePath(author));
+        let nameDoc = this.storage.getDocument(AboutLayer.makeNamePath(author));
         let longname = nameDoc === undefined
             ? null
             : (nameDoc.value || null);
@@ -63,7 +64,7 @@ export class AboutLayer {
         // normally timestamp should be omitted.
         return this.storage.set(this.keypair, {
             format: 'es.2',
-            path: AboutLayer._namePath(this.keypair.address),
+            path: AboutLayer.makeNamePath(this.keypair.address),
             value: longname,
             timestamp: timestamp,
         });
