@@ -23,6 +23,7 @@
     "test-crypto": "tap -Rspecy --jobs=1 build/test/crypto.test.js",
     "test-layer": "tap -Rspecy --jobs=1 build/test/layers.wiki.test.js",
     "test-storage": "tap -Rspecy --jobs=1 build/test/storage.test.js",
+    "test-sync": "tap -Rspecy --jobs=1 build/test/sync.test.js",
     "test-validator": "tap -Rspecy --jobs=1 build/test/validator.es2.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",
     "build-and-test": "npm run build && npm run test",
@@ -41,9 +42,11 @@
     "typescript": "^3.9.2"
   },
   "dependencies": {
+    "@types/isomorphic-fetch": "0.0.35",
     "better-sqlite3": "^7.0.1",
     "chalk": "^3.0.0",
     "chloride": "^2.2.14",
+    "isomorphic-fetch": "^2.2.1",
     "multibase": "^0.7.0",
     "tslib": "^2.0.0"
   }

@@ -221,6 +221,9 @@ Pub + Workspace + Author
 
 Pub + Workspace + Author + Path
     https://mypub.com//solarpunk.xxxx/@suzy.xxxxx/wiki/shared/Dolphin
+
+Pub + Workspace + Sync API
+    https://mypub.com/earthstar-api/v1/...
 ```
 
 TODO: how to link to a specific version of a document?
