@@ -45,12 +45,12 @@ let sparkleEmoji = '✨';
 //================================================================================
 
 t.test('makePagePath', (t: any) => {
-    t.same(WikiLayer.makePagePath('Dogs', 'shared'), '/wiki/shared/Dogs');
-    t.same(WikiLayer.makePagePath('Small Dogs', 'shared'), '/wiki/shared/Small%20Dogs');
-    t.same(WikiLayer.makePagePath('Dogs', author1), `/wiki/~${author1}/Dogs`);
-    t.same(WikiLayer.makePagePath('Small Dogs', author1), `/wiki/~${author1}/Small%20Dogs`);
-    t.throws(() => WikiLayer.makePagePath('Dogs', 'xxxx'), 'owner must be "shared" or an author address');
-    t.throws(() => WikiLayer.makePagePath('', 'shared'), 'title cannot be empty string');
+    t.same(WikiLayer.makePagePath('shared', 'Dogs'), '/wiki/shared/Dogs');
+    t.same(WikiLayer.makePagePath('shared', 'Small Dogs'), '/wiki/shared/Small%20Dogs');
+    t.same(WikiLayer.makePagePath(author1, 'Dogs'), `/wiki/~${author1}/Dogs`);
+    t.same(WikiLayer.makePagePath(author1, 'Small Dogs'), `/wiki/~${author1}/Small%20Dogs`);
+    t.throws(() => WikiLayer.makePagePath('xxxx', 'Dogs'), 'owner must be "shared" or an author address');
+    t.throws(() => WikiLayer.makePagePath('shared', ''), 'title cannot be empty string');
     t.end();
 });
 
@@ -82,20 +82,68 @@ t.test('parsePagePath', (t: any) => {
     t.equal(WikiLayer.parsePagePath(`/wiki/${author1}/Dogs`), null, 'no tilde');
     t.equal(WikiLayer.parsePagePath('/about/foo'), null, 'not a wiki path at all');
     t.equal(WikiLayer.parsePagePath('/wiki/shared/%2'), null, 'invalid percent-encoding');
+    t.equal(WikiLayer.parsePagePath(''), null, 'empty path');
     t.end();
 });
 
-/*
 t.test('with empty storage', (t: any) => {
     let storage = makeStorage(WORKSPACE);
     let wiki = new WikiLayer(storage, keypair1);
 
+    // read while empty
     t.same(wiki.listPageInfos(), [], 'list page info: empty');
     t.same(wiki.listPageInfos('shared'), [], 'list page info shared: empty');
     t.same(wiki.listPageInfos(author1), [], 'list page info author1: empty');
+    t.throws(() => wiki.listPageInfos('xxxx'), 'throws with invalid owner');
+
+    // do some writes
+    t.ok(wiki.setPageText(WikiLayer.makePagePath('shared', 'Small Dogs'), 'page text 1', now), 'write');
+    t.ok(wiki.setPageText(WikiLayer.makePagePath('shared', 'Small Dogs'), 'page text 2', now + 5), 'write again');
+
+    t.ok(wiki.setPageText(WikiLayer.makePagePath(author1, 'Dogs'), 'dogs dogs', now), 'write to owned page');
+
+    t.notOk(wiki.setPageText(WikiLayer.makePagePath(author2, 'Dogs'), 'dogs dogs', now), 'write to page of another author should fail');
+
+    // read them back
+    t.same(wiki.getPageDetails('/wiki/shared/Small%20Dogs'), {
+        path: '/wiki/shared/Small%20Dogs',
+        title: 'Small Dogs',
+        owner: 'shared',
+        lastAuthor: author1,
+        timestamp: now + 5,
+        text: 'page text 2',
+    }, 'getPageDetails returns second write');
+    t.same(wiki.getPageDetails(`/wiki/~${author1}/Dogs`), {
+        path: `/wiki/~${author1}/Dogs`,
+        title: 'Dogs',
+        owner: author1,
+        lastAuthor: author1,
+        timestamp: now,
+        text: 'dogs dogs',
+    }, 'getPageDetails returns owned page');
+
+    // reads that should fail
+    t.equal(wiki.getPageDetails(''), null, 'getPageDetails with bad path');
+    t.equal(wiki.getPageDetails('/wiki/xxx/Dogs'), null, 'getPageDetails with bad path');
+    t.equal(wiki.getPageDetails('/wiki/shared/Cats'), null, 'getPageDetails with nonexistant path');
+    t.equal(wiki.getPageDetails(`/wiki/~${author2}/Dogs`), null, 'should not find a write from another author - we do not have permission to write it');
+
+    // list pages again
+    let sharedInfo : WikiPageInfo = {
+        path: '/wiki/shared/Small%20Dogs',
+        owner: 'shared',
+        title: 'Small Dogs',
+    };
+    let myInfo : WikiPageInfo = {
+        path: `/wiki/~${author1}/Dogs`,
+        owner: author1,
+        title: 'Dogs',
+    }
+    t.same(wiki.listPageInfos(), [sharedInfo, myInfo], 'list page info');
+    t.same(wiki.listPageInfos('shared'), [sharedInfo], 'list page info: shared');
+    t.same(wiki.listPageInfos(author1), [myInfo], 'list page info: mine');
 
     t.end();
 });
-*/
 
 

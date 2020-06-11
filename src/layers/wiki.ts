@@ -27,6 +27,8 @@ export interface WikiPageDetail {
     /wiki/~@aaa/Little%20Snails
 */
 
+let log = console.log;
+
 export class WikiLayer {
     storage : IStorage;
     keypair : AuthorKeypair
@@ -34,7 +36,7 @@ export class WikiLayer {
         this.storage = storage;
         this.keypair = keypair;
     }
-    static makePagePath(title : string, owner : AuthorAddress | 'shared') : string {
+    static makePagePath(owner : AuthorAddress | 'shared', title : string) : string {
         if (owner.startsWith('@')) { owner = '~' + owner; }
         else if (owner !== 'shared') { throw 'invalid wiki page owner: ' + owner; }
         if (!title) { throw 'cannot make wiki page with empty title'; }
@@ -74,9 +76,14 @@ export class WikiLayer {
     listPageInfos(owner? : AuthorAddress | 'shared') : WikiPageInfo[] {
         // owner is optional
         let pathPrefix = '/wiki/';
-        if (owner && owner.startsWith('@')) { owner = '~' + owner; }
-        else if (owner !== 'shared') { throw 'invalid wiki page owner: ' + owner; }
-        if (owner) { pathPrefix = pathPrefix + owner + '/'; }
+        if (owner && owner.startsWith('@')) {
+            pathPrefix = `/wiki/~${owner}/`;
+        } else if (owner === 'shared') {
+            pathPrefix = '/wiki/shared/';
+        } else if (owner !== undefined) {
+            throw 'invalid wiki owner: ' + owner
+        }
+
         let pageInfoOrNulls = this.storage.paths({ pathPrefix })
             .map(path => WikiLayer.parsePagePath(path));
         let pageInfos = pageInfoOrNulls.filter(pi => pi !== null) as WikiPageInfo[];
