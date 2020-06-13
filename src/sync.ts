@@ -117,7 +117,6 @@ export class Syncer {
     }
 }
 
-
 let urlGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
     // domain should end in a slash.
     // output is like https://mypub.com/earthstar-api/v1/workspace//gardening.xxxxxxxx/documents
@@ -125,6 +124,7 @@ let urlGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
 let urlPostDocuments = urlGetDocuments;
 
 let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
+
 export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
     logSyncAlg('existing database workspace:', storage.workspace);
     let resultStats : any = {
