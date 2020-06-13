@@ -1,7 +1,7 @@
 
 # Earthstar
 
-![](earthstar-logo.png)
+![](docs/earthstar-logo.png)
 
 
 *Early alpha - do not use for important data yet*
@@ -21,7 +21,7 @@ An Earthstar workspace holds mutable documents with unique paths, similar to lev
 
 There are no transactions.  The unit of atomic change is writing a value to one path.  Causal order is not preserved for edits across multiple paths.
 
-![](earthstar-data-model.png)
+![](docs/earthstar-data-model.png)
 
 ### Scope
 
