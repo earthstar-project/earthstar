@@ -242,21 +242,18 @@ export class StorageSqlite implements IStorage {
             .map(doc => doc.path);
     }
     values(query? : QueryOpts) : string[] {
-        // get docs that match the query, sort by path, and return their values.
-        // If you set includeHistory you'll get historical values mixed in.
+        // just search using documents() and extract the values.
         log(`---- values(${JSON.stringify(query)})`);
         return this.documents(query).map(doc => doc.value);
     }
 
     authors() : AuthorAddress[] {
-        // TODO: query the db directly
-        let authorSet : Set<AuthorAddress> = new Set();
-        for (let doc of this.documents({ includeHistory: true })) {
-            authorSet.add(doc.author);
-        }
-        let authors = [...authorSet];
-        authors.sort();
-        return authors;
+        log(`---- authors()`);
+        let result : any = this.db.prepare(`
+            SELECT DISTINCT author FROM docs
+            ORDER BY author ASC;
+        `).all();
+        return result.map((r : any) => r.author);
     }
 
     getDocument(path : string) : Document | undefined {

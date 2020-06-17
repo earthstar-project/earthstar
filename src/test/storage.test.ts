@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import t = require('tap');
-t.runOnly = true;
+//t.runOnly = true;
 
 import {
     AuthorAddress,
@@ -41,19 +41,19 @@ interface Scenario {
     description: string,
 }
 let scenarios : Scenario[] = [
-    {
-        makeStore: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
-        description: 'StoreMemory',
-    },
     //{
-    //    makeStore: (workspace : string) : IStorage => new StorageSqlite({
-    //        mode: 'create',
-    //        workspace: workspace,
-    //        validators: VALIDATORS,
-    //        filename: ':memory:'
-    //    }),
-    //    description: "StoreSqlite(':memory:')",
+    //    makeStore: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
+    //    description: 'StoreMemory',
     //},
+    {
+        makeStore: (workspace : string) : IStorage => new StorageSqlite({
+            mode: 'create',
+            workspace: workspace,
+            validators: VALIDATORS,
+            filename: ':memory:'
+        }),
+        description: "StoreSqlite(':memory:')",
+    },
 ];
 
 //================================================================================
@@ -395,7 +395,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.only(scenario.description + ': limits on queries', (t: any) => {
+    t.test(scenario.description + ': limits on queries', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
         // three authors
@@ -429,7 +429,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.test(scenario.description + ': path and author queries', (t: any) => {
+    t.only(scenario.description + ': path and author queries', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
         // two authors
@@ -437,19 +437,25 @@ for (let scenario of scenarios) {
         t.ok(es.set(keypair2, {format: FORMAT, path: '/pathA', value: 'value2.Y', timestamp: now + 2}), 'set data');
         t.ok(es.set(keypair1, {format: FORMAT, path: '/pathA', value: 'value1.Z', timestamp: now + 3}), 'set data');
 
+        log('==============================================');
+        log('==============================================');
+        log('==============================================');
         t.same(es.authors(), [author1, author2], 'authors');
 
         // path queries
-        t.same(es.paths(    { path: '/pathA', includeHistory: false }), ['/pathA'], 'paths with path query');
-        t.same(es.values(   { path: '/pathA', includeHistory: false }), ['value1.Z'], 'values with path query');
-        t.same(es.documents({ path: '/pathA', includeHistory: false }).map(d => d.value), ['value1.Z'], 'documents with path query');
+        //t.same(es.paths(    { path: '/pathA', includeHistory: false }), ['/pathA'], 'paths with path query');
+        //t.same(es.values(   { path: '/pathA', includeHistory: false }), ['value1.Z'], 'values with path query');
+        //t.same(es.documents({ path: '/pathA', includeHistory: false }).map(d => d.value), ['value1.Z'], 'documents with path query');
 
-        t.same(es.paths(    { path: '/pathA', includeHistory: true }), ['/pathA'], 'paths with path query, history');
-        t.same(es.values(   { path: '/pathA', includeHistory: true }), ['value1.Z', 'value2.Y'], 'values with path query, history');
-        t.same(es.documents({ path: '/pathA', includeHistory: true }).map(d => d.value), ['value1.Z', 'value2.Y'], 'documents with path query, history');
+        //t.same(es.paths(    { path: '/pathA', includeHistory: true }), ['/pathA'], 'paths with path query, history');
+        //t.same(es.values(   { path: '/pathA', includeHistory: true }), ['value1.Z', 'value2.Y'], 'values with path query, history');
+        //t.same(es.documents({ path: '/pathA', includeHistory: true }).map(d => d.value), ['value1.Z', 'value2.Y'], 'documents with path query, history');
 
+        log('==============================================');
+        log('==============================================');
+        log('==============================================');
         //// versionsByAuthor
-        //t.same(es.paths({ versionsByAuthor: author1, includeHistory: true }), ['/pathA'], 'paths versionsByAuthor 1, no history');
+        t.same(es.paths({ versionsByAuthor: author1, includeHistory: true }), ['/pathA'], 'paths versionsByAuthor 1, no history');
         //t.same(es.paths({ versionsByAuthor: author1, includeHistory: false }), ['/pathA'], 'paths versionsByAuthor 1, no history');
         //t.same(es.paths({ versionsByAuthor: author2, includeHistory: true }), ['/pathA'], 'paths versionsByAuthor 2, with history');
         //t.same(es.paths({ versionsByAuthor: author2, includeHistory: false }), [], 'paths versionsByAuthor 2, with history');
