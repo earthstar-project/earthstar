@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import t = require('tap');
-//t.runOnly = true;
+t.runOnly = true;
 
 import {
     AuthorAddress,
@@ -16,6 +16,8 @@ import {
 import { ValidatorEs2 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
+
+let log = console.log;
 
 //================================================================================
 // prepare for test scenarios
@@ -43,15 +45,15 @@ let scenarios : Scenario[] = [
         makeStore: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
         description: 'StoreMemory',
     },
-    {
-        makeStore: (workspace : string) : IStorage => new StorageSqlite({
-            mode: 'create',
-            workspace: workspace,
-            validators: VALIDATORS,
-            filename: ':memory:'
-        }),
-        description: "StoreSqlite(':memory:')",
-    },
+    //{
+    //    makeStore: (workspace : string) : IStorage => new StorageSqlite({
+    //        mode: 'create',
+    //        workspace: workspace,
+    //        validators: VALIDATORS,
+    //        filename: ':memory:'
+    //    }),
+    //    description: "StoreSqlite(':memory:')",
+    //},
 ];
 
 //================================================================================
@@ -393,6 +395,29 @@ for (let scenario of scenarios) {
         t.done();
     });
 
+    t.only(scenario.description + ': author queries', (t: any) => {
+        let es = scenario.makeStore(WORKSPACE);
+
+        // two authors
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/pathA', value: 'value1.X', timestamp: now + 1}), 'set data');
+        t.ok(es.set(keypair2, {format: FORMAT, path: '/pathA', value: 'value2.Y', timestamp: now + 2}), 'set data');
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/pathA', value: 'value1.Z', timestamp: now + 3}), 'set data');
+
+        t.same(es.authors(), [author1, author2], 'authors');
+
+        t.same(es.values({ versionsByAuthor: author1, includeHistory: true }), ['value1.Z'], 'versionsByAuthor 1, no history');
+        t.same(es.values({ versionsByAuthor: author1, includeHistory: false }), ['value1.Z'], 'versionsByAuthor 1, no history');
+        t.same(es.values({ versionsByAuthor: author2, includeHistory: true }), ['value2.Y'], 'versionsByAuthor 2, with history');
+        t.same(es.values({ versionsByAuthor: author2, includeHistory: false }), [], 'versionsByAuthor 2, with history');
+
+        t.same(es.values({ participatingAuthor: author1, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 1, with history');
+        t.same(es.values({ participatingAuthor: author1, includeHistory: false }), ['value1.Z'], 'participatingAuthor 1, no history');
+        t.same(es.values({ participatingAuthor: author2, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 2, with history');
+        t.same(es.values({ participatingAuthor: author2, includeHistory: false }), ['value1.Z'], 'participatingAuthor 2, no history');
+
+        t.done();
+    });
+
     t.test(scenario.description + ': multi-author writes', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
@@ -473,7 +498,7 @@ for (let scenario of scenarios) {
     t.test(scenario.description + ': sync: two-way', (t: any) => {
         let optsToTry : SyncOpts[] = [
             {},  // use the defaults
-            { direction: 'both', existing: true, live: false },  // these are the defaults
+            //{ direction: 'both', existing: true, live: false },  // these are the defaults
         ];
 
         for (let opts of optsToTry) {
@@ -483,6 +508,7 @@ for (let scenario of scenarios) {
             // set up some paths
             t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy path');  // winner  (push #1)
             t.ok(es1.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy path');  // winner  (push 2)
+
             t.ok(es1.set(keypair1, {format: FORMAT, path: '/path1', value: 'one', timestamp: now}), 'author1 set path1');      // becomes history  (push 3)
             t.ok(es1.set(keypair2, {format: FORMAT, path: '/path1', value: 'two', timestamp: now + 1}), 'author2 set path1');  // winner  (push 4)
 
@@ -499,6 +525,10 @@ for (let scenario of scenarios) {
             let syncResults = es1.sync(es2, opts);
             //log('sync results', syncResults);
             t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
+
+            log('=================================================');
+            log('=================================================');
+            log('=================================================');
 
             t.equal(es1.paths().length, 6, '6 paths');
             t.equal(es1.documents().length, 6, '6 docs');

@@ -67,8 +67,21 @@ export interface QueryOpts {
     // include old versions of this doc from different authors?
     includeHistory?: boolean, // default false
 
-    // author?: AuthorKey  // TODO: does this include the author's obsolete history docs?
+    // if including history, find keys where the author ever wrote, and return all history for those keys by anyone
+    // if not including history, find keys where the author ever wrote, and return the latest doc (maybe not by the author)
+    participatingAuthor?: AuthorAddress,
+
+    //// if including history, find keys with the given last-author, and return all history for those keys
+    //// if not including history, find keys with the given last-author, and return just the last doc
+    //lastAuthor?: AuthorAddress,
+
+    // if including history, it's any revision by this author (heads and non-heads)
+    // if not including history, it's any revision by this author which is a head
+    versionsByAuthor?: AuthorAddress,
+
     // timestamp before and after // TODO
+
+    // sort order: TODO
 }
 
 export interface SyncOpts {
@@ -103,6 +116,7 @@ export interface IStorage {
     // subscribe with onChange.subscribe(...cb...);
     onChange: Emitter<undefined>;
 
+    // sort by path ASC, then timestamp DESC (newest first)
     documents(query?: QueryOpts): Document[];
     paths(query?: QueryOpts): string[];
     values(query?: QueryOpts): string[];

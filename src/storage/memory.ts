@@ -14,27 +14,20 @@ import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
 import { workspaceNameChars } from '../util/characters';
 
-//let log = console.log;
+let log = console.log;
 //let logWarning = console.log;
-let log = (...args : any[]) => void {};  // turn off logging for now
+//let log = (...args : any[]) => void {};  // turn off logging for now
 let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
 export let _historySortFn = (a: Document, b: Document): number => {
-    // Sorts docs within one key from multiple authors,
-    // so that the winning doc is first.
-    // timestamp DESC (newest first), signature DESC (to break timestamp ties)
-    if (a.timestamp < b.timestamp) {
-        return 1;
-    }
-    if (a.timestamp > b.timestamp) {
-        return -1;
-    }
-    if (a.signature < b.signature) {
-        return 1;
-    }
-    if (a.signature > b.signature) {
-        return -1;
-    }
+    // When used within one key, puts the winning revision first.
+    // path ASC (abcd), then timestamp DESC (newest first), then signature DESC (to break timestamp ties)
+    if (a.path > b.path) { return 1; }
+    if (a.path < b.path) { return -1; }
+    if (a.timestamp < b.timestamp) { return 1; }
+    if (a.timestamp > b.timestamp) { return -1; }
+    if (a.signature < b.signature) { return 1; }
+    if (a.signature > b.signature) { return -1; }
     return 0;
 };
 
@@ -113,7 +106,64 @@ export class StorageMemory implements IStorage {
         // return docs that match the query, sorted by keys.
         // TODO: note that opts.limit applies to the number of keys,
         //   not the number of unique history docs
+        query = query || {};
 
+        log('-------------------------------------------------------');
+        log(JSON.stringify(query));
+        let docs : Document[] = [];
+        for (let key of Object.keys(this._docs)) {
+            log('--- key:', key);
+
+            // ignore unwanted keys
+            if (query.lowPath !== undefined && key < query.lowPath) { continue; }
+            if (query.highPath !== undefined && key >= query.highPath) { continue; }
+            if (query.pathPrefix !== undefined && !key.startsWith(query.pathPrefix)) { continue; }
+
+            // get all history docs for this key
+            let authorToDoc = this._docs[key];
+            let keyDocs = Object.values(authorToDoc);
+
+            // is the desired participatingAuthor anywhere in this set of docs?
+            // if not, discard it
+            if (query.participatingAuthor !== undefined) {
+                if (authorToDoc[query.participatingAuthor] === undefined) {
+                    continue;
+                }
+            }
+
+            // sort newest first within this key
+            keyDocs.sort(_historySortFn);
+
+            // discard history?
+            log(`--- --- ${keyDocs.length} docs for this key`);
+            if (!query.includeHistory) {
+                log(`--- --- removing history`);
+                keyDocs = keyDocs.slice(0, 1)
+            }
+            log(`--- --- ${keyDocs.length} docs for this key`);
+            log('--- ---', keyDocs.map(doc => [doc.path, doc.author.slice(0, 10), doc.value]));
+
+            docs = docs.concat(keyDocs);
+        }
+        // apply author filters
+        if (query.versionsByAuthor !== undefined) {
+            log(`--- --- only keeping docs by ${query.versionsByAuthor.slice(0, 10)}`);
+            docs = docs.filter(doc => doc.author === query?.versionsByAuthor);
+        }
+        // sort
+        log(`--- --- sorting by key, then timestamp`);
+        docs.sort(_historySortFn);
+        // limit
+        if (query.limit) {
+            log(`--- limiting from ${docs.length} to ${query.limit} docs`);
+            docs = docs.slice(0, query.limit);
+        }
+        log(`--- final result: ${docs.length} docs`);
+        log('-------------------------------------------------------');
+
+        return docs;
+
+        /*
         //log('------------------------------------------ DOCS');
         //log('query', JSON.stringify(query));
         let includeHistory = query?.includeHistory === true;  // default to false
@@ -135,6 +185,7 @@ export class StorageMemory implements IStorage {
             }
         }
         return docs;
+        */
     }
     values(query? : QueryOpts) : string[] {
         // get docs that match the query, sort by key, and return their values.
