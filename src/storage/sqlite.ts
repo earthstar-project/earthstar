@@ -19,8 +19,9 @@ import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
 
 //let log = console.log;
-//let logWarning = console.log;
 let log = (...args : any[]) => void {};  // turn off logging for now
+
+//let logWarning = console.log;
 let logWarning = (...args : any[]) => void {};  // turn off logging for now
 
 export interface StorageSqliteOpts {
@@ -172,39 +173,60 @@ export class StorageSqlite implements IStorage {
 
         // convert the query into an array of SQL clauses
         let filters : string[] = [];
-        let params : {[k:string] : any} = {};
+        let filterParams : {[k:string] : any} = {};
+
+        let havings : string[] = [];
+        let havingParams : {[k:string] : any} = {};
+
+        // path filters
         if (query.path !== undefined) {
             filters.push('path = :path');
-            params.path = query.path;
+            filterParams.path = query.path;
         }
         if (query.lowPath !== undefined) {
             filters.push(':lowPath <= path');
-            params.lowPath = query.lowPath;
+            filterParams.lowPath = query.lowPath;
         }
         if (query.highPath !== undefined) {
             filters.push('path < :highPath');
-            params.highPath = query.highPath;
+            filterParams.highPath = query.highPath;
         }
         if (query.pathPrefix !== undefined) {
             filters.push("path LIKE (:prefix || '%') ESCAPE '\\'");
             // escape existing % and _ in the prefix
             // so they don't count as wildcards for LIKE
-            params.prefix = query.pathPrefix
+            filterParams.prefix = query.pathPrefix
                 .split('_').join('\\_')
                 .split('%').join('\\%');
+        }
+
+        // author filters
+        if (query.versionsByAuthor !== undefined) {
+            if (query.includeHistory === true) {
+                // use a normal WHERE filter
+                filters.push("author = :versionsByAuthor")
+                filterParams.versionsByAuthor = query.versionsByAuthor;
+            } else {
+                // desired order:
+                //   group by path, only keeping the latest one
+                //   only keep the ones matching the given author
+                // so we use a HAVING clause to apply it after the GROUP BY.
+                havings.push("author = :versionsByAuthor")
+                havingParams.versionsByAuthor = query.versionsByAuthor;
+            }
+        }
+
+        // limit
+        let limitClause = '';
+        let limitParams : {[k:string] : any} = {};
+        if (query.limit !== undefined && query.limit > 0) {
+            limitClause = 'LIMIT :limit'
+            limitParams.limit = query.limit;
         }
 
         let combinedFilters = '';
         if (filters.length > 0) {
             combinedFilters = 'WHERE ' + filters.join('\nAND ')
-        }
-        log('filters', filters);
-        log('combinedFilters', combinedFilters);
-
-        let limitClause = '';
-        if (query.limit !== undefined && query.limit > 0) {
-            limitClause = 'LIMIT :limit'
-            params.limit = query.limit;
         }
 
         let queryString = '';
@@ -218,28 +240,43 @@ export class StorageSqlite implements IStorage {
             `;
         } else {
             // when not including history, only get the latest doc per path (from any author)
+            log('havings', JSON.stringify(havings));
+            let combinedHaving = havings.length === 0 ? '' : 'HAVING ' + havings.join('\nAND ');
+            log('combined having', JSON.stringify(combinedHaving));
             queryString = `
                 SELECT format, workspace, path, value, author, MAX(timestamp) as timestamp, signature FROM docs
                 ${combinedFilters}
                 GROUP BY path
+                ${combinedHaving}
                 ORDER BY path ASC, timestamp DESC, signature DESC  -- break ties with signature
                 ${limitClause};
             `;
         }
-        log('docs query', query);
-        log('docs queryString', queryString);
-        log('docs params', params);
-        let docs = this.db.prepare(queryString).all(params);
+        log('query', query);
+        log('queryString', queryString);
+        log('filter params', filterParams);
+        log('having params', havingParams);
+        log('limit params', limitParams);
+        let docs = this.db.prepare(queryString).all({...filterParams, ...havingParams, ...limitParams});
         log('result:', docs);
         return docs;
     }
     paths(query? : QueryOpts) : string[] {
-        // do query without including history, so we get one
-        // doc per path.  this way the limit parameter works as
-        // expected in the case of paths.
+        // we have to do the document query with no limit,
+        // then remove dupes here, then apply the limit.
+        // this is super inefficient on large databases.
         log(`---- paths(${JSON.stringify(query)})`);
-        return this.documents({...query, includeHistory: false})
-            .map(doc => doc.path);
+        query = query || {};
+        let docs = this.documents({...query, limit: undefined});
+        // get unique paths up to limit
+        let paths : {[p:string] : boolean} = {};
+        let ii = 0;
+        for (let doc of docs) {
+            paths[doc.path] = true;
+            ii += 1;
+            if (query.limit !== undefined && ii >= query.limit) { break; }
+        }
+        return Object.keys(paths);
     }
     values(query? : QueryOpts) : string[] {
         // just search using documents() and extract the values.
