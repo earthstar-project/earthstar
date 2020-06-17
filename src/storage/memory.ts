@@ -73,8 +73,7 @@ export class StorageMemory implements IStorage {
     }
 
     paths(query? : QueryOpts) : string[] {
-        // return sorted keys that match the query
-        if (query === undefined) { query = {}; }
+        query = query || {};
 
         // if asking for a single key, check if it exists and return it by itself
         if (query.path !== undefined) {
@@ -84,45 +83,31 @@ export class StorageMemory implements IStorage {
                 return [];
             }
         }
-
-        let keys = Object.keys(this._docs);
-        keys.sort();
-
-        // filter the keys in various ways
-        if (query.lowPath !== undefined && query.highPath !== undefined) {
-            keys = keys.filter(k =>
-                (query?.lowPath as string) <= k && k < (query?.highPath as string));
+        // don't apply the limit in documents(), do it here
+        // after removing duplicates
+        let docs = this.documents({...query, limit: undefined});
+        // get unique paths up to limit
+        let paths : {[p:string] : boolean} = {};
+        let ii = 0;
+        for (let doc of docs) {
+            paths[doc.path] = true;
+            ii += 1;
+            if (query.limit !== undefined && ii >= query.limit) { break; }
         }
-        if (query.pathPrefix !== undefined) {
-            keys = keys.filter(k => k.startsWith(query?.pathPrefix as string));
-        }
-        if (query.limit) {
-            keys = keys.slice(0, query.limit);
-        }
-        // opts.includeHistory has no effect for keys()
-        return keys;
+        return Object.keys(paths);
     }
     documents(query? : QueryOpts) : Document[] {
-        // return docs that match the query, sorted by keys.
-        // TODO: note that opts.limit applies to the number of keys,
-        //   not the number of unique history docs
+        // return docs that match the query, sorted by path and timestamp
         query = query || {};
-
-        log('-------------------------------------------------------');
-        log(JSON.stringify(query));
         let docs : Document[] = [];
         for (let key of Object.keys(this._docs)) {
-            log('--- key:', key);
-
             // ignore unwanted keys
             if (query.lowPath !== undefined && key < query.lowPath) { continue; }
             if (query.highPath !== undefined && key >= query.highPath) { continue; }
             if (query.pathPrefix !== undefined && !key.startsWith(query.pathPrefix)) { continue; }
-
             // get all history docs for this key
             let authorToDoc = this._docs[key];
             let keyDocs = Object.values(authorToDoc);
-
             // is the desired participatingAuthor anywhere in this set of docs?
             // if not, discard it
             if (query.participatingAuthor !== undefined) {
@@ -130,67 +115,28 @@ export class StorageMemory implements IStorage {
                     continue;
                 }
             }
-
             // sort newest first within this key
             keyDocs.sort(_historySortFn);
-
             // discard history?
-            log(`--- --- ${keyDocs.length} docs for this key`);
             if (!query.includeHistory) {
-                log(`--- --- removing history`);
                 keyDocs = keyDocs.slice(0, 1)
             }
-            log(`--- --- ${keyDocs.length} docs for this key`);
-            log('--- ---', keyDocs.map(doc => [doc.path, doc.author.slice(0, 10), doc.value]));
-
             docs = docs.concat(keyDocs);
         }
         // apply author filters
         if (query.versionsByAuthor !== undefined) {
-            log(`--- --- only keeping docs by ${query.versionsByAuthor.slice(0, 10)}`);
             docs = docs.filter(doc => doc.author === query?.versionsByAuthor);
         }
         // sort
-        log(`--- --- sorting by key, then timestamp`);
         docs.sort(_historySortFn);
         // limit
         if (query.limit) {
-            log(`--- limiting from ${docs.length} to ${query.limit} docs`);
             docs = docs.slice(0, query.limit);
         }
-        log(`--- final result: ${docs.length} docs`);
-        log('-------------------------------------------------------');
-
         return docs;
-
-        /*
-        //log('------------------------------------------ DOCS');
-        //log('query', JSON.stringify(query));
-        let includeHistory = query?.includeHistory === true;  // default to false
-        let keys = this.paths(query);
-        //log('keys', keys);
-        let docs : Document[] = [];
-        for (let key of keys) {
-            //log('key', key);
-            let keyHistoryDocs = Object.values(this._docs[key]);
-            // sort by timestamp etc
-            //log(JSON.stringify(keyHistoryDocs, null, 4));
-            //log('sorting newest first...');
-            keyHistoryDocs.sort(_historySortFn);
-            //log(JSON.stringify(keyHistoryDocs, null, 4));
-            if (includeHistory) {
-                docs = docs.concat(keyHistoryDocs);
-            } else {
-                docs.push(keyHistoryDocs[0]);
-            }
-        }
-        return docs;
-        */
     }
     values(query? : QueryOpts) : string[] {
-        // get docs that match the query, sort by key, and return their values.
-        // TODO: note that opts.limit applies to the number of keys,
-        //   not the number of unique history docs
+        // same as docs, but we just return the values.
         return this.documents(query).map(doc => doc.value);
     }
 

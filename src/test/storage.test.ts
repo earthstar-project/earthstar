@@ -395,7 +395,34 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.only(scenario.description + ': author queries', (t: any) => {
+    t.only(scenario.description + ': limits on queries', (t: any) => {
+        let es = scenario.makeStore(WORKSPACE);
+
+        // three authors
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/foo', value: 'foo', timestamp: now}), 'set data');
+        t.ok(es.set(keypair1, {format: FORMAT, path: '/pathA', value: 'value1', timestamp: now + 1}), 'set data');
+        t.ok(es.set(keypair2, {format: FORMAT, path: '/pathA', value: 'value2', timestamp: now + 2}), 'set data');
+        t.ok(es.set(keypair3, {format: FORMAT, path: '/pathA', value: 'value3', timestamp: now + 3}), 'set data');
+
+        t.same(es.authors(), [author1, author3, author2], 'authors');
+
+        // path queries
+        t.same(es.paths( { includeHistory: true }), ['/foo', '/pathA'], 'paths with history');
+        t.same(es.values({ includeHistory: true }), ['foo', 'value3', 'value2', 'value1'], 'values with history');
+
+        t.same(es.paths( { includeHistory: true, limit: 1 }), ['/foo'], 'paths with history, limit 1');
+        t.same(es.values({ includeHistory: true, limit: 1 }), ['foo'], 'values with history, limit 1');
+
+        t.same(es.paths( { includeHistory: true, limit: 2 }), ['/foo', '/pathA'], 'paths with history, limit 2');
+        t.same(es.values({ includeHistory: true, limit: 2 }), ['foo', 'value3'], 'values with history, limit 2');
+
+        t.same(es.paths( { includeHistory: true, limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
+        t.same(es.values({ includeHistory: true, limit: 3 }), ['foo', 'value3', 'value2'], 'values with history, limit 3');
+
+        t.done();
+    });
+
+    t.test(scenario.description + ': path and author queries', (t: any) => {
         let es = scenario.makeStore(WORKSPACE);
 
         // two authors
@@ -405,15 +432,34 @@ for (let scenario of scenarios) {
 
         t.same(es.authors(), [author1, author2], 'authors');
 
-        t.same(es.values({ versionsByAuthor: author1, includeHistory: true }), ['value1.Z'], 'versionsByAuthor 1, no history');
-        t.same(es.values({ versionsByAuthor: author1, includeHistory: false }), ['value1.Z'], 'versionsByAuthor 1, no history');
-        t.same(es.values({ versionsByAuthor: author2, includeHistory: true }), ['value2.Y'], 'versionsByAuthor 2, with history');
-        t.same(es.values({ versionsByAuthor: author2, includeHistory: false }), [], 'versionsByAuthor 2, with history');
+        // path queries
+        t.same(es.paths(    { path: '/pathA', includeHistory: false }), ['/pathA'], 'paths with path query');
+        t.same(es.values(   { path: '/pathA', includeHistory: false }), ['value1.Z'], 'values with path query');
+        t.same(es.documents({ path: '/pathA', includeHistory: false }).map(d => d.value), ['value1.Z'], 'documents with path query');
 
-        t.same(es.values({ participatingAuthor: author1, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 1, with history');
-        t.same(es.values({ participatingAuthor: author1, includeHistory: false }), ['value1.Z'], 'participatingAuthor 1, no history');
-        t.same(es.values({ participatingAuthor: author2, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 2, with history');
-        t.same(es.values({ participatingAuthor: author2, includeHistory: false }), ['value1.Z'], 'participatingAuthor 2, no history');
+        t.same(es.paths(    { path: '/pathA', includeHistory: true }), ['/pathA'], 'paths with path query, history');
+        t.same(es.values(   { path: '/pathA', includeHistory: true }), ['value1.Z', 'value2.Y'], 'values with path query, history');
+        t.same(es.documents({ path: '/pathA', includeHistory: true }).map(d => d.value), ['value1.Z', 'value2.Y'], 'documents with path query, history');
+
+        //// versionsByAuthor
+        //t.same(es.paths({ versionsByAuthor: author1, includeHistory: true }), ['/pathA'], 'paths versionsByAuthor 1, no history');
+        //t.same(es.paths({ versionsByAuthor: author1, includeHistory: false }), ['/pathA'], 'paths versionsByAuthor 1, no history');
+        //t.same(es.paths({ versionsByAuthor: author2, includeHistory: true }), ['/pathA'], 'paths versionsByAuthor 2, with history');
+        //t.same(es.paths({ versionsByAuthor: author2, includeHistory: false }), [], 'paths versionsByAuthor 2, with history');
+        //t.same(es.values({ versionsByAuthor: author1, includeHistory: true }), ['value1.Z'], 'values versionsByAuthor 1, no history');
+        //t.same(es.values({ versionsByAuthor: author1, includeHistory: false }), ['value1.Z'], 'values versionsByAuthor 1, no history');
+        //t.same(es.values({ versionsByAuthor: author2, includeHistory: true }), ['value2.Y'], 'values versionsByAuthor 2, with history');
+        //t.same(es.values({ versionsByAuthor: author2, includeHistory: false }), [], 'values versionsByAuthor 2, with history');
+        //t.same(es.documents({ versionsByAuthor: author1, includeHistory: true }).length, 1, 'documents versionsByAuthor 1, no history');
+        //t.same(es.documents({ versionsByAuthor: author1, includeHistory: false }).length, 1, 'documents versionsByAuthor 1, no history');
+        //t.same(es.documents({ versionsByAuthor: author2, includeHistory: true }).length, 1, 'documents versionsByAuthor 2, with history');
+        //t.same(es.documents({ versionsByAuthor: author2, includeHistory: false }).length, 0, 'documents versionsByAuthor 2, with history');
+
+        //// participatingAuthor
+        //t.same(es.values({ participatingAuthor: author1, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 1, with history');
+        //t.same(es.values({ participatingAuthor: author1, includeHistory: false }), ['value1.Z'], 'participatingAuthor 1, no history');
+        //t.same(es.values({ participatingAuthor: author2, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 2, with history');
+        //t.same(es.values({ participatingAuthor: author2, includeHistory: false }), ['value1.Z'], 'participatingAuthor 2, no history');
 
         t.done();
     });

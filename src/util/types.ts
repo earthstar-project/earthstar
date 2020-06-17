@@ -62,7 +62,9 @@ export interface QueryOpts {
 
     pathPrefix?: string,  // paths starting with prefix.
 
-    limit?: number,  // there's no offset; use lowPath as a cursor instead
+    // limit applies to the total number of docs returned, counting heads and non-heads
+    // there's no offset; use lowPath as a cursor instead
+    limit?: number,
 
     // include old versions of this doc from different authors?
     includeHistory?: boolean, // default false
