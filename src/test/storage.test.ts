@@ -406,9 +406,9 @@ for (let scenario of scenarios) {
 
         t.same(es.authors(), [author1, author3, author2], 'authors');
 
-        // path queries
-        t.same(es.paths( { includeHistory: true }), ['/foo', '/pathA'], 'paths with history');
-        t.same(es.values({ includeHistory: true }), ['foo', 'value3', 'value2', 'value1'], 'values with history');
+        // queries with limits
+        t.same(es.paths( { includeHistory: true }), ['/foo', '/pathA'], 'paths with history, no limit');
+        t.same(es.values({ includeHistory: true }), ['foo', 'value3', 'value2', 'value1'], 'values with history, no limit');
 
         t.same(es.paths( { includeHistory: true, limit: 1 }), ['/foo'], 'paths with history, limit 1');
         t.same(es.values({ includeHistory: true, limit: 1 }), ['foo'], 'values with history, limit 1');
@@ -418,6 +418,13 @@ for (let scenario of scenarios) {
 
         t.same(es.paths( { includeHistory: true, limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
         t.same(es.values({ includeHistory: true, limit: 3 }), ['foo', 'value3', 'value2'], 'values with history, limit 3');
+        
+        // no history
+        t.same(es.paths( { includeHistory: false }), ['/foo', '/pathA'], 'paths no history, no limit');
+        t.same(es.values({ includeHistory: false }), ['foo', 'value3'], 'values no history, no limit');
+
+        t.same(es.paths( { includeHistory: false, limit: 1 }), ['/foo'], 'paths no history, limit 1');
+        t.same(es.values({ includeHistory: false, limit: 1 }), ['foo'], 'values no history, limit 1');
 
         t.done();
     });
