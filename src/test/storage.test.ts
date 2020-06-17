@@ -41,10 +41,10 @@ interface Scenario {
     description: string,
 }
 let scenarios : Scenario[] = [
-    //{
-    //    makeStore: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
-    //    description: 'StoreMemory',
-    //},
+    {
+        makeStore: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
+        description: 'StoreMemory',
+    },
     {
         makeStore: (workspace : string) : IStorage => new StorageSqlite({
             mode: 'create',
