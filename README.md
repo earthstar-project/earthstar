@@ -1,21 +1,49 @@
 
 # Earthstar
 
-![](docs/earthstar-logo.png)
+![](docs/earthstar-wordmark.png)
 
+## An offline-first, distributed, syncable, embedded document database for use in p2p software
 
-*Early alpha - do not use for important data yet*
-
-## An offline-first, distributed, syncable document database for use in p2p software
-
-Implementations so far:
-* Typescript (node, browsers) - this repo
+*Alpha - do not use for important data yet*
 
 Related tools:
-* [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli)
-* [earthstar-pub](https://github.com/cinnamon-bun/earthstar-pub)
+* [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli) -- command line utility
+* [earthstar-pub](https://github.com/cinnamon-bun/earthstar-pub) -- server to help you sync
+* [earthstar-wiki](https://github.com/cinnamon-bun/earthstar-wiki) -- an example app built with Earthstar
 
-### Data model
+Other docs:
+* [Earthstar concepts and vocabulary](docs/vocabulary.md)
+
+## Motivation
+
+Centralized services like Facebook have lots of problems: privacy, surveillance, addiction, dark patterns, ads, "real name" policies that harm minority groups, poor handling of moderation, bots, ...
+
+These problems come from 2 root causes:
+* They have a **profit motive**, so their purpose is to extract value from users.
+* They're **big**, so they're a bureaucracy that can't understand the nuances of the diverse world population they serve, and they're unresponsive to demands from their users.
+
+We'd be better off with communication services that are:
+* **Not for profit** - run by volunteers on small, cheap servers
+* **Small** - close to their users, locally governed, more democratic, understanding local norms and culture
+
+This is the "federated" model, like Mastodon: instead of one big Twitter, make a thousand small Twitters.
+
+But this has problems too -- volunteer-run servers don't last forever, and when they shut down their users lose their communities.
+
+Earthstar goes one step further: you can communicate without servers at all, directly from device to device; or you can use Earthstar servers which help sync your data but have no authority over your account.  You can easily run your own servers for yourself and your friends.
+
+Earthstar's philosophy is that **apps should be tools, not services**.  Authority no longer rests in a central server, it rests in each user.
+
+## Comparisons
+
+Earthstar is quite similar to Secure Scuttlebutt, but it changes some core properties to make good user experiences easier to build.  Users don't have an append-only log, they have a set of documents that can changed and deleted.
+
+It's like Firebase but decentralized and open source.
+
+It's like CouchDB, but cryptographically secure, so untrusted nodes can help your data get where it's going without being able to modify it.
+
+## Data model
 
 An Earthstar workspace holds mutable documents with unique paths, similar to leveldb or CouchDb.
 
@@ -23,21 +51,15 @@ There are no transactions.  The unit of atomic change is writing a value to one 
 
 ![](docs/earthstar-data-model.png)
 
-### Scope
+## Scope, typical usage
 
-Each user will have their own instance of a Earthstar database, maybe in their browser or embedded in an Electron app.  There might also be some on cloud servers.  These databases can sync with each other across HTTP or duplex stream connections.
+Each user will have their own instance of an Earthstar database, maybe in their browser or embedded in an Electron app.  There might also be some instances on cloud servers ("pubs").  The databases can sync with each other across HTTP or duplex stream connections.
 
 Each database instance can hold a subset of the entire data, specified by a query such as "paths starting with a certain substring", "paths written after a certain timestamp", etc.
 
-A "workspace" is a collection of data which is sync'd across database instances.  It's similar to a Slack workspace -- a collection of related people and data.  To join a workspace you need to know its unique ID, which is a random string.
+The universe of data is divided into "workspaces" -- collections of documents accessed by certain users.  Syncing happens one workspace at a time.
 
-### Security
-
-Each author is identified by a public key.
-
-Data updates are signed by the author, so it's safe for untrusted peers to help host and propagate data.  (Soon) you will also be able to encrypt data so untrusted peers can host it without reading it.
-
-### Editing data; multiple users and devices; conflicts
+## Editing data; multiple users and devices; conflicts
 
 A single author can use multiple devices at the same time.  You "log into" a device by providing your public and private key, like a username and password.
 
@@ -51,6 +73,10 @@ Conflicts from a single author (on multiple devices) are resolved by timestamp a
 
 ## Security properties
 
+Each author is identified by a public key.
+
+Data updates are signed by the author, so it's safe for untrusted peers to help host and propagate data.  (Soon) you will also be able to encrypt data so untrusted peers can host it without reading it.
+
 Malicious peers can:
 * Withold updates to individual documents during a sync
 * See the data (until encryption is implemented, soon)
@@ -59,6 +85,8 @@ Malicious peers can:
 Malicious peers cannot:
 * Alter documents from another author
 * Forge new documents signed by another author
+
+Although malicious peers can withold individual documents, as long as there are honest peers around you will eventually get the latest verison of everything.
 
 Because it allows partial sync and mutation of data, Earthstar doesn't cryptographically guarantee that you have a complete dataset with no gaps from a certain author.  Authors could chose to use sequential paths or embed a blockchain of hash backlinks into their messages, and you could verify these in your app (outside of Earthstar).
 
@@ -74,7 +102,7 @@ Like CouchDb, but:
 Like Scuttlebutt, but:
 * one author can use multiple devices
 * data is mutable
-* uses a key-value data model instead of event-sourcing, to reduce the need for custom indexing
+* instead of an append-only log, it's a set of mutable items
 * supports partial replication
 * will sync over HTTP, so it's easy to host in places like Glitch.com
 * has less strict data guarantees -- you can't tell if you have someone's entire dataset or not
@@ -106,19 +134,19 @@ These styles of app could be built on top of Earthstar:
 
 Earthstar doesn't handle multi-user text editing like Google Docs.  This is a different challenge.  You could probably use a CRDT like Automerge and rely on Earthstar to move and sync the patches it produces.
 
-It's not real-time yet - changes propagate over a few minutes.  This will improve but might not ever get below 1s latency.
+It will eventually stream live changes, but it's not designed for low-latency live data.
 
-The cryptography is not audited or bulletproof yet.
+The cryptography is not audited yet.
 
 Earthstar is not focused on anonymity -- more on autonomy.  You could use it over Tor or something.
 
-Earthstar doesn't provide transactions or causality guarantees across paths.
+Earthstar doesn't provide transactions or causality guarantees.
 
 Moderation and blocking support is not built in, but apps can build it on top of Earthstar.
 
 ## Example
 
-The API for a Store:
+The main interface to Earthstar is the Storage class:
 ```ts
 // A Store is all about a single workspace.
 // Workspaces are separate universes of data
@@ -157,48 +185,47 @@ sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
 
 Usage example:
 ```ts
-// Create a database for a particular workspace, 'gardening-pals'
-// We've chosen to use the main 'es.2' feed format so we supply the matching validator
-let es = new StoreMemory([ValidatorEs1], 'gardening-pals');
+// Create a database for a particular workspace, '//gardening-pals.xxxxxxxx'
+// We've chosen to use the latest 'es.2' feed format so we supply the matching validator.
+let storage = new StorageMemory([ValidatorEs2], '//gardening-pals.xxxxxxxx');
 
-// Make up some authors for testing
-// a keypair is { public: '@aaa', secret: 'xxx' }.
-// they are encoded using base58btc
+// Make up some authors for testing.
+// A keypair is { address: '@aaa.xxx', secret: 'xxx' }.
 let keypair1 = generateKeypair();
 let keypair2 = generateKeypair();
-let author1 = keypair1.public;
-let author2 = keypair2.public;
+let author1 = keypair1.address;
+let author2 = keypair2.address;
 
 // It's a key-value store.
-es.set('wiki/Strawberry', 'Tasty', author1, keypair1.secret);
-es.getValue('wiki/Strawberry') // --> 'Tasty'
+storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty' })
+storage.getValue('/wiki/Strawberry') // --> 'Tasty'
 
 // One author can use multiple devices with no problems.
 // Conflicts are resolved by timestamp.
 // Here the same author overwrites their previous value,
 // which is forgotten from the database.
-es.set('wiki/Strawberry', 'Tasty!!', author1, keypair1.secret);
-es.getValue('wiki/Strawberry') // --> 'Tasty!!'
+storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty!!' })
+storage.getValue('wiki/Strawberry') // --> 'Tasty!!'
 
 // Multiple authors can overwrite each other (also by timestamp).
-es.set('wiki/Strawberry', 'Yum', author2, keypair2.secret);
-es.getValue('wiki/Strawberry') // --> 'Yum'
+storage.set(keypair2, { format: 'es.2', path: '/wiki/Strawberry', value: 'Yum' })
+storage.getValue('wiki/Strawberry') // --> 'Yum'
 
 // We keep the one most recent value from each author, in case
 // you need to do better conflict resolution later.
 // To see the old values, use a query:
-es.values({ path='wiki/Strawberry', includeHistory: true })
+storage.values({ path='wiki/Strawberry', includeHistory: true })
     // --> ['Yum', 'Tasty!!']  // newest first
 
 // Get more context about a document, besides just the value.
-es.getDocument('wiki/Strawberry')
-/* {
+storage.getDocument('wiki/Strawberry')
+/* --> {
     format: 'es.2',
-    workspace: 'gardening-pals',
+    workspace: '//gardening-pals.xxxxxxxx',
     path: 'wiki/Strawberry',
-    value: 'Yum.',
-    author: 'aaa',
-    timestamp: 1503982037239,  // it's microseconds: Date.now()*1000
+    value: 'Yum',
+    author: '@aaa.xxx',
+    timestamp: 1503982037239,  // in microseconds: Date.now()*1000
     signature: 'xxxxxxxx.sig.ed25519',
 } */
 
@@ -209,131 +236,39 @@ es.getDocument('wiki/Strawberry')
 //
 // Examples:
 // One author write permission:
-//   '~@aaa/about'  -- only @aaa can write here.
-//   '~@aaa/follows/@bbb'  -- only @aaa can write here
+//   '/about/~@aaa/name'  -- only @aaa can write here.
+//   '/about/~@aaa/follows/@bbb'  -- only @aaa can write here
 // Public:
-//   '@aaa/wall'  -- no tilde, so anyone can write here
-//   'wiki/kittens'  -- no tilde, so anyone can write here
+//   '/wall/@aaa'  -- no tilde, so anyone can write here
+//   '/wiki/Kittens'  -- no tilde, so anyone can write here
 // Multiple authors:
-//   'whiteboard/~@aaa~@bbb'  -- both @aaa and @bbb can write here
+//   '/whiteboard/~@aaa~@bbb'  -- both @aaa and @bbb can write here
 //
-es.set(keypair1, '~' + author1 + '/about', '{name: ""}');
-
-// Coming soon, the workspace can also have members with
-// read or read-write permissions in general.
-
-// Values are just strings.
-// If you want JSON, you have to parse/stringify it yourself.
-// If you want to store binary data, you should base64-encode it.
-// To delete a message, maybe set it to "null" if you expect it to be JSON.
-// This may improve later.
+// Here we'll set the author's display name
+storage.set(keypair1, {
+    format: 'es.2',
+    path: '/about/~' + keypair1.address + '/name',
+    value: 'Suzie'}
+)
 
 // You can do leveldb style queries.
-es.path()
-es.path({ lowPath: 'abc', limit: 100 })
-es.path({ pathPrefix: 'wiki/' })
+storage.path()
+storage.path({ lowPath: 'abc', limit: 100 })
+storage.path({ pathPrefix: 'wiki/' })
 
-// You can sync to another Store
-let es2 = new StoreMemory();
-es.sync(es2);
-// Now es and es2 are identical.
+// You can sync to another Storage
+let storage2 = new StoreMemory();
+storage.sync(storage2);
+// Now storage and storage2 are identical.
 
 // Get notified when anything changes.
-let unsub = es.onChange.subscribe(yourCallback);
+let unsub = storage.onChange.subscribe(yourCallback);
 
 // Later, you can turn off your subscription
 unsub();
-
-//------------------------------
-// Upcoming features
-
-// Soon you can provide some queries and only sync docs matching
-// one or more of those queries.
-es.sync(es2, [
-    { prefix: 'about/' },
-    { prefix: 'wiki/' },
-]);
-
-// Soon you can control who can join, read, and write in a workspace, but details TBD.
 ```
 ----
-## Details
-
-### Classes
-* Store -- responsible for holding and querying the data.
-* Validator -- for a specific feed format, checks validity of incoming messages and signs outgoing messages.
-
-### Planned features:
-* Workspaces - Like a Slack workspace / Discord server / scuttleverse.  Control who joins, block people, invitations, etc.
-* Encryption - Wrap docs in an encrypted envelope.  They will still sync without being understood by middle-people.
-* Metadata - Each doc can have its own small k-v metadata, which can help us query for things.  The Store will be responsible for indexing it.  The goal is simple general purpose indexing so apps don't need their own indexes.
-* Namespaces? - Within a workspace, like top-level folders, to more easily control what to sync and keep different apps from stepping on each others' data.
-
-### Docs table schema
-```
-{
-    schema: 'es.1'  // for future updates
-    workspace: utf-8 string, no '\n'
-    path: utf-8 string, no '\n'
-    value: utf-8 string
-    timestamp: int in microseconds (milliseconds * 1000)
-    author pubkey: ascii string, no '\n'
-    signature by author: ascii string, no '\n'
-}
-primary key: (path, author) -- one doc per path per author.
-```
-
-### Feed formats
-* The main feed format is called `es`.  It's versioned, like `es.1`.
-* Feed formats are responsible for:
-    * Validating incoming messages
-    * Checking signatures
-    * Signing outgoing messages
-    * Setting rules about paths, for example enforcing url-safe characters
-    * Encoding and decoding author pubkeys between raw buffers and a string format such as `'@'+base58(key)`
-* There will eventually be a `ssb` feed format, which encapsulates SSB messages as key-value pairs.  It will be able to validate existing `ssb` signatures.  It will not enforce the hash chain backlinks because Earthstar can do partial syncs or sync in any order.
-
-### All about paths
-* typically you will think of them like file paths or URL paths
-* requirements:
-    * printable ASCII characters only
-    * tilde `~` has special meaning for giving author write permissions
-* recommendations:
-    * preferred to limit to url-safe characters `'()-._~$&+,/:;=?@` so browsers won't percent-escape them
-    * be aware using `/` will affect links in the browser (e.g. your content within a wiki) - you may need to set a <base> path.
-* max length: TODO.  has to be pretty long to allow several authors to have write permissions.
-
-### Path permissions
-Paths can specify which authors are allowed to write to them.
-Only authors that occur prefixed by a tilde `~` in a path can write to that path.
-
-Public:
-* `@aaa.ed25519/wall`  -- no tilde, so anyone can write here
-* `wiki/kittens`  -- no tilde, so anyone can write here
-
-One author write permission:
-* `~@aaa.ed25519/about`  -- tilde means only @aaa can write here.
-* `~@aaa.ed25519/follows/@bbb.ed25519`  -- only @aaa can write here
-* `about/~@aaa.ed25519`  -- tilde does not have to be at the beginning of the path
-
-Multiple authors:
-* `whiteboard/~@aaa.ed25519~@bbb.ed25519`  -- both @aaa and @bbb can write here; nobody else can
-
-### Encoding of crypto keys, signatures, etc
-* For now, keys and signatures are encoded using base58btc.
-* goals: URL safe, filename safe, no punctuation for easy doubleclicking, not case sensitive, widely supported by stdlibs, easy to implement, short enough for url location component (63 chars), sigils make sense, easy to regex, works as a link in markdown, works well in HTML
-* base64url
-    * https://github.com/commenthol/url-safe-base64#readme
-* base58 and base58check - used by Bitcoin and IPFS
-    * multibase - https://github.com/multiformats/multibase
-* base32
-* https://tools.ietf.org/html/rfc4648 - base 16, 32, 64
-* sigils
-    * author: `'@' + baseXX(pubkey)
-    * signature: `baseXX(sig)`
-    * pointer to a path: ?
-    * pointer to a specific path version: `hash(message)`?
-    * blobs are not used in this system.  Put your blobs under the path `blobs/xxxx` or something.
+## Details and notes
 
 ### Signatures
 Document hashes are used within signatures and to link to specific versions of a doc.
@@ -357,52 +292,8 @@ Note that docs only ever have to get transformed INTO this representation just b
 
 There is no canonical "feed encoding" - only the canonical way to hash an doc, above.  Databases and network code can represent the doc in any way they want.
 
-The hash and signature specification may change as the schema evolves beyond `es.1`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
+The hash and signature specification may change as the schema evolves beyond `es.2`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
 
-### To validate incoming docs:
-* check all the fields exist, have correct data types and no `\n`
-* check signature
-* check valid path string (no `\n`, etc)
-* check write permission of path by author
-* timestamp must be not too far in the future (10 minutes?)
-    * skip individual docs when timestamp is in the future
-    * maybe next time we sync that doc will be allowed by then
-
-### To ingest to database:
-* compare to existing newest doc for the same path
-* check if it's newer by timestamp
-* if older, ignore it
-* if timestamps are equal, keep the one with lowest signature to break ties
-* replace old value from same author, same path
-* keep one old value from each different author in a path
-    * (to help revert vandalism of publicly writable paths)
-```
-INSERT OR REPLACE INTO docs
-WHERE path=:path
-AND author=:author
-```
-
-Read a path:
-```
-SELECT * FROM docs
-WHERE path=:path
-ORDER BY timestamp DESC, signature ASC
-LIMIT 1
-```
-* return undefined if not found
-
-### Write a document:
-* remember we're using microseconds, Date.now()*1000
-* set timestamp to `max(now, path's highest existing timestamp + 1)` so we are the winner
-* sign
-* ingest
-* TODO: consider using same timestamp to indicate batch writes (transactions)
-
-When the app wants to delete a path:
-* write it the usual way using `"null"` as the value
-* this acts as a tombstone
-* this tombstone value may be app-dependent, it's not part of the core Earthstar spec (TODO?)
-* tombstones will be returned from queries just like other values
 
 ### Sync over duplex streams:
 Here's a very simple but inefficient algorithm to start with:
@@ -434,7 +325,9 @@ Here's a very simple but inefficient algorithm to start with:
 Note that everything happens in batches instead of infinite streams.  The code avoids using streams.
 
 ### HTTP API
-Coming soon:
+
+This is out of date -- See earthstar-pub for the latest
+
 ```
 HTTP replication:
 
@@ -449,33 +342,16 @@ POST /batch-ingest-docs    docs=[ {...}, {...} ]
     return 'ok' or error
 ```
 
-# TODO
-
-### Encoding of values:
-* Currently values are just utf8 strings
-* Do we want to make it easier to hold other things, and encode/decode for the user?
-* Maybe a prefix:
-```
-b:....  binary as base64
-u:....  utf-8
-j:....  json
-d:      tombstone for deleted docs
-```
-
-### Path shorthand
+## Coming soon: immutable documents by putting "(hash)" in the path
 * Use these special values in a path
 * Signatures are based on the shorthand path
 * Upon ingestion to the db, the values get replaced like a template string
 * Database lookups use the full expanded path
 * Across the network we only need to send the shorthand path
-```
-(@) for my own author pubkey, to save space
-(hash) for the hash of this message, to make immutable docs
-```
 * `(hash)` lets you create docs that can never be overwritten, because you can never make another doc with the same hash.
     * ...if we make it use a character that's forbidden in regular paths
 
 ### Path overlays?
-* It would be easy make an overlay view of different path prefixes ("folders") within a Store
-* Or overlay two Store instances
+* It would be easy make an overlay view of different path prefixes ("folders") within a Storage
+* Or overlay two Storage instances
 * For example you could combine `~@a/wiki` and `~@b/wiki` into one namespace

@@ -3,31 +3,54 @@
 Earthstar is an:
 * eventually consistent
 * offline-first
+* embedded
 * NoSQL document database
 * that syncs.
 
 It...
-* can be replicated peer-to-peer and peer-to-server
-* can be replicated across untrusted peers
+* can sync peer-to-peer and peer-to-server
+* can sync across untrusted peers
 * uses cryptographic signatures to prevent data tampering
+
+# Author
+
+An author is a person identified by a public key.  This is a "user account".
+
+A person can use the same author name and key from multiple devices.
+
+```
+    AUTHOR ADDRESS
+    |------------------------------------------------|
+     SHORTNAME
+          PUBLIC KEY (ed25519 as base58)
+     |--| |-----------------------------------------|
+    @suzy.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
+
+    DISPLAY NAME: any length, any characters
+    This is stored at the path "/about/~@suzy.6efJ8.../name"
+      Susan ✨
+```
+
+**Shortnames** are exactly 4 characters long with only lower case ASCII letters.  They can't be changed later.  They help protect against phishing attacks.
+
+Authors also have human-readable **display names** which are saved as regular documents along with other profile information, and can contain any characters.  They can be changed.
 
 # Workspace
 
-A workspace is a collection of **authors** and **documents**.
+A workspace is a collection of **documents** that can be accessed by certain **authors**.
 
-There are 2 kinds:
+There are 2 kinds of workspaces:
 
-**Unlisted** workspaces can be written by anyone, if they know the workspace address.  The address has a 20-character random number at the end (it's just a random number, not an encryption key).
+**Unlisted** workspaces can be written by anyone, if they know the workspace address.  The address has a 20-character random number at the end to make it hard to guess.
 
-**Limited** workspaces have a public key at the end.  They can only be written to by authors who know the matching private key.  Anyone can still sync and read the data, unless the authors have chosen to encrypt the data.
+**Limited** workspaces have a public key at the end.  They can only be written to by authors who know the matching private key.  Anyone can still sync and read the data, but authors can choose to encrypt their documents using the workspace key so only workspace members can read them.
 
 ```
 UNLISTED WORKSPACE:
 
    WORKSPACE ADDRESS
    |------------------------------|
-     WORKSPACE NAME
-               WORKSPACE RANDOM NUMBER
+     NAME      RANDOM NUMBER
      |-------| |------------------|
    //solarpunk.mVkCjHbAcjEBddaZwxFV
 
@@ -36,8 +59,7 @@ LIMITED WORKSPACE:
 
    WORKSPACE ADDRESS
    |-----------------------------------------------------|
-     WORKSPACE NAME
-               WORKSPACE KEY
+     NAME      PUBLIC KEY
      |-------| |-----------------------------------------|
    //solarpunk.mVkCjHbAcjEBddaZwxFVSiQdVFuvXSiH3B5K5bH7Hcx
 
@@ -45,75 +67,60 @@ LIMITED WORKSPACE:
    489pP5qqRNPvKWmWrsUT4XEhkRmLi7D7RKNGL2QwcZo4
 ```
 
-**Workspace names** are short strings containing only lower case letters, numbers, and dashes.
+**Workspace names** are short strings containing only lower case ASCII letters.
 
-# Author
-
-An author is a person identified by a public key.
-
-A person can use the same author name and key from multiple devices.
-
-```
-    AUTHOR ADDRESS
-    |------------------------------------------------|
-     AUTHOR SHORTNAME
-          AUTHOR KEY
-     |--| |-----------------------------------------|
-    @suzy.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
-
-    AUTHOR NAME: any length, any characters
-    Susan ✨
-```
-
-**Shortnames** are exactly 4 characters long with only lower case letters and numbers.  They can't be changed later.  They help protect against phishing attacks.
-
-Authors also have human-readable names which are saved as regular documents along with other profile information, and can contain any characters.  They can be changed.
 
 # Document
 
 A document is a JSON-style object with the following shape:
 ```
 {
-    format: 'es.1',
-    path: '/wiki/shared/Dolphins',
-    value: {
-        // any user data goes in here
-        text: 'Dolphins are aquatic mammals...',
-    },
-    timestamp: 12345000000000,
+    format: 'es.2',
+
+    path: '/wiki/Dolphins',
+    value: 'Dolphins are aquatic mammals...',
+
+    timestamp: 12345000000000,  // microseconds
     author: '@suzy.6efJ8...',
     authorSignature: 'xxxxxxx',
+
     workspaceSignature?: 'xxxxxxx',  // only present in limited workspaces
 }
 ```
 
-## Writing documents
-
-Documents are **mutable**.  You can overwrite them with newer versions.
-
-TODO: You can't truly delete a document, but you can overwrite it with any value you like, such as `{deleted: true}`.
-
-## History
-
-Each document has a history of old versions.  Earthstar keeps one latest version from each author.  Older versions are forgotten.
-
 ## Format
 
-This string identifies the **feed format** or schema used by Earthstar.  It controls the rules used to validate signatures and documents.
+This string identifies the **feed format** or schema used by Earthstar.  It controls the rules used to validate signatures and documents.  The format is versioned to help preserve old data.
 
 ## Path
 
 A string identifying this document like a path in a filesystem.
 
-Must start with `/`.  Can contain numbers, letters, and these characters:
+Must start with `/` and can contain numbers, letters, and these characters:
 ```
 /'()-._~!*$&+,:=?@%
 ```
-Case sensitive.  No spaces.  No unicode characters or unprintable ASCII.  Use percent-encoding to embed those characters.
+Case sensitive.  No spaces.  No unicode characters or unprintable ASCII.  Use percent-encoding to embed other characters.
 
 Typically the first folder component of the path represents the type of document, or the application used to make it.  When syncing data you can choose which paths to replicate (like `/wiki/*`).
 
-### Path ownership
+## Value
+
+User data goes here.  Currently this only allows strings; it will be expanded to allow JSON-style nested objects.
+
+## Timestamp
+
+Timestamps are in Unix microseconds.  Javascript measures time in milliseconds, so multiply by 1,000 to get microseconds.  If you have seconds, multiply by 1,000,000.
+
+Authors set the timestamps themselves so we can't trust them completely.  During sync, documents with timestamps too far in the future are skipped (not accepted or stored).  This prevents authors from faking future timestamps and spreading them through the network.  However, authors are able to choose old timestamps.
+
+## Writing documents
+
+Documents are **mutable**.  You can overwrite them with newer versions.
+
+You can't truly delete a document -- it will persist as a tombstone -- but you can overwrite it with any value you like, such as an empty string.
+
+## Path ownership
 
 Authors can **own** certain paths, which means that only they can write there.
 
@@ -124,20 +131,17 @@ If a path contains an author address prefixed with a tilde, only that author can
 
 If it contains multiple such tilde-authors, any of them can write.
 ```
-/groupchat/~@aaaa.01010101~@bbbb.7878787878/description
+/groupchat/~@aaaa.1a1a1a1a~@bbbb.2b2b2b2b2b/description
 ```
 
-Paths with no tildes are **shared** paths with no owners, and anyone in the workspace can write there.
+Paths with no tildes are **shared** paths with no owners, and anyone in the workspace can write there:
+```
+/wiki/Dolphins
+```
 
-## Value
+## Document History
 
-A JSON-style object holding arbitrary user data.
-
-## Timestamp
-
-Timestamps are in Unix microseconds.  In Javascript times are usually milliseconds, so multiply by 1,000 to get microseconds.  If you have seconds, multiply by 1,000,000.
-
-Authors set the timestamps themselves so we can't trust them completely.  During sync, documents with timestamps too far in the future are skipped.  This prevents authors from faking future timestamps and spreading them through the network.  However, authors are able to choose old timestamps.
+Each document has a history of old versions.  Earthstar keeps one latest version from each author.  Older versions are forgotten.
 
 # Query
 
@@ -163,21 +167,38 @@ To query, you supply a query object:
 
     limit?: number,  // there's no offset; use lowKey as a cursor instead
 
-    author?: AuthorKey  // TODO: does this include the author's obsolete history items?
+    author?: AuthorKey
 
     // include old versions of this item from different authors?
     includeHistory?: boolean, // default false
 }
 ```
 
-# Pubs
+# Pub servers
 
-A pub is a server that helps sync workspaces.  It holds a copy of the data and sits at a publically accessible URL.
+A pub is a server that helps sync workspaces.  It holds a copy of the data and sits at a publically accessible URL, usually on a cloud server.
 
 Pubs have regular HTTP style URLs:
 ```
 https://mypub.com
 ```
+
+Pubs can be configured to accept any workspace that's pushed to them, or they can have allowlists or blocklists to limit which workspaces they'll host.
+
+A workspace can be hosted by multiple pubs.
+
+Pubs have no authority over users, they just help sync data.
+
+# Finding your friends
+
+There is no centralized discovery or friend-finding system.
+
+To join a workspace you need to know:
+* The workspace address: `//solarpunk.mVkCjHbAcjEBddaZwxFV`
+* The workspace private key, if it's a limited workspace
+* One or more pubs that people in that workspace are using
+
+Users are expected to share their workspace addresses and pubs with each other outside of Earthstar, such as by email or chat.
 
 # URLs and URIs
 
@@ -261,26 +282,28 @@ Its **Outgoing** Replication Queries control which data it will give to other pe
 Both of these are lists of Query objects.  Adding more clauses inside a Query object narrows down the results (logical AND).  Adding more Query objects to the list broadens the results (logical OR).
 
 ```
-// download /wiki/* and /about/* documents
-// plus everything by me
+// What do we want from other peers?
+//  Get all /about/* documents,
+//  recent /wiki/* documents,
+//  and everything by me
 syncer.incomingReplicationQueries = [
-    {prefix: '/wiki/'},
-    {prefix: '/about/'},
-    {author: '@suzy.xxxxx'},
+    { prefix: '/about/' },
+    { prefix: '/wiki/', timestampAfer: 123450000000 },
+    { author: '@suzy.xxxxx' },
 ]
 
-// only upload my own documents after a certain timestamp
+// What should we give to other peers?
+//  Only upload my own documents
 syncer.outgoingReplicationQueries = [
-    {
-        author: '@suzy.xxxxx'
-        timestampAfter: 1234500000000,
-    },
+    { author: '@suzy.xxxxx' },
 ]
 ```
 
 ## Transactions, data integrity
 
 There are no transactions or batch writes.  The atomic unit is the document.  If you update 2 documents at the same time, it's possible that peers will end up with just one of the updates -- because of an interrupted sync, or because one was filtered out by a replication query.
+
+If certain pieces of state need to always be updated together, you can just design them to be part of the same document.  But there's a tradeoff -- larger documents are more likely to have conflicts when multiple people edit at the same time.  Smaller documents let people make narrower changes that sync together easily.
 
 ## Conflict resolution
 
@@ -289,7 +312,5 @@ Earthstar does not have fancy conflict resolution.
 Each document has a history of old versions.  Earthstar keeps one version from each author.  Older versions are forgotten.
 
 When fetching a path, the latest version is returned (by author-asserted timestamp).  You can also get all versions if you want to do manual conflict resolution.
-
-**THIS IMAGE IS OUT OF DATE** but it shows how conflict resolution works.  TODO: update this
 
 ![](earthstar-data-model.png)
