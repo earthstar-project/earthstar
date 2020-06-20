@@ -92,9 +92,11 @@ t.test('with empty storage', (t: any) => {
 
     // read while empty
     t.same(wiki.listPageInfos(), [], 'list page info: empty');
-    t.same(wiki.listPageInfos('shared'), [], 'list page info shared: empty');
-    t.same(wiki.listPageInfos(author1), [], 'list page info author1: empty');
-    t.throws(() => wiki.listPageInfos('xxxx'), 'throws with invalid owner');
+    t.same(wiki.listPageInfos({ owner: 'shared' }), [], 'list page info owner=shared: empty');
+    t.same(wiki.listPageInfos({ owner: author1 }), [], 'list page info owner=author1: empty');
+    t.same(wiki.listPageInfos({ participatingAuthor: author1 }), [], 'list page info participatingAuthor=author1: empty');
+    t.throws(() => wiki.listPageInfos({ owner: 'xxxx' }), 'throws with invalid owner');
+    t.doesNotThrow(() => wiki.listPageInfos({ participatingAuthor: 'xxxx' }), 'does not throw with invalid participatingAuthor');
 
     // do some writes
     t.ok(wiki.setPageText(WikiLayer.makePagePath('shared', 'Small Dogs'), 'page text 1', now), 'write');
@@ -140,8 +142,13 @@ t.test('with empty storage', (t: any) => {
         title: 'Dogs',
     }
     t.same(wiki.listPageInfos(), [sharedInfo, myInfo], 'list page info');
-    t.same(wiki.listPageInfos('shared'), [sharedInfo], 'list page info: shared');
-    t.same(wiki.listPageInfos(author1), [myInfo], 'list page info: mine');
+    t.same(wiki.listPageInfos({ owner: 'shared' }), [sharedInfo], 'list page info: shared');
+    t.same(wiki.listPageInfos({ owner: author1 }), [myInfo], 'list page info: mine');
+
+    // TODO: these need to be tested with more than one author in the db
+    t.same(wiki.listPageInfos({ owner: 'shared', participatingAuthor: author1 }), [sharedInfo], 'list page info: shared (b)');
+    t.same(wiki.listPageInfos({ owner: author1, participatingAuthor: author1 }), [myInfo], 'list page info: mine (b)');
+    t.same(wiki.listPageInfos({ participatingAuthor: author1 }), [sharedInfo, myInfo], 'list page info: my edits');
 
     t.end();
 });

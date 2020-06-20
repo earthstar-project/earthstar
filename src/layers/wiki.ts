@@ -4,6 +4,7 @@ import {
     AuthorShortname,
     IStorage,
     Path,
+    QueryOpts,
 } from '../util/types';
 
 export interface WikiPageInfo {
@@ -73,8 +74,14 @@ export class WikiLayer {
         }
         return { path: path, owner, title };
     }
-    listPageInfos(owner? : AuthorAddress | 'shared') : WikiPageInfo[] {
-        // owner is optional
+    listPageInfos(opts? : {
+            owner? : AuthorAddress | 'shared',
+            participatingAuthor? : AuthorAddress,
+        }): WikiPageInfo[] {
+        opts = opts || {};
+        let owner = opts.owner;
+        let author = opts.participatingAuthor;
+
         let pathPrefix = '/wiki/';
         if (owner && owner.startsWith('@')) {
             pathPrefix = `/wiki/~${owner}/`;
@@ -84,7 +91,10 @@ export class WikiLayer {
             throw 'invalid wiki owner: ' + owner
         }
 
-        let pageInfoOrNulls = this.storage.paths({ pathPrefix })
+        let query : QueryOpts = { pathPrefix };
+        if (author) { query.participatingAuthor = author; }
+
+        let pageInfoOrNulls = this.storage.paths(query)
             .map(path => WikiLayer.parsePagePath(path));
         let pageInfos = pageInfoOrNulls.filter(pi => pi !== null) as WikiPageInfo[];
         return pageInfos;
