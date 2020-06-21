@@ -118,9 +118,10 @@ export class Syncer {
 }
 
 let urlGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
-    // domain should end in a slash.
-    // output is like https://mypub.com/earthstar-api/v1/workspace//gardening.xxxxxxxx/documents
-    `${domain}earthstar-api/v1/workspace${workspace}/documents`;
+    // domain should already end in a slash.
+    // output is like https://mypub.com/earthstar-api/v1/workspace/gardening.xxxxxxxx/documents
+    // note we remove the double slash from workspace
+    `${domain}earthstar-api/v1/workspace/${workspace.slice(2)}/documents`;
 let urlPostDocuments = urlGetDocuments;
 
 let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
