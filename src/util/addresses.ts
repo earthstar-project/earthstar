@@ -23,7 +23,7 @@ export let parseWorkspaceAddress = (addr : string) : {workspaceParsed: Workspace
         return { workspaceParsed: null, err: 'workspace address has nonprintable characters' };
     }
     if (!addr.startsWith('//')) {
-        return { workspaceParsed: null, err: 'workspace address does not start with "@"' };
+        return { workspaceParsed: null, err: 'workspace address does not start with "//"' };
     }
     let parts = addr.slice(2).split('.');
     if (parts.length !== 2) {
