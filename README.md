@@ -13,7 +13,7 @@ Related tools:
 * [earthstar-wiki](https://github.com/cinnamon-bun/earthstar-wiki) -- an example app built with Earthstar
 
 Other docs:
-* [Earthstar concepts and vocabulary](docs/vocabulary.md)
+* [Earthstar concepts and vocabulary](docs/vocabulary.md) -- more details about workspaces, etc
 
 ## Motivation
 
@@ -31,25 +31,25 @@ This is the "federated" model, like Mastodon: instead of one big Twitter, make a
 
 But this has problems too -- volunteer-run servers don't last forever, and when they shut down their users lose their communities.
 
-Earthstar goes one step further: you can communicate without servers at all, directly from device to device; or you can use Earthstar servers which help sync your data but have no authority over your account.  You can easily run your own servers for yourself and your friends.
+Earthstar goes one step further: you can communicate without servers at all, directly from device to device; or you can run Earthstar on [servers ("called pubs")](https://github.com/cinnamon-bun/earthstar-pub) which help sync your data but have no authority over your account.  You can easily run your own servers for yourself and your friends.  Instructions coming soon.
+
+All the authority in the system rests in the users and is enforced by cryptography, not central servers.  Since servers only exist to help with syncing, and your data and identity are independent of the servers, you can easily use as many or as few servers as you want, and move between them without losing anything.
 
 Earthstar's philosophy is that **apps should be tools, not services**.  Authority no longer rests in a central server, it rests in each user.
 
-## Comparisons
-
-Earthstar is quite similar to Secure Scuttlebutt, but it changes some core properties to make good user experiences easier to build.  Users don't have an append-only log, they have a set of documents that can changed and deleted.
-
-It's like Firebase but decentralized and open source.
-
-It's like CouchDB, but cryptographically secure, so untrusted nodes can help your data get where it's going without being able to modify it.
-
 ## Data model
 
-An Earthstar workspace holds mutable documents with unique paths, similar to leveldb or CouchDb.
+An Earthstar workspace holds mutable **documents** with unique **paths** (ids), similar to leveldb or CouchDb.
 
 There are no transactions.  The unit of atomic change is writing a value to one path.  Causal order is not preserved for edits across multiple paths.
 
 ![](docs/earthstar-data-model.png)
+
+## Block diagram
+
+![](docs/block-diagram.png)
+
+There isn't a formal written spec yet - it will be written once things stabilize.
 
 ## Scope, typical usage
 
@@ -57,7 +57,9 @@ Each user will have their own instance of an Earthstar database, maybe in their 
 
 Each database instance can hold a subset of the entire data, specified by a query such as "paths starting with a certain substring", "paths written after a certain timestamp", etc.
 
-The universe of data is divided into "workspaces" -- collections of documents accessed by certain users.  Syncing happens one workspace at a time.
+The universe of data is divided into **workspaces** -- collections of documents accessed by certain users.  Syncing happens one workspace at a time.
+
+Read the [vocabulary and concepts](docs/vocabulary.md) documentation for more about workspaces.
 
 ## Editing data; multiple users and devices; conflicts
 
@@ -104,7 +106,7 @@ Like Scuttlebutt, but:
 * data is mutable
 * instead of an append-only log, it's a set of mutable items
 * supports partial replication
-* will sync over HTTP, so it's easy to host in places like Glitch.com
+* will sync over HTTP, not just TCP, so it's easy to host in places like Glitch.com
 * has less strict data guarantees -- you can't tell if you have someone's entire dataset or not
 
 Like DAT, but:
@@ -114,6 +116,10 @@ Like DAT, but:
 Like IPFS, but:
 * multi-author, multi-device
 * mutable
+
+Like Firebase, but:
+* open source
+* distributed
 
 Sometimes immutability is needed, like if you're running a package registry or want an audit log.  For social-network style use cases, though, immutability can be a privacy liability instead of a desirable guarantee.
 
@@ -324,6 +330,8 @@ Here's a very simple but inefficient algorithm to start with:
 
 Note that everything happens in batches instead of infinite streams.  The code avoids using streams.
 
+For *efficient* sync, we'll use something similar to [this set reconciliation algorithm described by Aljoscha Meyer](https://github.com/AljoschaMeyer/set-reconciliation/).
+
 ### HTTP API
 
 This is out of date -- See earthstar-pub for the latest
@@ -342,16 +350,19 @@ POST /batch-ingest-docs    docs=[ {...}, {...} ]
     return 'ok' or error
 ```
 
-## Coming soon: immutable documents by putting "(hash)" in the path
-* Use these special values in a path
-* Signatures are based on the shorthand path
-* Upon ingestion to the db, the values get replaced like a template string
-* Database lookups use the full expanded path
-* Across the network we only need to send the shorthand path
-* `(hash)` lets you create docs that can never be overwritten, because you can never make another doc with the same hash.
-    * ...if we make it use a character that's forbidden in regular paths
+## Future plans
 
-### Path overlays?
+### Immutable documents by putting "(hash)" in the path
+You'll be able to put the literal string "`(hash)`" in a path.  It will be replaced with the hash of that document.  Since no other document can have the same path, it will be impossible to overwrite or delete this document, making it immutable.
+
+* Signatures are based on the shorthand path
+* Upon ingestion to the db, replace `(hash)` with the actual hash of the document
+* Database lookups use the full expanded path
+* Across the network, we only need to send the shorthand path.  The expanded path is derived state.
+* `(hash)` lets you create docs that can never be overwritten, because you can never make another doc with the same hash.
+* The expanded path needs to contain a character that's not allowed in regular paths, so the only way to get that path is via `(hash)`.  e.g. a percent sign like `(hash)` --> `%a93jDj39sdH...`
+
+### Path overlays
 * It would be easy make an overlay view of different path prefixes ("folders") within a Storage
 * Or overlay two Storage instances
-* For example you could combine `~@a/wiki` and `~@b/wiki` into one namespace
+* For example you could combine `/wiki/~@a.xxxx` and `/wiki/~@b.xxxx` into one namespace
