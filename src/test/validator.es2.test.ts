@@ -9,8 +9,6 @@ import {
 } from '../crypto/crypto';
 import { ValidatorEs2 } from '../validator/es2';
 
-let log = console.log;
-
 let keypair1 = generateAuthorKeypair('test');
 let author1: AuthorAddress = keypair1.address;
 let now = 1500000000000000;

@@ -12,12 +12,7 @@ import {
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
-import { workspaceNameChars } from '../util/characters';
-
-let log = console.log;
-//let logWarning = console.log;
-//let log = (...args : any[]) => void {};  // turn off logging for now
-let logWarning = (...args : any[]) => void {};  // turn off logging for now
+import { log, logTest, logWarning } from '../util/log';
 
 export let _historySortFn = (a: Document, b: Document): number => {
     // When used within one key, puts the winning revision first.

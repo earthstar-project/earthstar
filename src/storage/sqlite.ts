@@ -17,12 +17,7 @@ import {
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
-
-//let log = console.log;
-let log = (...args : any[]) => void {};  // turn off logging for now
-
-//let logWarning = console.log;
-let logWarning = (...args : any[]) => void {};  // turn off logging for now
+import { log, logWarning } from '../util/log';
 
 export interface StorageSqliteOpts {
     // mode: create
@@ -416,6 +411,7 @@ export class StorageSqlite implements IStorage {
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
         // Pull all docs from the other Store and ingest them one by one.
+        log('_syncFrom');
         let numSuccess = 0;
         if (live) {
             // TODO
@@ -423,7 +419,9 @@ export class StorageSqlite implements IStorage {
         }
         if (existing) {
             for (let doc of otherStore.documents({includeHistory: true})) {
+                log('_syncFrom: got document from other store.  ingesting...');
                 let success = this.ingestDocument(doc);
+                log('_syncFrom: ...success = ', success);
                 if (success) { numSuccess += 1; }
             }
         }
@@ -437,6 +435,8 @@ export class StorageSqlite implements IStorage {
         //   opts.live (not implemented yet): Continue streaming new changes forever
         // Return the number of docs pushed and pulled.
         // This uses a simple and inefficient algorithm.  Fancier algorithm TBD.
+
+        log('sync');
 
         // don't sync with yourself
         if (otherStore === this) { return { numPushed: 0, numPulled: 0 }; }

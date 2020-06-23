@@ -17,8 +17,6 @@ import {
     encodeAuthorKeypair,
 } from '../crypto/encoding';
 
-let log = console.log;
-
 // use this unicode character for testing
 let snowmanJsString = '☃';
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);

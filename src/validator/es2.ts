@@ -17,11 +17,7 @@ import {
     pathChars,
 } from '../util/characters';
 import { parseAuthorAddress, parseWorkspaceAddress } from '../util/addresses';
-
-let log = console.log;
-let logWarning = console.warn;
-//let log = (...args : any[]) => void {};  // turn off logging for now
-//let logWarning = (...args : any[]) => void {};  // turn off logging for now
+import { log, logWarning } from '../util/log';
 
 export const ValidatorEs2 : IValidator = class {
     static format : FormatName = 'es.2';

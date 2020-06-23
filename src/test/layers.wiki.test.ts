@@ -20,8 +20,6 @@ import {
     WikiPageInfo,
 } from '../layers/wiki';
 
-let log = console.log;
-
 //================================================================================
 // prepare for test scenarios
 

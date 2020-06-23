@@ -9,8 +9,7 @@ import {
     parseWorkspaceAddress,
     parseAuthorAddress,
 } from '../util/addresses';
-
-let log = console.log;
+import { log, logTest, logWarning } from '../util/log';
 
 // use this unicode character for testing
 let snowmanJsString = '☃';
@@ -163,7 +162,7 @@ t.test('parse workspace address', (t: any) => {
         if (actualOutput.err) {
             t.same(!!v.output.err, !!actualOutput.err, v.note || 'vector should have error but does not');
         } else {
-            log(actualOutput.err);
+            logTest(actualOutput.err);
             t.same(v.output, actualOutput, v.note || 'vector should succeed');
         }
     }
@@ -313,7 +312,7 @@ t.test('parse author address', (t: any) => {
         if (actualOutput.err) {
             t.same(!!v.output.err, !!actualOutput.err, v.note || 'vector should have error but does not');
         } else {
-            log(actualOutput.err);
+            logTest(actualOutput.err);
             t.same(v.output, actualOutput, v.note || 'vector should succeed');
         }
     }

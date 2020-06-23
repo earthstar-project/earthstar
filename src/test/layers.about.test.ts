@@ -19,8 +19,6 @@ import {
     AuthorProfile,
 } from '../layers/about';
 
-let log = console.log;
-
 //================================================================================
 // prepare for test scenarios
 

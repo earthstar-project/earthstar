@@ -19,8 +19,6 @@ import {
     Syncer,
 } from '../sync';
 
-let log = console.log;
-
 //================================================================================
 // prepare for test scenarios
 

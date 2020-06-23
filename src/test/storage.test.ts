@@ -16,8 +16,7 @@ import {
 import { ValidatorEs2 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
-
-let log = console.log;
+import { log, logTest, logWarning } from '../util/log';
 
 //================================================================================
 // prepare for test scenarios
@@ -580,9 +579,9 @@ for (let scenario of scenarios) {
             //log('sync results', syncResults);
             t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
-            log('=================================================');
-            log('=================================================');
-            log('=================================================');
+            logTest('=================================================');
+            logTest('=================================================');
+            logTest('=================================================');
 
             t.equal(es1.paths().length, 6, '6 paths');
             t.equal(es1.documents().length, 6, '6 docs');

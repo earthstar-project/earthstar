@@ -28,8 +28,6 @@ export interface WikiPageDetail {
     /wiki/~@aaa/Little%20Snails
 */
 
-let log = console.log;
-
 export class WikiLayer {
     storage : IStorage;
     keypair : AuthorKeypair
