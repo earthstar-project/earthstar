@@ -16,7 +16,7 @@ import {
 import { ValidatorEs2 } from '../validator/es2';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
-import { log, logTest, logWarning } from '../util/log';
+import { logTest } from '../util/log';
 
 //================================================================================
 // prepare for test scenarios

@@ -1,7 +1,7 @@
 import mb = require('multibase');
 import {
-    AuthorShortname,
     AuthorKeypair,
+    AuthorShortname,
 } from '../util/types';
 import {
     KeypairBuffers,

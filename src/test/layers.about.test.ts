@@ -75,5 +75,3 @@ t.test('with empty storage', (t: any) => {
 
     t.end();
 });
-
-

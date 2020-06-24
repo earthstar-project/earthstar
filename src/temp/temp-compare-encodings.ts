@@ -1,5 +1,4 @@
 import * as mb from 'multibase';
-import * as crypto from '../crypto/crypto';
 
 let log = console.log;
 

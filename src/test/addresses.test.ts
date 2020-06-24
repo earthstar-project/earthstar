@@ -9,7 +9,7 @@ import {
     parseWorkspaceAddress,
     parseAuthorAddress,
 } from '../util/addresses';
-import { log, logTest, logWarning } from '../util/log';
+import { logTest } from '../util/log';
 
 // use this unicode character for testing
 let snowmanJsString = '☃';
@@ -318,5 +318,3 @@ t.test('parse author address', (t: any) => {
     }
     t.end();
 });
-
-

@@ -1,20 +1,20 @@
 import t = require('tap');
 import {
     LowLevelCrypto,
-    sha256,
     generateAuthorKeypair,
+    sha256,
     sign,
     verify,
 } from '../crypto/crypto';
 import {
-    encodePubkey,
-    decodePubkey,
-    encodeSecret,
-    decodeSecret,
-    encodeSig,
-    decodeSig,
     decodeAuthorKeypair,
+    decodePubkey,
+    decodeSecret,
+    decodeSig,
     encodeAuthorKeypair,
+    encodePubkey,
+    encodeSecret,
+    encodeSig,
 } from '../crypto/encoding';
 
 // use this unicode character for testing
@@ -134,4 +134,3 @@ t.test('signatures', (t: any) => {
 
     t.end();
 });
-//

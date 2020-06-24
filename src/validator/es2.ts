@@ -1,10 +1,10 @@
 import {
     AuthorAddress,
+    AuthorKeypair,
     Document,
     FormatName,
     IValidator,
     Path,
-    AuthorKeypair,
 } from '../util/types';
 import {
     sha256,
@@ -17,7 +17,7 @@ import {
     pathChars,
 } from '../util/characters';
 import { parseAuthorAddress, parseWorkspaceAddress } from '../util/addresses';
-import { log, logWarning } from '../util/log';
+import { logWarning } from '../util/log';
 
 export const ValidatorEs2 : IValidator = class {
     static format : FormatName = 'es.2';

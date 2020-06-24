@@ -1,7 +1,6 @@
 import {
     AuthorAddress,
     AuthorKeypair,
-    AuthorShortname,
     IStorage,
     Path,
     QueryOpts,
@@ -25,7 +24,7 @@ export interface WikiPageDetail {
     paths:
     ------
     /wiki/shared/Little%20Snails
-    /wiki/~@aaa/Little%20Snails
+    /wiki/~@aaa.xxxxx/Little%20Snails
 */
 
 export class WikiLayer {

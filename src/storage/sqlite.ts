@@ -17,7 +17,7 @@ import {
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
-import { log, logWarning } from '../util/log';
+import { logDebug, logWarning } from '../util/log';
 
 export interface StorageSqliteOpts {
     // mode: create
@@ -164,7 +164,7 @@ export class StorageSqlite implements IStorage {
 
     documents(query? : QueryOpts) : Document[] {
         if (query === undefined) { query = {}; }
-        log(`---- documents(${JSON.stringify(query)})`);
+        logDebug(`---- documents(${JSON.stringify(query)})`);
 
         // convert the query into an array of SQL clauses
         let filters : string[] = [];
@@ -235,9 +235,9 @@ export class StorageSqlite implements IStorage {
             `;
         } else {
             // when not including history, only get the latest doc per path (from any author)
-            log('havings', JSON.stringify(havings));
+            logDebug('havings', JSON.stringify(havings));
             let combinedHaving = havings.length === 0 ? '' : 'HAVING ' + havings.join('\nAND ');
-            log('combined having', JSON.stringify(combinedHaving));
+            logDebug('combined having', JSON.stringify(combinedHaving));
             queryString = `
                 SELECT format, workspace, path, value, author, MAX(timestamp) as timestamp, signature FROM docs
                 ${combinedFilters}
@@ -247,20 +247,20 @@ export class StorageSqlite implements IStorage {
                 ${limitClause};
             `;
         }
-        log('query', query);
-        log('queryString', queryString);
-        log('filter params', filterParams);
-        log('having params', havingParams);
-        log('limit params', limitParams);
+        logDebug('query', query);
+        logDebug('queryString', queryString);
+        logDebug('filter params', filterParams);
+        logDebug('having params', havingParams);
+        logDebug('limit params', limitParams);
         let docs = this.db.prepare(queryString).all({...filterParams, ...havingParams, ...limitParams});
-        log('result:', docs);
+        logDebug('result:', docs);
         return docs;
     }
     paths(query? : QueryOpts) : string[] {
         // we have to do the document query with no limit,
         // then remove dupes here, then apply the limit.
         // this is super inefficient on large databases.
-        log(`---- paths(${JSON.stringify(query)})`);
+        logDebug(`---- paths(${JSON.stringify(query)})`);
         query = query || {};
         let docs = this.documents({...query, limit: undefined});
         // get unique paths up to limit
@@ -275,12 +275,12 @@ export class StorageSqlite implements IStorage {
     }
     values(query? : QueryOpts) : string[] {
         // just search using documents() and extract the values.
-        log(`---- values(${JSON.stringify(query)})`);
+        logDebug(`---- values(${JSON.stringify(query)})`);
         return this.documents(query).map(doc => doc.value);
     }
 
     authors() : AuthorAddress[] {
-        log(`---- authors()`);
+        logDebug(`---- authors()`);
         let result : any = this.db.prepare(`
             SELECT DISTINCT author FROM docs
             ORDER BY author ASC;
@@ -292,19 +292,19 @@ export class StorageSqlite implements IStorage {
         // look up the winning value for a single path.
         // return undefined if not found.
         // to get history docs for a path, do docs({path: 'foo', includeHistory: true})
-        log(`---- getDocument(${JSON.stringify(path)})`);
+        logDebug(`---- getDocument(${JSON.stringify(path)})`);
         let result : any = this.db.prepare(`
             SELECT * FROM docs
             WHERE path = :path 
             ORDER BY timestamp DESC, signature DESC  -- break ties with signature
             LIMIT 1;
         `).get({ path: path });
-        log('getDocument result:', result);
+        logDebug('getDocument result:', result);
         return result;
     }
     getValue(path : string) : string | undefined {
         // same as getDocument, but just returns the value, not the whole doc object.
-        log(`---- getValue(${JSON.stringify(path)})`);
+        logDebug(`---- getValue(${JSON.stringify(path)})`);
         return this.getDocument(path)?.value;
     }
 
@@ -324,8 +324,8 @@ export class StorageSqlite implements IStorage {
         // Messages from after that are ignored.
         // Defaults to now + 10 minutes.
         // This prevents malicious peers from sending very high timestamps.
-        log(`---- ingestDocument`);
-        log('doc:', doc);
+        logDebug(`---- ingestDocument`);
+        logDebug('doc:', doc);
 
         let validator = this.validatorMap[doc.format];
         if (validator === undefined) {
@@ -379,7 +379,7 @@ export class StorageSqlite implements IStorage {
         // in which case it will be set to now().
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
-        log(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.value)}, ...)`);
+        logDebug(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.value)}, ...)`);
 
         let validator = this.validatorMap[docToSet.format];
         if (validator === undefined) {
@@ -411,7 +411,7 @@ export class StorageSqlite implements IStorage {
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
         // Pull all docs from the other Store and ingest them one by one.
-        log('_syncFrom');
+        logDebug('_syncFrom');
         let numSuccess = 0;
         if (live) {
             // TODO
@@ -419,9 +419,9 @@ export class StorageSqlite implements IStorage {
         }
         if (existing) {
             for (let doc of otherStore.documents({includeHistory: true})) {
-                log('_syncFrom: got document from other store.  ingesting...');
+                logDebug('_syncFrom: got document from other store.  ingesting...');
                 let success = this.ingestDocument(doc);
-                log('_syncFrom: ...success = ', success);
+                logDebug('_syncFrom: ...success = ', success);
                 if (success) { numSuccess += 1; }
             }
         }
@@ -436,7 +436,7 @@ export class StorageSqlite implements IStorage {
         // Return the number of docs pushed and pulled.
         // This uses a simple and inefficient algorithm.  Fancier algorithm TBD.
 
-        log('sync');
+        logDebug('sync');
 
         // don't sync with yourself
         if (otherStore === this) { return { numPushed: 0, numPulled: 0 }; }

@@ -16,7 +16,6 @@ import {
 } from '../storage/memory';
 import {
     WikiLayer,
-    WikiPageDetail,
     WikiPageInfo,
 } from '../layers/wiki';
 
@@ -150,5 +149,3 @@ t.test('with empty storage', (t: any) => {
 
     t.end();
 });
-
-

@@ -5,13 +5,12 @@ import {
     WorkspaceParsed,
 } from './types';
 import {
-    onlyHasChars,
-    pathChars,
-    isOnlyPrintableAscii,
-    workspaceNameChars,
-    b58chars,
     authorShortnameChars,
+    b58chars,
     digits,
+    isOnlyPrintableAscii,
+    onlyHasChars,
+    workspaceNameChars,
 } from './characters';
 
 export let makeAuthorAddress = (shortname : AuthorShortname, encodedPubkey : string) : AuthorAddress =>

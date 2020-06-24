@@ -27,6 +27,3 @@ export class Emitter<T> {
         }
     }
 }
-
-
-

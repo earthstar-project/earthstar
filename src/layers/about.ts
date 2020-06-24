@@ -17,9 +17,9 @@ export interface AuthorProfile {
 /*
     paths:
     ------
-    /about/~@aaa/name
-    /about/~@aaa/description    // coming soon
-    /about/~@aaa/icon           // coming soon
+    /about/~@aaa.xxxx/name
+    /about/~@aaa.xxxx/description    // coming soon
+    /about/~@aaa.xxxx/icon           // coming soon
 */
 export class AboutLayer {
     storage : IStorage;

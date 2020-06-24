@@ -10,10 +10,10 @@ import {
     KeypairBuffers,
 } from './cryptoTypes';
 import {
-    encodePubkey,
-    encodeSecret,
     decodeAuthorKeypair,
     decodePubkey,
+    encodePubkey,
+    encodeSecret,
 } from './encoding';
 import {
     makeAuthorAddress,

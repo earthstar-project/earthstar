@@ -1,6 +1,7 @@
 import fetch from 'isomorphic-fetch';
 import {
-    IStorage, WorkspaceAddress,
+    IStorage,
+    WorkspaceAddress,
 } from './util/types';
 import {
     Emitter

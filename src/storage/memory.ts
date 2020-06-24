@@ -12,7 +12,7 @@ import {
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
-import { log, logTest, logWarning } from '../util/log';
+import { logWarning } from '../util/log';
 
 export let _historySortFn = (a: Document, b: Document): number => {
     // When used within one key, puts the winning revision first.
