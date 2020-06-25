@@ -262,19 +262,18 @@ storage.set(keypair1, {
     value: 'Suzie',
 });
 
-// TODO: Uncomment. How should this work?
 // You can do leveldb style queries.
-// storage.path()
-// storage.path({ lowPath: 'abc', limit: 100 })
-// storage.path({ pathPrefix: 'wiki/' })
+storage.paths()
+storage.paths({ lowPath: '/abc', limit: 100 })
+storage.paths({ pathPrefix: '/wiki/' })
 
-// You can sync to another Storage
-let storage2 = new StorageMemory([ValidatorEs2], '//farming.xxxxxxxx');
+// You can sync to another Storage with the same workspace address
+let storage2 = new StorageMemory([ValidatorEs2], '//gardening.xxxxxxxx');
 storage.sync(storage2);
 // Now storage and storage2 are identical.
 
 // Get notified when anything changes.
-let unsub = storage.onChange.subscribe(console.log);
+let unsub = storage.onChange.subscribe(() => console.log('something changed'));
 
 // Later, you can turn off your subscription
 unsub();
