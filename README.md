@@ -7,6 +7,8 @@
 
 *Alpha - do not use for important data yet*
 
+Discuss Earthstar at [`#earthstar:matrix.org`](https://riot.im/app/#/room/!oGfoMKqZnBVrJYjebW:matrix.org?via=matrix.org)
+
 Related tools:
 * [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli) -- command line utility
 * [earthstar-pub](https://github.com/cinnamon-bun/earthstar-pub) -- server to help you sync
