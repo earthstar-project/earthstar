@@ -155,6 +155,7 @@ Moderation and blocking support is not built in, but apps can build it on top of
 ## Example
 
 The main interface to Earthstar is the Storage class:
+
 ```ts
 // A Store is all about a single workspace.
 // Workspaces are separate universes of data
@@ -193,43 +194,45 @@ sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
 
 Usage example:
 ```ts
-// Create a database for a particular workspace, '//gardening-pals.xxxxxxxx'
+const { StorageMemory, ValidatorEs2, generateAuthorKeypair } = require('earthstar');
+
+// Create a database for a particular workspace, '//gardening.xxxxxxxx'
 // We've chosen to use the latest 'es.2' feed format so we supply the matching validator.
-let storage = new StorageMemory([ValidatorEs2], '//gardening-pals.xxxxxxxx');
+let storage = new StorageMemory([ValidatorEs2], '//gardening.xxxxxxxx');
 
 // Make up some authors for testing.
 // A keypair is { address: '@aaa.xxx', secret: 'xxx' }.
-let keypair1 = generateKeypair();
-let keypair2 = generateKeypair();
+let keypair1 = generateAuthorKeypair('aaaa');
+let keypair2 = generateAuthorKeypair('bbbb');
 let author1 = keypair1.address;
 let author2 = keypair2.address;
 
 // It's a key-value store.
-storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty' })
-storage.getValue('/wiki/Strawberry') // --> 'Tasty'
+storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty' });
+storage.getValue('/wiki/Strawberry'); // --> 'Tasty'
 
 // One author can use multiple devices with no problems.
 // Conflicts are resolved by timestamp.
 // Here the same author overwrites their previous value,
 // which is forgotten from the database.
-storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty!!' })
-storage.getValue('wiki/Strawberry') // --> 'Tasty!!'
+storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty!!' });
+storage.getValue('wiki/Strawberry'); // --> 'Tasty!!'
 
 // Multiple authors can overwrite each other (also by timestamp).
-storage.set(keypair2, { format: 'es.2', path: '/wiki/Strawberry', value: 'Yum' })
-storage.getValue('wiki/Strawberry') // --> 'Yum'
+storage.set(keypair2, { format: 'es.2', path: '/wiki/Strawberry', value: 'Yum' });
+storage.getValue('wiki/Strawberry'); // --> 'Yum'
 
 // We keep the one most recent value from each author, in case
 // you need to do better conflict resolution later.
 // To see the old values, use a query:
-storage.values({ path='wiki/Strawberry', includeHistory: true })
-    // --> ['Yum', 'Tasty!!']  // newest first
+storage.values({ path: 'wiki/Strawberry', includeHistory: true });
+// --> ['Yum', 'Tasty!!']  // newest first
 
 // Get more context about a document, besides just the value.
-storage.getDocument('wiki/Strawberry')
+storage.getDocument('wiki/Strawberry');
 /* --> {
     format: 'es.2',
-    workspace: '//gardening-pals.xxxxxxxx',
+    workspace: '//gardening.xxxxxxxx',
     path: 'wiki/Strawberry',
     value: 'Yum',
     author: '@aaa.xxx',
@@ -256,21 +259,22 @@ storage.getDocument('wiki/Strawberry')
 storage.set(keypair1, {
     format: 'es.2',
     path: '/about/~' + keypair1.address + '/name',
-    value: 'Suzie'}
-)
+    value: 'Suzie',
+});
 
+// TODO: Uncomment. How should this work?
 // You can do leveldb style queries.
-storage.path()
-storage.path({ lowPath: 'abc', limit: 100 })
-storage.path({ pathPrefix: 'wiki/' })
+// storage.path()
+// storage.path({ lowPath: 'abc', limit: 100 })
+// storage.path({ pathPrefix: 'wiki/' })
 
 // You can sync to another Storage
-let storage2 = new StoreMemory();
+let storage2 = new StorageMemory([ValidatorEs2], '//farming.xxxxxxxx');
 storage.sync(storage2);
 // Now storage and storage2 are identical.
 
 // Get notified when anything changes.
-let unsub = storage.onChange.subscribe(yourCallback);
+let unsub = storage.onChange.subscribe(console.log);
 
 // Later, you can turn off your subscription
 unsub();
