@@ -201,7 +201,8 @@ const { StorageMemory, ValidatorEs2, generateAuthorKeypair } = require('earthsta
 let storage = new StorageMemory([ValidatorEs2], '//gardening.xxxxxxxx');
 
 // Make up some authors for testing.
-// A keypair is { address: '@aaa.xxx', secret: 'xxx' }.
+// A keypair is { address: '@aaaa.xxx', secret: 'xxx' }.
+// (xxx represents base58-encoded ed25519 keys)
 let keypair1 = generateAuthorKeypair('aaaa');
 let keypair2 = generateAuthorKeypair('bbbb');
 let author1 = keypair1.address;
@@ -235,7 +236,7 @@ storage.getDocument('wiki/Strawberry');
     workspace: '//gardening.xxxxxxxx',
     path: 'wiki/Strawberry',
     value: 'Yum',
-    author: '@aaa.xxx',
+    author: '@aaaa.xxx',
     timestamp: 1503982037239,  // in microseconds: Date.now()*1000
     signature: 'xxxxxxxx.sig.ed25519',
 } */
@@ -246,14 +247,15 @@ storage.getDocument('wiki/Strawberry');
 // Author names that occur prefixed by '~' in a path can write to that path.
 //
 // Examples:
+// (in these docs, "xxx" is shorthand for a long public key)
 // One author write permission:
-//   '/about/~@aaa/name'  -- only @aaa can write here.
-//   '/about/~@aaa/follows/@bbb'  -- only @aaa can write here
+//   '/about/~@aaaa.xxx/name'  -- only @aaaa.xxx can write here.
+//   '/about/~@aaaa.xxx/follows/@bbbb.xxx'  -- only @aaaa.xxx can write here
 // Public:
-//   '/wall/@aaa'  -- no tilde, so anyone can write here
+//   '/wall/@aaaa.xxx'  -- no tilde, so anyone can write here
 //   '/wiki/Kittens'  -- no tilde, so anyone can write here
 // Multiple authors:
-//   '/whiteboard/~@aaa~@bbb'  -- both @aaa and @bbb can write here
+//   '/whiteboard/~@aaaa.xxx~@bbbb.xxx'  -- both @aaaa.xxx and @bbbb.xxx can write here
 //
 // Here we'll set the author's display name
 storage.set(keypair1, {
