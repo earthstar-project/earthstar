@@ -17,6 +17,10 @@ Related tools:
 Other docs:
 * [Earthstar concepts and vocabulary](docs/vocabulary.md) -- more details about workspaces, etc
 
+## What kinds of apps can you build with Earthstar?
+
+Tools for collaborating with groups of people.  See [Use-cases](#Use-cases), below.
+
 ## Motivation
 
 Centralized services like Facebook have lots of problems: privacy, surveillance, addiction, dark patterns, ads, "real name" policies that harm minority groups, poor handling of moderation, bots, ...
