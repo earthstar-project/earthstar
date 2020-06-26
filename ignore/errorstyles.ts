@@ -6,6 +6,11 @@ type Dog = {
 type Err = {
     err : string,
 }
+let isErr = <T>(x : T | Err) : x is Err =>
+    'err' in x;
+let notErr = <T>(x : T | Err) : x is T =>
+    !isErr(x);
+
 
 type Result<T> = T | Error;
 let isError = <T>(result : Result<T>) : result is Error =>
@@ -22,21 +27,23 @@ let log = console.log;
                                 err check does type guarding
                                         can get err message
 
-result          shadow  fn      good    good    ok except for shadowing, shorter types but longer typechecks
+Dog|Err         good    fn      good    good    weird err check, simple types, shadowing of 'err' field
+
+Dog|Error       shadow  fn      good    good    weird err check, simple types, shadowing of fields from Error (type, message, stack)  this is Result<T>
 
 [Err | null,    good    good    oneway  good    ok if used correctly, not as wordy
  Dog | null]
+
+---------------
 
 {dog?, err?}    good    good    oneway  good    ok if used correctly, wordy
 
 {dog | null,    good    good    oneway  good    ok if used correctly, wordy
  err | null}
 
-Dog|null        good    good    good    no      nice and simple but no error info
-
 throw           no err  long    good    good    err is not captured in type info (easy to forget).  easy to chain though.
 
-Dog|Err         good    no      no      good    fail, Typescript can't understand it
+Dog|null        good    good    good    no      nice and simple but no error info
 
 */
 
@@ -103,13 +110,17 @@ let makeDogOrErr = (name : string) : Dog | Err => {
 }
 let dog3 = makeDogOrErr('');
 log(dog3.name);  // good, error as expected
-if (!dog3.err) {  // :( no way to test for this?
-    log(dog3.name);
+if ('err' in dog3) {  // weird
+    log(dog3.err);  // good, can get error message
 } else {
-    log(dog.err);  // :( can get error message, but typechecking problem
+    log(dog3.name);  // good
+    log(dog3.age);
 }
-if (!(dog3 as Err).err) {  // :( possible but messy
-    log((dog3 as Dog).name);
+if (notErr(dog3)) {
+    log(dog3.age);  // good
+}
+if (isErr(dog3)) {
+    log(dog3.err);  // good
 }
 
 
