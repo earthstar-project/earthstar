@@ -21,19 +21,19 @@ A person can use the same author name and key from multiple devices.
 ```
     AUTHOR ADDRESS
     |------------------------------------------------|
-     SHORTNAME
-          PUBLIC KEY (ed25519 as base58)
+     SHORTNAME (4 chars)
+          PUBLIC KEY (ed25519 as base58, 44 chars)
      |--| |-----------------------------------------|
     @suzy.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
 
-    DISPLAY NAME: any length, any characters
+    LONGNAME: any length, any characters
     This is stored at the path "/about/~@suzy.6efJ8.../name"
       Susan ✨
 ```
 
 **Shortnames** are exactly 4 characters long with only lower case ASCII letters.  They can't be changed later.  They help protect against phishing attacks.
 
-Authors also have human-readable **display names** which are saved as regular documents along with other profile information, and can contain any characters.  They can be changed.
+Authors also have human-readable **long names** which are saved as regular documents along with other profile information, and can contain any characters.  They can be changed.  This is like a "display name" in Slack or Twitter.
 
 # Workspace
 
@@ -43,31 +43,31 @@ There are 2 kinds of workspaces:
 
 **Unlisted** workspaces can be written by anyone, if they know the workspace address.  The address has a 20-character random number at the end to make it hard to guess.
 
-**Limited** workspaces have a public key at the end.  They can only be written to by authors who know the matching private key.  Anyone can still sync and read the data, but authors can choose to encrypt their documents using the workspace key so only workspace members can read them.
+**Invite-only** workspaces have a public key at the end.  They can only be written to by authors who know the matching private key.  Anyone can still sync and read the data, but authors can choose to encrypt their documents using the workspace key so only workspace members can read them.
 
 ```
 UNLISTED WORKSPACE:
 
    WORKSPACE ADDRESS
-   |------------------------------|
-     NAME      RANDOM NUMBER
-     |-------| |------------------|
-   //solarpunk.mVkCjHbAcjEBddaZwxFV
+   |-----------------------------|
+    NAME       RANDOM NUMBER (20 chars)
+    |--------| |-----------------|
+   +gardening.mVkCjHbAcjEBddaZwxFV
 
 
-LIMITED WORKSPACE:
+INVITE-ONLY WORKSPACE:
 
    WORKSPACE ADDRESS
-   |-----------------------------------------------------|
-     NAME      PUBLIC KEY
-     |-------| |-----------------------------------------|
-   //solarpunk.mVkCjHbAcjEBddaZwxFVSiQdVFuvXSiH3B5K5bH7Hcx
+   |----------------------------------------------------|
+    NAME      PUBLIC KEY (44 chars)
+    |-------| |-----------------------------------------|
+   +gardening.mVkCjHbAcjEBddaZwxFVSiQdVFuvXSiH3B5K5bH7Hcx
 
    WORKSPACE SECRET KEY:
    489pP5qqRNPvKWmWrsUT4XEhkRmLi7D7RKNGL2QwcZo4
 ```
 
-**Workspace names** are short strings containing only lower case ASCII letters.
+**Workspace names** are short strings containing 1 to 15 lower-case ASCII letters.
 
 
 # Document
@@ -76,15 +76,16 @@ A document is a JSON-style object with the following shape:
 ```
 {
     format: 'es.2',
+    workspace: '+gardening.xxxxx',
 
-    path: '/wiki/Dolphins',
-    value: 'Dolphins are aquatic mammals...',
+    path: '/wiki/Bumblebee',
+    value: 'Bumblebees are flying insects...',
 
     timestamp: 12345000000000,  // microseconds
     author: '@suzy.6efJ8...',
     authorSignature: 'xxxxxxx',
 
-    workspaceSignature?: 'xxxxxxx',  // only present in limited workspaces
+    workspaceSignature?: 'xxxxxxx',  // only present in invite-only workspaces
 }
 ```
 
@@ -136,7 +137,7 @@ If it contains multiple such tilde-authors, any of them can write.
 
 Paths with no tildes are **shared** paths with no owners, and anyone in the workspace can write there:
 ```
-/wiki/Dolphins
+/todo/get-milk
 ```
 
 ## Document History
@@ -194,9 +195,9 @@ Pubs have no authority over users, they just help sync data.
 There is no centralized discovery or friend-finding system.
 
 To join a workspace you need to know:
-* The workspace address: `//solarpunk.mVkCjHbAcjEBddaZwxFV`
-* The workspace private key, if it's a limited workspace
-* One or more pubs that people in that workspace are using
+* The workspace address: `+gardening.mVkCjHbAcjEBddaZwxFV`
+* The workspace private key, if it's an invite-only workspace
+* One or more pubs that people in that workspace are using, so you can sync
 
 Users are expected to share their workspace addresses and pubs with each other outside of Earthstar, such as by email or chat.
 
@@ -208,40 +209,31 @@ GENERAL FORMAT:
     PUB "/" WORKSPACE "/" AUTHOR "/" PATH
 
 Workspace
-    //solarpunk.xxxxx
+    +gardening.xxxxx
 
 Path
-    /wiki/shared/Dolphin
+    /wiki/shared/Bumblebee
 
 Author
     @suzy.xxxxx
 
-Author + Path
-    @suzy.xxxxx/wiki/shared/Dolphin
-
 Workspace + Path
-    //solarpunk.xxxxx//wiki/shared/Dolphin
+    +gardening.xxxxx/wiki/shared/Bumblebee
 
 Workspace + Author
-    //solarpunk.xxxxx/@suzy.xxxxx
-
-Workspace + Author + Path
-    //solarpunk.xxxxx/@suzy.xxxxx/wiki/shared/Dolphin
+    +gardening.xxxxx/@suzy.xxxxx
 
 Pub base URL (usually holds a human-readable webpage about the pub)
     https://mypub.com
 
 Pub + Workspace
-    https://mypub.com//solarpunk.xxxx
+    https://mypub.com/+gardening.xxxx
 
 Pub + Workspace + Path
-    https://mypub.com//solarpunk.xxxx//wiki/shared/Dolphin
+    https://mypub.com/+gardening.xxxx/wiki/shared/Bumblebee
 
 Pub + Workspace + Author
-    https://mypub.com//solarpunk.xxxx/@suzy.xxxxx
-
-Pub + Workspace + Author + Path
-    https://mypub.com//solarpunk.xxxx/@suzy.xxxxx/wiki/shared/Dolphin
+    https://mypub.com/+gardening.xxxx/@suzy.xxxxx
 
 Pub + Workspace + Sync API
     https://mypub.com/earthstar-api/v1/...
@@ -251,23 +243,9 @@ TODO: how to link to a specific version of a document?
 
 # Classes
 
-## Earthstar Peer
+This is specific to the Javascript implementation; other libraries might have different internal structures.
 
-This is the overarching object that contains all of the following:
-
-## Storage
-
-A **Storage** is a database holding a single Earthstar workspace.
-
-## Validator
-
-A class that implements a **feed format**.
-
-When you create a storage, you specify which feed formats you will allow it to hold.
-
-## Syncer
-
-A class whose job is to connect to other peers and sync data with them.
+![](building-blocks.png)
 
 # Replication / Syncing
 
@@ -314,3 +292,17 @@ Each document has a history of old versions.  Earthstar keeps one version from e
 When fetching a path, the latest version is returned (by author-asserted timestamp).  You can also get all versions if you want to do manual conflict resolution.
 
 ![](earthstar-data-model.png)
+
+Note that this image is simplified.  A real document looks like this:
+
+```
+{
+  "format": "es.2",
+  "workspace": "+gardening.xxxxxxxxxxxxxxxxxxxx",
+  "path": "/wiki/shared/Bumblebee",
+  "value": "Buzz buzz buzz",
+  "author": "@suzy.E4JHZTPXfc939fnLrpPDzRwjDEiTBFJHadFH32CN97yc",
+  "timestamp": 1593389751898000,
+  "signature": "wUkbUbGuwdZ4sbj53BQC2Yqeb55w2ZGX25qgTrkfvfqAR8f7qKpe2cAEGeD7ZwEZjCtgPaZoNoYeKf3NG3SBBP9"
+}
+```

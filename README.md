@@ -210,9 +210,9 @@ Usage example:
 ```ts
 const { StorageMemory, ValidatorEs2, generateAuthorKeypair } = require('earthstar');
 
-// Create a database for a particular workspace, '//gardening.xxxxxxxx'
+// Create a database for a particular workspace, '+gardening.xxxxxxxx'
 // We've chosen to use the latest 'es.2' feed format so we supply the matching validator.
-let storage = new StorageMemory([ValidatorEs2], '//gardening.xxxxxxxx');
+let storage = new StorageMemory([ValidatorEs2], '+gardening.xxxxxxxx');
 
 // Make up some authors for testing.
 // A keypair is { address: '@aaaa.xxx', secret: 'xxx' }.
@@ -247,7 +247,7 @@ storage.values({ path: 'wiki/Strawberry', includeHistory: true });
 storage.getDocument('wiki/Strawberry');
 /* --> {
     format: 'es.2',
-    workspace: '//gardening.xxxxxxxx',
+    workspace: '+gardening.xxxxxxxx',
     path: 'wiki/Strawberry',
     value: 'Yum',
     author: '@aaaa.xxx',
@@ -284,7 +284,7 @@ storage.paths({ lowPath: '/abc', limit: 100 })
 storage.paths({ pathPrefix: '/wiki/' })
 
 // You can sync to another Storage with the same workspace address
-let storage2 = new StorageMemory([ValidatorEs2], '//gardening.xxxxxxxx');
+let storage2 = new StorageMemory([ValidatorEs2], '+gardening.xxxxxxxx');
 storage.sync(storage2);
 // Now storage and storage2 are identical.
 
