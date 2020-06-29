@@ -1,11 +1,18 @@
 import { Emitter } from './emitter';
 
 export type Path = string;
-export type WorkspaceAddress = string;  // sometimes just called "workspace"
-export type WorkspaceName = string;  // sometimes just called "author"
+
+// Vocabulary:
+//   WorkspaceAddress = '//' + WorkspaceName + '.' + (WorkspacePubkey | WorkspaceRandom)
+//   AuthorAddress = '@' + AuthorShortname + '.' + AuthorPubkey
+
+export type WorkspaceAddress = string;
+export type WorkspaceName = string;
+
 export type AuthorAddress = string;
 export type AuthorShortname = string;
-export type EncodedKey = string; // base58 public or secret key
+
+export type EncodedKey = string; // a pubkey or secret key as base58
 
 export type AuthorParsed = {
     address: AuthorAddress,
@@ -24,7 +31,7 @@ export type AuthorKeypair = {
     secret: EncodedKey,
 };
 
-export type Signature = string;  // xxxxxxxxxxxx
+export type Signature = string;
 export type FormatName = string;
 
 export type Document = {

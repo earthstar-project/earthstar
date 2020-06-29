@@ -2,10 +2,9 @@ import { WorkspaceAddress, IStorage, AuthorKeypair } from './util/types';
 import { Syncer } from './sync';
 import { LayerAbout } from './layers/about';
 import { LayerWiki } from './layers/wiki';
-import { StorageMemory } from './storage/memory';
-import { ValidatorEs2 } from './validator/es2';
 
-// deciding which is better:
+// an experiment, deciding which is better:
+
 // option 1
 export class Workspace {
     storage : IStorage;
@@ -42,6 +41,6 @@ let makeWorkspace = (storage : IStorage, authorKeypair : AuthorKeypair | null) :
     layerWiki: new LayerWiki(storage),
 });
 
-let workspace1 = new Workspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
-let workspace2 = makeWorkspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
+//let workspace1 = new Workspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
+//let workspace2 = makeWorkspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
 
