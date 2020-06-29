@@ -10,3 +10,4 @@ export * from './util/addresses';
 export * from './util/emitter';
 export * from './util/types';
 export * from './validator/es2';
+export * from './workspace';

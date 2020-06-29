@@ -29,8 +29,8 @@ export interface WikiPageDetail {
 
 export class WikiLayer {
     storage : IStorage;
-    keypair : AuthorKeypair
-    constructor(storage : IStorage, keypair : AuthorKeypair) {
+    keypair : AuthorKeypair | null;
+    constructor(storage : IStorage, keypair : AuthorKeypair | null) {
         this.storage = storage;
         this.keypair = keypair;
     }
@@ -119,6 +119,9 @@ export class WikiLayer {
     }
     setPageText(path : string, text : string, timestamp? : number) : boolean {
         // normally timestamp should be omitted.
+        if (this.keypair === null) {
+            return false;
+        }
         return this.storage.set(this.keypair, {
             format: 'es.2',
             path: path,
