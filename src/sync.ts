@@ -86,13 +86,21 @@ export class Syncer {
         let numSuccessfulPubs = 0;
         let numFailedPubs = 0;
 
+        let syncPromises : {prom: Promise<any>, pub: any}[] = [];
+        // start each pub syncing
         for (let pub of this.state.pubs) {
             logSyncer('starting pub:', pub.domain);
             pub.syncState = 'syncing';
             this.onChange.send(this.state);
 
-            let resultStats = await syncLocalAndHttp(this.storage, pub.domain);
-
+            syncPromises.push({
+                prom: syncLocalAndHttp(this.storage, pub.domain),
+                pub: pub
+            });
+        }
+        // when each one finishes (not necessarily in the same order), report its results
+        for (let {prom, pub} of syncPromises) {
+            let resultStats = await prom;
             logSyncer('finished pub');
             logSyncer(JSON.stringify(resultStats, null, 2));
             if (resultStats.pull === null && resultStats.push === null) {
