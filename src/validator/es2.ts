@@ -29,6 +29,10 @@ export const ValidatorEs2 : IValidator = class {
             logWarning('invalid path: does not start with /');
             return false;
         }
+        if (path.indexOf('//') !== -1) {
+            logWarning('invalid path: contains two consecutive slashes');
+            return false;
+        }
         if (!onlyHasChars(path, pathChars)) {
             logWarning('invalid path: contains disallowed characters');
             return false;
