@@ -23,8 +23,10 @@ export interface WikiPageDetail {
 /*
     paths:
     ------
+          OWNER / TITLE (percent-encoded)
+
     /wiki/shared/Little%20Snails
-    /wiki/~@aaa.xxxxx/Little%20Snails
+    /wiki/~@aaaa.xxxxx/Little%20Snails
 */
 
 export class LayerWiki {

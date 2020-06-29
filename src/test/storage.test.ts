@@ -21,8 +21,8 @@ import { logTest } from '../util/log';
 //================================================================================
 // prepare for test scenarios
 
-let WORKSPACE = '//gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let WORKSPACE2 = '//another.xxxxxxxxxxxxxxxxxxxx';
+let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
+let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 
 let FORMAT : FormatName = 'es.2';
 let VALIDATORS : IValidator[] = [ValidatorEs2];

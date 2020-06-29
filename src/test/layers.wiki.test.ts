@@ -22,8 +22,7 @@ import {
 //================================================================================
 // prepare for test scenarios
 
-let WORKSPACE = '//gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let FORMAT : FormatName = 'es.2';
+let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let VALIDATORS : IValidator[] = [ValidatorEs2];
 
 let keypair1 = generateAuthorKeypair('test');

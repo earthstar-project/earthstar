@@ -22,7 +22,7 @@ import {
 //================================================================================
 // prepare for test scenarios
 
-let WORKSPACE = '//gardenclub.xxxxxxxxxxxxxxxxxxxx';
+let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let FORMAT : FormatName = 'es.2';
 let VALIDATORS : IValidator[] = [ValidatorEs2];
 

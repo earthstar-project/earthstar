@@ -17,14 +17,15 @@ export let makeAuthorAddress = (shortname : AuthorShortname, encodedPubkey : str
     `@${shortname}.${encodedPubkey}`;
 
 export let parseWorkspaceAddress = (addr : string) : {workspaceParsed: WorkspaceParsed | null, err : string | null} => {
-    // example: //solarpunk.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
+    // example unlisted workspace (20 chars randomness): +solarpunk.6efJ8v8rtwoBxfN5MKeT
+    // example invite-only (44 chars of pubkey):         +solarpunk.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
     if (!isOnlyPrintableAscii(addr)) {
         return { workspaceParsed: null, err: 'workspace address has nonprintable characters' };
     }
-    if (!addr.startsWith('//')) {
-        return { workspaceParsed: null, err: 'workspace address does not start with "//"' };
+    if (!addr.startsWith('+')) {
+        return { workspaceParsed: null, err: 'workspace address does not start with "+"' };
     }
-    let parts = addr.slice(2).split('.');
+    let parts = addr.slice(1).split('.');
     if (parts.length !== 2) {
         return { workspaceParsed: null, err: 'workspace address does not have two parts separated by "."' };
     }

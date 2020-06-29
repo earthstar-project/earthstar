@@ -26,12 +26,12 @@ type IsValidPathVector = {
     path : string,
     valid : boolean,
 };
-t.test('keyIsValid', (t: any) => {
+t.test('pathIsValid', (t: any) => {
     let vectors : IsValidPathVector[] = [
         { valid: false, path: '', note: 'empty string' },
         { valid: false, path: ' ', note: 'just a space' },
         { valid: false, path: '\x00', note: 'null byte' },
-        { valid: false, path: 'not-starting-with-slash' },
+        { valid: false, path: 'not/starting/with/slash' },
         { valid: false, path: ' /starts-with-space' },
         { valid: false, path: '/ends-with-space ' },
         { valid: false, path: '/space in the middle' },
@@ -76,21 +76,21 @@ t.test('authorCanWriteToKey', (t: any) => {
 t.test('hashDocument', (t: any) => {
     let doc1: Document = {
         format: 'es.2',
-        workspace: '//gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
         value: 'v1',
         timestamp: 1,
         author: '@me.ed25519',
         signature: 'xxx.sig.ed25519',
     };
-    t.equal(Val.hashDocument(doc1), '38f7d6d6de5b3fcd2abf52e03dc4eab8a32d7ca3e1c2ab30486598aa645a687f');
+    t.equal(Val.hashDocument(doc1), '5db7d57dc5a95bb11e1d4190e7f5c4672e1888de047a2cbc3e5acce60d519b95');
     t.done();
 });
 
 t.test('signDocument and documentSignatureIsValid', (t: any) => {
     let doc1: Document = {
         format: 'es.2',
-        workspace: '//gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
         value: 'v1',
         timestamp: 1,
@@ -135,7 +135,7 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
 t.test('documentIsValid', (t: any) => {
     let doc1: Document = {
         format: 'es.2',
-        workspace: '//gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
         value: 'v1',
         timestamp: now,

@@ -12,14 +12,16 @@ export interface AuthorProfile {
     address : AuthorAddress,
     shortname : AuthorShortname,
     longname : string | null,  // stored in the document's value.  null if none.
+    // description  // TODO
+    // icon  // TODO
 }
 
 /*
     paths:
     ------
-    /about/~@aaa.xxxx/name
-    /about/~@aaa.xxxx/description    // coming soon
-    /about/~@aaa.xxxx/icon           // coming soon
+    /about/~@aaaa.xxxxx/name
+    /about/~@aaaa.xxxxx/description    // coming soon
+    /about/~@aaaa.xxxxx/icon           // coming soon
 */
 export class LayerAbout {
     storage : IStorage;

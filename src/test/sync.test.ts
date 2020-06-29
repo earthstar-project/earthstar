@@ -22,7 +22,7 @@ import {
 //================================================================================
 // prepare for test scenarios
 
-let WORKSPACE = '//gardenclub.xxxxxxxxxxxxxxxxxxxx';
+let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let FORMAT : FormatName = 'es.2';
 let VALIDATORS : IValidator[] = [ValidatorEs2];
 
@@ -98,6 +98,8 @@ t.test('Syncer sync when empty', async (t: any) => {
     await syncer.sync();
     t.equal(numCalls, 2, 'callback was called twice');
     t.equal((lastCallbackVal as any as SyncState)?.syncState, 'idle', 'sync with no pubs ends up idle');
+
+    unsub();
 
     t.end();
 });

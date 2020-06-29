@@ -35,14 +35,6 @@ let ensureTrailingSlash = (url : string) : string =>
     // input is a URL with no path, like https://mypub.com or https://mypub.com/
     url.endsWith('/') ? url : url + '/';
 
-//let normalizePubUrl = (url : string) : string =>  {
-//    // input is a URL with no path, like https://mypub.com or https://mypub.com/
-//    // output is the base URL for the API
-//    if (!url.endsWith('/')) { url += '/'; }
-//    url += 'earthstar-api/v1/';
-//    return url;
-//}
-
 let logSyncer = (...args : any[]) => console.log('💚 syncer | ', ...args);
 export class Syncer {
     storage : IStorage;
@@ -128,9 +120,8 @@ export class Syncer {
 
 let urlGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
     // domain should already end in a slash.
-    // output is like https://mypub.com/earthstar-api/v1/workspace/gardening.xxxxxxxx/documents
-    // note we remove the double slash from workspace
-    `${domain}earthstar-api/v1/workspace/${workspace.slice(2)}/documents`;
+    // output is like https://mypub.com/earthstar-api/v1/+gardening.xxxxxxxx/documents
+    `${domain}earthstar-api/v1/${workspace}/documents`;
 let urlPostDocuments = urlGetDocuments;
 
 let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
