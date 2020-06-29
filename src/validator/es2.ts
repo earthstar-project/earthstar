@@ -29,6 +29,14 @@ export const ValidatorEs2 : IValidator = class {
             logWarning('invalid path: does not start with /');
             return false;
         }
+        if (path.startsWith('/@')) {
+            // this is disallowed so that we can tell paths and authors apart in cases like this
+            // when joining a workspace and a path/author:
+            // +gardening.xxxxx/@aaaa.xxxx
+            // +gardening.xxxxx/wiki/shared/Bumblebee
+            logWarning('invalid path: starts with "/@"');
+            return false;
+        }
         if (path.indexOf('//') !== -1) {
             logWarning('invalid path: contains two consecutive slashes');
             return false;
