@@ -1,22 +1,18 @@
 # Roadmap
 
-
 ## Done
 * Signatures
 * In-memory store
 * SQLite store
 * Tests
 * Better README
+* check if workspace matches existing database in constructor
 
 ## Todo
 
-### Immediate tasks
-* check if workspace matches existing database in constructor
-* set default format & validator in constructor
-
 ### Demos
-* Shopping list
 * Wiki
+* Shopping list
 * Social network
 
 ### General
@@ -174,65 +170,105 @@ btih: "bittorrent info hash"
 
 Unicode identifier and pattern syntax, and unicode hashtags
 https://unicode.org/reports/tr31/
+
+
+Alternate ideas for workspace sigil
+    used by...
+        feelings...
+#   URLs, hashtags
+/   URLs, earthstar paths
+'   english
+(   english, markdown links
+)   english, markdown links
+-                   -gardening.xxxx    not very distinctive
+.   author & workspace addresses
+_       weird
+~   author permission
+!                   !gardening.xxxx    alarming / "not"?
+*   markdown bold
+$   money
+&   html ent        &gardening.xxxx    nice, implies togetherness
++                   +gardening.xxxx    nice
+,       weird
+:   emoji shortcodes, URNs, URL protocols
+=                   =gardening.xxxx    not very distinctive
+?   URLs
+@   author address
+%   percent-encoding
+
+forbidden in URLs  "<>[\]^`{|}  and % except used for percent-encoding
+
+workspace types
+public                  +gardening
+public, domain style    +gardening.party
+unlisted                +gardening.xx...b58 entropy..xx
+invite-only             +gardening.xx...b58 pubkey...xxxxxxxxxxxxxxxxxxxxxxxxxx
+
 ```
 
 URI types
 ```
-ALNUM = azAZ09
-WSNAME = ALNUM+ between 1 and 15 characters inclusive
-B58KEY = azAZ09 * 43
-UUID = azAZ09 * 20
+ALNUM = a-zA-Z0-9
+WSNAME = ALNUM+  // 1 to 15 characters, inclusive
+B58KEY = ALNUM * 44
+RANDOM = ALNUM * 20
 
 // WS needs to look like a hostname.
 // The name seperator needs to be one of "_" | "-" | "." but "." seems to work best.
 // Total length not counting "//" needs to be <= 63 chars between periods
 
-WS = "//" WSNAME "." B58KEY     // access-controlled group
-WS = "//" WSNAME "." UUID    // secret group
+WS_UNLISTED = "+" WSNAME "." RANDOM  // unlisted
+WS_INVITE_ONLY = "+" WSNAME "." B58KEY  // invite-only
      .........1.........2.........3.........4.........5.........6...
                 .........1.........2.........3.........4...
-   = //solarpunk.mVkCjHbAcjEBddaZwxFVSiQdVFuvXSiH3B5K5bH7Hcx
-   = //solarpunk.mVkCjHbAcjEBddaZwxFV
+   = +solarpunk.mVkCjHbAcjEBddaZwxFV
+   = +solarpunk.mVkCjHbAcjEBddaZwxFVSiQdVFuvXSiH3B5K5bH7Hcx
 
 // A way to include the workspace secret to use in invitations
-WSSECRET = WS ("." B58SECRET)?
-   = //solarpunk.mVkCjHbAcjEBddaZwxFV.secrethere
-
+WS_INVITATION = WS_INVITE_ONLY "." B58SECRET
+   = +solarpunk.mVkCjHbAcjEBddaZwxFVSiQdVFuvXSiH3B5K5bH7Hcx.secretGoesHere
 
 // AUTHOR has many options for its name separator like -_:.
 // But let's use "." to match WS
 
-AUTHOR = "@" ALNUM*4 "." B58KEY
-   = @cinn.xjAHzdJHgMvJBqgD4iUNhmuwQbuMzPuDkntLi1sjjz
+SHORTNAME = a-z * 4  // exactly 4 lower case letters
+AUTHOR = "@" SHORTNAME "." B58KEY
+      1234 .........1.........2.........3.........4...
+   = @cinn.xjAHzdJHgMvJBqgD4iUNhmuwQbuMzPuDkntLi1s3jjz
 
 
 // FOLDERSEP could be any of "/" | ":" | "." but period is taken.
 // let's use "/" to be like regular URL paths
 
 FOLDERSEP = "/"
-KEYCHAR = any of ALNUM  FOLDERSEP  '()-._~  !*  $&+,:=?@  %
+KEYCHAR = any of ALNUM  FOLDERSEP  '()-._~  !*  $&+,:=?@  %   // url-safe characters
 KEY = "/" KEYCHAR*
     /wiki/shared/Solar%20Panels
     /about/~@cinn.xjAHzdJ/name
+extra rules:
+    no empty path segments (no "//" anywhere)
+    can't start with "/@"
 
 
-COMBO = WSSECRET "/" (AUTHOR | KEY)
-    //solarpunk.mVkCjHbAcj/@cinn.xjAHzdJh
-    //solarpunk.mVkCjHbAcj//key/wiki/shared/Farming
-    //solarpunk.mVkCjHbAcj.secrethere//key/wiki/shared/Farming
+COMBO = WS_UNLISTED "/" (AUTHOR | KEY)
+    +solarpunk.mVkCjHbAcj/@cinn.xjAHzdJh
+    +solarpunk.mVkCjHbAcj/wiki/shared/Farming
+OR
+    +solarpunk.mVkCjHbAcj/author/@cinn.xjAHzdJh
+    +solarpunk.mVkCjHbAcj/path/wiki/shared/Farming
+
 
 PUBURL = ORIGIN COMBO
-    http://mypub.com:8000//solarpunk.mVkCjHbAc
-    http://mypub.com:8000//solarpunk.mVkCjHbAc//wiki/shared/Farming
-    http://mypub.com:8000//solarpunk.mVkCjHbAcj/@cinn.xjAHzdJh
-    http://mypub.com:8000//solarpunk.mVkCjHbAcj.secrethere/@cinn.xjAHzdJh
+    http://mypub.com:8000/+solarpunk.mVkCjHbAc
+    http://mypub.com:8000/+solarpunk.mVkCjHbAcj/wiki/shared/Farming
+    http://mypub.com:8000/+solarpunk.mVkCjHbAcj/@cinn.xjAHzdJh
 
 PUB_SYNC_API =
-    http://mypub.com:8000//solarpunk.mVkCjHbAc/sync/v1/...
+    http://mypub.com:8000/+solarpunk.mVkCjHbAc/sync/v1/...
 
 DHT = PROTOCOL "://" SWARMKEY COMBO
-    hyperswarm://swarmkey//solarpunk.mVkCjHbAc
-    libp2p://swarmkey//solarpunk.mVkCjHbAc.secrethere
+    hyperswarm://swarmkey/+solarpunk.mVkCjHbAc
+    libp2p://swarmkey/+solarpunk.mVkCjHbAc.secrethere
 ```
 
 wikilinks
@@ -260,9 +296,9 @@ wiki page links: these get "/wiki/shared/" put in front, or "/wiki/~@foo/"
 regular markdown links to any earthstar key or author
     [a         key    link](/wiki/shared/page%20title)
     [a         author link](@cinn.fjaoeiJFOEF)
-    [another     workspace](//gardening.aAbBcC)
-    [a distant key    link](//gardening.aAbBcC//@cinn.fjaoeiJFOEF)
-    [a distant author link](//gardening.aAbBcC//wiki/shared/Ladybug)
+    [another     workspace](+gardening.aAbBcC)
+    [a distant key    link](+gardening.aAbBcC/@cinn.fjaoeiJFOEF)
+    [a distant author link](+gardening.aAbBcC/wiki/shared/Ladybug)
 
 bare author
     @cinn_fjaoeiJFOEF
@@ -271,7 +307,7 @@ bare key
     /wiki/shared/page%20title
 
 bare workspace
-    //solarpunk.JoiaJDOajd
+    +solarpunk.JoiaJDOajd
 ```
 
 ### TODO
@@ -291,15 +327,15 @@ http://www.google.com
 
 ---
 
-//solarpunk.aAaAa0011
++solarpunk.aAaAa0011
 
-[xxx](//solarpunk.aAaAa0011)
+[xxx](+solarpunk.aAaAa0011)
 
 ---
 
-//solarpunk_aAaAa0011
++solarpunk_aAaAa0011
 
-[xxx](//solarpunk_aAaAa0011)
+[xxx](+solarpunk_aAaAa0011)
 
 ---
 
