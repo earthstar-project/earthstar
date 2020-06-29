@@ -15,7 +15,7 @@ import {
     StorageMemory
 } from '../storage/memory';
 import {
-    AboutLayer,
+    LayerAbout,
     AuthorProfile,
 } from '../layers/about';
 
@@ -43,7 +43,7 @@ let sparkleEmoji = '✨';
 
 t.test('with empty storage', (t: any) => {
     let storage = makeStorage(WORKSPACE);
-    let about = new AboutLayer(storage);
+    let about = new LayerAbout(storage);
 
     // add a dummy document.
     // this author should not be picked up by the about layer (TODO: is this a good decision?)

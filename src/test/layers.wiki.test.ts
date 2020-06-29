@@ -15,7 +15,7 @@ import {
     StorageMemory
 } from '../storage/memory';
 import {
-    WikiLayer,
+    LayerWiki,
     WikiPageInfo,
 } from '../layers/wiki';
 
@@ -42,50 +42,50 @@ let sparkleEmoji = '✨';
 //================================================================================
 
 t.test('makePagePath', (t: any) => {
-    t.same(WikiLayer.makePagePath('shared', 'Dogs'), '/wiki/shared/Dogs');
-    t.same(WikiLayer.makePagePath('shared', 'Small Dogs'), '/wiki/shared/Small%20Dogs');
-    t.same(WikiLayer.makePagePath(author1, 'Dogs'), `/wiki/~${author1}/Dogs`);
-    t.same(WikiLayer.makePagePath(author1, 'Small Dogs'), `/wiki/~${author1}/Small%20Dogs`);
-    t.throws(() => WikiLayer.makePagePath('xxxx', 'Dogs'), 'owner must be "shared" or an author address');
-    t.throws(() => WikiLayer.makePagePath('shared', ''), 'title cannot be empty string');
+    t.same(LayerWiki.makePagePath('shared', 'Dogs'), '/wiki/shared/Dogs');
+    t.same(LayerWiki.makePagePath('shared', 'Small Dogs'), '/wiki/shared/Small%20Dogs');
+    t.same(LayerWiki.makePagePath(author1, 'Dogs'), `/wiki/~${author1}/Dogs`);
+    t.same(LayerWiki.makePagePath(author1, 'Small Dogs'), `/wiki/~${author1}/Small%20Dogs`);
+    t.throws(() => LayerWiki.makePagePath('xxxx', 'Dogs'), 'owner must be "shared" or an author address');
+    t.throws(() => LayerWiki.makePagePath('shared', ''), 'title cannot be empty string');
     t.end();
 });
 
 t.test('parsePagePath', (t: any) => {
-    t.same(WikiLayer.parsePagePath('/wiki/shared/Dogs'), {
+    t.same(LayerWiki.parsePagePath('/wiki/shared/Dogs'), {
         path: '/wiki/shared/Dogs',
         owner: 'shared',
         title: 'Dogs',
     });
-    t.same(WikiLayer.parsePagePath('/wiki/shared/Small%20Dogs'), {
+    t.same(LayerWiki.parsePagePath('/wiki/shared/Small%20Dogs'), {
         path: '/wiki/shared/Small%20Dogs',
         owner: 'shared',
         title: 'Small Dogs',
     });
-    t.same(WikiLayer.parsePagePath(`/wiki/~${author1}/Dogs`), {
+    t.same(LayerWiki.parsePagePath(`/wiki/~${author1}/Dogs`), {
         path: `/wiki/~${author1}/Dogs`,
         owner: author1,
         title: 'Dogs',
     });
-    t.same(WikiLayer.parsePagePath(`/wiki/~${author1}/Small%20Dogs`), {
+    t.same(LayerWiki.parsePagePath(`/wiki/~${author1}/Small%20Dogs`), {
         path: `/wiki/~${author1}/Small%20Dogs`,
         owner: author1,
         title: 'Small Dogs',
     });
-    t.equal(WikiLayer.parsePagePath('/wiki/shared/Dogs/foo'), null, 'too many slashes');
-    t.equal(WikiLayer.parsePagePath('/wiki/shared/'), null, 'title is empty string');
-    t.equal(WikiLayer.parsePagePath('/wiki/xxxx/Dogs'), null, 'invalid owner');
-    t.equal(WikiLayer.parsePagePath('/wiki/Dogs'), null, 'no owner');
-    t.equal(WikiLayer.parsePagePath(`/wiki/${author1}/Dogs`), null, 'no tilde');
-    t.equal(WikiLayer.parsePagePath('/about/foo'), null, 'not a wiki path at all');
-    t.equal(WikiLayer.parsePagePath('/wiki/shared/%2'), null, 'invalid percent-encoding');
-    t.equal(WikiLayer.parsePagePath(''), null, 'empty path');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/Dogs/foo'), null, 'too many slashes');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/'), null, 'title is empty string');
+    t.equal(LayerWiki.parsePagePath('/wiki/xxxx/Dogs'), null, 'invalid owner');
+    t.equal(LayerWiki.parsePagePath('/wiki/Dogs'), null, 'no owner');
+    t.equal(LayerWiki.parsePagePath(`/wiki/${author1}/Dogs`), null, 'no tilde');
+    t.equal(LayerWiki.parsePagePath('/about/foo'), null, 'not a wiki path at all');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/%2'), null, 'invalid percent-encoding');
+    t.equal(LayerWiki.parsePagePath(''), null, 'empty path');
     t.end();
 });
 
 t.test('with empty storage', (t: any) => {
     let storage = makeStorage(WORKSPACE);
-    let wiki = new WikiLayer(storage);
+    let wiki = new LayerWiki(storage);
 
     // read while empty
     t.same(wiki.listPageInfos(), [], 'list page info: empty');
@@ -96,13 +96,13 @@ t.test('with empty storage', (t: any) => {
     t.doesNotThrow(() => wiki.listPageInfos({ participatingAuthor: 'xxxx' }), 'does not throw with invalid participatingAuthor');
 
     // do some writes
-    let smallDogsPath = WikiLayer.makePagePath('shared', 'Small Dogs');
+    let smallDogsPath = LayerWiki.makePagePath('shared', 'Small Dogs');
     t.ok(wiki.setPageText(keypair1, smallDogsPath, 'page text 1', now), 'write');
     t.ok(wiki.setPageText(keypair1, smallDogsPath, 'page text 2', now + 5), 'write again');
 
-    t.ok(wiki.setPageText(keypair1, WikiLayer.makePagePath(author1, 'Dogs'), 'dogs dogs', now), 'write to owned page');
+    t.ok(wiki.setPageText(keypair1, LayerWiki.makePagePath(author1, 'Dogs'), 'dogs dogs', now), 'write to owned page');
 
-    t.notOk(wiki.setPageText(keypair1, WikiLayer.makePagePath(author2, 'Dogs'), 'dogs dogs', now), 'write to page of another author should fail');
+    t.notOk(wiki.setPageText(keypair1, LayerWiki.makePagePath(author2, 'Dogs'), 'dogs dogs', now), 'write to page of another author should fail');
 
     // read them back
     t.same(wiki.getPageDetails('/wiki/shared/Small%20Dogs'), {

@@ -27,7 +27,7 @@ export interface WikiPageDetail {
     /wiki/~@aaa.xxxxx/Little%20Snails
 */
 
-export class WikiLayer {
+export class LayerWiki {
     storage : IStorage;
     constructor(storage : IStorage) {
         this.storage = storage;
@@ -90,7 +90,7 @@ export class WikiLayer {
         if (author) { query.participatingAuthor = author; }
 
         let pageInfoOrNulls = this.storage.paths(query)
-            .map(path => WikiLayer.parsePagePath(path));
+            .map(path => LayerWiki.parsePagePath(path));
         let pageInfos = pageInfoOrNulls.filter(pi => pi !== null) as WikiPageInfo[];
         return pageInfos;
     }
@@ -100,7 +100,7 @@ export class WikiLayer {
             console.warn('missing wiki document at path:', path);
             return null;
         }
-        let pageInfo = WikiLayer.parsePagePath(path);
+        let pageInfo = LayerWiki.parsePagePath(path);
         if (pageInfo === null) {
             console.warn('could not parse wiki path: ' + path);
             return null;

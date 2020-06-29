@@ -1,21 +1,47 @@
 import { WorkspaceAddress, IStorage, AuthorKeypair } from './util/types';
 import { Syncer } from './sync';
-import { AboutLayer } from './layers/about';
-import { WikiLayer } from './layers/wiki';
+import { LayerAbout } from './layers/about';
+import { LayerWiki } from './layers/wiki';
+import { StorageMemory } from './storage/memory';
+import { ValidatorEs2 } from './validator/es2';
 
+// deciding which is better:
+// option 1
 export class Workspace {
     storage : IStorage;
     address : WorkspaceAddress;
+    authorKeypair : AuthorKeypair | null;
     syncer : Syncer;
-    keypair : AuthorKeypair | null;
-    layerAbout : AboutLayer;
-    layerWiki : WikiLayer;
-    constructor(address : WorkspaceAddress, storage : IStorage, keypair : AuthorKeypair | null) {
-        this.address = address;
+    layerAbout : LayerAbout;
+    layerWiki : LayerWiki;
+    constructor(storage : IStorage, authorKeypair : AuthorKeypair | null) {
         this.storage = storage;
+        this.address = storage.workspace;
+        this.authorKeypair = authorKeypair;
         this.syncer = new Syncer(storage);
-        this.keypair = keypair;
-        this.layerAbout = new AboutLayer(storage);
-        this.layerWiki = new WikiLayer(storage);
+        this.layerAbout = new LayerAbout(storage);
+        this.layerWiki = new LayerWiki(storage);
     }
 }
+
+// option 2
+interface IWorkspace {
+    storage : IStorage;
+    address : WorkspaceAddress;
+    authorKeypair : AuthorKeypair | null;
+    syncer : Syncer;
+    layerAbout : LayerAbout;
+    layerWiki : LayerWiki;
+}
+let makeWorkspace = (storage : IStorage, authorKeypair : AuthorKeypair | null) : IWorkspace => ({
+    storage: storage,
+    address: storage.workspace,
+    authorKeypair: authorKeypair,
+    syncer: new Syncer(storage),
+    layerAbout: new LayerAbout(storage),
+    layerWiki: new LayerWiki(storage),
+});
+
+let workspace1 = new Workspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
+let workspace2 = makeWorkspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
+

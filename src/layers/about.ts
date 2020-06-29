@@ -21,7 +21,7 @@ export interface AuthorProfile {
     /about/~@aaa.xxxx/description    // coming soon
     /about/~@aaa.xxxx/icon           // coming soon
 */
-export class AboutLayer {
+export class LayerAbout {
     storage : IStorage;
     constructor(storage : IStorage) {
         this.storage = storage;
@@ -47,7 +47,7 @@ export class AboutLayer {
     getAuthorProfile(author : AuthorAddress) : AuthorProfile | null {
         let {authorParsed, err} = parseAuthorAddress(author);
         if (err || !authorParsed) { return null; }
-        let nameDoc = this.storage.getDocument(AboutLayer.makeNamePath(author));
+        let nameDoc = this.storage.getDocument(LayerAbout.makeNamePath(author));
         let longname = nameDoc === undefined
             ? null
             : (nameDoc.value || null);
@@ -62,7 +62,7 @@ export class AboutLayer {
         // normally timestamp should be omitted.
         return this.storage.set(keypair, {
             format: 'es.2',
-            path: AboutLayer.makeNamePath(keypair.address),
+            path: LayerAbout.makeNamePath(keypair.address),
             value: longname,
             timestamp: timestamp,
         });

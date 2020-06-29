@@ -19,6 +19,9 @@ import {
 import { parseAuthorAddress, parseWorkspaceAddress } from '../util/addresses';
 import { logWarning } from '../util/log';
 
+// this is always used as a static class
+// e.g. just ValidatorEs2, not new ValidatorEs2()
+
 export const ValidatorEs2 : IValidator = class {
     static format : FormatName = 'es.2';
     static pathIsValid(path: Path): boolean {
