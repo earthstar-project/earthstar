@@ -75,7 +75,7 @@ INVITE-ONLY WORKSPACE:
 A document is a JSON-style object with the following shape:
 ```
 {
-    format: 'es.2',
+    format: 'es.3',
     workspace: '+gardening.xxxxx',
 
     path: '/wiki/Bumblebee',
@@ -297,7 +297,7 @@ Note that this image is simplified.  A real document looks like this:
 
 ```
 {
-  "format": "es.2",
+  "format": "es.3",
   "workspace": "+gardening.xxxxxxxxxxxxxxxxxxxx",
   "path": "/wiki/shared/Bumblebee",
   "value": "Buzz buzz buzz",

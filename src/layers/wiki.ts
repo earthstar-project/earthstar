@@ -120,7 +120,7 @@ export class LayerWiki {
     setPageText(keypair : AuthorKeypair, path : string, text : string, timestamp? : number) : boolean {
         // normally timestamp should be omitted.
         return this.storage.set(keypair, {
-            format: 'es.2',
+            format: 'es.3',
             path: path,
             value: text,
             timestamp: timestamp,

@@ -63,7 +63,7 @@ export class LayerAbout {
         // we can only set our own name, so we don't need an author input parameter.
         // normally timestamp should be omitted.
         return this.storage.set(keypair, {
-            format: 'es.2',
+            format: 'es.3',
             path: LayerAbout.makeNamePath(keypair.address),
             value: longname,
             timestamp: timestamp,

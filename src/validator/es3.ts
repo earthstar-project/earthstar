@@ -20,10 +20,10 @@ import { parseAuthorAddress, parseWorkspaceAddress } from '../util/addresses';
 import { logWarning } from '../util/log';
 
 // this is always used as a static class
-// e.g. just ValidatorEs2, not new ValidatorEs2()
+// e.g. just ValidatorEs3, not new ValidatorEs3()
 
-export const ValidatorEs2 : IValidator = class {
-    static format : FormatName = 'es.2';
+export const ValidatorEs3 : IValidator = class {
+    static format : FormatName = 'es.3';
     static pathIsValid(path: Path): boolean {
         if (!path.startsWith('/')) {
             logWarning('invalid path: does not start with /');
@@ -119,7 +119,7 @@ export const ValidatorEs2 : IValidator = class {
         // doc.format should have already been checked by the store, when it decides
         // which validator to use.  But let's check it anyway.
         if (doc.format !== this.format) {
-            logWarning('documentIsValid: format does not match');
+            logWarning('documentIsValid: format does not match validator');
             return false;
         }
 

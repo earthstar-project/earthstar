@@ -9,8 +9,8 @@ import {
     generateAuthorKeypair
 } from '../crypto/crypto';
 import {
-    ValidatorEs2
-} from '../validator/es2';
+    ValidatorEs3
+} from '../validator/es3';
 import {
     StorageMemory
 } from '../storage/memory';
@@ -23,7 +23,7 @@ import {
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let VALIDATORS : IValidator[] = [ValidatorEs2];
+let VALIDATORS : IValidator[] = [ValidatorEs3];
 
 let keypair1 = generateAuthorKeypair('test');
 let keypair2 = generateAuthorKeypair('twoo');

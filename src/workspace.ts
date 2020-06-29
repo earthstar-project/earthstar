@@ -41,6 +41,6 @@ let makeWorkspace = (storage : IStorage, authorKeypair : AuthorKeypair | null) :
     layerWiki: new LayerWiki(storage),
 });
 
-//let workspace1 = new Workspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
-//let workspace2 = makeWorkspace(new StorageMemory([ValidatorEs2], '//gardening.xxxxx'), null);
+//let workspace1 = new Workspace(new StorageMemory([ValidatorEs3], '+gardening.xxxxx'), null);
+//let workspace2 = makeWorkspace(new StorageMemory([ValidatorEs3], '+gardening.xxxxx'), null);
 

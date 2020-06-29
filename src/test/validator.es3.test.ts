@@ -8,13 +8,13 @@ import {
     generateAuthorKeypair
 } from '../crypto/crypto';
 import {
-    ValidatorEs2
-} from '../validator/es2';
+    ValidatorEs3
+} from '../validator/es3';
 
 let keypair1 = generateAuthorKeypair('test');
 let author1: AuthorAddress = keypair1.address;
 let now = 1500000000000000;
-let Val = ValidatorEs2;
+let Val = ValidatorEs3;
 
 let snowmanJsString = '☃';
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
@@ -80,7 +80,7 @@ t.test('authorCanWriteToKey', (t: any) => {
 
 t.test('hashDocument', (t: any) => {
     let doc1: Document = {
-        format: 'es.2',
+        format: 'es.3',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
         value: 'v1',
@@ -88,13 +88,13 @@ t.test('hashDocument', (t: any) => {
         author: '@me.ed25519',
         signature: 'xxx.sig.ed25519',
     };
-    t.equal(Val.hashDocument(doc1), '5db7d57dc5a95bb11e1d4190e7f5c4672e1888de047a2cbc3e5acce60d519b95');
+    t.equal(Val.hashDocument(doc1), '72bfa953aa3e838d5a5e2a1ca223d0b336f653ab0d461560821103b8a7f495f8');
     t.done();
 });
 
 t.test('signDocument and documentSignatureIsValid', (t: any) => {
     let doc1: Document = {
-        format: 'es.2',
+        format: 'es.3',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
         value: 'v1',
@@ -139,7 +139,7 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
 
 t.test('documentIsValid', (t: any) => {
     let doc1: Document = {
-        format: 'es.2',
+        format: 'es.3',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
         value: 'v1',

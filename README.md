@@ -208,11 +208,11 @@ sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
 
 Usage example:
 ```ts
-const { StorageMemory, ValidatorEs2, generateAuthorKeypair } = require('earthstar');
+const { StorageMemory, ValidatorEs3, generateAuthorKeypair } = require('earthstar');
 
 // Create a database for a particular workspace, '+gardening.xxxxxxxx'
-// We've chosen to use the latest 'es.2' feed format so we supply the matching validator.
-let storage = new StorageMemory([ValidatorEs2], '+gardening.xxxxxxxx');
+// We've chosen to use the latest 'es.3' feed format so we supply the matching validator.
+let storage = new StorageMemory([ValidatorEs3], '+gardening.xxxxxxxx');
 
 // Make up some authors for testing.
 // A keypair is { address: '@aaaa.xxx', secret: 'xxx' }.
@@ -223,18 +223,18 @@ let author1 = keypair1.address;
 let author2 = keypair2.address;
 
 // It's a key-value store.
-storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty' });
+storage.set(keypair1, { format: 'es.3', path: '/wiki/Strawberry', value: 'Tasty' });
 storage.getValue('/wiki/Strawberry'); // --> 'Tasty'
 
 // One author can use multiple devices with no problems.
 // Conflicts are resolved by timestamp.
 // Here the same author overwrites their previous value,
 // which is forgotten from the database.
-storage.set(keypair1, { format: 'es.2', path: '/wiki/Strawberry', value: 'Tasty!!' });
+storage.set(keypair1, { format: 'es.3', path: '/wiki/Strawberry', value: 'Tasty!!' });
 storage.getValue('wiki/Strawberry'); // --> 'Tasty!!'
 
 // Multiple authors can overwrite each other (also by timestamp).
-storage.set(keypair2, { format: 'es.2', path: '/wiki/Strawberry', value: 'Yum' });
+storage.set(keypair2, { format: 'es.3', path: '/wiki/Strawberry', value: 'Yum' });
 storage.getValue('wiki/Strawberry'); // --> 'Yum'
 
 // We keep the one most recent value from each author, in case
@@ -246,7 +246,7 @@ storage.values({ path: 'wiki/Strawberry', includeHistory: true });
 // Get more context about a document, besides just the value.
 storage.getDocument('wiki/Strawberry');
 /* --> {
-    format: 'es.2',
+    format: 'es.3',
     workspace: '+gardening.xxxxxxxx',
     path: 'wiki/Strawberry',
     value: 'Yum',
@@ -273,7 +273,7 @@ storage.getDocument('wiki/Strawberry');
 //
 // Here we'll set the author's display name
 storage.set(keypair1, {
-    format: 'es.2',
+    format: 'es.3',
     path: '/about/~' + keypair1.address + '/name',
     value: 'Suzie',
 });
@@ -284,7 +284,7 @@ storage.paths({ lowPath: '/abc', limit: 100 })
 storage.paths({ pathPrefix: '/wiki/' })
 
 // You can sync to another Storage with the same workspace address
-let storage2 = new StorageMemory([ValidatorEs2], '+gardening.xxxxxxxx');
+let storage2 = new StorageMemory([ValidatorEs3], '+gardening.xxxxxxxx');
 storage.sync(storage2);
 // Now storage and storage2 are identical.
 
@@ -319,7 +319,7 @@ Note that docs only ever have to get transformed INTO this representation just b
 
 There is no canonical "feed encoding" - only the canonical way to hash an doc, above.  Databases and network code can represent the doc in any way they want.
 
-The hash and signature specification may change as the schema evolves beyond `es.2`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
+The hash and signature specification may change as the schema evolves beyond `es.3`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
 
 
 ### Sync over duplex streams:
