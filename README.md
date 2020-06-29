@@ -47,15 +47,25 @@ Earthstar's philosophy is that **apps should be tools, not services**.  Authorit
 
 An Earthstar workspace holds mutable **documents** with unique **paths** (ids), similar to leveldb or CouchDb.
 
-There are no transactions.  The unit of atomic change is writing a value to one path.  Causal order is not preserved for edits across multiple paths.
+Within each **path**, we keep the newest version of that **document** from each author.  We discard old versions of a document from the same author.
+
+In other words, it's a mapping from `(path, author)` to `latest version of the document at that path, from that author`.
+
+The newest document (from any author) is considered the winner of a conflict.  More details below in the "Editing data" section.
+
+There are no transactions.  The unit of atomic change is the document.
 
 ![](docs/earthstar-data-model.png)
 
 ## Block diagram
 
+Simplified diagram of the entire system.  The dashed boxes are not implemented yet.
+
 ![](docs/block-diagram.png)
 
-There isn't a formal written spec yet - it will be written once things stabilize.
+A more detailed look at this Javascript implementation:
+
+![](docs/building-blocks.png)
 
 ## Scope, typical usage
 
