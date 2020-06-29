@@ -43,7 +43,7 @@ let sparkleEmoji = '✨';
 
 t.test('with empty storage', (t: any) => {
     let storage = makeStorage(WORKSPACE);
-    let about = new AboutLayer(storage, keypair1);
+    let about = new AboutLayer(storage);
 
     // add a dummy document.
     // this author should not be picked up by the about layer (TODO: is this a good decision?)
@@ -61,8 +61,8 @@ t.test('with empty storage', (t: any) => {
         longname: null,
     }, 'missing author /about => some info but longname is null');
 
-    t.true(about.setMyAuthorLongname('Long Name 1'), 'set author longname');
-    t.true(about.setMyAuthorLongname('Long Name 2 ' + sparkleEmoji), 'set author longname again');
+    t.true(about.setMyAuthorLongname(keypair1, 'Long Name 1'), 'set author longname');
+    t.true(about.setMyAuthorLongname(keypair1, 'Long Name 2 ' + sparkleEmoji), 'set author longname again');
 
     let expectedProfile : AuthorProfile = {
         address: author1,

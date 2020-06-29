@@ -29,10 +29,8 @@ export interface WikiPageDetail {
 
 export class WikiLayer {
     storage : IStorage;
-    keypair : AuthorKeypair | null;
-    constructor(storage : IStorage, keypair : AuthorKeypair | null) {
+    constructor(storage : IStorage) {
         this.storage = storage;
-        this.keypair = keypair;
     }
     static makePagePath(owner : AuthorAddress | 'shared', title : string) : string {
         if (owner.startsWith('@')) { owner = '~' + owner; }
@@ -117,12 +115,9 @@ export class WikiLayer {
             text: doc.value,
         }
     }
-    setPageText(path : string, text : string, timestamp? : number) : boolean {
+    setPageText(keypair : AuthorKeypair, path : string, text : string, timestamp? : number) : boolean {
         // normally timestamp should be omitted.
-        if (this.keypair === null) {
-            return false;
-        }
-        return this.storage.set(this.keypair, {
+        return this.storage.set(keypair, {
             format: 'es.2',
             path: path,
             value: text,

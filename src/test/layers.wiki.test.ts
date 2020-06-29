@@ -85,7 +85,7 @@ t.test('parsePagePath', (t: any) => {
 
 t.test('with empty storage', (t: any) => {
     let storage = makeStorage(WORKSPACE);
-    let wiki = new WikiLayer(storage, keypair1);
+    let wiki = new WikiLayer(storage);
 
     // read while empty
     t.same(wiki.listPageInfos(), [], 'list page info: empty');
@@ -96,12 +96,13 @@ t.test('with empty storage', (t: any) => {
     t.doesNotThrow(() => wiki.listPageInfos({ participatingAuthor: 'xxxx' }), 'does not throw with invalid participatingAuthor');
 
     // do some writes
-    t.ok(wiki.setPageText(WikiLayer.makePagePath('shared', 'Small Dogs'), 'page text 1', now), 'write');
-    t.ok(wiki.setPageText(WikiLayer.makePagePath('shared', 'Small Dogs'), 'page text 2', now + 5), 'write again');
+    let smallDogsPath = WikiLayer.makePagePath('shared', 'Small Dogs');
+    t.ok(wiki.setPageText(keypair1, smallDogsPath, 'page text 1', now), 'write');
+    t.ok(wiki.setPageText(keypair1, smallDogsPath, 'page text 2', now + 5), 'write again');
 
-    t.ok(wiki.setPageText(WikiLayer.makePagePath(author1, 'Dogs'), 'dogs dogs', now), 'write to owned page');
+    t.ok(wiki.setPageText(keypair1, WikiLayer.makePagePath(author1, 'Dogs'), 'dogs dogs', now), 'write to owned page');
 
-    t.notOk(wiki.setPageText(WikiLayer.makePagePath(author2, 'Dogs'), 'dogs dogs', now), 'write to page of another author should fail');
+    t.notOk(wiki.setPageText(keypair1, WikiLayer.makePagePath(author2, 'Dogs'), 'dogs dogs', now), 'write to page of another author should fail');
 
     // read them back
     t.same(wiki.getPageDetails('/wiki/shared/Small%20Dogs'), {

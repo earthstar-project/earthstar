@@ -23,10 +23,8 @@ export interface AuthorProfile {
 */
 export class AboutLayer {
     storage : IStorage;
-    keypair : AuthorKeypair | null;
-    constructor(storage : IStorage, keypair : AuthorKeypair | null) {
+    constructor(storage : IStorage) {
         this.storage = storage;
-        this.keypair = keypair;
     }
     static makeNamePath(author : AuthorAddress) : string {
         return `/about/~${author}/name`;
@@ -59,15 +57,12 @@ export class AboutLayer {
             longname: longname,
         }
     }
-    setMyAuthorLongname(longname : string, timestamp?: number) : boolean {
+    setMyAuthorLongname(keypair : AuthorKeypair, longname : string, timestamp?: number) : boolean {
         // we can only set our own name, so we don't need an author input parameter.
         // normally timestamp should be omitted.
-        if (this.keypair === null) {
-            return false;
-        }
-        return this.storage.set(this.keypair, {
+        return this.storage.set(keypair, {
             format: 'es.2',
-            path: AboutLayer.makeNamePath(this.keypair.address),
+            path: AboutLayer.makeNamePath(keypair.address),
             value: longname,
             timestamp: timestamp,
         });

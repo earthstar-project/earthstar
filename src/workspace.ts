@@ -15,7 +15,7 @@ export class Workspace {
         this.storage = storage;
         this.syncer = new Syncer(storage);
         this.keypair = keypair;
-        this.layerAbout = new AboutLayer(storage, keypair);
-        this.layerWiki = new WikiLayer(storage, keypair);
+        this.layerAbout = new AboutLayer(storage);
+        this.layerWiki = new WikiLayer(storage);
     }
 }
