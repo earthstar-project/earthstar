@@ -385,8 +385,12 @@ for (let scenario of scenarios) {
         let pathsFromStorage = storage.paths();
         t.same(paths.length, pathsFromStorage.length, 'same number of paths');
         t.same(sortedPaths, pathsFromStorage, 'paths are sorted');
+
         t.same(storage.paths({ path: '/q' }), ['/q'], 'query for specific path');
+        t.same(storage.documents({ path: '/q' }).map(doc => doc.path), ['/q'], 'query for specific path (documents)');
         t.same(storage.paths({ path: '/nope' }), [], 'query for missing path');
+        t.same(storage.documents({ path: '/nope' }), [], 'query for missing path (documents)');
+
         t.same(storage.paths({ lowPath: '/q', highPath: '/qqq' }), ['/q', '/qq'], 'lowPath <= k < highPath');
         t.same(storage.paths({ lowPath: '/q', highPath: '/qqq', limit: 1 }), ['/q'], 'lowPath, highPath with limit');
         t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');

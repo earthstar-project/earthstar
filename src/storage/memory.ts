@@ -31,11 +31,11 @@ export class StorageMemory implements IStorage {
     This uses an in-memory data structure:
     _docs:
     {
-        keyA: {
+        pathA: {
             @author1: {...DOC...},
             @author2: {...DOC...},
         }
-        keyB: {
+        pathB: {
             @author1: {...DOC...},
         }
     }
@@ -95,13 +95,18 @@ export class StorageMemory implements IStorage {
         // return docs that match the query, sorted by path and timestamp
         query = query || {};
         let docs : Document[] = [];
-        for (let key of Object.keys(this._docs)) {
+
+        // if we're only asking for one path, we only need to look at it specifically.
+        // otherwise we need to scan the whole dataset.
+        let pathsToSearch = query.path !== undefined ? [query.path] : Object.keys(this._docs);
+
+        for (let path of pathsToSearch) {
             // ignore unwanted keys
-            if (query.lowPath !== undefined && key < query.lowPath) { continue; }
-            if (query.highPath !== undefined && key >= query.highPath) { continue; }
-            if (query.pathPrefix !== undefined && !key.startsWith(query.pathPrefix)) { continue; }
+            if (query.lowPath !== undefined && path < query.lowPath) { continue; }
+            if (query.highPath !== undefined && path >= query.highPath) { continue; }
+            if (query.pathPrefix !== undefined && !path.startsWith(query.pathPrefix)) { continue; }
             // get all history docs for this key
-            let authorToDoc = this._docs[key];
+            let authorToDoc = this._docs[path] || {};
             let keyDocs = Object.values(authorToDoc);
             // is the desired participatingAuthor anywhere in this set of docs?
             // if not, discard it
