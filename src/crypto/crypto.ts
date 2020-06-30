@@ -16,7 +16,7 @@ import {
     encodeSecret,
 } from './encoding';
 import {
-    makeAuthorAddress,
+    assembleAuthorAddress,
     parseAuthorAddress,
 } from '../util/addresses';
 
@@ -26,12 +26,15 @@ export let sha256 = (input : string | Buffer) : string =>
 export let generateAuthorKeypair = (shortname : string) : AuthorKeypair => {
     let bufferPair : KeypairBuffers;
     let pubkey : string;
-    // generate over and over until it doesn't start with a number
-    // and it's 44 chars long
+    // When a buffer starts with zeros, base58 encoding can make
+    // a shorter than usual result.
+    // We want our encoded pubkeys to always be the same length (44 chars).
+    // We also want them to not start with a number.
+    // So, generate over and over until we get one we like.
     let ii = 1000;
     while (true) {
         ii -= 1;
-        if (ii === 0) { throw "generateAuthorKeypair was stuck in infinite loop"; }
+        if (ii === 0) { throw new Error("generateAuthorKeypair was stuck in infinite loop"); }
         bufferPair = LowLevelCrypto.generateKeypairBuffers();
         pubkey = encodePubkey(bufferPair.pubkey);
         // if it starts with a number, or length is not 44, try again
@@ -40,10 +43,15 @@ export let generateAuthorKeypair = (shortname : string) : AuthorKeypair => {
         // we did it
         break;
     }
-    return {
-        address: makeAuthorAddress(shortname, encodePubkey(bufferPair.pubkey)),
+    let keypair = {
+        address: assembleAuthorAddress(shortname, encodePubkey(bufferPair.pubkey)),
         secret: encodeSecret(bufferPair.secret),
     };
+    // Parse it to make sure it's valid
+    // This is where we detect if the shortname is bad (wrong length, etc)
+    let { authorParsed, err } = parseAuthorAddress(keypair.address);
+    if (err) { throw new Error(err); }
+    return keypair;
 }
 
 export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : string => {

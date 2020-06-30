@@ -8,7 +8,7 @@ import {
 } from './cryptoTypes';
 import {
     parseAuthorAddress,
-    makeAuthorAddress,
+    assembleAuthorAddress,
 } from '../util/addresses';
 
 let encodeBuffer = (b : Buffer) : string =>
@@ -25,13 +25,13 @@ export let decodeSecret = decodeBuffer;
 export let decodeSig = decodeBuffer;
 
 export let encodeAuthorKeypair = (shortname : AuthorShortname, pair : KeypairBuffers) : AuthorKeypair => ({
-    address: makeAuthorAddress(shortname, encodePubkey(pair.pubkey)),
+    address: assembleAuthorAddress(shortname, encodePubkey(pair.pubkey)),
     secret: encodeSecret(pair.secret),
 });
 
 export let decodeAuthorKeypair = (pair : AuthorKeypair) : KeypairBuffers => {
     let {authorParsed, err} = parseAuthorAddress(pair.address);
-    if (err || authorParsed === null) { throw 'could not parse author address: ' + pair.address + '  -- err: ' + err; }
+    if (err || authorParsed === null) { throw new Error('could not parse author address: ' + pair.address + '  -- err: ' + err); }
     return {
         pubkey: decodePubkey(authorParsed.pubkey),
         secret: decodeSecret(pair.secret),

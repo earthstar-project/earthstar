@@ -59,13 +59,21 @@ t.test('sha256 of buffers', (t: any) => {
     t.end();
 });
 
-t.test('generateKeypair', (t: any) => {
+t.test('generateAuthorKeypair', (t: any) => {
+    t.throws(() => generateAuthorKeypair('abc'), 'throws when author shortname is too short');
+    t.throws(() => generateAuthorKeypair('abcde'), 'throws when author shortname is too long');
+    t.throws(() => generateAuthorKeypair('TEST'), 'throws when author shortname is uppercase');
+    t.throws(() => generateAuthorKeypair('1234'), 'throws when author shortname has numbers');
+    t.throws(() => generateAuthorKeypair('----'), 'throws when author shortname has dashes');
+    t.throws(() => generateAuthorKeypair(''), 'throws when author shortname is empty');
+
     let keypair = generateAuthorKeypair('test');
     t.equal(typeof keypair.address, 'string', 'keypair has address');
     t.equal(typeof keypair.secret, 'string', 'keypair has secret');
     t.equal(keypair.address[0], '@', 'keypair.address starts with @');
     t.true(keypair.address.startsWith('@test.'), 'keypair.address starts with @test.');
     t.notEqual(keypair.secret[0], '@', 'keypair.secret does not start with @');
+
     t.end();
 });
 

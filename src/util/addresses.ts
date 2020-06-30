@@ -3,6 +3,9 @@ import {
     AuthorParsed,
     AuthorShortname,
     WorkspaceParsed,
+    WorkspaceName,
+    EncodedKey,
+    WorkspaceAddress,
 } from './types';
 import {
     authorShortnameChars,
@@ -13,7 +16,12 @@ import {
     workspaceNameChars,
 } from './characters';
 
-export let makeAuthorAddress = (shortname : AuthorShortname, encodedPubkey : string) : AuthorAddress =>
+export let assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress =>
+    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
+    `+${name}.${encodedPubkey}`;
+
+export let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress =>
+    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
     `@${shortname}.${encodedPubkey}`;
 
 export let parseWorkspaceAddress = (addr : string) : {workspaceParsed: WorkspaceParsed | null, err : string | null} => {
@@ -31,7 +39,7 @@ export let parseWorkspaceAddress = (addr : string) : {workspaceParsed: Workspace
     }
     let [name, pubkey] = parts;
     if (name.length < 1 || name.length > 15) {
-        return { workspaceParsed: null, err: `workspace shortname ${JSON.stringify(name)} is not between 1 and 15 chars long` };
+        return { workspaceParsed: null, err: `workspace name ${JSON.stringify(name)} is not between 1 and 15 chars long` };
     }
     if (pubkey.length < 1 || pubkey.length > 44) {
         return { workspaceParsed: null, err: `workspace pubkey ${JSON.stringify(name)} is not between 1 and 44 chars long` };
