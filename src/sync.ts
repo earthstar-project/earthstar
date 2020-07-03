@@ -18,7 +18,7 @@ let sleep = async (ms : number) : Promise<void> => {
 //  syncing   syncing is happening now
 //  success   syncing succeeded
 //  failure   syncing failed (probably couldn't connect to pub)
-interface Pub {
+export interface Pub {
     domain : string;
     syncState : 'idle' | 'syncing' | 'success' | 'failure';
     lastSync : number;

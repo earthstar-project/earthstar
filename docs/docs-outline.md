@@ -30,6 +30,7 @@ for developers
 
     the way of earthstar
         a workspace is a map from (path, author) --> latest doc by timestamp
+        state-based, not op-based
         workspaces are separate unrelated universes
             author identities can be reused across workspaces
         sync happens one workspace at a time

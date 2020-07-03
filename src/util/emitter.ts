@@ -27,3 +27,11 @@ export class Emitter<T> {
         }
     }
 }
+
+export let subscribeToMany = <T>(emitters : Emitter<T>[], cb : Callback<T>) : Thunk => {
+    // Run the callback when any of the emitters fire.
+    // Return a thunk which unsubscribes from all the emitters.
+    let unsubs = emitters.map(e => e.subscribe(cb));
+    let unsubAll = () => unsubs.forEach(u => u());
+    return unsubAll;
+}
