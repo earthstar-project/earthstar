@@ -58,6 +58,7 @@ t.test('with empty storage', (t: any) => {
     t.same(about.getAuthorProfile(author1), {
         address: author1,
         shortname: 'test',
+        pubkey: author1.split('.')[1],
         longname: null,
     }, 'missing author /about => some info but longname is null');
 
@@ -67,6 +68,7 @@ t.test('with empty storage', (t: any) => {
     let expectedProfile : AuthorProfile = {
         address: author1,
         shortname: 'test',
+        pubkey: author1.split('.')[1],
         longname: 'Long Name 2 ' + sparkleEmoji,
     };
 

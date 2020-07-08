@@ -3,6 +3,7 @@ import {
     AuthorKeypair,
     AuthorShortname,
     IStorage,
+    EncodedKey,
 } from '../util/types';
 import {
     parseAuthorAddress
@@ -11,6 +12,7 @@ import {
 export interface AuthorProfile {
     address : AuthorAddress,
     shortname : AuthorShortname,
+    pubkey : EncodedKey,
     longname : string | null,  // stored in the document's value.  null if none.
     // description  // TODO
     // icon  // TODO
@@ -41,12 +43,15 @@ export class LayerAbout {
             return {
                 address: authorParsed.address,
                 shortname: authorParsed.shortname,
+                pubkey: authorParsed.pubkey,
                 longname: doc.value,
             }
         });
         return profiles.filter(x => x !== null) as AuthorProfile[];
     }
     getAuthorProfile(author : AuthorAddress) : AuthorProfile | null {
+        // returns null when the given author address is invalid (can't be parsed).
+        // otherwise returns an object, within which longname might be null.
         let {authorParsed, err} = parseAuthorAddress(author);
         if (err || !authorParsed) { return null; }
         let nameDoc = this.storage.getDocument(LayerAbout.makeNamePath(author));
@@ -56,6 +61,7 @@ export class LayerAbout {
         return {
             address: authorParsed.address,
             shortname: authorParsed.shortname,
+            pubkey: authorParsed.pubkey,
             longname: longname,
         }
     }
