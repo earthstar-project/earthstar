@@ -9,69 +9,68 @@ import {
     parseAuthorAddress
 } from '../util/addresses';
 
-export interface AuthorProfile {
+export interface AuthorInfo {
     address : AuthorAddress,
     shortname : AuthorShortname,
     pubkey : EncodedKey,
-    longname : string | null,  // stored in the document's value.  null if none.
-    // description  // TODO
-    // icon  // TODO
+
+    // The rest of this info is stored as JSON in a single document
+    // at /about/~@suzy.xxxxx/profile .
+    // Even if the document is missing, this will
+    // have a value of {}.
+    profile: AuthorProfile,
 }
 
-/*
-    paths:
-    ------
-    /about/~@aaaa.xxxxx/name
-    /about/~@aaaa.xxxxx/description    // coming soon
-    /about/~@aaaa.xxxxx/icon           // coming soon
-*/
+export interface AuthorProfile {
+    longname? : string,
+    bio? : string,  // paragraph-length description of the person
+    hue? : number,  // theme color.  should be an integer between 0 and 360.
+}
+
 export class LayerAbout {
     storage : IStorage;
     constructor(storage : IStorage) {
         this.storage = storage;
     }
-    static makeNamePath(author : AuthorAddress) : string {
-        return `/about/~${author}/name`;
+    static makeProfilePath(author : AuthorAddress) : string {
+        return `/about/~${author}/profile`;
     }
-    listAuthorProfiles() : AuthorProfile[] {
-        // TODO: this only returns people with /about info.  should it also include authors of any document?
-        let nameDocs = this.storage.documents({pathPrefix: '/about/'})
-            .filter(doc => doc.path.endsWith('/name'));
-        let profiles : (AuthorProfile | null)[] = nameDocs.map(doc => {
-            let {authorParsed, err} = parseAuthorAddress(doc.author);
-            if (err || !authorParsed) { return null; }
-            return {
-                address: authorParsed.address,
-                shortname: authorParsed.shortname,
-                pubkey: authorParsed.pubkey,
-                longname: doc.value,
-            }
-        });
-        return profiles.filter(x => x !== null) as AuthorProfile[];
+    listAuthorInfos() : AuthorInfo[] {
+        let authorAddresses = this.storage.authors();
+        let infos = authorAddresses.map(authorAddress => this.getAuthorInfo(authorAddress));
+        return infos.filter(x => x !== null) as AuthorInfo[];
     }
-    getAuthorProfile(author : AuthorAddress) : AuthorProfile | null {
+    getAuthorInfo(authorAddress : AuthorAddress) : AuthorInfo | null {
         // returns null when the given author address is invalid (can't be parsed).
-        // otherwise returns an object, within which longname might be null.
-        let {authorParsed, err} = parseAuthorAddress(author);
+        // otherwise returns an object, within which the profile might be an empty object
+        // if there's no profile document for this author.
+        // TODO: this doesn't verify this author has ever written to the workspace...?
+        let {authorParsed, err} = parseAuthorAddress(authorAddress);
         if (err || !authorParsed) { return null; }
-        let nameDoc = this.storage.getDocument(LayerAbout.makeNamePath(author));
-        let longname = nameDoc === undefined
-            ? null
-            : (nameDoc.value || null);
-        return {
+        let info : AuthorInfo = {
             address: authorParsed.address,
             shortname: authorParsed.shortname,
             pubkey: authorParsed.pubkey,
-            longname: longname,
+            profile: {},
         }
+        let profilePath = LayerAbout.makeProfilePath(authorAddress);
+        let profileJson = this.storage.getValue(profilePath);
+        if (profileJson) {
+            try {
+                info.profile = JSON.parse(profileJson);
+            } catch (e) {
+            }
+        }
+        return info;
     }
-    setMyAuthorLongname(keypair : AuthorKeypair, longname : string, timestamp?: number) : boolean {
-        // we can only set our own name, so we don't need an author input parameter.
+    setMyAuthorProfile(keypair : AuthorKeypair, profile : AuthorProfile | null, timestamp?: number) : boolean {
+        // we can only set our own info, so we don't need an author input parameter.
+        // set profile to null to erase your profile (by writing an empty string to your profile document).
         // normally timestamp should be omitted.
         return this.storage.set(keypair, {
             format: 'es.3',
-            path: LayerAbout.makeNamePath(keypair.address),
-            value: longname,
+            path: LayerAbout.makeProfilePath(keypair.address),
+            value: profile === null ? '' : JSON.stringify(profile),
             timestamp: timestamp,
         });
     }
