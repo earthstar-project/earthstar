@@ -65,17 +65,16 @@ t.test('pathIsValid', (t: any) => {
 });
 
 t.test('authorCanWriteToKey', (t: any) => {
-    let author = 'abcdefg';  // no '@'
-    t.ok(Val.authorCanWriteToPath(author, 'public'), 'regular public key');
-    t.ok(Val.authorCanWriteToPath(author, author + '/about'), 'public key containing author');
-    t.ok(Val.authorCanWriteToPath(author, '~' + author + '/about'), 'only writable by author');
-    t.ok(Val.authorCanWriteToPath(author, '~notme' + '~' + author + '/about'), 'writable by me and someone else');
+    let author = '@abcd.xxxx';  // this is too short to be a valid author, but this should be an ok test for this function
 
-    t.ok(Val.authorCanWriteToPath(author, '~' + author + '/about/~'), 'extra tilde');
-    t.ok(Val.authorCanWriteToPath(author, '~' + author + '/about/~@notme.ed25519'), 'second author');
+    t.ok(Val.authorCanWriteToPath(author, '/public'), 'regular public key');
+    t.ok(Val.authorCanWriteToPath(author, '/about/' + author + '/name'), 'public key containing author but no tilde');
+    t.ok(Val.authorCanWriteToPath(author, '/about/~' + author + '/name'), 'only writable by author');
+    t.ok(Val.authorCanWriteToPath(author, '/chat/~@ffff.xxxx' + '~' + author + '/details'), 'writable by me and someone else');
+    t.ok(Val.authorCanWriteToPath(author, '/about/~' + author + '/~'), 'extra tilde does not interfere');
 
-    t.notOk(Val.authorCanWriteToPath(author, '~notme.ed25519/about'), 'only writable by someone else');
-    t.notOk(Val.authorCanWriteToPath(author, 'zzz/~/zzz'), 'nobody can write to a key with a bare ~');
+    t.notOk(Val.authorCanWriteToPath(author, '/about/~@ffff.xxxx'), 'only writable by someone else');
+    t.notOk(Val.authorCanWriteToPath(author, '/zzz/~/zzz'), 'nobody can write to a key with just a bare ~');
 
     t.done();
 });
