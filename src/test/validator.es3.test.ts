@@ -64,17 +64,17 @@ t.test('pathIsValid', (t: any) => {
     t.end();
 });
 
-t.test('authorCanWriteToKey', (t: any) => {
+t.test('authorCanWriteToPath', (t: any) => {
     let author = '@abcd.xxxx';  // this is too short to be a valid author, but this should be an ok test for this function
 
-    t.ok(Val.authorCanWriteToPath(author, '/public'), 'regular public key');
-    t.ok(Val.authorCanWriteToPath(author, '/about/' + author + '/name'), 'public key containing author but no tilde');
+    t.ok(Val.authorCanWriteToPath(author, '/public'), 'regular public path');
+    t.ok(Val.authorCanWriteToPath(author, '/about/' + author + '/name'), 'public path containing author but no tilde');
     t.ok(Val.authorCanWriteToPath(author, '/about/~' + author + '/name'), 'only writable by author');
     t.ok(Val.authorCanWriteToPath(author, '/chat/~@ffff.xxxx' + '~' + author + '/details'), 'writable by me and someone else');
     t.ok(Val.authorCanWriteToPath(author, '/about/~' + author + '/~'), 'extra tilde does not interfere');
 
     t.notOk(Val.authorCanWriteToPath(author, '/about/~@ffff.xxxx'), 'only writable by someone else');
-    t.notOk(Val.authorCanWriteToPath(author, '/zzz/~/zzz'), 'nobody can write to a key with just a bare ~');
+    t.notOk(Val.authorCanWriteToPath(author, '/zzz/~/zzz'), 'nobody can write to a path with just a bare ~');
 
     t.done();
 });
@@ -120,7 +120,7 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
     );
     t.notOk(
         Val.documentSignatureIsValid({...signedDoc, path: 'xxx'}),
-        'sig not valid if key changes'
+        'sig not valid if path changes'
     );
     t.notOk(
         Val.documentSignatureIsValid({...signedDoc, value: 'xxx'}),
@@ -154,7 +154,7 @@ t.test('documentIsValid', (t: any) => {
 
     t.notOk(Val.documentIsValid({...signedDoc, format: false as any}), 'format wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, workspace: false as any}), 'workspace wrong datatype');
-    t.notOk(Val.documentIsValid({...signedDoc, path: false as any}), 'key wrong datatype');
+    t.notOk(Val.documentIsValid({...signedDoc, path: false as any}), 'path wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, value: false as any}), 'value wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: false as any}), 'timestamp wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, author: false as any}), 'author wrong datatype');
@@ -164,24 +164,24 @@ t.test('documentIsValid', (t: any) => {
 
     t.notOk(Val.documentIsValid({...signedDoc, format: snowmanJsString}), 'format non-ascii');
     t.notOk(Val.documentIsValid({...signedDoc, workspace: snowmanJsString}), 'workspace non-ascii');
-    t.notOk(Val.documentIsValid({...signedDoc, path: snowmanJsString}), 'key non-ascii');
+    t.notOk(Val.documentIsValid({...signedDoc, path: snowmanJsString}), 'path non-ascii');
     t.notOk(Val.documentIsValid({...signedDoc, author: snowmanJsString}), 'author non-ascii');
     t.notOk(Val.documentIsValid({...signedDoc, signature: snowmanJsString}), 'signature non-ascii');
 
     t.notOk(Val.documentIsValid({...signedDoc, format: '\n'}), 'newline in format');
     t.notOk(Val.documentIsValid({...signedDoc, workspace: '\n'}), 'newline in workspace');
-    t.notOk(Val.documentIsValid({...signedDoc, path: '\n'}), 'newline in key');
+    t.notOk(Val.documentIsValid({...signedDoc, path: '\n'}), 'newline in path');
     t.notOk(Val.documentIsValid({...signedDoc, author: '\n'}), 'newline in author');
     t.notOk(Val.documentIsValid({...signedDoc, signature: '\n'}), 'newline in signature');
 
     t.notOk(Val.documentIsValid({...signedDoc, format: 'xxxxxx' as any}), 'unknown format');
 
-    let missingKey = {...signedDoc};
-    delete missingKey.path;
-    t.notOk(Val.documentIsValid(missingKey), 'missing key');
+    let docWithMissingPath = {...signedDoc};
+    delete docWithMissingPath.path;
+    t.notOk(Val.documentIsValid(docWithMissingPath), 'missing path');
 
     t.notOk(Val.documentIsValid({...signedDoc, author: 'a\nb'}), 'newline in author');
-    t.notOk(Val.documentIsValid({...signedDoc, path: '\n'}), 'invalid key');
+    t.notOk(Val.documentIsValid({...signedDoc, path: '\n'}), 'invalid path');
     t.notOk(Val.documentIsValid({...signedDoc, path: '{}'}), 'no write permission');
 
     t.notOk(Val.documentIsValid(doc1), 'bad signature');

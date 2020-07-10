@@ -268,7 +268,7 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': empty store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
-        t.same(storage.paths(), [], 'no keys');
+        t.same(storage.paths(), [], 'no paths');
         t.same(storage.documents(), [], 'no docs');
         t.same(storage.values(), [], 'no values');
         t.equal(storage.getDocument('xxx'), undefined, 'getDocument undefined');
@@ -309,31 +309,31 @@ for (let scenario of scenarios) {
             value: 'v1',
         }), 'set rejects unknown format');
 
-        let writableKeys = [
+        let writablePaths = [
             '/hello',
             '/~' + author1 + '/about',
-            '/chat/~@notme.ed25519~' + author1,
+            '/chat/~@ffff.xxxx~' + author1,
         ];
-        for (let key of writableKeys) {
+        for (let path of writablePaths) {
             t.ok(storage.ingestDocument(
                 ValidatorEs3.signDocument(
                     keypair1,
-                    {...doc1, path: key}
+                    {...doc1, path: path}
                 )),
-                "do ingest: writable key " + key
+                "do ingest: writable path " + path
             );
         }
-        let notWritableKeys = [
-            '/~@notme.ed25519/about',
+        let notWritablePaths = [
+            '/~@ffff.xxxx/about',
             '/~',
         ];
-        for (let key of notWritableKeys) {
+        for (let path of notWritablePaths) {
             t.notOk(storage.ingestDocument(
                 ValidatorEs3.signDocument(
                     keypair1,
-                    {...doc1, path: key}
+                    {...doc1, path: path}
                 )),
-                "don't ingest: non-writable key " + key
+                "don't ingest: non-writable path " + path
             );
         }
 
