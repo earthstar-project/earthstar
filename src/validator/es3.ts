@@ -25,8 +25,15 @@ import { logWarning } from '../util/log';
 export const ValidatorEs3 : IValidator = class {
     static format : FormatName = 'es.3';
     static pathIsValid(path: Path): boolean {
+        // a path is a series of one or more path segments.
+        // a path segment is a '/' followed by one or more allowed characters.
+
         if (!path.startsWith('/')) {
             logWarning('invalid path: does not start with /');
+            return false;
+        }
+        if (path.endsWith('/')) {
+            logWarning('invalid path: ends with /');
             return false;
         }
         if (path.startsWith('/@')) {

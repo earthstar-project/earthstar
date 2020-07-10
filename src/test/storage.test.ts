@@ -374,7 +374,7 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': path queries', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
-        let paths = '/zzz /aaa /dir /dir/ /q /qq /qqq /dir/a /dir/b /dir/c'.split(' ');
+        let paths = '/zzz /aaa /dir /q /qq /qqq /dir/a /dir/b /dir/c'.split(' ');
         let ii = 0;
         for (let path of paths) {
             t.ok(storage.set(keypair1, {format: FORMAT, path: path, value: 'true', timestamp: now + ii}), 'set path: ' + path),
@@ -393,8 +393,9 @@ for (let scenario of scenarios) {
 
         t.same(storage.paths({ lowPath: '/q', highPath: '/qqq' }), ['/q', '/qq'], 'lowPath <= k < highPath');
         t.same(storage.paths({ lowPath: '/q', highPath: '/qqq', limit: 1 }), ['/q'], 'lowPath, highPath with limit');
-        t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
-        t.same(storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/', '/dir/a'], 'pathPrefix with limit');
+        t.same(storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
+        t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
+        t.same(storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
         t.done();
     });
 
