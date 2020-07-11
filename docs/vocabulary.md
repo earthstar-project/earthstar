@@ -141,9 +141,15 @@ Instead of folders we talk about "path prefixes", like "all paths starting with 
 
 ## Value
 
-The main content of the document.  User data goes here.  Currently this only allows strings; it will be expanded to allow JSON-style nested objects.
+The main content of the document.  User data goes here.
 
-TODO: binary data?
+This must be a unicode string of any length.  To store binary data you can base64-encode it first.
+
+There is no way to store the MIME type of the data - consider using a file extension in the path, like `/notes/todo.txt`.
+
+TODO: expand this to allow JSON-style nested objects, binary data, ?
+
+TODO: add MIME type?
 
 ## Timestamp
 

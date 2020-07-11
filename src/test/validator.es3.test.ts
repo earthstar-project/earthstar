@@ -189,5 +189,28 @@ t.test('documentIsValid', (t: any) => {
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: now * 2}), 'timestamp in future');
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}), 'timestamp way too large');
 
+    // try various values for the document
+    let valuesAndValidity : [string, string, string][] = [
+        // value, validity, note
+
+        ['', 'VALID', 'empty string'],
+        [snowmanJsString, 'VALID', 'snowman js string'],
+        ['\x00\x00\x00', 'VALID', 'null bytes'],
+        ['line1\nline2', 'VALID', 'newline'],
+
+        [Buffer.from([97]) as any as string, 'THROWS', 'a buffer of "a"'],  // "a" as a buffer
+        [Buffer.from([127, 128]) as any as string, 'THROWS', 'a buffer with invalid unicode'],  // invalid unicode
+        [null as any as string, 'THROWS', 'null'],
+        [123 as any as string, 'THROWS', 'a number'],
+    ]
+    for (let [val, validity, note] of valuesAndValidity) {
+        if (validity === 'VALID' || validity === 'INVALID') {
+            let doc2 = Val.signDocument(keypair1, {...doc1, value: val});
+            t.same(Val.documentIsValid(doc2), validity === 'VALID', 'doc.value: ' + note);
+        } else {
+            t.throws(() => Val.signDocument(keypair1, {...doc1, value: val}), note);
+        }
+    }
+
     t.done();
 });

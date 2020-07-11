@@ -76,6 +76,13 @@ export const ValidatorEs3 : IValidator = class {
         // except for value, but value is hashed, so it's safe to
         // use newlines as a field separator.
         // We enforce the no-newlines rules in documentIsValid() and keyIsValid().
+        // If the document is especially malformed (wrong types or missing fields),
+        // this will throw an error.
+
+        if (!this._documentTypesAreValid(doc)) {
+            throw new Error("document has invalid types");
+        }
+
         return sha256([
             doc.format,
             doc.workspace,
@@ -98,6 +105,17 @@ export const ValidatorEs3 : IValidator = class {
             return false;
         }
     }
+    static _documentTypesAreValid(doc: Document): boolean {
+        return (
+               typeof doc.format === 'string'
+            && typeof doc.workspace === 'string'
+            && typeof doc.path === 'string'
+            && typeof doc.value === 'string'
+            && typeof doc.author === 'string'
+            && typeof doc.timestamp === 'number'
+            && typeof doc.signature === 'string'
+        );
+    }
     static documentIsValid(doc: Document, futureCutoff?: number): boolean {
         // "futureCutoff" is a time in microseconds (milliseconds * 1000).
         // If a message is from after futureCutoff, it's not valid.
@@ -105,14 +123,7 @@ export const ValidatorEs3 : IValidator = class {
         const FUTURE_CUTOFF_MINUTES = 10;
         futureCutoff = futureCutoff || (Date.now() + FUTURE_CUTOFF_MINUTES * 60 * 1000) * 1000;
 
-        if (   typeof doc.format !== 'string'
-            || typeof doc.workspace !== 'string'
-            || typeof doc.path !== 'string'
-            || typeof doc.value !== 'string'
-            || typeof doc.author !== 'string'
-            || typeof doc.timestamp !== 'number'
-            || typeof doc.signature !== 'string'
-        ) {
+        if (!this._documentTypesAreValid(doc)) {
             logWarning('documentIsValid: doc properties have wrong type(s)');
             return false;
         }
@@ -171,6 +182,8 @@ export const ValidatorEs3 : IValidator = class {
             logWarning('documentIsValid: signature contains non-printable ascii characters');
             return false;
         }
+
+        // doc.value can be any unicode string.
 
         // Key must be valid (only printable ascii, etc)
         if (!this.pathIsValid(doc.path)) {
