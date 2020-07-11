@@ -62,14 +62,14 @@ Earthstar does not guarantee causal order or help you prove you have a complete 
 
 ## Write permissions and merge conflicts
 
-Write permission is encoded into each key using a tilde `~` as a marker.
+Write permission is encoded into each path using a tilde `~` as a marker.
 
-* `wiki/kittens` - anyone can write here
-* `~@aaa/about` - only @aaa can write here
-* `~@aaa/follow/@bbb` - only @aaa can write here
-* `whiteboard/~@aaa~@bbb` - both @aaa and @bbb can write here, and nobody else can
+* `/wiki/kittens` - anyone can write here
+* `/~@aaaa.xxxx/about` - only @aaa can write here
+* `/~@aaaa.xxxx/follow/@bbbb.xxxx` - only @aaa can write here
+* `/whiteboard/~@aaaa.xxxx~@bbbb.xxxx` - both @aaa and @bbb can write here, and nobody else can
 
-Conflicts may occur within a single key.
+Conflicts may occur within a single path.
 
 An author can be on multiple devices. Their most recent update wins (by timestamp) and old ones are discarded.  This allows mutability.
 
@@ -79,4 +79,4 @@ Earthstar is not designed for fancy conflict resolution.  It's best to design ap
 
 ## Indexing
 
-Hopefully apps won't need their own indexes because they can access data directly by key.  They can also choose to sync only certain keys to make sure they have data such as `about` info.
+Hopefully apps won't need their own indexes because they can access data directly by path.  They can also choose to sync only certain paths to make sure they have data such as `about` info.

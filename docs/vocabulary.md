@@ -97,29 +97,87 @@ This string identifies the **feed format** or schema used by Earthstar.  It cont
 
 A string identifying this document like a path in a filesystem.
 
-Must start with `/` and can contain numbers, letters, and these characters:
-```
-/'()-._~!*$&+,:=?@%
-```
-Case sensitive.  No spaces.  No unicode characters or unprintable ASCII.  Use percent-encoding to embed other characters.
+Example paths:
 
-Typically the first folder component of the path represents the type of document, or the application used to make it.  When syncing data you can choose which paths to replicate (like `/wiki/*`).
+```
+/wiki/Puppies
+/about/~@aaaa.xxxxx/name
+/about/~@aaaa.xxxxx/follows/~@bbbb.xxxxx
+/photos/cat.jpg
+/www/index.html
+```
+
+### Valid paths
+
+Typically the first segment of the path represents the type of document, or the application used to make it.  When syncing or querying data you will often give a path prefix to get a subset of the documents (like `/wiki/` to get all wiki documents).
+
+Paths start with a `/` and do not end with a `/`.
+
+Paths are a sequence of one or more path segments, separated by `/`.
+
+A path segment must have at least one character.  These characters are the only ones allowed in path segments:
+* ASCII uppsercase and lowercase letters
+* ASCII numbers
+* These characters: `()'-._~!*$&+,:=?@%`
+
+Note that `~` has a special meaning (see the Path Ownership section).
+
+Paths are case sensitive.
+
+No spaces, no unicode characters, no unprintable ASCII characters.  Use browser-style percent-encoding to embed these other characters.
+
+### There are no "folders", only documents
+
+Although these are like filesystem paths, "folders" or "directories" don't actually exist, there are only documents.  So if there are two documents at these two paths:
+
+```
+/wiki/Animals/Dogs
+/wiki/Animals
+```
+
+Each of those two separate documents would contain their own data.  There may or may not be a third document at `/wiki`.
+
+Instead of folders we talk about "path prefixes", like "all paths starting with `/wiki/`"
 
 ## Value
 
-User data goes here.  Currently this only allows strings; it will be expanded to allow JSON-style nested objects.
+The main content of the document.  User data goes here.  Currently this only allows strings; it will be expanded to allow JSON-style nested objects.
+
+TODO: binary data?
 
 ## Timestamp
 
-Timestamps are in Unix microseconds.  Javascript measures time in milliseconds, so multiply by 1,000 to get microseconds.  If you have seconds, multiply by 1,000,000.
+A document's timestamp is when it was created / modified by the most recent author.  Higher timestamps allow newer documents to take precedence over older versions.  Earthstar doesn't have version numbers or sequence numbers, only timestamps.
 
-Authors set the timestamps themselves so we can't trust them completely.  During sync, documents with timestamps too far in the future are skipped (not accepted or stored).  This prevents authors from faking future timestamps and spreading them through the network.  However, authors are able to choose old timestamps.
+Timestamps are integers in Unix microseconds (millionths of a second).  Javascript measures time in milliseconds, so multiply by 1,000 to get microseconds.  If you have seconds, multiply by 1,000,000.
+
+Authors set the timestamps themselves so we can't trust them completely.  During sync, documents with timestamps too far in the future are silently skipped (not accepted or stored).  This prevents authors from faking future timestamps and spreading them through the network.  However, authors are able to dishonestly set old timestamps and we can't detect if they've done so.
+
+"Too far in the future" is recommended to be 10 minutes.
+
+Timestamps must be >= 10000000000000 (10^13).  This number was chosen to reject timestamps accidentally set in milliseconds instead of microseconds.
+
+Timestamps must be < 9007199254740991 (2^53-1).  This is Javascript's `Number.MAX_SAFE_INTEGER`.
 
 ## Writing documents
 
-Documents are **mutable**.  You can overwrite them with newer versions.
+Individual document versions are immutable.  However, newer versions overwrite older versions at the same path, so overall the document at a certain path is **mutable**.
 
-You can't truly delete a document -- it will persist as a tombstone -- but you can overwrite it with any value you like, such as an empty string.
+## Document History
+
+Within a certain path, Earthstar keeps the latest document from each author who has written to that path.
+
+In other words, if 3 authors have ever written to `/example/path`, Earthstar will remember 3 documents there -- the newest from each author.
+
+When new versions arrive, older versions are forgotten (locally deleted).
+
+The newest version is returned by default; the others are available by querying with `inclueHistory: true` in case you want to do more sophisticated conflict resolution.
+
+## Deleting documents
+
+Documents can't be deleted but they can be overwritten by a newer version with `value: ""`.  Documents with empty-string values should generally be treated by applications as if they don't exist.
+
+TODO: Storage queries should allow you to filter out empty documents.
 
 ## Path ownership
 
@@ -140,10 +198,6 @@ Paths with no tildes are **shared** paths with no owners, and anyone in the work
 /todo/get-milk
 ```
 
-## Document History
-
-Each document has a history of old versions.  Earthstar keeps one latest version from each author.  Older versions are forgotten.
-
 # Query
 
 You can retrieve documents in several ways:
@@ -154,24 +208,36 @@ You can retrieve documents in several ways:
 
 To query, you supply a query object:
 ```
-{
-    // An empty query object returns all keys.
+export interface QueryOpts {
+    // An empty query object returns all documents.
     // Each of the following adds an additional filter,
     // narrowing down the results further.
 
-    key?: string,  // one specific key only.
+    path?: string,  // one specific path only.
 
-    lowKey?: string,  // lowKey <= k
-    highKey?: string,  // k < highKey
+    lowPath?: string,  // lowPath <= p 
+    highPath?: string,  // p < highPath
 
-    prefix?: string,  // keys starting with prefix.
+    pathPrefix?: string,  // paths starting with prefix.
 
-    limit?: number,  // there's no offset; use lowKey as a cursor instead
+    // limit applies to the total number of docs returned, counting heads and non-heads
+    // there's no offset; use lowPath as a cursor instead
+    limit?: number,
 
-    author?: AuthorKey
-
-    // include old versions of this item from different authors?
+    // include old versions of this doc from different authors?
     includeHistory?: boolean, // default false
+
+    // if including history, find paths where the author ever wrote, and return all history for those paths by anyone
+    // if not including history, find paths where the author ever wrote, and return the latest doc (maybe not by the author)
+    participatingAuthor?: AuthorAddress,
+
+    // if including history, it's any revision by this author (heads and non-heads)
+    // if not including history, it's any revision by this author which is a head
+    versionsByAuthor?: AuthorAddress,
+
+    // timestamp before and after // TODO
+
+    // sort order: TODO
 }
 ```
 
@@ -203,7 +269,7 @@ Users are expected to share their workspace addresses and pubs with each other o
 
 # URLs and URIs
 
-Here's how to combine different kinds of Earthstar addresses.  In this documentation, `xxxxx` is an abbreviation for long keys.
+Here's how to combine different kinds of Earthstar addresses.  In this documentation, `xxxxx` is an abbreviation for long keys in base58 format.
 ```
 GENERAL FORMAT:
     PUB "/" WORKSPACE "/" AUTHOR "/" PATH

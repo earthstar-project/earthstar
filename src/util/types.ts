@@ -76,12 +76,12 @@ export interface QueryOpts {
     // include old versions of this doc from different authors?
     includeHistory?: boolean, // default false
 
-    // if including history, find keys where the author ever wrote, and return all history for those keys by anyone
-    // if not including history, find keys where the author ever wrote, and return the latest doc (maybe not by the author)
+    // if including history, find paths where the author ever wrote, and return all history for those paths by anyone
+    // if not including history, find paths where the author ever wrote, and return the latest doc (maybe not by the author)
     participatingAuthor?: AuthorAddress,
 
-    //// if including history, find keys with the given last-author, and return all history for those keys
-    //// if not including history, find keys with the given last-author, and return just the last doc
+    //// if including history, find paths with the given last-author, and return all history for those paths
+    //// if not including history, find paths with the given last-author, and return just the last doc
     //lastAuthor?: AuthorAddress,
 
     // if including history, it's any revision by this author (heads and non-heads)
