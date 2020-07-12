@@ -13,6 +13,7 @@ Related tools:
 * [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli) -- command line utility
 * [earthstar-pub](https://github.com/cinnamon-bun/earthstar-pub) -- server to help you sync
 * [earthstar-wiki](https://github.com/cinnamon-bun/earthstar-wiki) -- an example app built with Earthstar
+* [earthstar-os](https://github.com/cinnamon-bun/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser
 
 Other docs:
 * [Earthstar concepts and vocabulary](docs/vocabulary.md) -- more details about workspaces, etc
