@@ -84,9 +84,13 @@ for contributors to this library
     browserifying
 
 future changes
-    workspace sigil // will change
-    doc.value will change from string to JSON or something similar
-    docs will be explicitly marked when deleted, maybe using a value of `null`
+    become more like a filesystem
+        rename doc.value to doc.content
+        add a method for getting a document without its content, in case the content is very large
+        store byte buffers instead of unicode strings
+            (though this makes it harder to serialize to JSON)
+        use filename extensions in paths to imply data types (.jpg, etc)
+    docs will be explicitly marked when deleted, maybe with a new field isDeleted?
     choosing an RPC style
     secret-handshake?
     async storage
