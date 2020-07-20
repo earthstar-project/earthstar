@@ -16,7 +16,9 @@ export let isOnlyPrintableAscii = (s : string) : boolean => {
 export const alphaLower = 'abcdefghijklmnopqrstuvwxyz';
 export const alphaUpper = alphaLower.toUpperCase();
 export const digits = '0123456789';
-export const authorShortnameChars = alphaLower;
-export const workspaceNameChars = alphaLower;
-export const b58chars = alphaLower + alphaUpper + digits;  // todo: make this match b58 charset
-export const pathChars = alphaLower + alphaUpper + digits + "/'()-._~!*$&+,:=?@%";  // no spaces or double quotes because they're not allowed in URLs
+export const authorShortnameChars = alphaLower + digits;
+export const workspaceNameChars = alphaLower + digits;
+export const b32chars = alphaLower + digits;  // approximately speaking
+export const b58chars = alphaLower + alphaUpper + digits;  // approximately speaking
+export const pathPunctuation = "/'()-._~!*$&+,:=?@%";  // no spaces or double quotes because they're not allowed in URLs
+export const pathChars = alphaLower + alphaUpper + digits + pathPunctuation;

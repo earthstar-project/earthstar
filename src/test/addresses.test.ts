@@ -32,12 +32,23 @@ t.test('parse workspace address', (t: any) => {
         // normal cases
         {
             note: 'ok: regular invite-only address',
-            input: '+solarpunk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solarpunk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: {
                 workspaceParsed: {
-                    address: '+solarpunk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    address: '+solarpunk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                     name: 'solarpunk',
-                    pubkey: 'aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    pubkey: 'brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+                },
+                err: null,
+            }
+        }, {
+            note: 'ok: number in name',
+            input: '+solar2000.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+            output: {
+                workspaceParsed: {
+                    address: '+solar2000.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+                    name: 'solar2000',
+                    pubkey: 'brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                 },
                 err: null,
             }
@@ -51,11 +62,11 @@ t.test('parse workspace address', (t: any) => {
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: no leading plus',
-            input: 'solarpunk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: 'solarpunk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: leading slashes (old style)',
-            input: '//solarpunk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '//solarpunk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: empty key',
@@ -75,39 +86,51 @@ t.test('parse workspace address', (t: any) => {
         // characters
         {
             note: 'x: uppercase letters in name',
-            input: '+solarPUNK.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solarPUNK.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+            output: { workspaceParsed: null, err: true, }
+        }, {
+            note: 'x: uppercase letters in pubkey',
+            input: '+solarPunk.bRH7M3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: emoji in name',
-            input: '+solar' + sparkleEmoji + '.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solar' + sparkleEmoji + '.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: snowman in name',
-            input: '+solar' + snowmanJsString + '.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solar' + snowmanJsString + '.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: newline in name',
-            input: '+solar\npunk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solar\npunk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: newline in key',
-            input: '+solarpunk.aF2jmsq\nfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solarpunk.brh\n7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: ! in key',
-            input: '+solarpunk.2!2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solarpunk.brh7\nm3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: space in name',
-            input: '+solar punk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solar punk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: dash in name',
-            input: '+solar-punk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solar-punk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+            output: { workspaceParsed: null, err: true, }
+        },
+
+        //----------------------------------------
+        // url-safety rules
+        {
+            note: 'x: name starts with number',
+            input: '+0solarpunk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
-            note: 'x: number in name',
-            input: '+solar0000.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            note: 'x: pubkey starts with number',
+            input: '+solarpunk.7rh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         },
 
@@ -115,15 +138,15 @@ t.test('parse workspace address', (t: any) => {
         // periods
         {
             note: 'x: too many periods',
-            input: '+solar.punk.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solar.punk.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: no periods',
-            input: '+solarpunkaF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+solarpunkbrh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'x: no name',
-            input: '+aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { workspaceParsed: null, err: true, }
         },
 
@@ -131,43 +154,44 @@ t.test('parse workspace address', (t: any) => {
         // name length
         {
             note: 'x: empty name',
-            input: '+.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { workspaceParsed: null, err: true, }
         }, {
             note: 'ok: name 1 char long',
-            input: '+x.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+x.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: {
                 workspaceParsed: {
-                    address: '+x.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    address: '+x.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                     name: 'x',
-                    pubkey: 'aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    pubkey: 'brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                 },
                 err: null,
             }
         }, {
             note: 'ok: name 15 chars long',
-            input: '+aaaaabbbbbccccc.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+aaaaabbbbbccccc.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: {
                 workspaceParsed: {
-                    address: '+aaaaabbbbbccccc.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    address: '+aaaaabbbbbccccc.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                     name: 'aaaaabbbbbccccc',
-                    pubkey: 'aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    pubkey: 'brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                 },
                 err: null,
             }
         }, {
             note: 'x: name 16 chars long',
-            input: '+aaaaabbbbbcccccd.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+aaaaabbbbbcccccd.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { workspaceParsed: null, err: true, }
         },
     ];
     for (let v of vectors) {
         let actualOutput = parseWorkspaceAddress(v.input);
+        logTest(actualOutput);
         if (actualOutput.err) {
-            t.same(!!v.output.err, !!actualOutput.err, v.note || 'vector should have error but does not');
+            t.same(!!v.output.err, !!actualOutput.err, 'workspace ' + v.note || 'vector should have error but does not');
         } else {
             logTest(actualOutput.err);
-            t.same(v.output, actualOutput, v.note || 'vector should succeed');
+            t.same(v.output, actualOutput, 'workspace ' + v.note || 'vector should succeed');
         }
     }
     t.end();
@@ -184,12 +208,24 @@ t.test('parse author address', (t: any) => {
         // normal cases
         {
             note: 'ok: regular address',
-            input: '@suzy.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '@suzy.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: {
                 authorParsed: {
-                    address: '@suzy.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    address: '@suzy.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                     shortname: 'suzy',
-                    pubkey: 'aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+                    pubkey: 'brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+                },
+                err: null,
+            }
+        },
+        {
+            note: 'ok: number in name',
+            input: '@su99.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+            output: {
+                authorParsed: {
+                    address: '@su99.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+                    shortname: 'su99',
+                    pubkey: 'brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
                 },
                 err: null,
             }
@@ -199,15 +235,26 @@ t.test('parse author address', (t: any) => {
         // pubkey rules
         {
             note: 'x: pubkey one character too short',
-            input: '@suzy.F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '@suzy.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: pubkey one character too long',
-            input: '@suzy.xaF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '@suzy.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaaa',
             output: { authorParsed: null, err: true, }
         }, {
+            note: 'x: pubkey not starting with "b"',
+            input: '@suzy.arh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+            output: { authorParsed: null, err: true, }
+        },
+        //----------------------------------------
+        // url-safety rules
+        {
             note: 'x: pubkey starts with number',
-            input: '@suzy.1F2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '@suzy.7rh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+            output: { authorParsed: null, err: true, }
+        }, {
+            note: 'x: name starts with number',
+            input: '@0uzy.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         },
 
@@ -219,7 +266,7 @@ t.test('parse author address', (t: any) => {
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: no leading @',
-            input: 'suzy.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: 'suzy.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: empty key',
@@ -239,39 +286,39 @@ t.test('parse author address', (t: any) => {
         // characters
         {
             note: 'x: uppercase letters in name',
-            input: '+SUZY.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+SUZY.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
+            output: { authorParsed: null, err: true, }
+        }, {
+            note: 'x: uppercase letters in pubkey',
+            input: '+suzy.bRH7M3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: emoji in name',
-            input: '+suz' + sparkleEmoji + '.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+suz' + sparkleEmoji + '.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: snowman in name',
-            input: '+suz' + snowmanJsString + '.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+suz' + snowmanJsString + '.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: newline in name',
-            input: '+su\nz.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+su\nz.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: newline in key',
-            input: '+suzy.aF2jmsq\nfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+suzy.brh7\nm3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: ! in key',
-            input: '+suzy.2!2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+suzy.brh7!m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: space in name',
-            input: '+su z.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+su z.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: dash in name',
-            input: '+su-z.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
-            output: { authorParsed: null, err: true, }
-        }, {
-            note: 'x: number in name',
-            input: '+su00.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+su-z.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         },
 
@@ -279,15 +326,15 @@ t.test('parse author address', (t: any) => {
         // periods
         {
             note: 'x: too many periods',
-            input: '+suzy.foo.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+suzy.foo.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: no periods',
-            input: '+suzyaF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW',
+            input: '+suzybrh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa',
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: no name',
-            input: '+aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { authorParsed: null, err: true, }
         },
 
@@ -295,29 +342,28 @@ t.test('parse author address', (t: any) => {
         // name length
         {
             note: 'x: empty name',
-            input: '+.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: name 1 char long',
-            input: '+a.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+a.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: name 3 chars long',
-            input: '+abc.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+abc.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { authorParsed: null, err: true, }
         }, {
             note: 'x: name 5 chars long',
-            input: '+abcde.aF2jmsqfTCK9HDRiFbXGa5JzRxYaej5Q2ebHs7wrWdkW', 
+            input: '+abcde.brh7m3unra5j5kx2luy64tbxccxawfp6gt5okdyf4mjkr2jywowaa', 
             output: { authorParsed: null, err: true, }
         }
     ];
     for (let v of vectors) {
         let actualOutput = parseAuthorAddress(v.input);
         if (actualOutput.err) {
-            t.same(!!v.output.err, !!actualOutput.err, v.note || 'vector should have error but does not');
+            t.same(!!v.output.err, !!actualOutput.err, 'author ' + v.note || 'vector should have error but does not');
         } else {
-            logTest(actualOutput.err);
-            t.same(v.output, actualOutput, v.note || 'vector should succeed');
+            t.same(v.output, actualOutput, 'author ' + v.note || 'vector should succeed');
         }
     }
     t.end();

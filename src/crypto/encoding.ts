@@ -11,10 +11,16 @@ import {
     assembleAuthorAddress,
 } from '../util/addresses';
 
+// We use rfc4648, no padding, lowercase, prefixed with "b".
+// Multibase adds a "b" prefix to specify this particular encoding.
+// We leave the "b" prefix there because we don't want the encoded string
+// to start with a number (so we can use it as a URL location).
+// Character set: "abcdefghijklmnopqrstuvwxyz234567"
+// The decoding is strict (it doesn't allow a 1 in place of an i, etc).
 let encodeBuffer = (b : Buffer) : string =>
-    mb.encode('base58btc', b).toString().slice(1);  // take off the 'z' prefix that means base58btc
+    mb.encode('base32', b).toString();
 let decodeBuffer = (s : string) : Buffer =>
-    mb.decode('z' + s);
+    mb.decode(s);
 
 export let encodePubkey = encodeBuffer;
 export let encodeSecret = encodeBuffer;
