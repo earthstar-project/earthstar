@@ -114,7 +114,7 @@ export class LayerWiki {
             owner : owner,
             lastAuthor: doc.author,
             timestamp: doc.timestamp,
-            text: doc.value,
+            text: doc.content,
         }
     }
     setPageText(keypair : AuthorKeypair, path : string, text : string, timestamp? : number) : boolean {
@@ -122,7 +122,7 @@ export class LayerWiki {
         return this.storage.set(keypair, {
             format: 'es.3',
             path: path,
-            value: text,
+            content: text,
             timestamp: timestamp,
         });
     }

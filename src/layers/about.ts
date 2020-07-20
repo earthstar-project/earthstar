@@ -16,8 +16,8 @@ export interface AuthorInfo {
 
     // The rest of this info is stored as JSON in a single document
     // at /about/~@suzy.xxxxx/profile .
-    // Even if the document is missing, this will
-    // have a value of {}.
+    // Even if the document has never been written, this will
+    // return a content of {}.
     profile: AuthorProfile,
 }
 
@@ -54,7 +54,7 @@ export class LayerAbout {
             profile: {},
         }
         let profilePath = LayerAbout.makeProfilePath(authorAddress);
-        let profileJson = this.storage.getValue(profilePath);
+        let profileJson = this.storage.getContent(profilePath);
         if (profileJson) {
             try {
                 info.profile = JSON.parse(profileJson);
@@ -70,7 +70,7 @@ export class LayerAbout {
         return this.storage.set(keypair, {
             format: 'es.3',
             path: LayerAbout.makeProfilePath(keypair.address),
-            value: profile === null ? '' : JSON.stringify(profile),
+            content: profile === null ? '' : JSON.stringify(profile),
             timestamp: timestamp,
         });
     }

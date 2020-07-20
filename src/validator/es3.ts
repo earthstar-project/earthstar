@@ -59,23 +59,23 @@ export const ValidatorEs3 : IValidator = class {
         if (path.indexOf('~') === -1) {
             return true;
         }
-        // key contains "~" + author.  the author can write here.
+        // path contains "~" + author.  the author can write here.
         if (path.indexOf('~' + author) !== -1) {
             return true;
         }
-        // key contains at least one tilde but not ~@author.  The author can't write here.
-        logWarning(`author ${author} can't write to key ${path}`);
+        // path contains at least one tilde but not ~@author.  The author can't write here.
+        logWarning(`author ${author} can't write to path ${path}`);
         return false;
     }
     static hashDocument(doc: Document): string {
         // This is used for signatures and references to specific docs.
-        // We use the hash of the value so we can drop the actual value
+        // We use the hash of the content so we can drop the actual content
         // and only keep the hash around for verifying signatures,
         // though we're not using that ability yet.
         // None of these fields are allowed to contain newlines
-        // except for value, but value is hashed, so it's safe to
+        // except for content, but content is hashed, so it's safe to
         // use newlines as a field separator.
-        // We enforce the no-newlines rules in documentIsValid() and keyIsValid().
+        // We enforce the no-newlines rules in documentIsValid() and pathIsValid().
         // If the document is especially malformed (wrong types or missing fields),
         // this will throw an error.
 
@@ -87,7 +87,7 @@ export const ValidatorEs3 : IValidator = class {
             doc.format,
             doc.workspace,
             doc.path,
-            sha256(doc.value),
+            sha256(doc.content),
             '' + doc.timestamp,
             doc.author,
         ].join('\n'));
@@ -110,7 +110,7 @@ export const ValidatorEs3 : IValidator = class {
                typeof doc.format === 'string'
             && typeof doc.workspace === 'string'
             && typeof doc.path === 'string'
-            && typeof doc.value === 'string'
+            && typeof doc.content === 'string'
             && typeof doc.author === 'string'
             && typeof doc.timestamp === 'number'
             && typeof doc.signature === 'string'
@@ -163,7 +163,7 @@ export const ValidatorEs3 : IValidator = class {
             return false;
         }
 
-        // No non-printable ascii characters or unicode (except doc.value)
+        // No non-printable ascii characters or unicode (except doc.content)
         // (the format is caught earlier by checking if doc.format === this.format)
         /* istanbul ignore next */
         if (!isOnlyPrintableAscii(doc.format)) {
@@ -183,11 +183,11 @@ export const ValidatorEs3 : IValidator = class {
             return false;
         }
 
-        // doc.value can be any unicode string.
+        // doc.content can be any unicode string.
 
-        // Key must be valid (only printable ascii, etc)
+        // Path must be valid (only printable ascii, etc)
         if (!this.pathIsValid(doc.path)) {
-            logWarning('documentIsValid: key not valid');
+            logWarning('documentIsValid: path not valid');
             return false;
         }
 
@@ -207,7 +207,7 @@ export const ValidatorEs3 : IValidator = class {
 
         // Author must have write permission
         if (!this.authorCanWriteToPath(doc.author, doc.path)) {
-            logWarning('documentIsValid: author can\'t write to key');
+            logWarning('documentIsValid: author can\'t write to path');
             return false;
         }
 

@@ -83,13 +83,13 @@ t.test('hashDocument', (t: any) => {
     let doc1: Document = {
         format: 'es.3',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
-        path: '/k1',
-        value: 'v1',
+        path: '/path1',
+        content: 'content1',
         timestamp: 1,
-        author: '@me.ed25519',
-        signature: 'xxx.sig.ed25519',
+        author: '@suzy.xxxxxxxxxxx',
+        signature: 'xxxxxxxxxxxxx',
     };
-    t.equal(Val.hashDocument(doc1), '72bfa953aa3e838d5a5e2a1ca223d0b336f653ab0d461560821103b8a7f495f8');
+    t.equal(Val.hashDocument(doc1), 'c6b5a15600f82f2cff9172152b2ea9e49b63b661817a4a865a5550701eadfcc1');
     t.done();
 });
 
@@ -98,7 +98,7 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
         format: 'es.3',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
-        value: 'v1',
+        content: 'v1',
         timestamp: 1,
         author: author1,
         signature: '',
@@ -123,8 +123,8 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
         'sig not valid if path changes'
     );
     t.notOk(
-        Val.documentSignatureIsValid({...signedDoc, value: 'xxx'}),
-        'sig not valid if value changes'
+        Val.documentSignatureIsValid({...signedDoc, content: 'xxx'}),
+        'sig not valid if content changes'
     );
     t.notOk(
         Val.documentSignatureIsValid({...signedDoc, timestamp: 9999}),
@@ -143,7 +143,7 @@ t.test('documentIsValid', (t: any) => {
         format: 'es.3',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
-        value: 'v1',
+        content: 'v1',
         timestamp: now,
         author: author1,
         signature: 'xxx',
@@ -155,7 +155,7 @@ t.test('documentIsValid', (t: any) => {
     t.notOk(Val.documentIsValid({...signedDoc, format: false as any}), 'format wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, workspace: false as any}), 'workspace wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, path: false as any}), 'path wrong datatype');
-    t.notOk(Val.documentIsValid({...signedDoc, value: false as any}), 'value wrong datatype');
+    t.notOk(Val.documentIsValid({...signedDoc, content: false as any}), 'content wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: false as any}), 'timestamp wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, author: false as any}), 'author wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, signature: false as any}), 'signature wrong datatype');
@@ -189,9 +189,9 @@ t.test('documentIsValid', (t: any) => {
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: now * 2}), 'timestamp in future');
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}), 'timestamp way too large');
 
-    // try various values for the document
-    let valuesAndValidity : [string, string, string][] = [
-        // value, validity, note
+    // try various contents for the document
+    let contentsAndValidity : [string, string, string][] = [
+        // content, validity, note
 
         ['', 'VALID', 'empty string'],
         [snowmanJsString, 'VALID', 'snowman js string'],
@@ -203,12 +203,12 @@ t.test('documentIsValid', (t: any) => {
         [null as any as string, 'THROWS', 'null'],
         [123 as any as string, 'THROWS', 'a number'],
     ]
-    for (let [val, validity, note] of valuesAndValidity) {
+    for (let [content, validity, note] of contentsAndValidity) {
         if (validity === 'VALID' || validity === 'INVALID') {
-            let doc2 = Val.signDocument(keypair1, {...doc1, value: val});
-            t.same(Val.documentIsValid(doc2), validity === 'VALID', 'doc.value: ' + note);
+            let doc2 = Val.signDocument(keypair1, {...doc1, content: content});
+            t.same(Val.documentIsValid(doc2), validity === 'VALID', 'doc.content: ' + note);
         } else {
-            t.throws(() => Val.signDocument(keypair1, {...doc1, value: val}), note);
+            t.throws(() => Val.signDocument(keypair1, {...doc1, content: content}), note);
         }
     }
 

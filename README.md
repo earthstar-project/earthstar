@@ -82,7 +82,7 @@ Read the [vocabulary and concepts](docs/vocabulary.md) documentation for more ab
 
 A single author can use multiple devices at the same time.  You "log into" a device by providing your public and private key, like a username and password.
 
-Data is mutable.  Authors can update paths with new values.  The old data is thrown away and doesn't take up space.  You can also delete paths (soon); this replaces them with a tombstone value which is kept around.
+Data is mutable.  Authors can update paths with new documents.  The old data is thrown away and doesn't take up space.  You can "delete" data by overwriting it with an empty document.
 
 There is a write permission system to allow only certain authors to write to certain paths.  Other paths can be written by anyone.
 
@@ -184,15 +184,15 @@ constructor(validators : IValidator[], workspace : string)
 // subscribe with onChange.subscribe(...cb...);
 onChange: Emitter<undefined>;
 
-// look up a path and get the corresponding value...
-getValue(path: string): string | undefined;
+// look up a path and get the corresponding content...
+getContent(path: string): string | undefined;
 // or get the whole document, which is an object with more details (author, timestamp...)
 getDocument(path: string): Document | undefined;
 
 // query with a variety of options - filter by paths and authors, etc
 documents(query?: QueryOpts): Document[];
-paths(query?: QueryOpts): string[];
-values(query?: QueryOpts): string[];
+paths(query?: QueryOpts): string[];  // return just the paths of matching documents
+contents(query?: QueryOpts): string[];  // return just the contents of matching documents
 
 // list all authors who have written
 authors(): EncodedKey[];
@@ -224,36 +224,36 @@ let author1 = keypair1.address;
 let author2 = keypair2.address;
 
 // It's a key-value store.
-storage.set(keypair1, { format: 'es.3', path: '/wiki/Strawberry', value: 'Tasty' });
-storage.getValue('/wiki/Strawberry'); // --> 'Tasty'
+storage.set(keypair1, { format: 'es.3', path: '/wiki/Strawberry', content: 'Tasty' });
+storage.getContent('/wiki/Strawberry'); // --> 'Tasty'
 
 // One author can use multiple devices with no problems.
 // Conflicts are resolved by timestamp.
-// Here the same author overwrites their previous value,
+// Here the same author overwrites their previous document,
 // which is forgotten from the database.
-storage.set(keypair1, { format: 'es.3', path: '/wiki/Strawberry', value: 'Tasty!!' });
-storage.getValue('wiki/Strawberry'); // --> 'Tasty!!'
+storage.set(keypair1, { format: 'es.3', path: '/wiki/Strawberry', content: 'Tasty!!' });
+storage.getContent('wiki/Strawberry'); // --> 'Tasty!!'
 
 // Multiple authors can overwrite each other (also by timestamp).
-storage.set(keypair2, { format: 'es.3', path: '/wiki/Strawberry', value: 'Yum' });
-storage.getValue('wiki/Strawberry'); // --> 'Yum'
+storage.set(keypair2, { format: 'es.3', path: '/wiki/Strawberry', content: 'Yum' });
+storage.getContent('wiki/Strawberry'); // --> 'Yum'
 
-// We keep the one most recent value from each author, in case
-// you need to do better conflict resolution later.
-// To see the old values, use a query:
-storage.values({ path: 'wiki/Strawberry', includeHistory: true });
+// We keep the one most recent document from each author,
+// in case we need to do better conflict resolution later.
+// To see the old versions, use a query:
+storage.contents({ path: 'wiki/Strawberry', includeHistory: true });
 // --> ['Yum', 'Tasty!!']  // newest first
 
-// Get more context about a document, besides just the value.
+// Get the entire document to see all the metadata as well as the content.
 storage.getDocument('wiki/Strawberry');
 /* --> {
     format: 'es.3',
     workspace: '+gardening.xxxxxxxx',
     path: 'wiki/Strawberry',
-    value: 'Yum',
-    author: '@aaaa.xxx',
+    content: 'Yum',
+    author: '@aaaa.xxxxxxx',
     timestamp: 1503982037239,  // in microseconds: Date.now()*1000
-    signature: 'xxxxxxxx.sig.ed25519',
+    signature: 'xxxxxxxx',
 } */
 
 // WRITE PERMISSIONS
@@ -276,7 +276,7 @@ storage.getDocument('wiki/Strawberry');
 storage.set(keypair1, {
     format: 'es.3',
     path: '/about/~' + keypair1.address + '/name',
-    value: 'Suzie',
+    content: 'Suzie',
 });
 
 // You can do leveldb style queries.
@@ -307,18 +307,18 @@ There's a simple canonical way to hash a doc: mostly you just concat all the fie
         doc.schema,
         doc.workspace,
         doc.path,
-        sha256(doc.value),
+        sha256(doc.content),
         '' + doc.timestamp,
         doc.author,
     ].join('\n')).hexDigest();
 ```
-None of those fields are allowed to contain newlines (except value, which is hashed for that reason) so newlines are safe to use as a delimiter.
+None of those fields are allowed to contain newlines (except content, which is hashed for that reason) so newlines are safe to use as a delimiter.
 
 To sign a doc, you sign its hash with the author's secret key.
 
 Note that docs only ever have to get transformed INTO this representation just before hashing -- we never need to convert from this representation BACK into a real doc.
 
-There is no canonical "feed encoding" - only the canonical way to hash an doc, above.  Databases and network code can represent the doc in any way they want.
+There is no canonical encoding for storage or networking - only the canonical hash encoding, above.  Databases and network code can represent the doc in any way they want.
 
 The hash and signature specification may change as the schema evolves beyond `es.3`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
 

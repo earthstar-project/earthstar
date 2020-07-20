@@ -133,7 +133,7 @@ export class StorageSqlite implements IStorage {
                 format TEXT NOT NULL,
                 workspace TEXT NOT NULL,
                 path TEXT NOT NULL,
-                value TEXT NOT NULL,
+                content TEXT NOT NULL,
                 author TEXT NOT NULL,
                 timestamp NUMBER NOT NULL,
                 signature TEXT NOT NULL,
@@ -145,21 +145,21 @@ export class StorageSqlite implements IStorage {
         this.db.prepare(`
             CREATE TABLE IF NOT EXISTS config (
                 key TEXT NOT NULL PRIMARY KEY,
-                value TEXT NOT NULL
+                content TEXT NOT NULL
             );
         `).run();
     }
-    _setConfig(key : string, value : string) {
+    _setConfig(key : string, content : string) {
         this.db.prepare(`
-            INSERT OR REPLACE INTO config (key, value) VALUES (:key, :value);
-        `).run({ key: key, value: value });
+            INSERT OR REPLACE INTO config (key, content) VALUES (:key, :content);
+        `).run({ key: key, content: content });
     }
     _getConfig(key : string) : string | null {
         let result = this.db.prepare(`
-            SELECT value FROM config WHERE key = :key
+            SELECT content FROM config WHERE key = :key
         `).get({ key: key });
         if (result === undefined) { return null; }
-        return result.value;
+        return result.content;
     }
 
     documents(query? : QueryOpts) : Document[] {
@@ -239,7 +239,7 @@ export class StorageSqlite implements IStorage {
             let combinedHaving = havings.length === 0 ? '' : 'HAVING ' + havings.join('\nAND ');
             logDebug('combined having', JSON.stringify(combinedHaving));
             queryString = `
-                SELECT format, workspace, path, value, author, MAX(timestamp) as timestamp, signature FROM docs
+                SELECT format, workspace, path, content, author, MAX(timestamp) as timestamp, signature FROM docs
                 ${combinedFilters}
                 GROUP BY path
                 ${combinedHaving}
@@ -273,10 +273,10 @@ export class StorageSqlite implements IStorage {
         }
         return Object.keys(paths);
     }
-    values(query? : QueryOpts) : string[] {
-        // just search using documents() and extract the values.
-        logDebug(`---- values(${JSON.stringify(query)})`);
-        return this.documents(query).map(doc => doc.value);
+    contents(query? : QueryOpts) : string[] {
+        // just search using documents() and extract the contents.
+        logDebug(`---- contents(${JSON.stringify(query)})`);
+        return this.documents(query).map(doc => doc.content);
     }
 
     authors() : AuthorAddress[] {
@@ -289,7 +289,7 @@ export class StorageSqlite implements IStorage {
     }
 
     getDocument(path : string) : Document | undefined {
-        // look up the winning value for a single path.
+        // look up the winning document for a single path.
         // return undefined if not found.
         // to get history docs for a path, do docs({path: 'foo', includeHistory: true})
         logDebug(`---- getDocument(${JSON.stringify(path)})`);
@@ -302,10 +302,10 @@ export class StorageSqlite implements IStorage {
         logDebug('getDocument result:', result);
         return result;
     }
-    getValue(path : string) : string | undefined {
-        // same as getDocument, but just returns the value, not the whole doc object.
-        logDebug(`---- getValue(${JSON.stringify(path)})`);
-        return this.getDocument(path)?.value;
+    getContent(path : string) : string | undefined {
+        // same as getDocument, but just returns the content, not the whole doc object.
+        logDebug(`---- getContent(${JSON.stringify(path)})`);
+        return this.getDocument(path)?.content;
     }
 
     ingestDocument(doc : Document, futureCutoff? : number) : boolean {
@@ -366,20 +366,20 @@ export class StorageSqlite implements IStorage {
 
         // Insert new doc, replacing old doc if there is one
         this.db.prepare(`
-            INSERT OR REPLACE INTO docs (format, workspace, path, value, author, timestamp, signature)
-            VALUES (:format, :workspace, :path, :value, :author, :timestamp, :signature);
+            INSERT OR REPLACE INTO docs (format, workspace, path, content, author, timestamp, signature)
+            VALUES (:format, :workspace, :path, :content, :author, :timestamp, :signature);
         `).run(doc);
         this.onChange.send(undefined);
         return true;
     }
 
     set(keypair : AuthorKeypair, docToSet : DocToSet) : boolean {
-        // Store a value.
+        // Store a document.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
-        logDebug(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.value)}, ...)`);
+        logDebug(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.content)}, ...)`);
 
         let validator = this.validatorMap[docToSet.format];
         if (validator === undefined) {
@@ -392,7 +392,7 @@ export class StorageSqlite implements IStorage {
             format: docToSet.format,
             workspace: this.workspace,
             path: docToSet.path,
-            value: docToSet.value,
+            content: docToSet.content,
             author: keypair.address,
             timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
             signature: '',
@@ -431,7 +431,7 @@ export class StorageSqlite implements IStorage {
     sync(otherStore : IStorage, opts? : SyncOpts) : SyncResults {
         // Sync with another Store.
         //   opts.direction: 'push', 'pull', or 'both'
-        //   opts.existing: Sync existing values.  Default true.
+        //   opts.existing: Sync existing documents.  Default true.
         //   opts.live (not implemented yet): Continue streaming new changes forever
         // Return the number of docs pushed and pulled.
         // This uses a simple and inefficient algorithm.  Fancier algorithm TBD.

@@ -42,7 +42,7 @@ export type Document = {
     format: FormatName,
     workspace: WorkspaceAddress,
     path: Path,
-    value: string,
+    content: string,
     author: AuthorAddress,
     timestamp: number,
     signature: Signature,
@@ -52,7 +52,7 @@ export type Document = {
 export type DocToSet = {
     format: FormatName,
     path: Path,
-    value: string,
+    content: string,
     timestamp?: number,  // timestamp only for testing, usually omitted
     // workspace is implied by the storage we put it into
     // no author - the whole keypair is provided separately when setting
@@ -190,8 +190,8 @@ export interface IStorage {
     documents(query?: QueryOpts): Document[];
     // Same as documents(), but only return the distinct paths of the matching documents (duplicates removed).
     paths(query?: QueryOpts): string[];
-    // Same as documents(), but only return the value properties of the matching documents.
-    values(query?: QueryOpts): string[];
+    // Same as documents(), but only return the content properties of the matching documents.
+    contents(query?: QueryOpts): string[];
 
     // List of authors that have ever written in this workspace.
     authors(): AuthorAddress[];
@@ -201,8 +201,8 @@ export interface IStorage {
     // Only returns the most recent document at this path.
     // To get older docs at this path (from other authors), do a query.
     getDocument(path: string): Document | undefined;
-    // Same as getDocument(path).value -- just the value of that document
-    getValue(path: string): string | undefined;
+    // Same as getDocument(path).content -- just the content of that document
+    getContent(path: string): string | undefined;
 
     // WRITING
     // Write a document.
@@ -210,7 +210,7 @@ export interface IStorage {
     // The DocToSet type is similar but smaller than a regular document:
     //   format: which document format to use
     //   path
-    //   value
+    //   content
     //   timestamp: optional.  If absent or zero, the current time is set for you
     //   - no workspace -- this Storage object knows what workspace it is
     //   - no author -- it's provided in the keypair argument

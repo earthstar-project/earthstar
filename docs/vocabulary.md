@@ -79,7 +79,7 @@ A document is a JSON-style object with the following shape:
     workspace: '+gardening.xxxxx',
 
     path: '/wiki/Bumblebee',
-    value: 'Bumblebees are flying insects...',
+    content: 'Bumblebees are flying insects...',
 
     timestamp: 12345000000000,  // microseconds
     author: '@suzy.6efJ8...',
@@ -139,11 +139,11 @@ Each of those two separate documents would contain their own data.  There may or
 
 Instead of folders we talk about "path prefixes", like "all paths starting with `/wiki/`"
 
-## Value
+## Content
 
 The main content of the document.  User data goes here.
 
-This must be a unicode string of any length.  To store binary data you can base64-encode it first.
+This must be a unicode string of any length.  Empty strings are allowed.  To store binary data you can base64-encode it first.
 
 There is no way to store the MIME type of the data - consider using a file extension in the path, like `/notes/todo.txt`.
 
@@ -181,7 +181,7 @@ The newest version is returned by default; the others are available by querying 
 
 ## Deleting documents
 
-Documents can't be deleted but they can be overwritten by a newer version with `value: ""`.  Documents with empty-string values should generally be treated by applications as if they don't exist.
+Documents can't be deleted but they can be overwritten by a newer version with `content: ""`.  Documents with empty-string content should generally be treated by applications as if they don't exist.
 
 TODO: Storage queries should allow you to filter out empty documents.
 
@@ -365,14 +365,14 @@ When fetching a path, the latest version is returned (by author-asserted timesta
 
 ![](earthstar-data-model.png)
 
-Note that this image is simplified.  A real document looks like this:
+Note that this image is simplified.  A real document looks approximately like this:
 
 ```
 {
   "format": "es.3",
   "workspace": "+gardening.xxxxxxxxxxxxxxxxxxxx",
   "path": "/wiki/shared/Bumblebee",
-  "value": "Buzz buzz buzz",
+  "content": "Buzz buzz buzz",
   "author": "@suzy.E4JHZTPXfc939fnLrpPDzRwjDEiTBFJHadFH32CN97yc",
   "timestamp": 1593389751898000,
   "signature": "wUkbUbGuwdZ4sbj53BQC2Yqeb55w2ZGX25qgTrkfvfqAR8f7qKpe2cAEGeD7ZwEZjCtgPaZoNoYeKf3NG3SBBP9"

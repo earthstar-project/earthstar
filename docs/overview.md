@@ -73,7 +73,7 @@ Conflicts may occur within a single path.
 
 An author can be on multiple devices. Their most recent update wins (by timestamp) and old ones are discarded.  This allows mutability.
 
-Conflicts from multiple authors are also resolved by timestamp but we keep one old value from each author, to allow manual conflict resolution later.
+Conflicts from multiple authors are also resolved by timestamp but we keep one old document from each author, to allow manual conflict resolution later.
 
 Earthstar is not designed for fancy conflict resolution.  It's best to design apps so they don't need it -- for example, let people add comments to something instead of editing it.
 

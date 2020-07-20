@@ -15,7 +15,7 @@ import { parseWorkspaceAddress } from '../util/addresses';
 import { logWarning } from '../util/log';
 
 export let _historySortFn = (a: Document, b: Document): number => {
-    // When used within one key, puts the winning revision first.
+    // When used within one path's documents, puts the winning version first.
     // path ASC (abcd), then timestamp DESC (newest first), then signature DESC (to break timestamp ties)
     if (a.path > b.path) { return 1; }
     if (a.path < b.path) { return -1; }
@@ -39,14 +39,14 @@ export class StorageMemory implements IStorage {
             @author1: {...DOC...},
         }
     }
-    _docs[key] is never an empty object, it's always missing or contains docs.
+    _docs[path] is never an empty object, it's always missing or contains docs.
 
-    Each key can have one doc per author.
-    Keys with write permissions will only have one author, thus only one doc.
-    Public keys can have multiple authors, but one is considered the winner
+    Each path can have one doc per author.
+    Paths with write permissions will only have one author, thus only one doc.
+    Public paths can have multiple authors, but one is considered the winner
       (with the highest timestamp).
     */
-    _docs : {[key:string] : {[author:string] : Document}} = {};
+    _docs : {[path:string] : {[author:string] : Document}} = {};
     workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
@@ -70,7 +70,7 @@ export class StorageMemory implements IStorage {
     paths(query? : QueryOpts) : string[] {
         query = query || {};
 
-        // if asking for a single key, check if it exists and return it by itself
+        // if asking for a single path, check if it exists and return it by itself
         if (query.path !== undefined) {
             if (this._docs[query.path] !== undefined) {
                 return [query.path];
@@ -101,13 +101,13 @@ export class StorageMemory implements IStorage {
         let pathsToSearch = query.path !== undefined ? [query.path] : Object.keys(this._docs);
 
         for (let path of pathsToSearch) {
-            // ignore unwanted keys
+            // ignore unwanted paths
             if (query.lowPath !== undefined && path < query.lowPath) { continue; }
             if (query.highPath !== undefined && path >= query.highPath) { continue; }
             if (query.pathPrefix !== undefined && !path.startsWith(query.pathPrefix)) { continue; }
-            // get all history docs for this key
+            // get all history docs for this path
             let authorToDoc = this._docs[path] || {};
-            let keyDocs = Object.values(authorToDoc);
+            let pathDocs = Object.values(authorToDoc);
             // is the desired participatingAuthor anywhere in this set of docs?
             // if not, discard it
             if (query.participatingAuthor !== undefined) {
@@ -115,13 +115,13 @@ export class StorageMemory implements IStorage {
                     continue;
                 }
             }
-            // sort newest first within this key
-            keyDocs.sort(_historySortFn);
+            // sort newest first within this path
+            pathDocs.sort(_historySortFn);
             // discard history?
             if (!query.includeHistory) {
-                keyDocs = keyDocs.slice(0, 1)
+                pathDocs = pathDocs.slice(0, 1)
             }
-            docs = docs.concat(keyDocs);
+            docs = docs.concat(pathDocs);
         }
         // apply author filters
         if (query.versionsByAuthor !== undefined) {
@@ -135,9 +135,9 @@ export class StorageMemory implements IStorage {
         }
         return docs;
     }
-    values(query? : QueryOpts) : string[] {
-        // same as docs, but we just return the values.
-        return this.documents(query).map(doc => doc.value);
+    contents(query? : QueryOpts) : string[] {
+        // same as docs, but we just return the contents.
+        return this.documents(query).map(doc => doc.content);
     }
 
     authors() : AuthorAddress[] {
@@ -150,18 +150,18 @@ export class StorageMemory implements IStorage {
         return authors;
     }
 
-    getDocument(key : string) : Document | undefined {
-        // look up the winning value for a single key.
+    getDocument(path : string) : Document | undefined {
+        // look up the winning document for a single path.
         // return undefined if not found.
-        // to get history docs for a key, do documents({key: 'foo', includeHistory: true})
-        if (this._docs[key] === undefined) { return undefined; }
-        let keyHistoryDocs = Object.values(this._docs[key]);
-        keyHistoryDocs.sort(_historySortFn);
-        return keyHistoryDocs[0];
+        // to get history docs for a path, do documents({path: 'foo', includeHistory: true})
+        if (this._docs[path] === undefined) { return undefined; }
+        let pathHistoryDocs = Object.values(this._docs[path]);
+        pathHistoryDocs.sort(_historySortFn);
+        return pathHistoryDocs[0];
     }
-    getValue(key : string) : string | undefined {
-        // same as getDocument, but just returns the value, not the whole doc object.
-        return this.getDocument(key)?.value;
+    getContent(path : string) : string | undefined {
+        // same as getDocument, but just returns the content, not the whole doc object.
+        return this.getDocument(path)?.content;
     }
 
     ingestDocument(doc : Document, futureCutoff? : number) : boolean {
@@ -171,9 +171,9 @@ export class StorageMemory implements IStorage {
         // It can be rejected if it's not the latest one from the same author,
         // or if the doc is invalid (signature, etc).
 
-        // Within a single key we keep the one latest doc from each author.
+        // Within a single path we keep the one latest doc from each author.
         // So this overwrites older docs from the same author - they are forgotten.
-        // If it's from a new author for this key, we keep it no matter the timestamp.
+        // If it's from a new author for this path, we keep it no matter the timestamp.
         // The winning doc is chosen at get time, not write time.
 
         // futureCutoff is a timestamp in microseconds.
@@ -198,8 +198,8 @@ export class StorageMemory implements IStorage {
             return false;
         }
 
-        let existingDocsByKey = this._docs[doc.path] || {};
-        let existingFromSameAuthor = existingDocsByKey[doc.author];
+        let existingDocsByPath = this._docs[doc.path] || {};
+        let existingFromSameAuthor = existingDocsByPath[doc.author];
 
         // Compare timestamps.
         // Compare signature to break timestamp ties.
@@ -212,14 +212,14 @@ export class StorageMemory implements IStorage {
             return false;
         }
 
-        existingDocsByKey[doc.author] = doc;
-        this._docs[doc.path] = existingDocsByKey;
+        existingDocsByPath[doc.author] = doc;
+        this._docs[doc.path] = existingDocsByPath;
         this.onChange.send(undefined);
         return true;
     }
 
     set(keypair : AuthorKeypair, docToSet : DocToSet) : boolean {
-        // Store a value.
+        // Store a document.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
         // (New writes should always have a timestamp of now() except during
@@ -236,7 +236,7 @@ export class StorageMemory implements IStorage {
             format: docToSet.format,
             workspace: this.workspace,
             path: docToSet.path,
-            value: docToSet.value,
+            content: docToSet.content,
             author: keypair.address,
             timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
             signature: '',
@@ -273,7 +273,7 @@ export class StorageMemory implements IStorage {
     sync(otherStore : IStorage, opts? : SyncOpts) : SyncResults {
         // Sync with another Store.
         //   opts.direction: 'push', 'pull', or 'both'
-        //   opts.existing: Sync existing values.  Default true.
+        //   opts.existing: Sync existing documents.  Default true.
         //   opts.live (not implemented yet): Continue streaming new changes forever
         // Return the number of docs pushed and pulled.
         // This uses a simple and inefficient algorithm.  Fancier algorithm TBD.

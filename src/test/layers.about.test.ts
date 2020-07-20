@@ -53,7 +53,7 @@ t.test('with empty storage', (t: any) => {
     storage.set(keypair2, {
         format: FORMAT,
         path: '/extra',
-        value: 'whatever',
+        content: 'whatever',
     });
 
     let expectedInfo1 : AuthorInfo = {

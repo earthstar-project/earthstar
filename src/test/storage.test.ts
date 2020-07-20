@@ -270,9 +270,9 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
         t.same(storage.paths(), [], 'no paths');
         t.same(storage.documents(), [], 'no docs');
-        t.same(storage.values(), [], 'no values');
+        t.same(storage.contents(), [], 'no contents');
         t.equal(storage.getDocument('xxx'), undefined, 'getDocument undefined');
-        t.equal(storage.getValue('xxx'), undefined, 'getValue undefined');
+        t.equal(storage.getContent('xxx'), undefined, 'getContent undefined');
         t.same(storage.authors(), [], 'no authors');
         t.done();
     });
@@ -284,14 +284,14 @@ for (let scenario of scenarios) {
             format: FORMAT,
             workspace: WORKSPACE,
             path: '/k1',
-            value: 'v1',
+            content: 'v1',
             timestamp: now,
             author: author1,
             signature: 'xxx',
         };
         let signedDoc = ValidatorEs3.signDocument(keypair1, doc1);
         t.ok(storage.ingestDocument(signedDoc), "successful ingestion");
-        t.equal(storage.getValue('/k1'), 'v1', "getValue worked");
+        t.equal(storage.getContent('/k1'), 'v1', "getContent worked");
 
         t.notOk(storage.ingestDocument(doc1), "don't ingest: bad signature");
         t.notOk(storage.ingestDocument({...signedDoc, format: 'xxx'}), "don't ingest: unknown format");
@@ -306,7 +306,7 @@ for (let scenario of scenarios) {
         t.notOk(storage.set(keypair1, {
             format: 'xxx',
             path: '/k1',
-            value: 'v1',
+            content: 'v1',
         }), 'set rejects unknown format');
 
         let writablePaths = [
@@ -342,30 +342,30 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': one-author store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
-        t.equal(storage.getValue('/path1'), undefined, 'nonexistant paths are undefined');
-        t.equal(storage.getValue('/path2'), undefined, 'nonexistant paths are undefined');
+        t.equal(storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
+        t.equal(storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
 
         // set a decoy path to make sure the later tests return the correct path
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy', value:'zzz', timestamp: now}), 'set decoy path');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now}), 'set decoy path');
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', value: 'val1.0', timestamp: now}), 'set new path');
-        t.equal(storage.getValue('/path1'), 'val1.0');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), 'set new path');
+        t.equal(storage.getContent('/path1'), 'val1.0');
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', value: 'val1.2', timestamp: now + 2}), 'overwrite path with newer time');
-        t.equal(storage.getValue('/path1'), 'val1.2');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.2', timestamp: now + 2}), 'overwrite path with newer time');
+        t.equal(storage.getContent('/path1'), 'val1.2');
 
         // write with an old timestamp - this timestamp should be overridden to the existing timestamp + 1.
         // note that on ingest() the newer timestamp wins, but on set() we adjust the newly created timestamp
         // so it's always greater than the existing ones.
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', value: 'val1.1', timestamp: now-99}), 'automatically supercede previous timestamp');
-        t.equal(storage.getValue('/path1'), 'val1.1', 'superceded newer existing value');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1', timestamp: now-99}), 'automatically supercede previous timestamp');
+        t.equal(storage.getContent('/path1'), 'val1.1', 'superceded newer existing content');
         t.equal(storage.getDocument('/path1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
 
         // should be alphabetical
         t.same(storage.paths(), ['/decoy', '/path1'], 'paths() are correct');
 
-        // order of values should match order of paths
-        t.same(storage.values(), ['zzz', 'val1.1'], 'values() are correct');
+        // order of contents should match order of paths
+        t.same(storage.contents(), ['zzz', 'val1.1'], 'contents() are correct');
 
         t.same(storage.authors(), [author1], 'author');
 
@@ -377,7 +377,7 @@ for (let scenario of scenarios) {
         let paths = '/zzz /aaa /dir /q /qq /qqq /dir/a /dir/b /dir/c'.split(' ');
         let ii = 0;
         for (let path of paths) {
-            t.ok(storage.set(keypair1, {format: FORMAT, path: path, value: 'true', timestamp: now + ii}), 'set path: ' + path),
+            t.ok(storage.set(keypair1, {format: FORMAT, path: path, content: 'true', timestamp: now + ii}), 'set path: ' + path),
                 ii += 1;
         }
         let sortedPaths = [...paths];
@@ -403,32 +403,32 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // three authors
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/foo', value: 'foo', timestamp: now}), 'set data');
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', value: 'value1', timestamp: now + 1}), 'set data');
-        t.ok(storage.set(keypair2, {format: FORMAT, path: '/pathA', value: 'value2', timestamp: now + 2}), 'set data');
-        t.ok(storage.set(keypair3, {format: FORMAT, path: '/pathA', value: 'value3', timestamp: now + 3}), 'set data');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'foo', timestamp: now}), 'set data');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1', timestamp: now + 1}), 'set data');
+        t.ok(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2', timestamp: now + 2}), 'set data');
+        t.ok(storage.set(keypair3, {format: FORMAT, path: '/pathA', content: 'content3', timestamp: now + 3}), 'set data');
 
         t.same(storage.authors(), [author1, author3, author2], 'authors');
 
         // queries with limits
         t.same(storage.paths( { includeHistory: true }), ['/foo', '/pathA'], 'paths with history, no limit');
-        t.same(storage.values({ includeHistory: true }), ['foo', 'value3', 'value2', 'value1'], 'values with history, no limit');
+        t.same(storage.contents({ includeHistory: true }), ['foo', 'content3', 'content2', 'content1'], 'contents with history, no limit');
 
         t.same(storage.paths( { includeHistory: true, limit: 1 }), ['/foo'], 'paths with history, limit 1');
-        t.same(storage.values({ includeHistory: true, limit: 1 }), ['foo'], 'values with history, limit 1');
+        t.same(storage.contents({ includeHistory: true, limit: 1 }), ['foo'], 'contents with history, limit 1');
 
         t.same(storage.paths( { includeHistory: true, limit: 2 }), ['/foo', '/pathA'], 'paths with history, limit 2');
-        t.same(storage.values({ includeHistory: true, limit: 2 }), ['foo', 'value3'], 'values with history, limit 2');
+        t.same(storage.contents({ includeHistory: true, limit: 2 }), ['foo', 'content3'], 'contents with history, limit 2');
 
         t.same(storage.paths( { includeHistory: true, limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
-        t.same(storage.values({ includeHistory: true, limit: 3 }), ['foo', 'value3', 'value2'], 'values with history, limit 3');
+        t.same(storage.contents({ includeHistory: true, limit: 3 }), ['foo', 'content3', 'content2'], 'contents with history, limit 3');
         
         // no history
         t.same(storage.paths( { includeHistory: false }), ['/foo', '/pathA'], 'paths no history, no limit');
-        t.same(storage.values({ includeHistory: false }), ['foo', 'value3'], 'values no history, no limit');
+        t.same(storage.contents({ includeHistory: false }), ['foo', 'content3'], 'contents no history, no limit');
 
         t.same(storage.paths( { includeHistory: false, limit: 1 }), ['/foo'], 'paths no history, limit 1');
-        t.same(storage.values({ includeHistory: false, limit: 1 }), ['foo'], 'values no history, limit 1');
+        t.same(storage.contents({ includeHistory: false, limit: 1 }), ['foo'], 'contents no history, limit 1');
 
         t.done();
     });
@@ -437,30 +437,30 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // two authors
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', value: 'value1.X', timestamp: now + 1}), 'set data');
-        t.ok(storage.set(keypair2, {format: FORMAT, path: '/pathA', value: 'value2.Y', timestamp: now + 2}), 'set data');
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', value: 'value1.Z', timestamp: now + 3}), 'set data');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.X', timestamp: now + 1}), 'set data');
+        t.ok(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2.Y', timestamp: now + 2}), 'set data');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.Z', timestamp: now + 3}), 'set data');
 
         t.same(storage.authors(), [author1, author2], 'authors');
 
         // path queries
         t.same(storage.paths(    { path: '/pathA', includeHistory: false }), ['/pathA'], 'paths with path query');
-        t.same(storage.values(   { path: '/pathA', includeHistory: false }), ['value1.Z'], 'values with path query');
-        t.same(storage.documents({ path: '/pathA', includeHistory: false }).map(d => d.value), ['value1.Z'], 'documents with path query');
+        t.same(storage.contents(   { path: '/pathA', includeHistory: false }), ['content1.Z'], 'contents with path query');
+        t.same(storage.documents({ path: '/pathA', includeHistory: false }).map(d => d.content), ['content1.Z'], 'documents with path query');
 
         t.same(storage.paths(    { path: '/pathA', includeHistory: true }), ['/pathA'], 'paths with path query, history');
-        t.same(storage.values(   { path: '/pathA', includeHistory: true }), ['value1.Z', 'value2.Y'], 'values with path query, history');
-        t.same(storage.documents({ path: '/pathA', includeHistory: true }).map(d => d.value), ['value1.Z', 'value2.Y'], 'documents with path query, history');
+        t.same(storage.contents(   { path: '/pathA', includeHistory: true }), ['content1.Z', 'content2.Y'], 'contents with path query, history');
+        t.same(storage.documents({ path: '/pathA', includeHistory: true }).map(d => d.content), ['content1.Z', 'content2.Y'], 'documents with path query, history');
 
         // versionsByAuthor
         t.same(storage.paths({ versionsByAuthor: author1, includeHistory: true }), ['/pathA'], 'paths versionsByAuthor 1, history');
         t.same(storage.paths({ versionsByAuthor: author1, includeHistory: false }), ['/pathA'], 'paths versionsByAuthor 1, no history');
         t.same(storage.paths({ versionsByAuthor: author2, includeHistory: true }), ['/pathA'], 'paths versionsByAuthor 2, history');
         t.same(storage.paths({ versionsByAuthor: author2, includeHistory: false }), [], 'paths versionsByAuthor 2, no history');
-        t.same(storage.values({ versionsByAuthor: author1, includeHistory: true }), ['value1.Z'], 'values versionsByAuthor 1, history');
-        t.same(storage.values({ versionsByAuthor: author1, includeHistory: false }), ['value1.Z'], 'values versionsByAuthor 1, no history');
-        t.same(storage.values({ versionsByAuthor: author2, includeHistory: true }), ['value2.Y'], 'values versionsByAuthor 2, history');
-        t.same(storage.values({ versionsByAuthor: author2, includeHistory: false }), [], 'values versionsByAuthor 2, no history');
+        t.same(storage.contents({ versionsByAuthor: author1, includeHistory: true }), ['content1.Z'], 'contents versionsByAuthor 1, history');
+        t.same(storage.contents({ versionsByAuthor: author1, includeHistory: false }), ['content1.Z'], 'contents versionsByAuthor 1, no history');
+        t.same(storage.contents({ versionsByAuthor: author2, includeHistory: true }), ['content2.Y'], 'contents versionsByAuthor 2, history');
+        t.same(storage.contents({ versionsByAuthor: author2, includeHistory: false }), [], 'contents versionsByAuthor 2, no history');
         t.same(storage.documents({ versionsByAuthor: author1, includeHistory: true }).length, 1, 'documents versionsByAuthor 1, history');
         t.same(storage.documents({ versionsByAuthor: author1, includeHistory: false }).length, 1, 'documents versionsByAuthor 1, no history');
         t.same(storage.documents({ versionsByAuthor: author2, includeHistory: true }).length, 1, 'documents versionsByAuthor 2, history');
@@ -468,10 +468,10 @@ for (let scenario of scenarios) {
 
         //// participatingAuthor
         //// TODO: this is not implemented in sqlite yet
-        //t.same(storage.values({ participatingAuthor: author1, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 1, with history');
-        //t.same(storage.values({ participatingAuthor: author1, includeHistory: false }), ['value1.Z'], 'participatingAuthor 1, no history');
-        //t.same(storage.values({ participatingAuthor: author2, includeHistory: true }), ['value1.Z', 'value2.Y'], 'participatingAuthor 2, with history');
-        //t.same(storage.values({ participatingAuthor: author2, includeHistory: false }), ['value1.Z'], 'participatingAuthor 2, no history');
+        //t.same(storage.contents({ participatingAuthor: author1, includeHistory: true }), ['content1.Z', 'content2.Y'], 'participatingAuthor 1, with history');
+        //t.same(storage.contents({ participatingAuthor: author1, includeHistory: false }), ['content1.Z'], 'participatingAuthor 1, no history');
+        //t.same(storage.contents({ participatingAuthor: author2, includeHistory: true }), ['content1.Z', 'content2.Y'], 'participatingAuthor 2, with history');
+        //t.same(storage.contents({ participatingAuthor: author2, includeHistory: false }), ['content1.Z'], 'participatingAuthor 2, no history');
 
         t.done();
     });
@@ -480,29 +480,29 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
        // set decoy paths to make sure the later tests return the correct path
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'set decoy path 2');
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'set decoy path 1');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), 'set decoy path 2');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), 'set decoy path 1');
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', value: 'one', timestamp: now}), 'set new path');
-        t.equal(storage.getValue('/path1'), 'one');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), 'set new path');
+        t.equal(storage.getContent('/path1'), 'one');
 
         // this will overwrite 'one' but the doc for 'one' will remain in history.
         // history will have 2 docs for this path.
-        t.ok(storage.set(keypair2, {format: FORMAT, path: '/path1', value: 'two', timestamp: now + 1}), 'update from a second author');
-        t.equal(storage.getValue('/path1'), 'two');
+        t.ok(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), 'update from a second author');
+        t.equal(storage.getContent('/path1'), 'two');
 
         // this will replace the old original doc 'one' from this author.
         // history will have 2 docs for this path.
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', value: 'three', timestamp: now + 2}), 'update from original author again');
-        t.equal(storage.getValue('/path1'), 'three');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'three', timestamp: now + 2}), 'update from original author again');
+        t.equal(storage.getContent('/path1'), 'three');
 
         t.equal(storage.paths().length, 3, '3 paths');
-        t.equal(storage.values().length, 3, '3 values');
-        t.equal(storage.values({ includeHistory: true }).length, 4, '4 values with history');
+        t.equal(storage.contents().length, 3, '3 contents');
+        t.equal(storage.contents({ includeHistory: true }).length, 4, '4 contents with history');
 
         t.same(storage.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths()');
-        t.same(storage.values(), ['aaa', 'zzz', 'three'], 'values()');
-        t.same(storage.values({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'values with history, newest first');
+        t.same(storage.contents(), ['aaa', 'zzz', 'three'], 'contents()');
+        t.same(storage.contents({ includeHistory: true }), ['aaa', 'zzz', 'three', 'two'], 'contents with history, newest first');
 
         t.same(
             storage.documents({ includeHistory: true }).map((doc : Document) => doc.author),
@@ -524,10 +524,10 @@ for (let scenario of scenarios) {
         let storage2 = scenario.makeStorage(WORKSPACE);
 
         // set up some paths
-        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy path');
-        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy path');
-        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/path1', value: 'one', timestamp: now}), 'author1 set path1');
-        t.ok(storage1.set(keypair2, {format: FORMAT, path: '/path1', value: 'two', timestamp: now + 1}), 'author2 set path1');
+        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), 'author1 set decoy path');
+        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), 'author1 set decoy path');
+        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), 'author1 set path1');
+        t.ok(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), 'author2 set path1');
 
         // sync
         let syncResults = storage1.sync(storage2, { direction: 'push', existing: true, live: false });
@@ -536,14 +536,14 @@ for (let scenario of scenarios) {
 
         // check results
         t.same(storage1.paths(), storage2.paths(), 'storage1.paths() == storage2.paths()');
-        t.same(storage1.values(), storage2.values(), 'storage1 values == storage2');
-        t.same(storage1.values({ includeHistory: true }), storage2.values({ includeHistory: true }), 'storage1 values with history == storage2');
+        t.same(storage1.contents(), storage2.contents(), 'storage1 contents == storage2');
+        t.same(storage1.contents({ includeHistory: true }), storage2.contents({ includeHistory: true }), 'storage1 contents with history == storage2');
 
         t.same(storage2.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths are as expected');
-        t.same(storage2.getValue('/path1'), 'two', 'latest doc for a path wins on storage2');
-        t.same(storage2.getDocument('/path1')?.value, 'two', 'getDocument has correct value');
-        t.same(storage2.values(), ['aaa', 'zzz', 'two'], 'storage2 values are as expected');
-        t.same(storage2.values({ includeHistory: true }), ['aaa', 'zzz', 'two', 'one'], 'values with history are as expected');
+        t.same(storage2.getContent('/path1'), 'two', 'latest doc for a path wins on storage2');
+        t.same(storage2.getDocument('/path1')?.content, 'two', 'getDocument has correct content');
+        t.same(storage2.contents(), ['aaa', 'zzz', 'two'], 'storage2 contents are as expected');
+        t.same(storage2.contents({ includeHistory: true }), ['aaa', 'zzz', 'two', 'one'], 'contents with history are as expected');
 
         // sync again.  nothing should happen.
         let syncResults2 = storage1.sync(storage2, { direction: 'push', existing: true, live: false });
@@ -564,20 +564,20 @@ for (let scenario of scenarios) {
             let storage2 = scenario.makeStorage(WORKSPACE);
 
             // set up some paths
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', value: 'zzz', timestamp: now}), 'author1 set decoy path');  // winner  (push #1)
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', value: 'aaa', timestamp: now}), 'author1 set decoy path');  // winner  (push 2)
+            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), 'author1 set decoy path');  // winner  (push #1)
+            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), 'author1 set decoy path');  // winner  (push 2)
 
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/path1', value: 'one', timestamp: now}), 'author1 set path1');      // becomes history  (push 3)
-            t.ok(storage1.set(keypair2, {format: FORMAT, path: '/path1', value: 'two', timestamp: now + 1}), 'author2 set path1');  // winner  (push 4)
+            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), 'author1 set path1');      // becomes history  (push 3)
+            t.ok(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), 'author2 set path1');  // winner  (push 4)
 
-            t.ok(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', value: '221', timestamp: now}));       // dropped
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', value: '111', timestamp: now + 10}));  // winner  (push 5)
+            t.ok(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '221', timestamp: now}));       // dropped
+            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '111', timestamp: now + 10}));  // winner  (push 5)
 
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', value: '11', timestamp: now}));       // dropped
-            t.ok(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', value: '22', timestamp: now + 10}));  // winner  (pull 1)
+            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', content: '11', timestamp: now}));       // dropped
+            t.ok(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', content: '22', timestamp: now + 10}));  // winner  (pull 1)
 
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/authorConflict', value: 'author1storage1', timestamp: now}));      // becomes history  (push 6)
-            t.ok(storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', value: 'author2storage2', timestamp: now + 1}));  // winner  (pull 2)
+            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/authorConflict', content: 'author1storage1', timestamp: now}));      // becomes history  (push 6)
+            t.ok(storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage2', timestamp: now + 1}));  // winner  (pull 2)
 
             // sync
             let syncResults = storage1.sync(storage2, opts);
@@ -591,17 +591,17 @@ for (let scenario of scenarios) {
             t.equal(storage1.paths().length, 6, '6 paths');
             t.equal(storage1.documents().length, 6, '6 docs');
             t.equal(storage1.documents({ includeHistory: true }).length, 8, '8 docs with history');
-            t.equal(storage1.values().length, 6, '6 values');
-            t.equal(storage1.values({ includeHistory: true }).length, 8, '8 values with history');
+            t.equal(storage1.contents().length, 6, '6 contents');
+            t.equal(storage1.contents({ includeHistory: true }).length, 8, '8 contents with history');
 
             t.same(storage1.paths(), '/authorConflict /decoy1 /decoy2 /latestOnStorage1 /latestOnStorage2 /path1'.split(' '), 'correct paths on storage1');
-            t.same(storage1.values(), 'author2storage2 aaa zzz 111 22 two'.split(' '), 'correct values on storage1');
+            t.same(storage1.contents(), 'author2storage2 aaa zzz 111 22 two'.split(' '), 'correct contents on storage1');
 
             t.same(storage1.paths(), storage2.paths(), 'paths match');
             t.same(storage1.documents(), storage2.documents(), 'docs match');
             t.same(storage1.documents({ includeHistory: true }), storage2.documents({ includeHistory: true }), 'docs with history: match');
-            t.same(storage1.values(), storage2.values(), 'values match');
-            t.same(storage1.values({ includeHistory: true }), storage2.values({ includeHistory: true }), 'values with history: match');
+            t.same(storage1.contents(), storage2.contents(), 'contents match');
+            t.same(storage1.contents({ includeHistory: true }), storage2.contents({ includeHistory: true }), 'contents with history: match');
         }
 
         t.done();
@@ -611,9 +611,9 @@ for (let scenario of scenarios) {
         let storageA1 = scenario.makeStorage(WORKSPACE);
         let storageA2 = scenario.makeStorage(WORKSPACE);
         let storageB = scenario.makeStorage(WORKSPACE2);
-        t.ok(storageA1.set(keypair1, {format: FORMAT, path: '/a1', value: 'a1'}));
-        t.ok(storageA2.set(keypair1, {format: FORMAT, path: '/a2', value: 'a2'}));
-        t.ok(storageB.set(keypair1, {format: FORMAT, path: '/b', value: 'b'}));
+        t.ok(storageA1.set(keypair1, {format: FORMAT, path: '/a1', content: 'a1'}));
+        t.ok(storageA2.set(keypair1, {format: FORMAT, path: '/a2', content: 'a2'}));
+        t.ok(storageB.set(keypair1, {format: FORMAT, path: '/b', content: 'b'}));
 
         t.same(storageA1.sync(storageB), { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
         t.same(storageA1.sync(storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
@@ -627,7 +627,7 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // this time let's omit schema and timestamp
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/foo', value: 'bar'}));
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'bar'}));
 
         // live mode (not implemented yet)
         t.throws(() => storageEmpty1.sync(storageEmpty2, {live: true}), 'live is not implemented yet and should throw');
@@ -664,14 +664,14 @@ for (let scenario of scenarios) {
         let cb = () => { numCalled += 1; }
         let unsub = storage.onChange.subscribe(cb);
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', value: 'val1.0', timestamp: now}), 'set new path');
-        t.notOk(storage.set(keypair1, {format: 'xxx', path: '/path1', value: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
-        t.equal(storage.getValue('/path1'), 'val1.0', 'second set was ignored');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), 'set new path');
+        t.notOk(storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
+        t.equal(storage.getContent('/path1'), 'val1.0', 'second set was ignored');
 
         t.equal(numCalled, 1, 'callback was called once');
         unsub();
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path2', value: 'val2.0', timestamp: now + 1}), 'set another path');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path2', content: 'val2.0', timestamp: now + 1}), 'set another path');
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 

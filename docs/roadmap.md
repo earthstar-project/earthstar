@@ -60,7 +60,7 @@
 ### Store Spec
 * Add {hash} to make immutable keys work
     * Disallow hashes in regular keys to avoid ovewriting them.
-* `value` encoding for binary, json, tombstones, etc
+* `content` encoding for binary, json, tombstones, etc
 * Tombstones: `null`, `tombstone:`, or a new field `isDeleted`?
 * Revise pubkey encoding and sigils (base58check?)
 * Revise allowed characters in keys
