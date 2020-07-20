@@ -33,6 +33,7 @@
   "author": "Cinnamon <cinnamon_npm@fastmail.com>",
   "license": "AGPL-3.0",
   "devDependencies": {
+    "@types/bencode": "^2.0.0",
     "@types/better-sqlite3": "^5.4.0",
     "@types/multibase": "^0.6.0",
     "@types/node": "^14.0.3",
@@ -44,9 +45,11 @@
   },
   "dependencies": {
     "@types/isomorphic-fetch": "0.0.35",
+    "bencode": "^2.0.1",
     "better-sqlite3": "^7.0.1",
     "chalk": "^3.0.0",
     "chloride": "^2.2.14",
+    "fast-equals": "^2.0.0",
     "isomorphic-fetch": "^2.2.1",
     "multibase": "^0.7.0",
     "tslib": "^2.0.0"
