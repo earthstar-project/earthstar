@@ -83,6 +83,26 @@ let valToBuf = (val : BuffableType) : Buffer => {
     }
     return Buffer.concat([Buffer.from(tag, 'utf8'), buf]);
 }
+let valToString = (val : BuffableType) : string => {
+    let tag : string;
+    let str : string;
+    if (typeof val === 'string') {
+        tag = 's:';
+        str = val;
+    } else if (val === null) {
+        tag = 'n:';
+        str = '';
+    } else if (val instanceof Buffer) {
+        tag = 'b:';
+        str = val.toString('base64');
+    } else if (typeof val === 'boolean' || typeof val === 'object' || typeof val === 'number' || Array.isArray(val)) {
+        tag = 'j:';
+        str = JSON.stringify(val);
+    } else {
+        throw new Error('unsupported data type: ' + JSON.stringify(val));
+    }
+    return tag + str;
+}
 // Convert from buffer back to actual type
 // This can throw a SyntaxError if JSON is invalid,
 // or a generic Error if the buffer is empty or doesn't start with a known type tag
@@ -93,6 +113,15 @@ let bufToVal = (buf : Buffer) : BuffableType => {
     if (tag === 'n:') { return null; }
     if (tag === 'b:') { return data; }
     if (tag === 'j:') { return JSON.parse(data.toString('utf8')); }
+    else { throw new Error('unsupported data type: ' + tag); }
+}
+let stringToVal = (str : string) : BuffableType => {
+    let tag = str.slice(0, 2);
+    let data = str.slice(2);
+    if (tag === 's:') { return data; }
+    if (tag === 'n:') { return null; }
+    if (tag === 'b:') { return Buffer.from(data, 'base64'); }
+    if (tag === 'j:') { return JSON.parse(data); }
     else { throw new Error('unsupported data type: ' + tag); }
 }
 
@@ -111,12 +140,12 @@ let vals : BuffableType[] = [
 ]
 
 for (let val of vals) {
-    let buf = valToBuf(val);
-    let val2 = bufToVal(buf);
+    let buf = valToString(val);
+    let val2 = stringToVal(buf);
     log('--------------------');
     log('orig', val);
     log('buf', buf);
-    log('buf as string', buf.toString('utf8'));
+    //log('buf as string', buf.toString('utf8'));
     log('val2', val2);
     log('match? ', deepEqual(val, val2));
 }
