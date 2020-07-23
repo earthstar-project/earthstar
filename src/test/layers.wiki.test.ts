@@ -9,8 +9,8 @@ import {
     generateAuthorKeypair
 } from '../crypto/crypto';
 import {
-    ValidatorEs3
-} from '../validator/es3';
+    ValidatorEs4
+} from '../validator/es4';
 import {
     StorageMemory
 } from '../storage/memory';
@@ -23,7 +23,7 @@ import {
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let VALIDATORS : IValidator[] = [ValidatorEs3];
+let VALIDATORS : IValidator[] = [ValidatorEs4];
 
 let keypair1 = generateAuthorKeypair('test');
 let keypair2 = generateAuthorKeypair('twoo');
@@ -41,43 +41,46 @@ let sparkleEmoji = '✨';
 //================================================================================
 
 t.test('makePagePath', (t: any) => {
-    t.same(LayerWiki.makePagePath('shared', 'Dogs'), '/wiki/shared/Dogs');
-    t.same(LayerWiki.makePagePath('shared', 'Small Dogs'), '/wiki/shared/Small%20Dogs');
-    t.same(LayerWiki.makePagePath(author1, 'Dogs'), `/wiki/~${author1}/Dogs`);
-    t.same(LayerWiki.makePagePath(author1, 'Small Dogs'), `/wiki/~${author1}/Small%20Dogs`);
+    t.same(LayerWiki.makePagePath('shared', 'Dogs'), '/wiki/shared/Dogs.md');
+    t.same(LayerWiki.makePagePath('shared', 'Small Dogs'), '/wiki/shared/Small%20Dogs.md');
+    t.same(LayerWiki.makePagePath(author1, 'Dogs'), `/wiki/~${author1}/Dogs.md`);
+    t.same(LayerWiki.makePagePath(author1, 'Small Dogs'), `/wiki/~${author1}/Small%20Dogs.md`);
     t.throws(() => LayerWiki.makePagePath('xxxx', 'Dogs'), 'owner must be "shared" or an author address');
     t.throws(() => LayerWiki.makePagePath('shared', ''), 'title cannot be empty string');
     t.end();
 });
 
 t.test('parsePagePath', (t: any) => {
-    t.same(LayerWiki.parsePagePath('/wiki/shared/Dogs'), {
-        path: '/wiki/shared/Dogs',
+    t.same(LayerWiki.parsePagePath('/wiki/shared/Dogs.md'), {
+        path: '/wiki/shared/Dogs.md',
         owner: 'shared',
         title: 'Dogs',
-    });
-    t.same(LayerWiki.parsePagePath('/wiki/shared/Small%20Dogs'), {
-        path: '/wiki/shared/Small%20Dogs',
+    }, 'shared path');
+    t.same(LayerWiki.parsePagePath('/wiki/shared/Small%20Dogs.md'), {
+        path: '/wiki/shared/Small%20Dogs.md',
         owner: 'shared',
         title: 'Small Dogs',
-    });
-    t.same(LayerWiki.parsePagePath(`/wiki/~${author1}/Dogs`), {
-        path: `/wiki/~${author1}/Dogs`,
+    }, 'shared path with percent');
+    t.same(LayerWiki.parsePagePath(`/wiki/~${author1}/Dogs.md`), {
+        path: `/wiki/~${author1}/Dogs.md`,
         owner: author1,
         title: 'Dogs',
-    });
-    t.same(LayerWiki.parsePagePath(`/wiki/~${author1}/Small%20Dogs`), {
-        path: `/wiki/~${author1}/Small%20Dogs`,
+    }, 'owned path');
+    t.same(LayerWiki.parsePagePath(`/wiki/~${author1}/Small%20Dogs.md`), {
+        path: `/wiki/~${author1}/Small%20Dogs.md`,
         owner: author1,
         title: 'Small Dogs',
-    });
-    t.equal(LayerWiki.parsePagePath('/wiki/shared/Dogs/foo'), null, 'too many slashes');
+    }, 'owned path with percent');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/Dogs'), null, 'no trailing .md');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/Dogs/foo.md'), null, 'too many slashes');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/Dogs.md/foo'), null, 'too many slashes');
     t.equal(LayerWiki.parsePagePath('/wiki/shared/'), null, 'title is empty string');
-    t.equal(LayerWiki.parsePagePath('/wiki/xxxx/Dogs'), null, 'invalid owner');
-    t.equal(LayerWiki.parsePagePath('/wiki/Dogs'), null, 'no owner');
-    t.equal(LayerWiki.parsePagePath(`/wiki/${author1}/Dogs`), null, 'no tilde');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/.md'), null, 'title is empty string with .md');
+    t.equal(LayerWiki.parsePagePath('/wiki/xxxx/Dogs.md'), null, 'invalid owner');
+    t.equal(LayerWiki.parsePagePath('/wiki/Dogs.md'), null, 'no owner');
+    t.equal(LayerWiki.parsePagePath(`/wiki/${author1}/Dogs.md`), null, 'owner with no tilde');
     t.equal(LayerWiki.parsePagePath('/about/foo'), null, 'not a wiki path at all');
-    t.equal(LayerWiki.parsePagePath('/wiki/shared/%2'), null, 'invalid percent-encoding');
+    t.equal(LayerWiki.parsePagePath('/wiki/shared/%2.md'), null, 'invalid percent-encoding');
     t.equal(LayerWiki.parsePagePath(''), null, 'empty path');
     t.end();
 });
@@ -104,16 +107,16 @@ t.test('with empty storage', (t: any) => {
     t.notOk(wiki.setPageText(keypair1, LayerWiki.makePagePath(author2, 'Dogs'), 'dogs dogs', now), 'write to page of another author should fail');
 
     // read them back
-    t.same(wiki.getPageDetails('/wiki/shared/Small%20Dogs'), {
-        path: '/wiki/shared/Small%20Dogs',
+    t.same(wiki.getPageDetails('/wiki/shared/Small%20Dogs.md'), {
+        path: '/wiki/shared/Small%20Dogs.md',
         title: 'Small Dogs',
         owner: 'shared',
         lastAuthor: author1,
         timestamp: now + 5,
         text: 'page text 2',
     }, 'getPageDetails returns second write');
-    t.same(wiki.getPageDetails(`/wiki/~${author1}/Dogs`), {
-        path: `/wiki/~${author1}/Dogs`,
+    t.same(wiki.getPageDetails(`/wiki/~${author1}/Dogs.md`), {
+        path: `/wiki/~${author1}/Dogs.md`,
         title: 'Dogs',
         owner: author1,
         lastAuthor: author1,
@@ -123,18 +126,18 @@ t.test('with empty storage', (t: any) => {
 
     // reads that should fail
     t.equal(wiki.getPageDetails(''), null, 'getPageDetails with bad path');
-    t.equal(wiki.getPageDetails('/wiki/xxx/Dogs'), null, 'getPageDetails with bad path');
-    t.equal(wiki.getPageDetails('/wiki/shared/Cats'), null, 'getPageDetails with nonexistant path');
-    t.equal(wiki.getPageDetails(`/wiki/~${author2}/Dogs`), null, 'should not find a write from another author - we do not have permission to write it');
+    t.equal(wiki.getPageDetails('/wiki/xxx/Dogs.md'), null, 'getPageDetails with bad path');
+    t.equal(wiki.getPageDetails('/wiki/shared/Cats.md'), null, 'getPageDetails with nonexistant path');
+    t.equal(wiki.getPageDetails(`/wiki/~${author2}/Dogs.md`), null, 'should not find a write from another author - we do not have permission to write it');
 
     // list pages again
     let sharedInfo : WikiPageInfo = {
-        path: '/wiki/shared/Small%20Dogs',
+        path: '/wiki/shared/Small%20Dogs.md',
         owner: 'shared',
         title: 'Small Dogs',
     };
     let myInfo : WikiPageInfo = {
-        path: `/wiki/~${author1}/Dogs`,
+        path: `/wiki/~${author1}/Dogs.md`,
         owner: author1,
         title: 'Dogs',
     }

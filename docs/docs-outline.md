@@ -12,12 +12,14 @@ contributing guidelines
 motivation
     local governance
     mutual aid / no profit motive / DIY
+    resilience - reduce the number of parties involved
+    offline-first
 
 for users
+    unbundling centralized services into identities, data, hosting, blocking
     [diagram of users and pub servers]
     identities ("accounts") - what are they
     workspaces
-    data and hosting are now 2 different things
     privacy properties of pubs and DHT
     who can read your stuff
     who can steal your password

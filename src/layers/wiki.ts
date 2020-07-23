@@ -38,14 +38,19 @@ export class LayerWiki {
         if (owner.startsWith('@')) { owner = '~' + owner; }
         else if (owner !== 'shared') { throw 'invalid wiki page owner: ' + owner; }
         if (!title) { throw 'cannot make wiki page with empty title'; }
-        return `/wiki/${owner}/${encodeURIComponent(title)}`;
+        return `/wiki/${owner}/${encodeURIComponent(title)}.md`;
     }
     static parsePagePath(path : Path) : WikiPageInfo | null {
         if (!path.startsWith('/wiki/')) {
             console.warn('path does not start with "/wiki/":', path);
             return null;
         }
-        let ownerAndTitle = path.slice(6);
+        if (!path.endsWith('.md')) {
+            console.warn('path does not end with ".md":', path);
+            return null;
+        }
+        let pathNoMd = path.slice(0, -3);  // remove '.md'
+        let ownerAndTitle = pathNoMd.slice(6);
         let parts = ownerAndTitle.split('/');
         if (parts.length !== 2) {
             console.warn('path has wrong number of path segments:', parts);
@@ -120,7 +125,7 @@ export class LayerWiki {
     setPageText(keypair : AuthorKeypair, path : string, text : string, timestamp? : number) : boolean {
         // normally timestamp should be omitted.
         return this.storage.set(keypair, {
-            format: 'es.3',
+            format: 'es.4',
             path: path,
             content: text,
             timestamp: timestamp,

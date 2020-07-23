@@ -33,7 +33,7 @@ export class LayerAbout {
         this.storage = storage;
     }
     static makeProfilePath(author : AuthorAddress) : string {
-        return `/about/~${author}/profile`;
+        return `/about/~${author}/profile.json`;
     }
     listAuthorInfos() : AuthorInfo[] {
         let authorAddresses = this.storage.authors();
@@ -68,7 +68,7 @@ export class LayerAbout {
         // set profile to null to erase your profile (by writing an empty string to your profile document).
         // normally timestamp should be omitted.
         return this.storage.set(keypair, {
-            format: 'es.3',
+            format: 'es.4',
             path: LayerAbout.makeProfilePath(keypair.address),
             content: profile === null ? '' : JSON.stringify(profile),
             timestamp: timestamp,

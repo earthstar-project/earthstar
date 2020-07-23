@@ -33,11 +33,11 @@ export type AuthorKeypair = {
 
 export type Signature = string;
 
-// A document format such as "es.3".
+// A document format such as "es.4".
 export type FormatName = string;
 
 // The main type for Earthstar documents.
-// TODO: is this type specific to the es.3 format, or is it a universal requirement for all Earthstar formats?
+// TODO: is this type specific to the es.4 format, or is it a universal requirement for all Earthstar formats?
 export type Document = {
     format: FormatName,
     workspace: WorkspaceAddress,
@@ -134,7 +134,7 @@ export interface SyncResults {
 }
 
 export interface IValidator {
-    // Validators are each responsible for one document format such as "es.3".
+    // Validators are each responsible for one document format such as "es.4".
     // They are used by Storage instances to
     // * check if documents are valid before accepting them
     // * sign new documents
@@ -146,23 +146,26 @@ export interface IValidator {
     // These are all static methods.
     // You won't be making instances of Validators because they have no state.
     // They're just a collection of functions.
+
+    // The string name of the format, like "es.4"
     format: FormatName;
 
     // Deterministic hash of this version of the document
     hashDocument(doc: Document): string;
 
     // Add an author signature to the document.
-    // The input document should have a signature field to satisfy Typescript, but
-    // it will be overwritten here, so you may as well just set signature: ''
+    // The input document needs a signature field to satisfy Typescript, but
+    // it will be overwritten here, so you may as well just set signature: '' on the input
     signDocument(keypair: AuthorKeypair, doc: Document): Document;
+
+    // General validity check including the specific checks (can write to path, path is valid, signature)
+    // plus other checks (missing fields, wrong datatypes, etc)
+    documentIsValid(doc: Document, futureCutoff?: number): boolean;
 
     // Specific validity checks
     authorCanWriteToPath(author: AuthorAddress, path: Path): boolean;
     pathIsValid(path: Path): boolean;
     documentSignatureIsValid(doc: Document): boolean;
-
-    // General validity check: bad signature, missing fields, wrong datatypes, invalid paths, etc etc.
-    documentIsValid(doc: Document, futureCutoff?: number): boolean;
 }
 
 export interface IStorage {

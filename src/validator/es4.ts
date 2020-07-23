@@ -20,10 +20,10 @@ import { parseAuthorAddress, parseWorkspaceAddress } from '../util/addresses';
 import { logWarning } from '../util/log';
 
 // this is always used as a static class
-// e.g. just ValidatorEs3, not new ValidatorEs3()
+// e.g. just ValidatorEs4, not new ValidatorEs4()
 
-export const ValidatorEs3 : IValidator = class {
-    static format : FormatName = 'es.3';
+export const ValidatorEs4 : IValidator = class {
+    static format : FormatName = 'es.4';
     static pathIsValid(path: Path): boolean {
         // a path is a series of one or more path segments.
         // a path segment is a '/' followed by one or more allowed characters.

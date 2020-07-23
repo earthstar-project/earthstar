@@ -12,8 +12,8 @@ import {
     StorageMemory,
 } from '../storage/memory';
 import {
-    ValidatorEs3,
-} from '../validator/es3';
+    ValidatorEs4,
+} from '../validator/es4';
 import {
     SyncState,
     Syncer,
@@ -23,8 +23,8 @@ import {
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let FORMAT : FormatName = 'es.3';
-let VALIDATORS : IValidator[] = [ValidatorEs3];
+let VALIDATORS : IValidator[] = [ValidatorEs4];
+let FORMAT : FormatName = VALIDATORS[0].format;
 
 let keypair1 = generateAuthorKeypair('test');
 let keypair2 = generateAuthorKeypair('twoo');
