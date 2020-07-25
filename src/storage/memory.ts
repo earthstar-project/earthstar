@@ -67,7 +67,27 @@ export class StorageMemory implements IStorage {
         }
     }
 
+
+    _removeExpiredDocsAtPath(path : string, now: number) : void {
+        let authorToDoc = this._docs[path];
+        if (authorToDoc === undefined) { return; }
+        for (let [author, doc] of Object.entries(authorToDoc)) {
+            if (doc.deleteAfter !== undefined && now > doc.deleteAfter) {
+                delete authorToDoc[author];
+            }
+        }
+        if (Object.keys(authorToDoc).length === 0) {
+            delete this._docs[path];
+        }
+    }
+    _removeAllExpiredDocs(now: number) : void {
+        for (let path of Object.keys(this._docs)) {
+            this._removeExpiredDocsAtPath(path, now);
+        }
+    }
+
     paths(query? : QueryOpts) : string[] {
+
         query = query || {};
 
         // if asking for a single path, check if it exists and return it by itself
@@ -129,6 +149,16 @@ export class StorageMemory implements IStorage {
         }
         // sort
         docs.sort(_historySortFn);
+    
+        // remove expired ephemeral docs from our results
+        let now = query.now || Date.now() * 1000;
+        let originalCount = docs.length;
+        docs = docs.filter(doc => doc.deleteAfter === undefined || doc.deleteAfter >= now);
+        if (originalCount !== docs.length) {
+            // and if there were any, also trigger a check of the entire database to remove expired docs
+            this._removeAllExpiredDocs(now);
+        }
+
         // limit
         if (query.limit) {
             docs = docs.slice(0, query.limit);
@@ -140,7 +170,10 @@ export class StorageMemory implements IStorage {
         return this.documents(query).map(doc => doc.content);
     }
 
-    authors() : AuthorAddress[] {
+    authors(now?: number) : AuthorAddress[] {
+
+        // TODO: check for and remove expired docs
+
         let authorSet : Set<AuthorAddress> = new Set();
         for (let doc of this.documents({ includeHistory: true })) {
             authorSet.add(doc.author);
@@ -150,18 +183,20 @@ export class StorageMemory implements IStorage {
         return authors;
     }
 
-    getDocument(path : string) : Document | undefined {
+    getDocument(path : string, now?: number) : Document | undefined {
         // look up the winning document for a single path.
         // return undefined if not found.
         // to get history docs for a path, do documents({path: 'foo', includeHistory: true})
+        this._removeExpiredDocsAtPath(path, now || Date.now() * 1000);
+
         if (this._docs[path] === undefined) { return undefined; }
         let pathHistoryDocs = Object.values(this._docs[path]);
         pathHistoryDocs.sort(_historySortFn);
         return pathHistoryDocs[0];
     }
-    getContent(path : string) : string | undefined {
+    getContent(path : string, now?: number) : string | undefined {
         // same as getDocument, but just returns the content, not the whole doc object.
-        return this.getDocument(path)?.content;
+        return this.getDocument(path, now)?.content;
     }
 
     ingestDocument(doc : Document, now? : number) : boolean {
@@ -217,10 +252,12 @@ export class StorageMemory implements IStorage {
 
     set(keypair : AuthorKeypair, docToSet : DocToSet, now?: number) : boolean {
         // Store a document.
-        // Timestamp is optional and should normally be omitted or set to 0,
-        // in which case it will be set to now().
+        // docToSet.timestamp is optional and should normally be omitted or set to 0,
+        // in which case it will be set to now.
+        // now should also normally be omitted; it defaults to Date.now()*1000
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
+        now = now || Date.now() * 1000;
 
         let validator = this.validatorMap[docToSet.format];
         if (validator === undefined) {
@@ -235,7 +272,7 @@ export class StorageMemory implements IStorage {
             path: docToSet.path,
             content: docToSet.content,
             author: keypair.address,
-            timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
+            timestamp: docToSet.timestamp || now,
             signature: '',
         }
         if (docToSet.deleteAfter !== undefined) {

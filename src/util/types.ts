@@ -106,6 +106,11 @@ export interface QueryOpts {
 
     // sort order: TODO
     // For now the default sort is path ASC, then timestamp DESC (newest first within same path)
+
+    // The time at which the query is considered to take place.
+    // This is useful for testing ephemeral document expiration.
+    // Normally this should be omitted.  It defaults to the current time.
+    now?: number,
 }
 
 // Options for the Storage.sync() method
@@ -206,15 +211,15 @@ export interface IStorage {
     contents(query?: QueryOpts): string[];
 
     // List of authors that have ever written in this workspace.
-    authors(): AuthorAddress[];
+    authors(now?: number): AuthorAddress[];
 
     // INDIVIDUAL DOCUMENT LOOKUP
     // Get one document by path.
     // Only returns the most recent document at this path.
     // To get older docs at this path (from other authors), do a query.
-    getDocument(path: string): Document | undefined;
+    getDocument(path: string, now?: number): Document | undefined;
     // Same as getDocument(path).content -- just the content of that document
-    getContent(path: string): string | undefined;
+    getContent(path: string, now?: number): string | undefined;
 
     // WRITING
     // Write a document.
@@ -244,6 +249,8 @@ export interface IStorage {
 
     // Internal helper method to do a one-way pull sync.
     _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;
+
+    // TODO: add now? param to _syncFrom and sync
 
     // Two-way sync to another local Storage instance running in the same process.
     // This is not network-aware.  Network sync is handled by the Syncer class.

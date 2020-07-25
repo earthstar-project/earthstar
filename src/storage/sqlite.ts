@@ -164,6 +164,9 @@ export class StorageSqlite implements IStorage {
     }
 
     documents(query? : QueryOpts) : Document[] {
+
+        // TODO: check for and remove expired docs
+
         if (query === undefined) { query = {}; }
         logDebug(`---- documents(${JSON.stringify(query)})`);
 
@@ -240,7 +243,7 @@ export class StorageSqlite implements IStorage {
             let combinedHaving = havings.length === 0 ? '' : 'HAVING ' + havings.join('\nAND ');
             logDebug('combined having', JSON.stringify(combinedHaving));
             queryString = `
-                SELECT format, workspace, path, content, author, MAX(timestamp) as timestamp, signature FROM docs
+                SELECT format, workspace, path, content, author, MAX(timestamp) as timestamp, deleteAfter, signature FROM docs
                 ${combinedFilters}
                 GROUP BY path
                 ${combinedHaving}
@@ -253,7 +256,12 @@ export class StorageSqlite implements IStorage {
         logDebug('filter params', filterParams);
         logDebug('having params', havingParams);
         logDebug('limit params', limitParams);
-        let docs = this.db.prepare(queryString).all({...filterParams, ...havingParams, ...limitParams});
+        let docs : Document[] = this.db.prepare(queryString).all({...filterParams, ...havingParams, ...limitParams});
+        for (let doc of docs) {
+            if (doc.deleteAfter === null) {
+                delete doc.deleteAfter;
+            }
+        }
         logDebug('result:', docs);
         return docs;
     }
@@ -280,7 +288,10 @@ export class StorageSqlite implements IStorage {
         return this.documents(query).map(doc => doc.content);
     }
 
-    authors() : AuthorAddress[] {
+    authors(now?: number) : AuthorAddress[] {
+
+        // TODO: check for and remove expired docs
+
         logDebug(`---- authors()`);
         let result : any = this.db.prepare(`
             SELECT DISTINCT author FROM docs
@@ -289,10 +300,13 @@ export class StorageSqlite implements IStorage {
         return result.map((r : any) => r.author);
     }
 
-    getDocument(path : string) : Document | undefined {
+    getDocument(path : string, now? : number) : Document | undefined {
         // look up the winning document for a single path.
         // return undefined if not found.
         // to get history docs for a path, do docs({path: 'foo', includeHistory: true})
+
+        // TODO: check for and remove expired docs
+
         logDebug(`---- getDocument(${JSON.stringify(path)})`);
         let result : any = this.db.prepare(`
             SELECT * FROM docs
@@ -307,10 +321,10 @@ export class StorageSqlite implements IStorage {
         logDebug('getDocument result:', result);
         return result;
     }
-    getContent(path : string) : string | undefined {
+    getContent(path : string, now? : number) : string | undefined {
         // same as getDocument, but just returns the content, not the whole doc object.
         logDebug(`---- getContent(${JSON.stringify(path)})`);
-        return this.getDocument(path)?.content;
+        return this.getDocument(path, now)?.content;
     }
 
     ingestDocument(doc : Document, now? : number) : boolean {
@@ -347,6 +361,7 @@ export class StorageSqlite implements IStorage {
         }
 
         // check if it's newer than existing doc from same author, same path
+        // TODO: check for expired ephemeral document
         let existingSameAuthorSamePath = this.db.prepare(`
             SELECT * FROM docs
             WHERE path = :path
@@ -388,6 +403,8 @@ export class StorageSqlite implements IStorage {
         // unit testing or if you're importing old data.)
         logDebug(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.content)}, ...)`);
 
+        now = now || Date.now() * 1000;
+
         let validator = this.validatorMap[docToSet.format];
         if (validator === undefined) {
             logWarning(`set: unrecognized format ${docToSet.format}`);
@@ -401,7 +418,7 @@ export class StorageSqlite implements IStorage {
             path: docToSet.path,
             content: docToSet.content,
             author: keypair.address,
-            timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
+            timestamp: docToSet.timestamp || now,
             signature: '',
         }
         if (docToSet.deleteAfter !== undefined) {

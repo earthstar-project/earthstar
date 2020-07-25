@@ -45,10 +45,10 @@ interface Scenario {
     description: string,
 }
 let scenarios : Scenario[] = [
-    {
-        makeStorage: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
-        description: 'StoreMemory',
-    },
+    //{
+    //    makeStorage: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
+    //    description: 'StoreMemory',
+    //},
     {
         makeStorage: (workspace : string) : IStorage => new StorageSqlite({
             mode: 'create',
@@ -59,8 +59,6 @@ let scenarios : Scenario[] = [
         description: "StoreSqlite(':memory:')",
     },
 ];
-
-/*
 
 //================================================================================
 // memory specific tests
@@ -264,7 +262,6 @@ t.test(`StoreSqlite: config`, (t: any) => {
     t.done();
 });
 
-*/
 //================================================================================
 // run the standard store tests on each scenario
 
@@ -273,7 +270,6 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    /*
     t.test(scenario.description + ': empty store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         t.same(storage.paths(), [], 'no paths');
@@ -348,11 +344,8 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    */
-
-    t.only(scenario.description + ': deleteAfter', (t: any) => {
+    t.test(scenario.description + ': deleteAfter', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
-        t.equal(storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
 
         // an expired ephemeral doc can't be set because it's invalid
         t.notOk(storage.set(keypair1, {
@@ -362,7 +355,7 @@ for (let scenario of scenarios) {
                 timestamp: now - 60*MIN,
                 deleteAfter: now - 45*MIN,
         }, now), 'set expired ephemeral document');
-        t.equal(storage.getContent('/path1'), undefined, 'temporary doc is not there');
+        t.equal(storage.getContent('/path1', now), undefined, 'temporary doc is not there');
 
         // a good doc.  make sure deleteAfter survives the roundtrip
         t.ok(storage.set(keypair1, {
@@ -378,17 +371,72 @@ for (let scenario of scenarios) {
                 content: 'ccc',
                 timestamp: now,
         }, now), 'set good ephemeral document');
-        let ephDoc = storage.getDocument('/ephemeral');
-        let regDoc = storage.getDocument('/regular');
-        t.true(ephDoc !== undefined && regDoc !== undefined, 'ephemeral and regular docs were set');
-        t.true('deleteAfter' in (ephDoc as any), 'ephemeral doc has deleteAfter after roundtrip');
-        t.equal(ephDoc?.deleteAfter, now + 3 * DAY, 'ephemeral doc deleteAfter value survived roundtrip');
-        t.false('deleteAfter' in (regDoc as any), 'regular doc does not have deleteAfter property');
+        let ephDoc = storage.getDocument('/ephemeral', now);
+        let regDoc = storage.getDocument('/regular', now);
+
+        if (ephDoc === undefined || regDoc === undefined) {
+            t.true(false, 'ephDoc or regDoc were not set');
+        } else {
+            t.true('deleteAfter' in (ephDoc as any), 'ephemeral doc has deleteAfter after roundtrip');
+            t.equal(ephDoc?.deleteAfter, now + 3 * DAY, 'ephemeral doc deleteAfter value survived roundtrip');
+            t.false('deleteAfter' in (regDoc as any), 'regular doc does not have deleteAfter property');
+        }
+
+        // a doc that was valid when set, but expired while sitting in the database, then was read after being expired
+        let setExpiringDoc = () => {
+            t.ok(storage.set(keypair1, {
+                    format: FORMAT,
+                    path: '/expire-in-place',
+                    content: 'ccc',
+                    timestamp: now - 1,
+                    deleteAfter: now + 5 * DAY,
+            }, now), 'set good ephemeral document');
+        };
+
+        if (scenario.description === 'StoreMemory') {
+            // TODO: enable these tests for sqlite too
+
+            // set the doc, observe it in place.
+            // set now ahead, try to get the doc, which should delete it.
+            // rewind now again, and the doc should still be gone because it was deleted.
+            setExpiringDoc();
+            t.notEqual(storage.getDocument('/expire-in-place', now          ), undefined, 'getDocument(): doc was there');
+            t.equal(   storage.getDocument('/expire-in-place', now + 8 * DAY), undefined, 'getDocument(): doc expired in place');
+            t.equal(   storage.getDocument('/expire-in-place', now          ), undefined, 'getDocument(): doc was deleted after expiring');
+
+            setExpiringDoc();
+            t.equal(storage.getContent('/expire-in-place', now          ), 'ccc',     'getContent(): doc was there');
+            t.equal(storage.getContent('/expire-in-place', now + 8 * DAY), undefined, 'getContent(): doc expired in place');
+            t.equal(storage.getContent('/expire-in-place', now          ), undefined, 'getContent(): doc was deleted after expiring');
+
+            setExpiringDoc();
+            t.same(storage.paths({pathPrefix: '/exp', now: now          }), ['/expire-in-place'], 'paths(): doc was there');
+            t.same(storage.paths({pathPrefix: '/exp', now: now + 8 * DAY}), [], 'paths(): doc expired in place');
+            t.same(storage.paths({pathPrefix: '/exp', now: now          }), [], 'paths(): doc was deleted after expiring');
+
+            setExpiringDoc();
+            t.same(storage.documents({pathPrefix: '/exp', now: now          }).length, 1, 'documents(): doc was there');
+            t.same(storage.documents({pathPrefix: '/exp', now: now + 8 * DAY}).length, 0, 'documents(): doc expired in place');
+            t.same(storage.documents({pathPrefix: '/exp', now: now          }).length, 0, 'documents(): doc was deleted after expiring');
+        }
+
+        // TODO for ephemeral doc tests:
+        //
+        // careful check of sqlite code for now parameter
+        //
+        // implement removal and result checking in sqlite
+        //
+        // test includeHistory
+        // test limit
+        // test participatingAuthor
+        //
+        // uh oh
+        //      an expiring doc can overwrite a real doc and then expire and vanish
+        //      and then the original doc is locally gone, but could come back during a sync
+        //      depending on how far the expiring doc propagated through the network...
 
         t.done();
     });
-
-    /*
 
     t.test(scenario.description + ': one-author store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
@@ -396,7 +444,7 @@ for (let scenario of scenarios) {
         t.equal(storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
 
         // set a decoy path to make sure the later tests return the correct path
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now, deleteAfter: now + 3*DAY}), 'set decoy path');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now}), 'set decoy path');
 
         t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), 'set new path');
         t.equal(storage.getContent('/path1'), 'val1.0');
@@ -727,7 +775,5 @@ for (let scenario of scenarios) {
 
         t.done();
     });
-
-    */
 
 }

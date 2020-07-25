@@ -111,7 +111,7 @@ export const ValidatorEs4 : IValidator = class {
         }
     }
     static _documentTypesAreValid(doc: Document): boolean {
-        return (
+        let valid = (
                typeof doc.format === 'string'
             && typeof doc.workspace === 'string'
             && typeof doc.path === 'string'
@@ -121,6 +121,8 @@ export const ValidatorEs4 : IValidator = class {
             && ("deleteAfter" in doc === false || typeof doc.deleteAfter === 'number')
             && typeof doc.signature === 'string'
         );
+        if (!valid) { logWarning(doc); }
+        return valid;
     }
     static documentIsValid(doc: Document, now?: number): boolean {
         now = now === undefined ? (Date.now() * 1000) : now;
