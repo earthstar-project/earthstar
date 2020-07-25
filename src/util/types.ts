@@ -231,11 +231,15 @@ export interface IStorage {
     // omitted so they default to now.
     // The timestamp will also be increased so that it's greater than any previous doc
     // at the same path (from any author), to guarantee that this write will be the conflict winner.
-    set(keypair: AuthorKeypair, docToSet: DocToSet): boolean;
+    //
+    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
+    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): boolean;
 
     // Save a document from an external source to this Storage instance.
     // The document must be already signed.
     // This is mostly used for syncing.
+    //
+    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
     ingestDocument(doc: Document, now?: number): boolean;
 
     // Internal helper method to do a one-way pull sync.

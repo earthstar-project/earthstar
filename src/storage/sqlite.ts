@@ -136,6 +136,7 @@ export class StorageSqlite implements IStorage {
                 content TEXT NOT NULL,
                 author TEXT NOT NULL,
                 timestamp NUMBER NOT NULL,
+                deleteAfter NUMBER,  -- optional, can be null
                 signature TEXT NOT NULL,
                 PRIMARY KEY(path, author)
             );
@@ -299,6 +300,10 @@ export class StorageSqlite implements IStorage {
             ORDER BY timestamp DESC, signature DESC  -- break ties with signature
             LIMIT 1;
         `).get({ path: path });
+        // when not set, deleteAfter is NULL in the database but missing from the javascript object
+        if (result !== undefined && result.deleteAfter === null) {
+            delete result.deleteAfter;
+        }
         logDebug('getDocument result:', result);
         return result;
     }
@@ -361,16 +366,21 @@ export class StorageSqlite implements IStorage {
             return false;
         }
 
+        // if deleteAfter is missing, set it NULL for sqlite
+        let docToSet = {
+            ...doc,
+            deleteAfter: doc.deleteAfter === undefined ? null : doc.deleteAfter,
+        }
         // Insert new doc, replacing old doc if there is one
         this.db.prepare(`
-            INSERT OR REPLACE INTO docs (format, workspace, path, content, author, timestamp, signature)
-            VALUES (:format, :workspace, :path, :content, :author, :timestamp, :signature);
-        `).run(doc);
+            INSERT OR REPLACE INTO docs (format, workspace, path, content, author, timestamp, deleteAfter, signature)
+            VALUES (:format, :workspace, :path, :content, :author, :timestamp, :deleteAfter, :signature);
+        `).run(docToSet);
         this.onChange.send(undefined);
         return true;
     }
 
-    set(keypair : AuthorKeypair, docToSet : DocToSet) : boolean {
+    set(keypair : AuthorKeypair, docToSet : DocToSet, now?: number) : boolean {
         // Store a document.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
@@ -394,6 +404,9 @@ export class StorageSqlite implements IStorage {
             timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
             signature: '',
         }
+        if (docToSet.deleteAfter !== undefined) {
+            doc.deleteAfter = docToSet.deleteAfter;
+        }
 
         // If there's an existing doc from anyone,
         // make sure our timestamp is greater
@@ -403,7 +416,7 @@ export class StorageSqlite implements IStorage {
         doc.timestamp = Math.max(doc.timestamp, existingDocTimestamp+1);
 
         let signedDoc = validator.signDocument(keypair, doc);
-        return this.ingestDocument(signedDoc, doc.timestamp);
+        return this.ingestDocument(signedDoc, now);
     }
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {

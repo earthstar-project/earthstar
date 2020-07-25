@@ -60,6 +60,8 @@ let scenarios : Scenario[] = [
     },
 ];
 
+/*
+
 //================================================================================
 // memory specific tests
 
@@ -262,7 +264,7 @@ t.test(`StoreSqlite: config`, (t: any) => {
     t.done();
 });
 
-
+*/
 //================================================================================
 // run the standard store tests on each scenario
 
@@ -271,6 +273,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
+    /*
     t.test(scenario.description + ': empty store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         t.same(storage.paths(), [], 'no paths');
@@ -345,24 +348,47 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    /*
-    t.test(scenario.description + ': deleteAfter', (t: any) => {
+    */
+
+    t.only(scenario.description + ': deleteAfter', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         t.equal(storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
 
-        // set a decoy path to make sure the later tests return the correct path
+        // an expired ephemeral doc can't be set because it's invalid
         t.notOk(storage.set(keypair1, {
                 format: FORMAT,
                 path: '/path1',
-                content: 'zzz',
-                timestamp: now - 1*HOUR,
-                deleteAfter: now-45*MIN,
-        }), 'set temporary document that is already expired');
-
+                content: 'aaa',
+                timestamp: now - 60*MIN,
+                deleteAfter: now - 45*MIN,
+        }, now), 'set expired ephemeral document');
         t.equal(storage.getContent('/path1'), undefined, 'temporary doc is not there');
+
+        // a good doc.  make sure deleteAfter survives the roundtrip
+        t.ok(storage.set(keypair1, {
+                format: FORMAT,
+                path: '/ephemeral',
+                content: 'bbb',
+                timestamp: now,
+                deleteAfter: now + 3 * DAY,
+        }, now), 'set good ephemeral document');
+        t.ok(storage.set(keypair1, {
+                format: FORMAT,
+                path: '/regular',
+                content: 'ccc',
+                timestamp: now,
+        }, now), 'set good ephemeral document');
+        let ephDoc = storage.getDocument('/ephemeral');
+        let regDoc = storage.getDocument('/regular');
+        t.true(ephDoc !== undefined && regDoc !== undefined, 'ephemeral and regular docs were set');
+        t.true('deleteAfter' in (ephDoc as any), 'ephemeral doc has deleteAfter after roundtrip');
+        t.equal(ephDoc?.deleteAfter, now + 3 * DAY, 'ephemeral doc deleteAfter value survived roundtrip');
+        t.false('deleteAfter' in (regDoc as any), 'regular doc does not have deleteAfter property');
+
         t.done();
     });
-    */
+
+    /*
 
     t.test(scenario.description + ': one-author store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
@@ -701,4 +727,7 @@ for (let scenario of scenarios) {
 
         t.done();
     });
+
+    */
+
 }

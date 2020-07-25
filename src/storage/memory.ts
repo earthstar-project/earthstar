@@ -215,7 +215,7 @@ export class StorageMemory implements IStorage {
         return true;
     }
 
-    set(keypair : AuthorKeypair, docToSet : DocToSet) : boolean {
+    set(keypair : AuthorKeypair, docToSet : DocToSet, now?: number) : boolean {
         // Store a document.
         // Timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now().
@@ -238,6 +238,9 @@ export class StorageMemory implements IStorage {
             timestamp: docToSet.timestamp > 0 ? docToSet.timestamp : Date.now()*1000,
             signature: '',
         }
+        if (docToSet.deleteAfter !== undefined) {
+            doc.deleteAfter = docToSet.deleteAfter;
+        }
 
         // If there's an existing doc from anyone,
         // make sure our timestamp is greater
@@ -247,7 +250,7 @@ export class StorageMemory implements IStorage {
         doc.timestamp = Math.max(doc.timestamp, existingDocTimestamp+1);
 
         let signedDoc = validator.signDocument(keypair, doc);
-        return this.ingestDocument(signedDoc, doc.timestamp);
+        return this.ingestDocument(signedDoc, now);
     }
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
