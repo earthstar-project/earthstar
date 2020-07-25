@@ -21,6 +21,12 @@ let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
 let snowmanJs2 = snowmanBufferUtf8.toString('utf8');
 let snowmanU = '\u2604';
 
+// microseconds
+let SEC = 1000000;
+let MIN = SEC * 60;
+let HOUR = MIN * 60;
+let DAY = HOUR * 24;
+
 type IsValidPathVector = {
     note?: string,
     path : string,
@@ -89,7 +95,20 @@ t.test('hashDocument', (t: any) => {
         author: '@suzy.xxxxxxxxxxx',
         signature: 'xxxxxxxxxxxxx',
     };
-    t.equal(Val.hashDocument(doc1), '3a492b92c2b91f78bb27cad68c84117369c028233b4963bd762bde2c02619f5c');
+    t.equal(Val.hashDocument(doc1), '971e8a1cc02c6a6e7be9e81765d0658a2db338f951b6c78ea8c5c3284fa233cf', 'expected document hash');
+
+    // now with deleteAfter
+    let doc2: Document = {
+        format: 'es.4',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/path1',
+        content: 'content1',
+        timestamp: 1,
+        deleteAfter: 2,
+        author: '@suzy.xxxxxxxxxxx',
+        signature: 'xxxxxxxxxxxxx',
+    };
+    t.equal(Val.hashDocument(doc2), '292adcd11cceed8ad3de1b49bfb02bf9440b46b2bd5459ebffcde357710c6e68', 'expected document hash with deleteAfter');
     t.done();
 });
 
@@ -148,9 +167,19 @@ t.test('documentIsValid', (t: any) => {
         author: author1,
         signature: 'xxx',
     };
-    let signedDoc = Val.signDocument(keypair1, doc1);
 
+    t.notOk(Val.documentIsValid(doc1), 'bad signature');
+
+    let signedDoc = Val.signDocument(keypair1, doc1);
     t.ok(Val.documentIsValid(signedDoc), 'valid doc');
+
+    t.notOk(Val.documentIsValid({...signedDoc, format: 'a'}), 'change format after signature');
+    t.notOk(Val.documentIsValid({...signedDoc, workspace: '+gardenclub.xx'}), 'change workspace after signature');
+    t.notOk(Val.documentIsValid({...signedDoc, path: '/a/b/c'}), 'change path after signature');
+    t.notOk(Val.documentIsValid({...signedDoc, content: 'abc'}), 'change content after signature');
+    t.notOk(Val.documentIsValid({...signedDoc, timestamp: now-1}), 'change timestamp after signature');
+    t.notOk(Val.documentIsValid({...signedDoc, author: author1+'x'}), 'change author after signature');
+    t.notOk(Val.documentIsValid({...signedDoc, signature: 'x'}), 'change signature after signature');
 
     t.notOk(Val.documentIsValid({...signedDoc, format: false as any}), 'format wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, workspace: false as any}), 'workspace wrong datatype');
@@ -160,34 +189,46 @@ t.test('documentIsValid', (t: any) => {
     t.notOk(Val.documentIsValid({...signedDoc, author: false as any}), 'author wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, signature: false as any}), 'signature wrong datatype');
 
-    t.notOk(Val.documentIsValid({...signedDoc, extra: 'xxx'} as any), 'extra property in object');
+    t.notOk(Val.documentIsValid({...signedDoc, extra: 'xxx'} as any), 'add extra property after signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, extra: 'xxx'} as any)), 'add extra property before signing');
 
-    t.notOk(Val.documentIsValid({...signedDoc, format: snowmanJsString}), 'format non-ascii');
-    t.notOk(Val.documentIsValid({...signedDoc, workspace: snowmanJsString}), 'workspace non-ascii');
-    t.notOk(Val.documentIsValid({...signedDoc, path: snowmanJsString}), 'path non-ascii');
-    t.notOk(Val.documentIsValid({...signedDoc, author: snowmanJsString}), 'author non-ascii');
-    t.notOk(Val.documentIsValid({...signedDoc, signature: snowmanJsString}), 'signature non-ascii');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, format: snowmanJsString})), 'format non-ascii before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, workspace: snowmanJsString})), 'workspace non-ascii before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, path: snowmanJsString})), 'path non-ascii before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, author: snowmanJsString})), 'author non-ascii before signing');
 
-    t.notOk(Val.documentIsValid({...signedDoc, format: '\n'}), 'newline in format');
-    t.notOk(Val.documentIsValid({...signedDoc, workspace: '\n'}), 'newline in workspace');
-    t.notOk(Val.documentIsValid({...signedDoc, path: '\n'}), 'newline in path');
-    t.notOk(Val.documentIsValid({...signedDoc, author: '\n'}), 'newline in author');
-    t.notOk(Val.documentIsValid({...signedDoc, signature: '\n'}), 'newline in signature');
+    t.notOk(Val.documentIsValid({...signedDoc, format: snowmanJsString}), 'format non-ascii after signing');
+    t.notOk(Val.documentIsValid({...signedDoc, workspace: snowmanJsString}), 'workspace non-ascii after signing');
+    t.notOk(Val.documentIsValid({...signedDoc, path: snowmanJsString}), 'path non-ascii after signing');
+    t.notOk(Val.documentIsValid({...signedDoc, author: snowmanJsString}), 'author non-ascii after signing');
+    t.notOk(Val.documentIsValid({...signedDoc, signature: snowmanJsString}), 'signature non-ascii after signing');
 
-    t.notOk(Val.documentIsValid({...signedDoc, format: 'xxxxxx' as any}), 'unknown format');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, format: '\n'})), 'newline in format before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, workspace: '\n'})), 'newline in workspace before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, path: '\n'})), 'newline in path before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, author: '\n'})), 'newline in author before signing');
+
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, format: 'xxx'})), 'unknown format before signing');
 
     let docWithMissingPath = {...signedDoc};
     delete docWithMissingPath.path;
-    t.notOk(Val.documentIsValid(docWithMissingPath), 'missing path');
+    t.notOk(Val.documentIsValid(docWithMissingPath), 'missing path after signing');
+    t.throws(() => Val.signDocument(keypair1, docWithMissingPath), 'missing path throws while signing');
 
-    t.notOk(Val.documentIsValid({...signedDoc, author: 'a\nb'}), 'newline in author');
-    t.notOk(Val.documentIsValid({...signedDoc, path: '\n'}), 'invalid path');
-    t.notOk(Val.documentIsValid({...signedDoc, path: '{}'}), 'no write permission');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, author: 'a\nb'})), 'newline in author');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, path: '\n'})), 'invalid path');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, path: '/~'})), 'no write permission');
 
-    t.notOk(Val.documentIsValid(doc1), 'bad signature');
-    t.notOk(Val.documentIsValid({...signedDoc, timestamp: now / 1000}), 'timestamp too small, probably in milliseconds');
-    t.notOk(Val.documentIsValid({...signedDoc, timestamp: now * 2}), 'timestamp in future');
-    t.notOk(Val.documentIsValid({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}), 'timestamp way too large');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: -123}), now), 'timestamp negative');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: 0}), now), 'timestamp zero');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: now / 1000}), now), 'timestamp too small, probably in milliseconds');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: now + 3*DAY}), now), 'timestamp from the future');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: Number.MAX_SAFE_INTEGER + 10}), now), 'timestamp way too large');
+
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: now + 5, deleteAfter: now + 3}), now), 'temporary document: timestamp and deleteAfter out of order');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: now - 7, deleteAfter: now - 3}), now), 'temporary document: just expired');
+    t.ok(   Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: now - 7, deleteAfter: now + 3}), now), 'temporary document: still good');
+    t.ok(   Val.documentIsValid(Val.signDocument(keypair1, {...doc1, timestamp: now - 7, deleteAfter: now + 3 * DAY}), now), 'temporary document: definitely still good');
 
     // try various contents for the document
     let contentsAndValidity : [string, string, string][] = [

@@ -1,3 +1,4 @@
+import { deepEqual } from 'fast-equals';
 import {
     AuthorAddress,
     AuthorKeypair,
@@ -75,21 +76,25 @@ export const ValidatorEs4 : IValidator = class {
         // None of these fields are allowed to contain newlines
         // except for content, but content is hashed, so it's safe to
         // use newlines as a field separator.
-        // We enforce the no-newlines rules in documentIsValid() and pathIsValid().
-        // If the document is especially malformed (wrong types or missing fields),
-        // this will throw an error.
+        // (We enforce the no-newlines rules in documentIsValid() and pathIsValid().)
 
+        // If the document is especially malformed (wrong types or missing fields), throw an error.
         if (!this._documentTypesAreValid(doc)) {
             throw new Error("document has invalid types");
         }
 
+        // Fields in alphabetical order.
+        // Convert numbers to strings.
+        // Replace optional properties with '' if they're missing.
+        // Hash the content.
         return sha256([
-            doc.format,
-            doc.workspace,
-            doc.path,
-            sha256(doc.content),
-            '' + doc.timestamp,
             doc.author,
+            sha256(doc.content),
+            doc.deleteAfter === undefined ? '' : '' + doc.deleteAfter,
+            doc.format,
+            doc.path,
+            '' + doc.timestamp,
+            doc.workspace,
         ].join('\n'));
     }
     static signDocument(keypair : AuthorKeypair, doc: Document): Document {
@@ -113,15 +118,17 @@ export const ValidatorEs4 : IValidator = class {
             && typeof doc.content === 'string'
             && typeof doc.author === 'string'
             && typeof doc.timestamp === 'number'
+            && ("deleteAfter" in doc === false || typeof doc.deleteAfter === 'number')
             && typeof doc.signature === 'string'
         );
     }
-    static documentIsValid(doc: Document, futureCutoff?: number): boolean {
-        // "futureCutoff" is a time in microseconds (milliseconds * 1000).
-        // If a message is from after futureCutoff, it's not valid.
-        // It defaults to 10 minutes in the future.
+    static documentIsValid(doc: Document, now?: number): boolean {
+        now = now === undefined ? (Date.now() * 1000) : now;
+
+        // "futureCutoff" is a time in microseconds (milliseconds * 1000) after now.
+        // If a message is from after futureCutoff, it's not valid because it's from too far in the future.
         const FUTURE_CUTOFF_MINUTES = 10;
-        futureCutoff = futureCutoff || (Date.now() + FUTURE_CUTOFF_MINUTES * 60 * 1000) * 1000;
+        let futureCutoff = now + FUTURE_CUTOFF_MINUTES * 60 * 1000000;
 
         if (!this._documentTypesAreValid(doc)) {
             logWarning('documentIsValid: doc properties have wrong type(s)');
@@ -129,7 +136,19 @@ export const ValidatorEs4 : IValidator = class {
         }
 
         // Don't allow extra properties in the object
-        if (Object.keys(doc).length !== 7) {
+        let keys = Object.keys(doc);
+        if (keys.indexOf('deleteAfter') === -1) { keys.push('deleteAfter'); }
+        keys.sort();
+        if (!deepEqual(keys, [
+            'author',
+            'content',
+            'deleteAfter',
+            'format',
+            'path',
+            'signature',
+            'timestamp',
+            'workspace',
+        ])) {
             logWarning('documentIsValid: doc has extra properties');
             return false;
         }
@@ -161,6 +180,20 @@ export const ValidatorEs4 : IValidator = class {
         if (doc.timestamp > futureCutoff) {
             logWarning('documentIsValid: timestamp is in the future');
             return false;
+        }
+
+        // Temporary documents
+        if (doc.deleteAfter !== undefined) {
+            // Expiration date has passed
+            if (now > doc.deleteAfter) {
+                logWarning('documentIsValid: temporary doc has expired');
+                return false;
+            }
+            // Expired before it was created??
+            if (doc.deleteAfter <= doc.timestamp) {
+                logWarning('documentIsValid: deleteAfter must be > timestamp');
+                return false;
+            }
         }
 
         // No non-printable ascii characters or unicode (except doc.content)

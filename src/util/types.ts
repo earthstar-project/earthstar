@@ -52,6 +52,7 @@ export type Document = {
     content: string,
     author: AuthorAddress,
     timestamp: number,
+    deleteAfter?: number,
     signature: Signature,
 };
 
@@ -61,6 +62,7 @@ export type DocToSet = {
     path: Path,
     content: string,
     timestamp?: number,  // timestamp only for testing, usually omitted
+    deleteAfter?: number,
     // workspace is implied by the storage we put it into
     // no author - the whole keypair is provided separately when setting
     // no signature - it's generated during setting
@@ -167,7 +169,7 @@ export interface IValidator {
 
     // General validity check including the specific checks (can write to path, path is valid, signature)
     // plus other checks (missing fields, wrong datatypes, etc)
-    documentIsValid(doc: Document, futureCutoff?: number): boolean;
+    documentIsValid(doc: Document, now?: number): boolean;
 
     // Specific validity checks
     authorCanWriteToPath(author: AuthorAddress, path: Path): boolean;
@@ -234,7 +236,7 @@ export interface IStorage {
     // Save a document from an external source to this Storage instance.
     // The document must be already signed.
     // This is mostly used for syncing.
-    ingestDocument(doc: Document): boolean;
+    ingestDocument(doc: Document, now?: number): boolean;
 
     // Internal helper method to do a one-way pull sync.
     _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;

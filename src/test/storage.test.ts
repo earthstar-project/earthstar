@@ -35,6 +35,11 @@ let author2: AuthorAddress = keypair2.address;
 let author3: AuthorAddress = keypair3.address;
 let now = 1500000000000000;
 
+let SEC = 1000000;
+let MIN = SEC * 60;
+let HOUR = MIN * 60;
+let DAY = HOUR * 24;
+
 interface Scenario {
     makeStorage: (workspace : string) => IStorage,
     description: string,
@@ -340,13 +345,32 @@ for (let scenario of scenarios) {
         t.done();
     });
 
+    /*
+    t.test(scenario.description + ': deleteAfter', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+        t.equal(storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
+
+        // set a decoy path to make sure the later tests return the correct path
+        t.notOk(storage.set(keypair1, {
+                format: FORMAT,
+                path: '/path1',
+                content: 'zzz',
+                timestamp: now - 1*HOUR,
+                deleteAfter: now-45*MIN,
+        }), 'set temporary document that is already expired');
+
+        t.equal(storage.getContent('/path1'), undefined, 'temporary doc is not there');
+        t.done();
+    });
+    */
+
     t.test(scenario.description + ': one-author store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         t.equal(storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
         t.equal(storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
 
         // set a decoy path to make sure the later tests return the correct path
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now}), 'set decoy path');
+        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now, deleteAfter: now + 3*DAY}), 'set decoy path');
 
         t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), 'set new path');
         t.equal(storage.getContent('/path1'), 'val1.0');

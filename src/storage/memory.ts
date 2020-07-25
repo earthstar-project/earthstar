@@ -164,7 +164,7 @@ export class StorageMemory implements IStorage {
         return this.getDocument(path)?.content;
     }
 
-    ingestDocument(doc : Document, futureCutoff? : number) : boolean {
+    ingestDocument(doc : Document, now? : number) : boolean {
         // Given a doc from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
@@ -176,10 +176,7 @@ export class StorageMemory implements IStorage {
         // If it's from a new author for this path, we keep it no matter the timestamp.
         // The winning doc is chosen at get time, not write time.
 
-        // futureCutoff is a timestamp in microseconds.
-        // Messages from after that are ignored.
-        // Defaults to now + 10 minutes.
-        // This prevents malicious peers from sending very high timestamps.
+        // now is a timestamp in microseconds, usually omitted but settable for testing purposes.
 
         let validator = this.validatorMap[doc.format];
         if (validator === undefined) {
@@ -187,7 +184,7 @@ export class StorageMemory implements IStorage {
             return false;
         }
 
-        if (!validator.documentIsValid(doc, futureCutoff)) {
+        if (!validator.documentIsValid(doc, now)) {
             logWarning(`ingestDocument: doc is not valid`);
             return false;
         }
