@@ -213,6 +213,8 @@ export class StorageMemory implements IStorage {
 
         // now is a timestamp in microseconds, usually omitted but settable for testing purposes.
 
+        now = now || Date.now() * 1000;
+
         let validator = this.validatorMap[doc.format];
         if (validator === undefined) {
             logWarning(`ingestDocument: unrecognized format ${doc.format}`);
@@ -231,7 +233,17 @@ export class StorageMemory implements IStorage {
         }
 
         let existingDocsByPath = this._docs[doc.path] || {};
-        let existingFromSameAuthor = existingDocsByPath[doc.author];
+        let existingFromSameAuthor : Document | undefined = existingDocsByPath[doc.author];
+
+        // if the existing doc from same author is expired, it should be deleted.
+        // but we can just pretend we didn't see it and let it get overwritten by the incoming doc.
+        if (existingFromSameAuthor !== undefined) {
+            if (existingFromSameAuthor.deleteAfter !== undefined) {
+                if (now > existingFromSameAuthor.deleteAfter) {
+                    existingFromSameAuthor = undefined;
+                }
+            }
+        }
 
         // Compare timestamps.
         // Compare signature to break timestamp ties.
@@ -283,7 +295,7 @@ export class StorageMemory implements IStorage {
         // make sure our timestamp is greater
         // even if this puts us slightly into the future.
         // (We know about the existing doc so let's assume we want to supercede it.)
-        let existingDocTimestamp = this.getDocument(doc.path)?.timestamp || 0;
+        let existingDocTimestamp = this.getDocument(doc.path, now)?.timestamp || 0;
         doc.timestamp = Math.max(doc.timestamp, existingDocTimestamp+1);
 
         let signedDoc = validator.signDocument(keypair, doc);

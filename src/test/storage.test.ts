@@ -45,10 +45,10 @@ interface Scenario {
     description: string,
 }
 let scenarios : Scenario[] = [
-    //{
-    //    makeStorage: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
-    //    description: 'StoreMemory',
-    //},
+    {
+        makeStorage: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
+        description: 'StoreMemory',
+    },
     {
         makeStorage: (workspace : string) : IStorage => new StorageSqlite({
             mode: 'create',
@@ -370,16 +370,20 @@ for (let scenario of scenarios) {
                 path: '/regular',
                 content: 'ccc',
                 timestamp: now,
-        }, now), 'set good ephemeral document');
+        }, now), 'set good regular document');
         let ephDoc = storage.getDocument('/ephemeral', now);
         let regDoc = storage.getDocument('/regular', now);
 
-        if (ephDoc === undefined || regDoc === undefined) {
-            t.true(false, 'ephDoc or regDoc were not set');
+        if (ephDoc === undefined) {
+            t.true(false, 'ephDoc was not set, or not retrieved');
         } else {
             t.true('deleteAfter' in (ephDoc as any), 'ephemeral doc has deleteAfter after roundtrip');
             t.equal(ephDoc?.deleteAfter, now + 3 * DAY, 'ephemeral doc deleteAfter value survived roundtrip');
-            t.false('deleteAfter' in (regDoc as any), 'regular doc does not have deleteAfter property');
+        }
+        if (regDoc === undefined) {
+            t.true(false, 'regDoc was not set, or not retrieved');
+        } else {
+            t.false('deleteAfter' in (regDoc as any), 'as expected, regular doc does not have deleteAfter property');
         }
 
         // a doc that was valid when set, but expired while sitting in the database, then was read after being expired

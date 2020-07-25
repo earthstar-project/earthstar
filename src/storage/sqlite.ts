@@ -163,12 +163,22 @@ export class StorageSqlite implements IStorage {
         return result.content;
     }
 
+    _removeExpiredDocs(now : number): void {
+        this.db.prepare(`
+            DELETE FROM docs
+            WHERE deleteAfter NOT NULL
+            AND :now > deleteAfter;
+        `).run({ now: now });
+    }
+
     documents(query? : QueryOpts) : Document[] {
 
         // TODO: check for and remove expired docs
 
         if (query === undefined) { query = {}; }
         logDebug(`---- documents(${JSON.stringify(query)})`);
+
+        this._removeExpiredDocs(query.now || Date.now() * 1000);
 
         // convert the query into an array of SQL clauses
         let filters : string[] = [];
@@ -289,10 +299,10 @@ export class StorageSqlite implements IStorage {
     }
 
     authors(now?: number) : AuthorAddress[] {
-
-        // TODO: check for and remove expired docs
-
         logDebug(`---- authors()`);
+
+        this._removeExpiredDocs(now || Date.now() * 1000);
+
         let result : any = this.db.prepare(`
             SELECT DISTINCT author FROM docs
             ORDER BY author ASC;
@@ -304,10 +314,10 @@ export class StorageSqlite implements IStorage {
         // look up the winning document for a single path.
         // return undefined if not found.
         // to get history docs for a path, do docs({path: 'foo', includeHistory: true})
-
-        // TODO: check for and remove expired docs
-
         logDebug(`---- getDocument(${JSON.stringify(path)})`);
+
+        this._removeExpiredDocs(now || Date.now() * 1000);
+
         let result : any = this.db.prepare(`
             SELECT * FROM docs
             WHERE path = :path 
@@ -343,6 +353,8 @@ export class StorageSqlite implements IStorage {
         logDebug(`---- ingestDocument`);
         logDebug('doc:', doc);
 
+        now = now || Date.now() * 1000;
+
         let validator = this.validatorMap[doc.format];
         if (validator === undefined) {
             logWarning(`ingestDocument: unrecognized format ${doc.format}`);
@@ -361,14 +373,25 @@ export class StorageSqlite implements IStorage {
         }
 
         // check if it's newer than existing doc from same author, same path
-        // TODO: check for expired ephemeral document
         let existingSameAuthorSamePath = this.db.prepare(`
             SELECT * FROM docs
             WHERE path = :path
             AND author = :author
+            --AND (deleteAfter IS NULL OR :now <= deleteAfter)
             ORDER BY timestamp DESC
             LIMIT 1;
-        `).get({ path: doc.path, author: doc.author });
+        `).get({ path: doc.path, author: doc.author});
+
+        // check if existing doc is expired
+        if (existingSameAuthorSamePath !== undefined) {
+            if (existingSameAuthorSamePath.deleteAfter !== null) {  // null because we store it as null in sqlite instead of undefined
+                if (now > existingSameAuthorSamePath.deleteAfter) {
+                    // existing doc is expired, so ignore it.
+                    // it will get replaced by the new one we're inserting.
+                    existingSameAuthorSamePath = undefined;
+                }
+            }
+        }
         
         // Compare timestamps.
         // Compare signature to break timestamp ties.
@@ -429,7 +452,7 @@ export class StorageSqlite implements IStorage {
         // make sure our timestamp is greater
         // even if this puts us slightly into the future.
         // (We know about the existing doc so let's assume we want to supercede it.)
-        let existingDocTimestamp = this.getDocument(doc.path)?.timestamp || 0;
+        let existingDocTimestamp = this.getDocument(doc.path, now)?.timestamp || 0;
         doc.timestamp = Math.max(doc.timestamp, existingDocTimestamp+1);
 
         let signedDoc = validator.signDocument(keypair, doc);
@@ -438,6 +461,7 @@ export class StorageSqlite implements IStorage {
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
         // Pull all docs from the other Store and ingest them one by one.
+        // TODO: set now, or add an instance variable for overriding now
         logDebug('_syncFrom');
         let numSuccess = 0;
         if (live) {
