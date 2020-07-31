@@ -50,11 +50,11 @@ workspace  \t  +gardening.xxxxxxxxxx  \n
 
 > **Details**
 > 
-> For this to be secure, none of the keys or fields are allowed to contain `\n` or `\t`.  We already enforce this elsewhere, except for the `content` field.  We also enforce that the object keys are all strings, and the object values are all strings or integers (no nested objects or arrays).
+> For this to be secure, none of the keys or fields are allowed to contain `\n` or `\t`.  We already enforce this elsewhere, except for the `content` field.  We also enforce that the object keys are all strings, and the object values are all strings or integers (no nested objects or arrays).  Finally, each particular key is limited to a consistent type (always integers or always strings.)
 > 
 > Because `content` can contain special characters, we use the `contentHash` instead (e.g. `sha256(content)`).
 > 
-> This also lets us verify the document when the actual content is missing and we only know the `contentHash` -- maybe the content is large and we only download it on demand, or maybe we deleted it for some reason.
+> Using `contentHash` also lets us verify the document when the actual content is missing -- maybe the content is large and we only download it on demand, or maybe we deleted it for some reason.
 >
 
 **Bad choices for hashing serialization:**
