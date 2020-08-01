@@ -89,7 +89,7 @@ export const ValidatorEs4 : IValidator = class {
         // Hash the content.
         return sha256([
             doc.author,
-            sha256(doc.content),
+            doc.contentHash,
             doc.deleteAfter === undefined ? '' : '' + doc.deleteAfter,
             doc.format,
             doc.path,
@@ -104,6 +104,15 @@ export const ValidatorEs4 : IValidator = class {
         };
     }
     static documentSignatureIsValid(doc: Document): boolean {
+
+        // contentHash must match content
+        // TODO: if content is null, skip this check
+        let shaContent = sha256(doc.content);
+        if (doc.contentHash !== shaContent) {
+            logWarning(`documentIsValid: content does not match contentHash.  sha256(content) is ${shaContent}`);
+            return false;
+        }
+
         try {
             return verify(doc.author, doc.signature, this.hashDocument(doc));
         } catch (e) {
@@ -115,7 +124,8 @@ export const ValidatorEs4 : IValidator = class {
                typeof doc.format === 'string'
             && typeof doc.workspace === 'string'
             && typeof doc.path === 'string'
-            && typeof doc.content === 'string'
+            && typeof doc.contentHash === 'string'
+            && typeof doc.content === 'string'  // TODO: or null
             && typeof doc.author === 'string'
             && typeof doc.timestamp === 'number'
             && ("deleteAfter" in doc === false || typeof doc.deleteAfter === 'number')
@@ -144,6 +154,7 @@ export const ValidatorEs4 : IValidator = class {
         if (!deepEqual(keys, [
             'author',
             'content',
+            'contentHash',
             'deleteAfter',
             'format',
             'path',
@@ -201,6 +212,10 @@ export const ValidatorEs4 : IValidator = class {
         // No non-printable ascii characters or unicode (except doc.content)
         // (the format is caught earlier by checking if doc.format === this.format)
         /* istanbul ignore next */
+        if (!isOnlyPrintableAscii(doc.contentHash)) {
+            logWarning('documentIsValid: contentHash contains non-printable ascii characters');
+            return false;
+        }
         if (!isOnlyPrintableAscii(doc.format)) {
             logWarning('documentIsValid: format contains non-printable ascii characters');
             return false;
@@ -245,6 +260,9 @@ export const ValidatorEs4 : IValidator = class {
             logWarning('documentIsValid: author can\'t write to path');
             return false;
         }
+
+        // contentHash must match content
+        // (is checked in documentSignatureIsValid)
 
         // Check signature last since it's slow and all the above checks
         // are simple and safe enough to do on untrusted data.

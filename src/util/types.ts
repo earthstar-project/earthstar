@@ -49,7 +49,8 @@ export type Document = {
     format: FormatName,
     workspace: WorkspaceAddress,
     path: Path,
-    content: string,
+    contentHash: string,
+    content: string,  // TODO: eventually, this should be "string | null"
     author: AuthorAddress,
     timestamp: number,
     deleteAfter?: number,

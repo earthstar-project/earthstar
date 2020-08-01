@@ -4,7 +4,7 @@ export interface KeypairBuffers {
 }
 
 export interface ILowLevelCrypto {
-    sha256(input: string | Buffer) : string ;  // hex
+    sha256(input: string | Buffer) : string ;  // lower-case hex
     generateKeypairBuffers() : KeypairBuffers;
     sign(keypair : KeypairBuffers, msg : string | Buffer) : string;
     verify(publicKey : Buffer, sig : string, msg : string | Buffer) : boolean;

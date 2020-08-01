@@ -1,11 +1,13 @@
 import t = require('tap');
+//t.runOnly = true;
 
 import {
     AuthorAddress,
     Document,
 } from '../util/types';
 import {
-    generateAuthorKeypair
+    generateAuthorKeypair,
+    sha256,
 } from '../crypto/crypto';
 import {
     ValidatorEs4
@@ -90,6 +92,7 @@ t.test('hashDocument', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/path1',
+        contentHash: sha256('content1'),
         content: 'content1',
         timestamp: 1,
         author: '@suzy.xxxxxxxxxxx',
@@ -102,6 +105,7 @@ t.test('hashDocument', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/path1',
+        contentHash: sha256('content1'),
         content: 'content1',
         timestamp: 1,
         deleteAfter: 2,
@@ -117,7 +121,8 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
-        content: 'v1',
+        contentHash: sha256('content1'),
+        content: 'content1',
         timestamp: 1,
         author: author1,
         signature: '',
@@ -146,6 +151,10 @@ t.test('signDocument and documentSignatureIsValid', (t: any) => {
         'sig not valid if content changes'
     );
     t.notOk(
+        Val.documentSignatureIsValid({...signedDoc, contentHash: 'xxx'}),
+        'sig not valid if contentHash changes'
+    );
+    t.notOk(
         Val.documentSignatureIsValid({...signedDoc, timestamp: 9999}),
         'sig not valid if timestamp changes'
     );
@@ -162,6 +171,7 @@ t.test('documentIsValid', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
+        contentHash: sha256('v1'),
         content: 'v1',
         timestamp: now,
         author: author1,
@@ -177,6 +187,7 @@ t.test('documentIsValid', (t: any) => {
     t.notOk(Val.documentIsValid({...signedDoc, workspace: '+gardenclub.xx'}), 'change workspace after signature');
     t.notOk(Val.documentIsValid({...signedDoc, path: '/a/b/c'}), 'change path after signature');
     t.notOk(Val.documentIsValid({...signedDoc, content: 'abc'}), 'change content after signature');
+    t.notOk(Val.documentIsValid({...signedDoc, contentHash: 'abc'}), 'change contentHash after signature');
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: now-1}), 'change timestamp after signature');
     t.notOk(Val.documentIsValid({...signedDoc, author: author1+'x'}), 'change author after signature');
     t.notOk(Val.documentIsValid({...signedDoc, signature: 'x'}), 'change signature after signature');
@@ -185,6 +196,7 @@ t.test('documentIsValid', (t: any) => {
     t.notOk(Val.documentIsValid({...signedDoc, workspace: false as any}), 'workspace wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, path: false as any}), 'path wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, content: false as any}), 'content wrong datatype');
+    t.notOk(Val.documentIsValid({...signedDoc, contentHash: false as any}), 'contentHash wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, timestamp: false as any}), 'timestamp wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, author: false as any}), 'author wrong datatype');
     t.notOk(Val.documentIsValid({...signedDoc, signature: false as any}), 'signature wrong datatype');
@@ -196,17 +208,20 @@ t.test('documentIsValid', (t: any) => {
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, workspace: snowmanJsString})), 'workspace non-ascii before signing');
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, path: snowmanJsString})), 'path non-ascii before signing');
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, author: snowmanJsString})), 'author non-ascii before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, contentHash: snowmanJsString})), 'contentHash non-ascii before signing');
 
     t.notOk(Val.documentIsValid({...signedDoc, format: snowmanJsString}), 'format non-ascii after signing');
     t.notOk(Val.documentIsValid({...signedDoc, workspace: snowmanJsString}), 'workspace non-ascii after signing');
     t.notOk(Val.documentIsValid({...signedDoc, path: snowmanJsString}), 'path non-ascii after signing');
     t.notOk(Val.documentIsValid({...signedDoc, author: snowmanJsString}), 'author non-ascii after signing');
+    t.notOk(Val.documentIsValid({...signedDoc, contentHash: snowmanJsString}), 'contentHash non-ascii after signing');
     t.notOk(Val.documentIsValid({...signedDoc, signature: snowmanJsString}), 'signature non-ascii after signing');
 
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, format: '\n'})), 'newline in format before signing');
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, workspace: '\n'})), 'newline in workspace before signing');
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, path: '\n'})), 'newline in path before signing');
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, author: '\n'})), 'newline in author before signing');
+    t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, contentHash: '\n'})), 'newline in contentHash before signing');
 
     t.notOk(Val.documentIsValid(Val.signDocument(keypair1, {...doc1, format: 'xxx'})), 'unknown format before signing');
 
@@ -246,7 +261,7 @@ t.test('documentIsValid', (t: any) => {
     ]
     for (let [content, validity, note] of contentsAndValidity) {
         if (validity === 'VALID' || validity === 'INVALID') {
-            let doc2 = Val.signDocument(keypair1, {...doc1, content: content});
+            let doc2 = Val.signDocument(keypair1, {...doc1, content: content, contentHash: sha256(content)});
             t.same(Val.documentIsValid(doc2), validity === 'VALID', 'doc.content: ' + note);
         } else {
             t.throws(() => Val.signDocument(keypair1, {...doc1, content: content}), note);

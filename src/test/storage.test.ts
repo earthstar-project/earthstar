@@ -11,7 +11,8 @@ import {
     SyncOpts,
 } from '../util/types';
 import {
-    generateAuthorKeypair
+    generateAuthorKeypair,
+    sha256,
 } from '../crypto/crypto';
 import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/memory';
@@ -288,6 +289,7 @@ for (let scenario of scenarios) {
             format: FORMAT,
             workspace: WORKSPACE,
             path: '/k1',
+            contentHash: sha256('v1'),
             content: 'v1',
             timestamp: now,
             author: author1,
@@ -398,7 +400,7 @@ for (let scenario of scenarios) {
         };
 
         if (scenario.description === 'StoreMemory') {
-            // TODO: enable these tests for sqlite too
+            // TODO: enable these deleteAfter tests for sqlite too
 
             // set the doc, observe it in place.
             // set now ahead, try to get the doc, which should delete it.
@@ -470,6 +472,14 @@ for (let scenario of scenarios) {
         t.same(storage.contents(), ['zzz', 'val1.1'], 'contents() are correct');
 
         t.same(storage.authors(), [author1], 'author');
+
+        // returned document should have matching contentHash and content
+        let doc = storage.getDocument('/path1');
+        if (doc === undefined) { t.ok(false, 'this doc should not be undefined'); }
+        else {
+            t.notEqual(doc.content, null, 'content should not be null');
+            t.equal(doc.contentHash, sha256(doc.content), 'doc.contentHash matches doc.content after roundtrip');
+        }
 
         t.done();
     });

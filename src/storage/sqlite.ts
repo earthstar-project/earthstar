@@ -18,6 +18,7 @@ import {
 import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
 import { logDebug, logWarning } from '../util/log';
+import { sha256 } from '../crypto/crypto';
 
 export interface StorageSqliteOpts {
     // mode: create
@@ -133,7 +134,8 @@ export class StorageSqlite implements IStorage {
                 format TEXT NOT NULL,
                 workspace TEXT NOT NULL,
                 path TEXT NOT NULL,
-                content TEXT NOT NULL,
+                contentHash TEXT NOT NULL,
+                content TEXT NOT NULL, -- TODO: allow null
                 author TEXT NOT NULL,
                 timestamp NUMBER NOT NULL,
                 deleteAfter NUMBER,  -- optional, can be null
@@ -253,7 +255,7 @@ export class StorageSqlite implements IStorage {
             let combinedHaving = havings.length === 0 ? '' : 'HAVING ' + havings.join('\nAND ');
             logDebug('combined having', JSON.stringify(combinedHaving));
             queryString = `
-                SELECT format, workspace, path, content, author, MAX(timestamp) as timestamp, deleteAfter, signature FROM docs
+                SELECT format, workspace, path, contentHash, content, author, MAX(timestamp) as timestamp, deleteAfter, signature FROM docs
                 ${combinedFilters}
                 GROUP BY path
                 ${combinedHaving}
@@ -411,8 +413,8 @@ export class StorageSqlite implements IStorage {
         }
         // Insert new doc, replacing old doc if there is one
         this.db.prepare(`
-            INSERT OR REPLACE INTO docs (format, workspace, path, content, author, timestamp, deleteAfter, signature)
-            VALUES (:format, :workspace, :path, :content, :author, :timestamp, :deleteAfter, :signature);
+            INSERT OR REPLACE INTO docs (format, workspace, path, contentHash, content, author, timestamp, deleteAfter, signature)
+            VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature);
         `).run(docToSet);
         this.onChange.send(undefined);
         return true;
@@ -439,6 +441,7 @@ export class StorageSqlite implements IStorage {
             format: docToSet.format,
             workspace: this.workspace,
             path: docToSet.path,
+            contentHash: sha256(docToSet.content),
             content: docToSet.content,
             author: keypair.address,
             timestamp: docToSet.timestamp || now,
