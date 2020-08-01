@@ -50,6 +50,7 @@ t.test('pathIsValid', (t: any) => {
         { valid: false, path: '/double/slash/at/end//' },
         { valid: false, path: '/backslash\\' },
         { valid: false, path: '/double-quote"' },
+        { valid: false, path: '/question-mark?' },
         { valid: false, path: '/bracket<' },
         { valid: false, path: '/new\nline' },
         { valid: false, path: '/@starts/with/at/sign' },
@@ -63,7 +64,7 @@ t.test('pathIsValid', (t: any) => {
         { valid: true, path: '/a/b/c/d/e/f/g/h' },
         { valid: true, path: '/about/~@suzy.abc/name' },
         { valid: true, path: '/wiki/shared/Garden%20Gnome' },
-        { valid: true, path: '/\'()-._~!*$&+,:=?@%', note: 'all allowed punctuation characters' },
+        { valid: true, path: '/\'()-._~!*$&+,:=@%', note: 'all allowed punctuation characters' },
     ]
     for (let v of vectors) {
         t.same(v.valid, Val.pathIsValid(v.path),

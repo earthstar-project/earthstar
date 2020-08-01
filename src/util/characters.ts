@@ -34,7 +34,12 @@ export const authorAddressChars = authorShortnameChars + b32chars + '@.';
 export const workspaceNameChars = alphaLower + digits;
 export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
 
-export const pathPunctuation = "/'()-._~!*$&+,:=?@%";  // no spaces or double quotes because they're not allowed in URLs
+// Path special characters should be usable in regular web URLs without percent-encoding.
+// Notably not allowed:
+//    space  not allowed in URLs
+//    "      not allowed in URLs
+//    ?      to avoid confusion with URL query parameters
+export const pathPunctuation = "/'()-._~!*$&+,:=@%";
 export const pathChars = alphaLower + alphaUpper + digits + pathPunctuation;
 
 
