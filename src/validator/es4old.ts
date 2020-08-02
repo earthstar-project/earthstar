@@ -4,7 +4,8 @@ import {
     AuthorKeypair,
     Document,
     FormatName,
-    IValidator,
+    EncodedHash,
+    IValidatorOld,
     Path,
 } from '../util/types';
 import {
@@ -23,7 +24,7 @@ import { logWarning } from '../util/log';
 // this is always used as a static class
 // e.g. just ValidatorEs4, not new ValidatorEs4()
 
-export const ValidatorEs4 : IValidator = class {
+export const ValidatorEs4Old : IValidatorOld = class {
     static format : FormatName = 'es.4';
     static pathIsValid(path: Path): boolean {
         // a path is a series of one or more path segments.
@@ -68,7 +69,7 @@ export const ValidatorEs4 : IValidator = class {
         logWarning(`author ${author} can't write to path ${path}`);
         return false;
     }
-    static hashDocument(doc: Document): string {
+    static hashDocument(doc: Document): EncodedHash {
         // This is used for signatures and references to specific docs.
         // We use the hash of the content so we can drop the actual content
         // and only keep the hash around for verifying signatures,

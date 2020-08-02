@@ -1,12 +1,15 @@
 import {
     AuthorAddress,
     FormatName,
+    EncodedHash,
     Path,
     Signature,
     WorkspaceAddress,
 } from '../util/types';
 import {
     authorAddressChars,
+    alphaLower,
+    digits,
     b32chars,
     hexLower,
     pathChars,
@@ -14,11 +17,11 @@ import {
     workspaceAddressChars,
 } from '../util/characters';
 import {
-    AsserterSchema,
-    assertInt,
-    assertObj,
-    assertString,
-} from '../util/asserters';
+    CheckerSchema,
+    checkInt,
+    checkObj,
+    checkString,
+} from '../util/checkers';
 let log = console.log;
 
 // ================================================================================
@@ -55,12 +58,11 @@ type Ob = {[k : string] : any}
 //================================================================================
 // Specific schema
 
-type HexHash = string;
 interface DocCore {
     format: FormatName,
     workspace: WorkspaceAddress,
     path: Path,
-    contentHash: HexHash,
+    contentHash: EncodedHash,
     author: AuthorAddress,
     timestamp: number,
     signature: Signature,
@@ -77,33 +79,33 @@ interface DocES4 extends DocCore {
 
 let MIN_TIMESTAMP = 35184372088832;  // 2**45
 let MAX_TIMESTAMP = 9007199254740990;  // 2**53 - 2.  One smaller than Number.MAX_SAFE_INTEGER.
-let DOC_CORE_SCHEMA : AsserterSchema = {
-    format:      assertString({minLen: 1, maxLen: 256, allowedChars: printableAscii}),
-    workspace:   assertString({minLen: 1, maxLen: 256, allowedChars: workspaceAddressChars}),
-    path:        assertString({minLen: 1, maxLen: 256, allowedChars: pathChars}),
-    contentHash: assertString({minLen: 1, maxLen: 256, allowedChars: hexLower}),
-    author:      assertString({minLen: 1, maxLen: 256, allowedChars: authorAddressChars}),
-    signature:   assertString({minLen: 1, maxLen: 256, allowedChars: b32chars}),
-    timestamp:   assertInt({min: MIN_TIMESTAMP, max: MAX_TIMESTAMP}),
-    deleteAfter: assertInt({min: MIN_TIMESTAMP, max: MAX_TIMESTAMP, optional: true}),
+let DOC_CORE_SCHEMA : CheckerSchema = {
+    format:      checkString({minLen: 1, maxLen: 256, allowedChars: printableAscii}),
+    workspace:   checkString({minLen: 1, maxLen: 256, allowedChars: workspaceAddressChars}),
+    path:        checkString({minLen: 1, maxLen: 256, allowedChars: pathChars}),
+    contentHash: checkString({minLen: 1, maxLen: 256, allowedChars: hexLower}),
+    author:      checkString({minLen: 1, maxLen: 256, allowedChars: authorAddressChars}),
+    signature:   checkString({minLen: 1, maxLen: 256, allowedChars: b32chars}),
+    timestamp:   checkInt({min: MIN_TIMESTAMP, max: MAX_TIMESTAMP}),
+    deleteAfter: checkInt({min: MIN_TIMESTAMP, max: MAX_TIMESTAMP, optional: true}),
 }
 let DOC_CORE_FIELDS = Object.keys(DOC_CORE_SCHEMA).sort();
-let DOC_CORE_VALIDATOR = assertObj({
+let DOC_CORE_VALIDATOR = checkObj({
     allowUndefined: false,
     allowExtraKeys: false,
     objSchema: DOC_CORE_SCHEMA,
 });
-let DOC_ANY_VALIDATOR = assertObj({
+let DOC_ANY_VALIDATOR = checkObj({
     allowUndefined: false,
     allowExtraKeys: true,
     objSchema: DOC_CORE_SCHEMA,
 });
 
-let DOC_ES4_SCHEMA : AsserterSchema = {
+let DOC_ES4_SCHEMA : CheckerSchema = {
     ...DOC_CORE_SCHEMA,
-    workspaceSignature: assertString({minLen: 1, maxLen: 256, allowedChars: b32chars, optional: true}),
+    workspaceSignature: checkString({minLen: 1, maxLen: 256, allowedChars: b32chars, optional: true}),
 }
-let DOC_ES4_VALIDATOR = assertObj({
+let DOC_ES4_VALIDATOR = checkObj({
     allowUndefined: false,
     allowExtraKeys: false,
     objSchema: DOC_ES4_SCHEMA,

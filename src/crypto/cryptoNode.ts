@@ -7,6 +7,10 @@ import {
     decodeSig,
     encodeSig,
 } from './encoding';
+import {
+    EncodedHash,
+    EncodedSig,
+} from '../util/types';
 
 const _generateKeypairDerBuffers = () : KeypairBuffers => {
     // Typescript has outdated definitions, doesn't know about ed25519
@@ -43,13 +47,13 @@ let _lengthenDerSecret = (b : Buffer) : Buffer =>
     Buffer.concat([_derPrefixSecret, b]);
 
 export const CryptoNode : ILowLevelCrypto = class {
-    static sha256(input: string | Buffer): string {
+    static sha256(input: string | Buffer): EncodedHash {
         return crypto.createHash('sha256').update(input).digest().toString('hex');
     }
     static generateKeypairBuffers() : KeypairBuffers {
         return _shortenDer(_generateKeypairDerBuffers());
     };
-    static sign(keypair : KeypairBuffers, msg : string | Buffer) : string {
+    static sign(keypair : KeypairBuffers, msg : string | Buffer) : EncodedSig {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         // prettier-ignore
         return encodeSig(crypto.sign(
@@ -62,7 +66,7 @@ export const CryptoNode : ILowLevelCrypto = class {
             }
         ));
     }
-    static verify(publicKey : Buffer, sig : string, msg : string | Buffer) : boolean {
+    static verify(publicKey : Buffer, sig : EncodedSig, msg : string | Buffer) : boolean {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         try {
             // prettier-ignore

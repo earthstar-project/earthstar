@@ -25,7 +25,8 @@
     "test-layer-wiki": "tap -Rspecy --jobs=1 build/test/layers.wiki.test.js",
     "test-storage": "tap -Rspecy --jobs=1 build/test/storage.test.js",
     "test-sync": "tap -Rspecy --jobs=1 build/test/sync.test.js",
-    "test-validator": "tap -Rspecy --jobs=1 build/test/validator.es4.test.js",
+    "test-validator-new": "tap -Rspecy --jobs=1 build/test/validator.es4new.test.js",
+    "test-validator-old": "tap -Rspecy --jobs=1 build/test/validator.es4old.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",
     "build-and-test": "npm run build && npm run test",
     "prepublishOnly": "npm run clean && npm run build && npm test"

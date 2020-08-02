@@ -3,7 +3,7 @@ import {
     AuthorAddress,
     FormatName,
     IStorage,
-    IValidator,
+    IValidatorOld,
 } from '../util/types';
 import {
     generateAuthorKeypair
@@ -12,8 +12,8 @@ import {
     StorageMemory,
 } from '../storage/memory';
 import {
-    ValidatorEs4,
-} from '../validator/es4';
+    ValidatorEs4Old,
+} from '../validator/es4old';
 import {
     SyncState,
     Syncer,
@@ -23,7 +23,7 @@ import {
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let VALIDATORS : IValidator[] = [ValidatorEs4];
+let VALIDATORS : IValidatorOld[] = [ValidatorEs4Old];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
 let keypair1 = generateAuthorKeypair('test');

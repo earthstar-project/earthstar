@@ -25,7 +25,7 @@ export let printableAscii = makePrintableAscii();
 export const alphaLower = 'abcdefghijklmnopqrstuvwxyz';
 export const alphaUpper = alphaLower.toUpperCase();
 export const digits = '0123456789';
-export const b32chars = alphaLower + digits;  // approximately speaking
+export const b32chars = alphaLower + '234567';
 export const hexLower = digits + 'abcdef';
 
 export const authorShortnameChars = alphaLower + digits;

@@ -8,9 +8,13 @@ import {
     decodeSig,
     encodeSig,
 } from './encoding';
+import {
+    EncodedHash,
+    EncodedSig,
+} from '../util/types';
 
 export const CryptoChloride : ILowLevelCrypto = class {
-    static sha256(input: string | Buffer) : string {
+    static sha256(input: string | Buffer) : EncodedHash {
         return crypto.createHash('sha256').update(input).digest().toString('hex');
     }
     static generateKeypairBuffers(seed?: Buffer) : KeypairBuffers {
@@ -28,14 +32,14 @@ export const CryptoChloride : ILowLevelCrypto = class {
             secret: (keys.privateKey || keys.secretKey).slice(0, 32),
         };
     };
-    static sign(keypair : KeypairBuffers, msg : string | Buffer) : string {
+    static sign(keypair : KeypairBuffers, msg : string | Buffer) : EncodedSig {
         let secretBuf = Buffer.concat([keypair.secret, keypair.pubkey]);
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         return encodeSig(
             sodium.crypto_sign_detached(msg, secretBuf)
         );
     }
-    static verify(publicKey : Buffer, sig : string, msg : string | Buffer) : boolean {
+    static verify(publicKey : Buffer, sig : EncodedSig, msg : string | Buffer) : boolean {
         try {
             if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
             return sodium.crypto_sign_verify_detached(

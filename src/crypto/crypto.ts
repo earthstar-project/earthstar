@@ -5,6 +5,8 @@ export { LowLevelCrypto };
 import {
     AuthorAddress,
     AuthorKeypair,
+    EncodedHash,
+    EncodedSig,
 } from '../util/types';
 import {
     KeypairBuffers,
@@ -20,7 +22,7 @@ import {
     parseAuthorAddress,
 } from '../util/addresses';
 
-export let sha256 = (input : string | Buffer) : string =>
+export let sha256 = (input : string | Buffer) : EncodedHash =>
     LowLevelCrypto.sha256(input);
 
 export let generateAuthorKeypair = (shortname : string) : AuthorKeypair => {
@@ -36,12 +38,12 @@ export let generateAuthorKeypair = (shortname : string) : AuthorKeypair => {
     return keypair;
 }
 
-export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : string => {
+export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig => {
     let keypairBuffers = decodeAuthorKeypair(keypair);
     return LowLevelCrypto.sign(keypairBuffers, msg);
 }
 
-export let verify = (authorAddress : AuthorAddress, sig : string, msg : string | Buffer) : boolean => {
+export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : string | Buffer) : boolean => {
     let { authorParsed, err } = parseAuthorAddress(authorAddress);
     if (err || authorParsed === null) { throw 'could not parse author address: ' + authorAddress + '  -- err: ' + err; }
     return LowLevelCrypto.verify(decodePubkey(authorParsed.pubkey), sig, msg);

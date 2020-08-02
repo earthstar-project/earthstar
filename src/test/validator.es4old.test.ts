@@ -10,18 +10,18 @@ import {
     sha256,
 } from '../crypto/crypto';
 import {
-    ValidatorEs4
-} from '../validator/es4';
+    ValidatorEs4Old
+} from '../validator/es4old';
 
 let keypair1 = generateAuthorKeypair('test');
 let author1: AuthorAddress = keypair1.address;
 let now = 1500000000000000;
-let Val = ValidatorEs4;
+let Val = ValidatorEs4Old;
 
 let snowmanJsString = '☃';
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
 let snowmanJs2 = snowmanBufferUtf8.toString('utf8');
-let snowmanU = '\u2604';
+let snowmanU = '\u2603';
 
 // microseconds
 let SEC = 1000000;

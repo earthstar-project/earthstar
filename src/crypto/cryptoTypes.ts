@@ -1,11 +1,16 @@
+import {
+    EncodedSig,
+    EncodedHash,
+} from '../util/types';
+
 export interface KeypairBuffers {
     pubkey: Buffer,
     secret: Buffer,
 }
 
 export interface ILowLevelCrypto {
-    sha256(input: string | Buffer) : string ;  // lower-case hex
-    generateKeypairBuffers() : KeypairBuffers;
-    sign(keypair : KeypairBuffers, msg : string | Buffer) : string;
-    verify(publicKey : Buffer, sig : string, msg : string | Buffer) : boolean;
+    sha256(input: string | Buffer): EncodedHash;  // lower-case hex
+    generateKeypairBuffers(): KeypairBuffers;
+    sign(keypair: KeypairBuffers, msg: string | Buffer): EncodedSig;  // base32
+    verify(publicKey: Buffer, sig: EncodedSig, msg: string | Buffer): boolean;
 }

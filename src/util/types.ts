@@ -19,7 +19,12 @@ export type WorkspaceName = string;
 export type AuthorAddress = string;
 export type AuthorShortname = string;
 
-export type EncodedKey = string; // a pubkey or secret key as base58
+export type HexLower = string;
+export type Base32String = string;
+
+export type EncodedHash = HexLower;  // lowercase hex-encoded sha256 hash
+export type EncodedKey = Base32String; // a pubkey or secret key as base32
+export type EncodedSig = Base32String;
 
 export type AuthorParsed = {
     address: AuthorAddress,
@@ -49,7 +54,7 @@ export type Document = {
     format: FormatName,
     workspace: WorkspaceAddress,
     path: Path,
-    contentHash: string,
+    contentHash: EncodedHash,
     content: string,  // TODO: eventually, this should be "string | null"
     author: AuthorAddress,
     timestamp: number,
@@ -148,7 +153,7 @@ export interface SyncResults {
     numPulled: number,
 }
 
-export interface IValidator {
+export interface IValidatorOld {
     // Validators are each responsible for one document format such as "es.4".
     // They are used by Storage instances to
     // * check if documents are valid before accepting them
@@ -166,7 +171,7 @@ export interface IValidator {
     format: FormatName;
 
     // Deterministic hash of this version of the document
-    hashDocument(doc: Document): string;
+    hashDocument(doc: Document): EncodedHash;
 
     // Add an author signature to the document.
     // The input document needs a signature field to satisfy Typescript, but
@@ -181,6 +186,35 @@ export interface IValidator {
     authorCanWriteToPath(author: AuthorAddress, path: Path): boolean;
     pathIsValid(path: Path): boolean;
     documentSignatureIsValid(doc: Document): boolean;
+}
+
+export interface IValidatorNew {
+    format: FormatName;
+    hashDocument(doc: Document): EncodedHash;
+    signDocument(keypair: AuthorKeypair, doc: Document): Document;
+
+    // this calls all the following more detailed functions.
+    // can throw ValidationError.
+    assertDocumentIsValid(doc: Document, now?: number): void;
+
+    // these are broken out for easier unit testing.
+    // they will not normally be used.
+    // can throw ValidationError.
+    _assertBasicDocumentValidity(doc: Document): void;  // check for correct fields and datatypes
+    _assertAuthorCanWriteToPath(author: AuthorAddress, path: Path): void;
+    _assertTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): void;
+    _assertPathIsValid(path: Path): void;
+    _assertAuthorIsValid(authorAddress: AuthorAddress): void;
+    _assertWorkspaceIsValid(workspaceAddress: WorkspaceAddress): void;
+    _assertAuthorSignatureIsValid(doc: Document): void;
+    _assertContentMatchesHash(content: string, contentHash: EncodedHash): void;
+
+    // can throw ValidationError.
+    parseAuthorAddress(addr : AuthorAddress) : AuthorParsed;
+    parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed;
+}
+export interface IValidatorNew_ES4 extends IValidatorNew {
+    format: 'es.4';
 }
 
 export interface IStorage {

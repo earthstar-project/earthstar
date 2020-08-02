@@ -2,6 +2,8 @@ import mb = require('multibase');
 import {
     AuthorKeypair,
     AuthorShortname,
+    HexLower,
+    Base32String,
 } from '../util/types';
 import {
     KeypairBuffers,
@@ -17,9 +19,9 @@ import {
 // to start with a number (so we can use it as a URL location).
 // Character set: "abcdefghijklmnopqrstuvwxyz234567"
 // The decoding is strict (it doesn't allow a 1 in place of an i, etc).
-let encodeBuffer = (b : Buffer) : string =>
+let encodeBuffer = (b : Buffer) : Base32String =>
     mb.encode('base32', b).toString();
-let decodeBuffer = (s : string) : Buffer =>
+let decodeBuffer = (s : Base32String) : Buffer =>
     mb.decode(s);
 
 export let encodePubkey = encodeBuffer;

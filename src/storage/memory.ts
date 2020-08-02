@@ -4,7 +4,7 @@ import {
     DocToSet,
     Document,
     IStorage,
-    IValidator,
+    IValidatorOld,
     QueryOpts,
     SyncOpts,
     SyncResults,
@@ -49,9 +49,9 @@ export class StorageMemory implements IStorage {
     */
     _docs : {[path:string] : {[author:string] : Document}} = {};
     workspace : WorkspaceAddress;
-    validatorMap : {[format: string] : IValidator};
+    validatorMap : {[format: string] : IValidatorOld};
     onChange : Emitter<undefined>;
-    constructor(validators : IValidator[], workspace : WorkspaceAddress) {
+    constructor(validators : IValidatorOld[], workspace : WorkspaceAddress) {
         let {workspaceParsed, err} = parseWorkspaceAddress(workspace);
         if (err || !workspaceParsed) { throw 'invalid workspace address: ' + err; }
 

@@ -1,27 +1,31 @@
 import {
     onlyHasChars,
-} from '../util/characters';
+} from './characters';
+
+// Similar to JSON schema, these functions help check if
+// data is in the expected format.
+// A "checker" function returns null on success, or a string on error.
 
 type Ob = {[k : string] : any}
 
-export type Asserter = (x : any) => null | string;
-export type AsserterSchema = {
-    [k:string]: Asserter,
+export type Checker = (x : any) => null | string;
+export type CheckerSchema = {
+    [k:string]: Checker,
 }
 
 export let isPlainObject = (obj : any) : obj is Ob =>
     Object.prototype.toString.call(obj) === '[object Object]'
-export let assertIsPlainObject : Asserter = (x : any) : null | string =>
+export let checkIsPlainObject : Checker = (x : any) : null | string =>
     isPlainObject(x) ? null : 'expected plain object but got ' + x;
 
 
-export interface AssertStringOpts {
+export interface CheckStringOpts {
     optional?: boolean,  // default false
     minLen?: number,
     maxLen?: number,
     allowedChars?: string,
 }
-export let assertString = (opts : AssertStringOpts) : Asserter =>
+export let checkString = (opts : CheckStringOpts) : Checker =>
     (x : any) : null | string => {
         if (x === undefined && opts.optional === false) { return 'required'; }
         if (typeof x !== 'string') { return 'expected a string but got ' + JSON.stringify(x); }
@@ -31,12 +35,12 @@ export let assertString = (opts : AssertStringOpts) : Asserter =>
         return null;
     }
 
-export interface assertIntOpts {
+export interface CheckIntOpts {
     optional?: boolean,  // default false
     min?: number,  // inclusive
     max?: number,  // inclusive
 }
-export let assertInt = (opts : assertIntOpts) : Asserter =>
+export let checkInt = (opts : CheckIntOpts) : Checker =>
     (x : any) : null | string => {
         if (x === undefined && opts.optional === false) { return 'required'; }
         if (typeof x !== 'number') { return 'expected a number but got ' + JSON.stringify(x); }
@@ -46,12 +50,12 @@ export let assertInt = (opts : assertIntOpts) : Asserter =>
         return null;
     }
 
-export interface AssertObjOpts {
+export interface CheckObjOpts {
     allowUndefined?: boolean, // default false.  allow value in the object to be explicitly set to undefined?
     allowExtraKeys?: boolean, // default false.  allow keys not set in objSchema?  to use this, you must also define objSchema
-    objSchema?: AsserterSchema,  // an object of validators
+    objSchema?: CheckerSchema,  // an object of validators
 }
-export let assertObj = (opts : AssertObjOpts) : Asserter =>
+export let checkObj = (opts : CheckObjOpts) : Checker =>
     (x : any) : null | string => {
         if (!isPlainObject(x)) { return 'expected an object'; }
         if (opts.allowUndefined === false || opts.allowUndefined === undefined) {

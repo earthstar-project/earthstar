@@ -9,7 +9,7 @@ import {
     DocToSet,
     Document,
     IStorage,
-    IValidator,
+    IValidatorOld,
     QueryOpts,
     SyncOpts,
     SyncResults,
@@ -35,14 +35,14 @@ export interface StorageSqliteOpts {
     //
     mode: 'open' | 'create' | 'create-or-open',
     workspace: WorkspaceAddress | null,
-    validators: IValidator[],  // must provide at least one
+    validators: IValidatorOld[],  // must provide at least one
     filename: string,
 }
 
 export class StorageSqlite implements IStorage {
     db : SqliteDatabase;
     workspace : WorkspaceAddress;
-    validatorMap : {[format: string] : IValidator};
+    validatorMap : {[format: string] : IValidatorOld};
     onChange : Emitter<undefined>;
     constructor(opts : StorageSqliteOpts) {
         this.onChange = new Emitter<undefined>();

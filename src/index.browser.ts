@@ -9,5 +9,5 @@ export * from './sync';
 export * from './util/addresses';
 export * from './util/emitter';
 export * from './util/types';
-export * from './validator/es4';
+export * from './validator/es4old';
 export * from './workspace';
