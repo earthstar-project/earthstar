@@ -4,14 +4,14 @@ import {
     DocToSet,
     Document,
     IStorage,
-    IValidatorOld,
+    IValidatorNew,
     QueryOpts,
     SyncOpts,
     SyncResults,
     WorkspaceAddress,
+    ValidationError,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
-import { parseWorkspaceAddress } from '../util/addresses';
 import { logWarning } from '../util/log';
 import { sha256 } from '../crypto/crypto';
 
@@ -49,19 +49,21 @@ export class StorageMemory implements IStorage {
     */
     _docs : {[path:string] : {[author:string] : Document}} = {};
     workspace : WorkspaceAddress;
-    validatorMap : {[format: string] : IValidatorOld};
+    validatorMap : {[format: string] : IValidatorNew};
     onChange : Emitter<undefined>;
-    constructor(validators : IValidatorOld[], workspace : WorkspaceAddress) {
-        let {workspaceParsed, err} = parseWorkspaceAddress(workspace);
-        if (err || !workspaceParsed) { throw 'invalid workspace address: ' + err; }
+    constructor(validators : IValidatorNew[], workspace : WorkspaceAddress) {
+        if (validators.length === 0) {
+            throw new Error('must provide at least one validator');
+        }
 
+        // check if the workspace is valid
+        // TODO: try with all the of validators, and only throw an error if they all fail
+        let val0 : IValidatorNew = validators[0];
+        val0._assertWorkspaceIsValid(workspace);  // can throw ValidationError
         this.workspace = workspace;
 
         this.onChange = new Emitter<undefined>();
 
-        if (validators.length === 0) {
-            throw "must provide at least one validator";
-        }
         this.validatorMap = {};
         for (let validator of validators) {
             this.validatorMap[validator.format] = validator;
@@ -222,9 +224,13 @@ export class StorageMemory implements IStorage {
             return false;
         }
 
-        if (!validator.documentIsValid(doc, now)) {
-            logWarning(`ingestDocument: doc is not valid`);
-            return false;
+        try {
+            validator.assertDocumentIsValid(doc, now);
+        } catch (err) {
+            if (err instanceof ValidationError) {
+                logWarning(err.message);
+                return false;
+            }
         }
 
         // Only accept docs from the same workspace.

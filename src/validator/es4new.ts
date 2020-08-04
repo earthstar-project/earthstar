@@ -75,6 +75,10 @@ export const ValidatorNew_Es4 : IValidatorNew_ES4 = class {
         // it will be overwritten here, so you may as well just set signature: '' on the input
         // Can throw a ValidationError (via hashDocument), but only checks for very basic document validity.
 
+        if (keypair.address !== doc.author) {
+            throw new ValidationError('when signing a document, keypair address must match document author');
+        }
+
         return {
             ...doc,
             signature: sign(keypair, this.hashDocument(doc)),
@@ -246,7 +250,9 @@ export const ValidatorNew_Es4 : IValidatorNew_ES4 = class {
         // Check if the signature is good.
         // Throw a ValidationError, or return nothing on success.
         try {
-            verify(doc.author, doc.signature, this.hashDocument(doc));
+            if (verify(doc.author, doc.signature, this.hashDocument(doc)) === false) {
+                throw new ValidationError('signature is invalid');
+            }
         } catch (e) {
             throw new ValidationError('signature is invalid');
         }

@@ -7,14 +7,14 @@ import {
     Document,
     FormatName,
     IStorage,
-    IValidatorOld,
+    IValidatorNew,
     SyncOpts,
 } from '../util/types';
 import {
     generateAuthorKeypair,
     sha256,
 } from '../crypto/crypto';
-import { ValidatorEs4Old } from '../validator/es4old';
+import { ValidatorNew_Es4 } from '../validator/es4new';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
 import { logTest } from '../util/log';
@@ -25,7 +25,7 @@ import { logTest } from '../util/log';
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 
-let VALIDATORS : IValidatorOld[] = [ValidatorEs4Old];
+let VALIDATORS : IValidatorNew[] = [ValidatorNew_Es4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
 let keypair1 = generateAuthorKeypair('test');
@@ -295,7 +295,7 @@ for (let scenario of scenarios) {
             author: author1,
             signature: 'xxx',
         };
-        let signedDoc = ValidatorEs4Old.signDocument(keypair1, doc1);
+        let signedDoc = ValidatorNew_Es4.signDocument(keypair1, doc1);
         t.ok(storage.ingestDocument(signedDoc), "successful ingestion");
         t.equal(storage.getContent('/k1'), 'v1', "getContent worked");
 
@@ -306,7 +306,7 @@ for (let scenario of scenarios) {
         t.notOk(storage.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
         t.notOk(storage.ingestDocument({...signedDoc, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
 
-        let signedDocDifferentWorkspace = ValidatorEs4Old.signDocument(keypair1, {...doc1, workspace: 'xxx'});
+        let signedDocDifferentWorkspace = ValidatorNew_Es4.signDocument(keypair1, {...doc1, workspace: 'xxx'});
         t.notOk(storage.ingestDocument(signedDocDifferentWorkspace), "don't ingest: mismatch workspace");
 
         t.notOk(storage.set(keypair1, {
@@ -322,7 +322,7 @@ for (let scenario of scenarios) {
         ];
         for (let path of writablePaths) {
             t.ok(storage.ingestDocument(
-                ValidatorEs4Old.signDocument(
+                ValidatorNew_Es4.signDocument(
                     keypair1,
                     {...doc1, path: path}
                 )),
@@ -335,7 +335,7 @@ for (let scenario of scenarios) {
         ];
         for (let path of notWritablePaths) {
             t.notOk(storage.ingestDocument(
-                ValidatorEs4Old.signDocument(
+                ValidatorNew_Es4.signDocument(
                     keypair1,
                     {...doc1, path: path}
                 )),

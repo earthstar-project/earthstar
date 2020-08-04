@@ -9,11 +9,12 @@ import {
     DocToSet,
     Document,
     IStorage,
-    IValidatorOld,
+    IValidatorNew,
     QueryOpts,
     SyncOpts,
     SyncResults,
     WorkspaceAddress,
+    ValidationError,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { parseWorkspaceAddress } from '../util/addresses';
@@ -35,25 +36,27 @@ export interface StorageSqliteOpts {
     //
     mode: 'open' | 'create' | 'create-or-open',
     workspace: WorkspaceAddress | null,
-    validators: IValidatorOld[],  // must provide at least one
+    validators: IValidatorNew[],  // must provide at least one
     filename: string,
 }
 
 export class StorageSqlite implements IStorage {
     db : SqliteDatabase;
     workspace : WorkspaceAddress;
-    validatorMap : {[format: string] : IValidatorOld};
+    validatorMap : {[format: string] : IValidatorNew};
     onChange : Emitter<undefined>;
     constructor(opts : StorageSqliteOpts) {
         this.onChange = new Emitter<undefined>();
 
-        if (opts.workspace) {
-            let {workspaceParsed, err} = parseWorkspaceAddress(opts.workspace);
-            if (err || !workspaceParsed) { throw 'invalid workspace address: ' + err; }
-        }
-
         if (opts.validators.length === 0) {
             throw "must provide at least one validator";
+        }
+
+        if (opts.workspace) {
+            // check if the workspace is valid
+            // TODO: try with all the of validators, and only throw an error if they all fail
+            let val0 : IValidatorNew = opts.validators[0];
+            val0._assertWorkspaceIsValid(opts.workspace);  // can throw ValidationError
         }
 
         // in each mode we need to
@@ -363,9 +366,13 @@ export class StorageSqlite implements IStorage {
             return false;
         }
 
-        if (!validator.documentIsValid(doc, now)) {
-            logWarning(`ingestDocument: doc is not valid`);
-            return false;
+        try {
+            validator.assertDocumentIsValid(doc, now);
+        } catch (err) {
+            if (err instanceof ValidationError) {
+                logWarning(err.message);
+                return false;
+            }
         }
 
         // Only accept docs from the same workspace.

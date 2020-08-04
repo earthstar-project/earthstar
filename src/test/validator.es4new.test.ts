@@ -39,17 +39,121 @@ let DAY = HOUR * 24;
 
 //================================================================================
 
-type BasicValidityVector = {
-    valid: boolean,
-    doc: any,
-    note?: string,
-};
+// Document properties
+let stringFields = 'format workspace path contentHash content author signature'.split(' ');
+let intFields = 'timestamp deleteAfter'.split(' ');
+let optionalFields = ['deleteAfter'];
+let allFields = stringFields.concat(intFields);
+let requiredFields = allFields.filter(f => optionalFields.indexOf(f) === -1);
+
 type Ob = {[key:string]: any};
 let delProperty = (obj: Ob, name: string) : Ob => {
     let obj2 = {...obj};
     delete obj2[name];
     return obj2;
 }
+
+//================================================================================
+
+t.test('hashDocument', (t: any) => {
+    let doc1: Document = {
+        format: 'es.4',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/path1',
+        contentHash: sha256('content1'),
+        content: 'content1',
+        timestamp: 1,
+        author: '@suzy.xxxxxxxxxxx',
+        signature: 'xxxxxxxxxxxxx',
+    };
+    t.equal(Val.hashDocument(doc1), '971e8a1cc02c6a6e7be9e81765d0658a2db338f951b6c78ea8c5c3284fa233cf', 'expected document hash');
+    t.done();
+});
+
+t.test('signDocument and _assertAuthorSignatureIsValid', (t: any) => {
+    let doc: Document = {
+        format: 'es.4',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/k1',
+        contentHash: sha256('content1'),
+        content: 'content1',
+        timestamp: NOW - 10,
+        deleteAfter: NOW + 10,
+        author: author1,
+        signature: '',
+    };
+
+    let signedDoc = Val.signDocument(keypair1, doc);
+    t.doesNotThrow(() => Val._assertAuthorSignatureIsValid(signedDoc), 'signature is valid');
+    t.doesNotThrow(() => Val.assertDocumentIsValid(signedDoc, NOW), 'doc is valid');
+
+    t.throws(() => Val.signDocument(keypair2, doc), 'doc author must match keypair when signing');
+    t.throws(() => Val._assertAuthorSignatureIsValid({...signedDoc, author: author2}), 'changing author after signing makes signature invalid');
+
+    t.throws(() => Val._assertAuthorSignatureIsValid(doc), 'empty signature is invalid');
+    t.throws(() => Val.assertDocumentIsValid(doc, NOW), 'doc without signature is invalid');
+
+    for (let field of requiredFields) {
+        let alteredDocPostSig = delProperty(signedDoc, field);
+        t.throws(() => Val._assertAuthorSignatureIsValid(alteredDocPostSig as any), `deleting property makes signature invalid: ${field}`);
+    }
+    for (let field of stringFields) {
+        // verifying content = contentHash is not done by _assertAuthorSignatureIsValid, it's done by _assertContentMatchesHash
+        if (field === 'content') { continue; }
+
+        t.throws(() => Val._assertAuthorSignatureIsValid({...signedDoc, [field]: 'a'}), `altering string property makes signature invalid: ${field}`);
+    }
+    for (let field of intFields) {
+        t.throws(() => Val._assertAuthorSignatureIsValid({...signedDoc, [field]: (signedDoc as any)[field]-1}), `altering int property makes signature invalid: ${field}`);
+    }
+
+    t.done();
+});
+
+t.test('assertDocumentIsValid', (t: any) => {
+    let doc: Document = {
+        format: 'es.4',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/k1',
+        contentHash: sha256('content1'),
+        content: 'content1',
+        timestamp: NOW - 10,
+        deleteAfter: NOW + 10,
+        author: author1,
+        signature: '',
+    };
+
+    let signedDoc = Val.signDocument(keypair1, doc);
+    t.doesNotThrow(() => Val.assertDocumentIsValid(signedDoc, NOW), 'doc is valid');
+
+    t.throws(() => Val.signDocument(keypair2, doc), 'doc author must match keypair when signing');
+
+    t.throws(() => Val.assertDocumentIsValid(doc, NOW), 'doc without signature is invalid');
+    t.throws(() => Val.assertDocumentIsValid({...signedDoc, content: 'abc'}, NOW), 'changing content makes doc invalid');
+    t.throws(() => Val.assertDocumentIsValid({} as any, NOW), 'empty doc is invalid');
+    t.throws(() => Val.assertDocumentIsValid({...signedDoc, extra: 'abc'} as any, NOW), 'extra property makes doc invalid');
+
+    let doc2: Document = {
+        format: 'es.4',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/k1',
+        contentHash: sha256('content1'),
+        content: 'content1',
+        timestamp: Date.now() * 1000,
+        author: author1,
+        signature: '',
+    };
+    let signedDoc2 = Val.signDocument(keypair1, doc2);
+    t.doesNotThrow(() => Val.assertDocumentIsValid(signedDoc2), 'doc is valid when not supplying a value for NOW, and no deleteAfter');
+
+    t.done();
+});
+
+type BasicValidityVector = {
+    valid: boolean,
+    doc: any,
+    note?: string,
+};
 t.test('_assertBasicDocumentValidity', (t: any) => {
     let validDoc = {
             format: 'es.4',
@@ -62,10 +166,6 @@ t.test('_assertBasicDocumentValidity', (t: any) => {
             deleteAfter: 123,
             signature: 'a',
     };
-    let stringFields = 'format workspace path contentHash content author signature'.split(' ');
-    let intFields = 'timestamp deleteAfter'.split(' ');
-    let optionalFields = ['deleteAfter'];
-    let allFields = stringFields.concat(intFields);
 
     let vectors: BasicValidityVector[] = [
         { valid: true, doc: validDoc, note: 'basic valid doc' },
@@ -461,6 +561,27 @@ t.test('parseWorkspaceAddress', (t: any) => {
     t.end();
 });
 
-// TODO:
-// _assertAuthorSignatureIsValid(doc);
-// _assertContentMatchesHash(doc.content, doc.contentHash);
+type ContentMatchesHashVector = {
+    valid: boolean,
+    content: string,
+    contentHash: string,
+    note?: string,
+};
+t.test('_assertContentMatchesHash', (t: any) => {
+    let vectors: ContentMatchesHashVector[] = [
+        { valid: true, content: '', contentHash: sha256('') },
+        { valid: true, content: 'abc', contentHash: sha256('abc') },
+        { valid: true, content: 'a\nb', contentHash: sha256('a\nb') },
+        { valid: true, content: snowmanJsString, contentHash: sha256(snowmanJsString) },
+
+        { valid: false, content: '', contentHash: '' },
+        { valid: false, content: 'hello', contentHash: sha256('abc') },
+    ];
+    for (let v of vectors) {
+        let testMethod = v.valid ? t.doesNotThrow : t.throws;
+        testMethod(() => Val._assertContentMatchesHash(v.content, v.contentHash),
+            `${v.valid ? 'content matches hash' : 'content does not match hash'} ${JSON.stringify(v.contentHash)}  ${v.note || ''}`
+        );
+    }
+    t.end();
+});
