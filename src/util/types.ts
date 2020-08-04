@@ -153,6 +153,7 @@ export interface SyncResults {
     numPulled: number,
 }
 
+/*
 export interface IValidatorOld {
     // Validators are each responsible for one document format such as "es.4".
     // They are used by Storage instances to
@@ -187,6 +188,7 @@ export interface IValidatorOld {
     pathIsValid(path: Path): boolean;
     documentSignatureIsValid(doc: Document): boolean;
 }
+*/
 
 export interface IValidatorNew {
     format: FormatName;

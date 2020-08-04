@@ -19,7 +19,6 @@
     "start": "node build/main.js",
     "prettier": "prettier --write src/*",
     "test": "tap -Rspecy --jobs=1 build/test/*.test.js",
-    "test-addresses": "tap -Rspecy --jobs=1 build/test/addresses.test.js",
     "test-crypto": "tap -Rspecy --jobs=1 build/test/crypto.test.js",
     "test-layer-about": "tap -Rspecy --jobs=1 build/test/layers.about.test.js",
     "test-layer-wiki": "tap -Rspecy --jobs=1 build/test/layers.wiki.test.js",

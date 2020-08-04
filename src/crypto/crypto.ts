@@ -7,6 +7,11 @@ import {
     AuthorKeypair,
     EncodedHash,
     EncodedSig,
+    WorkspaceName,
+    EncodedKey,
+    WorkspaceAddress,
+    AuthorShortname,
+    ValidationError,
 } from '../util/types';
 import {
     KeypairBuffers,
@@ -18,23 +23,36 @@ import {
     encodeSecret,
 } from './encoding';
 import {
-    assembleAuthorAddress,
-    parseAuthorAddress,
-} from '../util/addresses';
+    ValidatorNew_Es4
+} from '../validator/es4new';
+
+//================================================================================
+// this really should happen in the validator?
+
+let assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress =>
+    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
+    `+${name}.${encodedPubkey}`;
+
+let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress =>
+    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
+    `@${shortname}.${encodedPubkey}`;
+
+//================================================================================
+
 
 export let sha256 = (input : string | Buffer) : EncodedHash =>
     LowLevelCrypto.sha256(input);
 
 export let generateAuthorKeypair = (shortname : string) : AuthorKeypair => {
+    // This throws a ValidationError if the shortname doesn't follow the rules.
+
     let bufferPair : KeypairBuffers = LowLevelCrypto.generateKeypairBuffers();
     let keypair = {
         address: assembleAuthorAddress(shortname, encodePubkey(bufferPair.pubkey)),
         secret: encodeSecret(bufferPair.secret),
     };
-    // Parse it to make sure it's valid
-    // This is where we detect if the shortname is bad (wrong length, etc)
-    let { authorParsed, err } = parseAuthorAddress(keypair.address);
-    if (err) { throw new Error(err); }
+    // Make sure it's valid (correct length, etc).  Throw error if invalid.
+    ValidatorNew_Es4._assertAuthorIsValid(keypair.address);
     return keypair;
 }
 
@@ -44,7 +62,12 @@ export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig 
 }
 
 export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : string | Buffer) : boolean => {
-    let { authorParsed, err } = parseAuthorAddress(authorAddress);
-    if (err || authorParsed === null) { throw 'could not parse author address: ' + authorAddress + '  -- err: ' + err; }
-    return LowLevelCrypto.verify(decodePubkey(authorParsed.pubkey), sig, msg);
+    // If authorAddress is bad, this just returns false instead of throwing a ValidationError.
+    try {
+        let authorParsed = ValidatorNew_Es4.parseAuthorAddress(authorAddress);
+        return LowLevelCrypto.verify(decodePubkey(authorParsed.pubkey), sig, msg);
+    } catch (err) {
+        if (err instanceof ValidationError) { return false; }
+        throw err;
+    }
 }

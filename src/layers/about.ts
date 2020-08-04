@@ -4,10 +4,12 @@ import {
     AuthorShortname,
     IStorage,
     EncodedKey,
+    ValidationError,
+    AuthorParsed,
 } from '../util/types';
 import {
-    parseAuthorAddress
-} from '../util/addresses';
+    ValidatorNew_Es4
+} from '../validator/es4new';
 
 export interface AuthorInfo {
     address : AuthorAddress,
@@ -45,8 +47,13 @@ export class LayerAbout {
         // otherwise returns an object, within which the profile might be an empty object
         // if there's no profile document for this author.
         // TODO: this doesn't verify this author has ever written to the workspace...?
-        let {authorParsed, err} = parseAuthorAddress(authorAddress);
-        if (err || !authorParsed) { return null; }
+        let authorParsed : AuthorParsed;
+        try {
+            authorParsed = ValidatorNew_Es4.parseAuthorAddress(authorAddress);
+        } catch (err) {
+            if (err instanceof ValidationError) { return null; }
+            throw err;
+        }
         let info : AuthorInfo = {
             address: authorParsed.address,
             shortname: authorParsed.shortname,

@@ -17,7 +17,6 @@ import {
     ValidationError,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
-import { parseWorkspaceAddress } from '../util/addresses';
 import { logDebug, logWarning } from '../util/log';
 import { sha256 } from '../crypto/crypto';
 

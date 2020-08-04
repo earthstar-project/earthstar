@@ -125,7 +125,7 @@ t.test('signatures', (t: any) => {
     t.notOk(verify(keypair.address, 'otherSig', input), 'garbage signature is not valid');
     t.notOk(verify(keypair.address, sig2, input), 'signature from another key is not valid');
     t.notOk(verify(keypair.address, sig, 'otherInput'), 'signature is not valid with different input');
-    t.throws(() => verify('@xxxx.yyyyyyy', sig, input), 'throws when address is not parseable');
+    t.notOk(verify('@bad.address', sig, input), 'invalid author address = invalid signature, return false');
 
     // changing input should change signature
     t.notEqual(sign(keypair, 'aaa'), sign(keypair, 'xxx'), 'different inputs should make different signature');
