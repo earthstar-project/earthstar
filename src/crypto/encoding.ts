@@ -14,7 +14,7 @@ import {
 } from './cryptoTypes';
 import {
     ValidatorNew_Es4,
-} from '../validator/es4new';
+} from '../validator/es4';
 
 //================================================================================
 // this really should happen in the validator?

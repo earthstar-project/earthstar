@@ -3,14 +3,14 @@ import {
     AuthorAddress,
     FormatName,
     IStorage,
-    IValidatorNew,
+    IValidator,
 } from '../util/types';
 import {
     generateAuthorKeypair
 } from '../crypto/crypto';
 import {
     ValidatorNew_Es4
-} from '../validator/es4new';
+} from '../validator/es4';
 import {
     StorageMemory
 } from '../storage/memory';
@@ -24,7 +24,7 @@ import {
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let VALIDATORS : IValidatorNew[] = [ValidatorNew_Es4];
+let VALIDATORS : IValidator[] = [ValidatorNew_Es4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
 let keypair1 = generateAuthorKeypair('test');

@@ -7,14 +7,14 @@ import {
     Document,
     FormatName,
     IStorage,
-    IValidatorNew,
+    IValidator,
     SyncOpts,
 } from '../util/types';
 import {
     generateAuthorKeypair,
     sha256,
 } from '../crypto/crypto';
-import { ValidatorNew_Es4 } from '../validator/es4new';
+import { ValidatorNew_Es4 } from '../validator/es4';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
 import { logTest } from '../util/log';
@@ -25,7 +25,7 @@ import { logTest } from '../util/log';
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 
-let VALIDATORS : IValidatorNew[] = [ValidatorNew_Es4];
+let VALIDATORS : IValidator[] = [ValidatorNew_Es4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
 let keypair1 = generateAuthorKeypair('test');

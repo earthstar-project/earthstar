@@ -15,7 +15,7 @@ import {
 import {
     ValidatorNew_Es4,
     FUTURE_CUTOFF_MICROSECONDS,
-} from '../validator/es4new';
+} from '../validator/es4';
 
 let keypair1 = generateAuthorKeypair('test');
 let author1: AuthorAddress = keypair1.address;

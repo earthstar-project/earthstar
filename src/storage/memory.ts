@@ -4,7 +4,7 @@ import {
     DocToSet,
     Document,
     IStorage,
-    IValidatorNew,
+    IValidator,
     QueryOpts,
     SyncOpts,
     SyncResults,
@@ -49,16 +49,16 @@ export class StorageMemory implements IStorage {
     */
     _docs : {[path:string] : {[author:string] : Document}} = {};
     workspace : WorkspaceAddress;
-    validatorMap : {[format: string] : IValidatorNew};
+    validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
-    constructor(validators : IValidatorNew[], workspace : WorkspaceAddress) {
+    constructor(validators : IValidator[], workspace : WorkspaceAddress) {
         if (validators.length === 0) {
             throw new Error('must provide at least one validator');
         }
 
         // check if the workspace is valid
         // TODO: try with all the of validators, and only throw an error if they all fail
-        let val0 : IValidatorNew = validators[0];
+        let val0 : IValidator = validators[0];
         val0._assertWorkspaceIsValid(workspace);  // can throw ValidationError
         this.workspace = workspace;
 

@@ -190,7 +190,7 @@ export interface IValidatorOld {
 }
 */
 
-export interface IValidatorNew {
+export interface IValidator {
     format: FormatName;
     hashDocument(doc: Document): EncodedHash;
     signDocument(keypair: AuthorKeypair, doc: Document): Document;
@@ -215,7 +215,7 @@ export interface IValidatorNew {
     parseAuthorAddress(addr : AuthorAddress) : AuthorParsed;
     parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed;
 }
-export interface IValidatorNew_ES4 extends IValidatorNew {
+export interface IValidatorES4 extends IValidator {
     format: 'es.4';
 }
 

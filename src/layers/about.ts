@@ -9,7 +9,7 @@ import {
 } from '../util/types';
 import {
     ValidatorNew_Es4
-} from '../validator/es4new';
+} from '../validator/es4';
 
 export interface AuthorInfo {
     address : AuthorAddress,

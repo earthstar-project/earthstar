@@ -9,7 +9,7 @@ import {
     DocToSet,
     Document,
     IStorage,
-    IValidatorNew,
+    IValidator,
     QueryOpts,
     SyncOpts,
     SyncResults,
@@ -35,14 +35,14 @@ export interface StorageSqliteOpts {
     //
     mode: 'open' | 'create' | 'create-or-open',
     workspace: WorkspaceAddress | null,
-    validators: IValidatorNew[],  // must provide at least one
+    validators: IValidator[],  // must provide at least one
     filename: string,
 }
 
 export class StorageSqlite implements IStorage {
     db : SqliteDatabase;
     workspace : WorkspaceAddress;
-    validatorMap : {[format: string] : IValidatorNew};
+    validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
     constructor(opts : StorageSqliteOpts) {
         this.onChange = new Emitter<undefined>();
@@ -54,7 +54,7 @@ export class StorageSqlite implements IStorage {
         if (opts.workspace) {
             // check if the workspace is valid
             // TODO: try with all the of validators, and only throw an error if they all fail
-            let val0 : IValidatorNew = opts.validators[0];
+            let val0 : IValidator = opts.validators[0];
             val0._assertWorkspaceIsValid(opts.workspace);  // can throw ValidationError
         }
 

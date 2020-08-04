@@ -6,7 +6,7 @@ import {
     AuthorParsed,
     Document,
     EncodedHash,
-    IValidatorNew_ES4,
+    IValidatorES4,
     Path,
     ValidationError,
     WorkspaceAddress,
@@ -39,7 +39,7 @@ export const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 10
 
 // Methods called "assert_____" return nothing on success, and throw a ValidationError on failure.
 
-export const ValidatorNew_Es4 : IValidatorNew_ES4 = class {
+export const ValidatorNew_Es4 : IValidatorES4 = class {
     static format: 'es.4' = 'es.4';
     static hashDocument(doc: Document): EncodedHash {
         // Deterministic hash of the document.

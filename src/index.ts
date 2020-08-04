@@ -8,5 +8,5 @@ export * from './storage/sqlite';
 export * from './sync';
 export * from './util/emitter';
 export * from './util/types';
-export * from './validator/es4new';
+export * from './validator/es4';
 export * from './workspace';
