@@ -153,8 +153,7 @@ export interface SyncResults {
     numPulled: number,
 }
 
-/*
-export interface IValidatorOld {
+export interface IValidator {
     // Validators are each responsible for one document format such as "es.4".
     // They are used by Storage instances to
     // * check if documents are valid before accepting them
@@ -179,29 +178,13 @@ export interface IValidatorOld {
     // it will be overwritten here, so you may as well just set signature: '' on the input
     signDocument(keypair: AuthorKeypair, doc: Document): Document;
 
-    // General validity check including the specific checks (can write to path, path is valid, signature)
-    // plus other checks (missing fields, wrong datatypes, etc)
-    documentIsValid(doc: Document, now?: number): boolean;
-
-    // Specific validity checks
-    authorCanWriteToPath(author: AuthorAddress, path: Path): boolean;
-    pathIsValid(path: Path): boolean;
-    documentSignatureIsValid(doc: Document): boolean;
-}
-*/
-
-export interface IValidator {
-    format: FormatName;
-    hashDocument(doc: Document): EncodedHash;
-    signDocument(keypair: AuthorKeypair, doc: Document): Document;
-
-    // this calls all the following more detailed functions.
-    // can throw ValidationError.
+    // This calls all the following more detailed functions.
+    // Can throw ValidationError.
     assertDocumentIsValid(doc: Document, now?: number): void;
 
-    // these are broken out for easier unit testing.
-    // they will not normally be used.
-    // can throw ValidationError.
+    // These are broken out for easier unit testing.
+    // They will not normally be used directly; use the main assertDocumentIsValid instead.
+    // Can throw ValidationError.
     _assertBasicDocumentValidity(doc: Document): void;  // check for correct fields and datatypes
     _assertAuthorCanWriteToPath(author: AuthorAddress, path: Path): void;
     _assertTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): void;
@@ -211,9 +194,15 @@ export interface IValidator {
     _assertAuthorSignatureIsValid(doc: Document): void;
     _assertContentMatchesHash(content: string, contentHash: EncodedHash): void;
 
-    // can throw ValidationError.
+    // Parse an address into its parts.
+    // Can throw ValidationError.
     parseAuthorAddress(addr : AuthorAddress) : AuthorParsed;
     parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed;
+
+    // TODO: add these methods for building addresses
+    // and remove them from crypto.ts and encoding.ts
+    // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
+    // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
 }
 export interface IValidatorES4 extends IValidator {
     format: 'es.4';

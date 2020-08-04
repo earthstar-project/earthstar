@@ -47,6 +47,7 @@ export class LayerAbout {
         // otherwise returns an object, within which the profile might be an empty object
         // if there's no profile document for this author.
         // TODO: this doesn't verify this author has ever written to the workspace...?
+        // TODO: should this throw a ValidationError instead of returning null?
         let authorParsed : AuthorParsed;
         try {
             authorParsed = ValidatorNew_Es4.parseAuthorAddress(authorAddress);

@@ -425,7 +425,7 @@ t.test('parseAuthorAddress', (t: any) => {
         { valid: false, address: `@s${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 1 letter' },
 
         // TODO: more carefully check b32 characters
-        //{ valid: false, address: '@suzy.b01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'invalid b32 characters in key (0, 1)' },
+        { valid: false, address: '@suzy.b01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'invalid b32 characters in key (0, 1)' },
     ];
     for (let v of vectors) {
         if (v.valid) {

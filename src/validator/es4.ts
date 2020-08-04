@@ -162,8 +162,6 @@ export const ValidatorNew_Es4 : IValidatorES4 = class {
         // accidentally created with milliseconds or seconds,
         // the message is invalid.
 
-        // TODO: all these checks need to apply to deleteAfter also
-
         if (typeof timestamp !== 'number' || timestamp !== Math.floor(timestamp)) {
             throw new ValidationError('timestamp must be an integer');
         }

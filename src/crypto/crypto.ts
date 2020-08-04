@@ -27,7 +27,7 @@ import {
 } from '../validator/es4';
 
 //================================================================================
-// this really should happen in the validator?
+// TODO: this really should happen in the validator?
 
 let assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress =>
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
