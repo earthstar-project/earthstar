@@ -10,6 +10,7 @@ import {
     SyncResults,
     WorkspaceAddress,
     ValidationError,
+    StorageIsClosedError,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { logWarning } from '../util/log';
@@ -51,6 +52,7 @@ export class StorageMemory implements IStorage {
     workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
+    _isClosed : boolean = false;
     constructor(validators : IValidator[], workspace : WorkspaceAddress) {
         if (validators.length === 0) {
             throw new Error('must provide at least one validator');
@@ -90,6 +92,7 @@ export class StorageMemory implements IStorage {
     }
 
     paths(query? : QueryOpts) : string[] {
+        this._assertNotClosed();
 
         query = query || {};
 
@@ -116,6 +119,9 @@ export class StorageMemory implements IStorage {
     }
     documents(query? : QueryOpts) : Document[] {
         // return docs that match the query, sorted by path and timestamp
+
+        this._assertNotClosed();
+
         query = query || {};
         let docs : Document[] = [];
 
@@ -170,10 +176,12 @@ export class StorageMemory implements IStorage {
     }
     contents(query? : QueryOpts) : string[] {
         // same as docs, but we just return the contents.
+        this._assertNotClosed();
         return this.documents(query).map(doc => doc.content);
     }
 
     authors(now?: number) : AuthorAddress[] {
+        this._assertNotClosed();
 
         // TODO: check for and remove expired docs
 
@@ -190,6 +198,9 @@ export class StorageMemory implements IStorage {
         // look up the winning document for a single path.
         // return undefined if not found.
         // to get history docs for a path, do documents({path: 'foo', includeHistory: true})
+
+        this._assertNotClosed();
+
         this._removeExpiredDocsAtPath(path, now || Date.now() * 1000);
 
         if (this._docs[path] === undefined) { return undefined; }
@@ -199,6 +210,7 @@ export class StorageMemory implements IStorage {
     }
     getContent(path : string, now?: number) : string | undefined {
         // same as getDocument, but just returns the content, not the whole doc object.
+        this._assertNotClosed();
         return this.getDocument(path, now)?.content;
     }
 
@@ -215,6 +227,8 @@ export class StorageMemory implements IStorage {
         // The winning doc is chosen at get time, not write time.
 
         // now is a timestamp in microseconds, usually omitted but settable for testing purposes.
+
+        this._assertNotClosed();
 
         now = now || Date.now() * 1000;
 
@@ -276,6 +290,9 @@ export class StorageMemory implements IStorage {
         // now should also normally be omitted; it defaults to Date.now()*1000
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
+
+        this._assertNotClosed();
+
         now = now || Date.now() * 1000;
 
         let validator = this.validatorMap[docToSet.format];
@@ -335,6 +352,8 @@ export class StorageMemory implements IStorage {
         // Return the number of docs pushed and pulled.
         // This uses a simple and inefficient algorithm.  Fancier algorithm TBD.
 
+        this._assertNotClosed();
+
         // don't sync with yourself
         if (otherStore === this) { return { numPushed: 0, numPulled: 0 }; }
 
@@ -355,5 +374,20 @@ export class StorageMemory implements IStorage {
             numPushed = otherStore._syncFrom(this, existing, live);
         }
         return { numPushed, numPulled };
+    }
+
+    // Close this storage.
+    // All functions called after this will throw a StorageIsClosedError,
+    // except you can call close() as many times as you want.
+    // Once closed, a Storage instance cannot be opened again.
+    close() : void {
+        this._isClosed = true;
+    }
+    _assertNotClosed() : void {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+    }
+    // Find out if the storage is closed.
+    isClosed() : boolean {
+        return this._isClosed;
     }
 }

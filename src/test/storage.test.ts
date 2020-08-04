@@ -282,6 +282,27 @@ for (let scenario of scenarios) {
         t.done();
     });
 
+    t.test(scenario.description + ': close', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+        let storage2 = scenario.makeStorage(WORKSPACE);
+
+        t.same(storage.isClosed(), false, 'starts off not closed');
+        storage.close();
+        t.same(storage.isClosed(), true, 'becomes closed');
+        storage.close();
+        t.same(storage.isClosed(), true, 'stays closed');
+
+        t.throws(() => storage.contents(), 'contents() throws when closed');
+        t.throws(() => storage.documents(), 'documents() throws when closed');
+        t.throws(() => storage.getContent('/a'), 'getContent() throws when closed');
+        t.throws(() => storage.getDocument('/a'), 'getDocument() throws when closed');
+        t.throws(() => storage.ingestDocument({} as any), 'ingestDocument() throws when closed');
+        t.throws(() => storage.paths(), 'paths() throws when closed');
+        t.throws(() => storage.set(keypair1, {} as any), 'set() throws when closed');
+        t.throws(() => storage.sync(storage2, {}), 'sync() throws when closed');
+        t.done();
+    });
+
     t.test(scenario.description + ': store ingestDocument rejects invalid docs', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 

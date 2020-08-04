@@ -11,6 +11,7 @@ import {
     IStorage,
     IValidator,
     QueryOpts,
+    StorageIsClosedError,
     SyncOpts,
     SyncResults,
     WorkspaceAddress,
@@ -44,6 +45,7 @@ export class StorageSqlite implements IStorage {
     workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
     onChange : Emitter<undefined>;
+    _isClosed : boolean = false;
     constructor(opts : StorageSqliteOpts) {
         this.onChange = new Emitter<undefined>();
 
@@ -176,6 +178,7 @@ export class StorageSqlite implements IStorage {
     }
 
     documents(query? : QueryOpts) : Document[] {
+        this._assertNotClosed();
 
         // TODO: check for and remove expired docs
 
@@ -284,6 +287,7 @@ export class StorageSqlite implements IStorage {
         // then remove dupes here, then apply the limit.
         // this is super inefficient on large databases.
         logDebug(`---- paths(${JSON.stringify(query)})`);
+        this._assertNotClosed();
         query = query || {};
         let docs = this.documents({...query, limit: undefined});
         // get unique paths up to limit
@@ -299,11 +303,13 @@ export class StorageSqlite implements IStorage {
     contents(query? : QueryOpts) : string[] {
         // just search using documents() and extract the contents.
         logDebug(`---- contents(${JSON.stringify(query)})`);
+        this._assertNotClosed();
         return this.documents(query).map(doc => doc.content);
     }
 
     authors(now?: number) : AuthorAddress[] {
         logDebug(`---- authors()`);
+        this._assertNotClosed();
 
         this._removeExpiredDocs(now || Date.now() * 1000);
 
@@ -319,6 +325,7 @@ export class StorageSqlite implements IStorage {
         // return undefined if not found.
         // to get history docs for a path, do docs({path: 'foo', includeHistory: true})
         logDebug(`---- getDocument(${JSON.stringify(path)})`);
+        this._assertNotClosed();
 
         this._removeExpiredDocs(now || Date.now() * 1000);
 
@@ -338,6 +345,7 @@ export class StorageSqlite implements IStorage {
     getContent(path : string, now? : number) : string | undefined {
         // same as getDocument, but just returns the content, not the whole doc object.
         logDebug(`---- getContent(${JSON.stringify(path)})`);
+        this._assertNotClosed();
         return this.getDocument(path, now)?.content;
     }
 
@@ -356,6 +364,7 @@ export class StorageSqlite implements IStorage {
         // now is a timestamp in microseconds, usually omitted but settable for testing purposes.
         logDebug(`---- ingestDocument`);
         logDebug('doc:', doc);
+        this._assertNotClosed();
 
         now = now || Date.now() * 1000;
 
@@ -433,6 +442,7 @@ export class StorageSqlite implements IStorage {
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
         logDebug(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.content)}, ...)`);
+        this._assertNotClosed();
 
         now = now || Date.now() * 1000;
 
@@ -497,6 +507,7 @@ export class StorageSqlite implements IStorage {
         // This uses a simple and inefficient algorithm.  Fancier algorithm TBD.
 
         logDebug('sync');
+        this._assertNotClosed();
 
         // don't sync with yourself
         if (otherStore === this) { return { numPushed: 0, numPulled: 0 }; }
@@ -520,4 +531,19 @@ export class StorageSqlite implements IStorage {
         return { numPushed, numPulled };
     }
 
+    // Close this storage.
+    // All functions called after this will throw a StorageIsClosedError,
+    // except you can call close() as many times as you want.
+    // Once closed, a Storage instance cannot be opened again.
+    close() : void {
+        this._isClosed = true;
+        this.db.close();
+    }
+    _assertNotClosed() : void {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+    }
+    // Find out if the storage is closed.
+    isClosed() : boolean {
+        return this._isClosed;
+    }
 }

@@ -6,6 +6,12 @@ export class ValidationError extends Error {
         this.name = "ValidationError";
     }
 }
+export class StorageIsClosedError extends Error {
+    constructor() {
+        super();
+        this.name = "StorageIsClosedError";
+    }
+}
 
 export type Path = string;
 
@@ -284,4 +290,13 @@ export interface IStorage {
 
     // TODO: Delete data locally.  This deletion will not propagate.
     // forget(query : QueryOpts) : void;  // same query options as paths()
+
+    // Close this storage.
+    // All functions called after this will throw a StorageIsClosedError,
+    // except you can call close() as many times as you want.
+    // Once closed, a Storage instance cannot be opened again.
+    // TODO: what happens when a long-running process like a sync is happening, and the Storage is closed?
+    close() : void;
+    // Find out if the storage is closed.
+    isClosed() : boolean;
 }
