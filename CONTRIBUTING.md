@@ -28,7 +28,7 @@ If you are using Earthstar for the purpose of harming people or hosting communit
 
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
-The software we make, and the community here in which we make it, should be accessible to everyone -- especially people who are not typically privileged in tech spaces.
+The software we make, and the community here in which we make it, should be accessible to everyone -- especially people who are not historically privileged in tech spaces.
 
 ## Communication, collaboration, and decision making
 
@@ -100,7 +100,7 @@ JSON also uses camelCase:
 
 ### Whitespace and semicolons
 
-Use semicolons.
+Use semicolons.  Format functions like this:
 
 ```ts
 let exampleFunction = (x: number): number => {
@@ -109,6 +109,13 @@ let exampleFunction = (x: number): number => {
 
 let oneLinerFunction = (x: number): number =>
     x * 2;
+```
+
+Object literals written on one line should have spaces inside the curly brackets:
+
+```ts
+let myObject = { a: 1, b: 2, c:3 };
+//       spaces ^               ^
 ```
 
 Some old code has a space before type-related colons, which we don't want.  This can be fixed with the built-in code formatter in VSCode (command-shift P, then "format selection").
