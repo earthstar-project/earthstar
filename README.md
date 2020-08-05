@@ -7,7 +7,6 @@
 
 *Alpha - do not use for important data yet*
 
-Discuss Earthstar at [`#earthstar:matrix.org`](https://riot.im/app/#/room/!oGfoMKqZnBVrJYjebW:matrix.org?via=matrix.org)
 
 Related tools:
 * [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli) -- command line utility
@@ -17,6 +16,12 @@ Related tools:
 
 Other docs:
 * [Earthstar concepts and vocabulary](docs/vocabulary.md) -- more details about workspaces, etc
+
+## Community / how to contribute
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
+Chatroom: [`#earthstar:matrix.org`](https://matrix.to/#/!oGfoMKqZnBVrJYjebW:matrix.org)
 
 ## What kinds of apps can you build with Earthstar?
 

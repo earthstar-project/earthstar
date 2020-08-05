@@ -11,10 +11,12 @@ Earthstar is mostly a **format for distributed data** and associated **user iden
 
 It's a delta-state based CRDT that works in adversarial conditions.
 
-This data format can be moved around in any way -- sneakernet, bluetooth, HTTP, etc.  For convenience, Earthstar suggests a way to do **networking**:
+This data format can be moved around in any way -- sneakernet, bluetooth, HTTP, etc.  For convenience, Earthstar suggests a way to do **networking** but is less opinionated about it:
 
 * Finding other peers
 * A protocol for syncing across a network
+
+Earthstar is a **specification** and a **reference implementation** in Typescript.
 
 ## Out of scope
 
@@ -22,6 +24,8 @@ This data format can be moved around in any way -- sneakernet, bluetooth, HTTP, 
 * No strong anonymity guarantees -- use Earthstar across more sophisticated network tools such as Tor, I2P, VPNs, yggdrasil, zerotier, etc.
 
 ## Goals and priorities
+
+The goal of this project is to make it easy for people and communities to have their own communications infrastructure, independent of big tech companies and people with specialized tech skills.
 
 Priority 1: Security:
 
@@ -35,6 +39,7 @@ Priority 2: Affordances to meet user needs:
 * Use a single identity from multiple devices
 * Robust blocking and abuse prevention tools (mostly provided by apps built on top of Earthstar, using the flexibility of Earthstar's data model)
 * Private messages (not implemented yet)
+* Phishing and impersonation resistance
 
 Priority 3: Diffusion of power and control:
 
@@ -49,7 +54,14 @@ Priority 4: Code simplicity, to democratize implementation and understanding:
 
 * Use well-known, "boring" technologies and programming paradigms
 * Use simple algorithms
-* Write lots of documentation :)
+* Write lots of documentation
+* Minimize dependencies
+
+Priority 5: Backwards compatability
+
+* Preserve the ability to read old Earthstar data
+* Bump the format version (e.g. "es.4" and ValidatorES4) when making changes
+* Storage classes should support multiple validators -- this lets them handle old and new data at the same time
 
 ## Technical rules and invariants
 
