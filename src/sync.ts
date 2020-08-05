@@ -2,6 +2,7 @@ import fetch from 'isomorphic-fetch';
 import {
     IStorage,
     WorkspaceAddress,
+    WriteResult,
 } from './util/types';
 import {
     Emitter
@@ -157,7 +158,7 @@ export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
         let docs = await resp.json();
         resultStats.pull.numTotal = docs.length;
         for (let doc of docs) {
-            if (storage.ingestDocument(doc)) { resultStats.pull.numIngested += 1; }
+            if (storage.ingestDocument(doc) === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
             else { resultStats.pull.numIgnored += 1; }
         }
         logSyncAlg(JSON.stringify(resultStats.pull, null, 2));

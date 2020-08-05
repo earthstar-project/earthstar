@@ -2,13 +2,14 @@ import {
     AuthorAddress,
     AuthorKeypair,
     AuthorShortname,
-    IStorage,
     EncodedKey,
+    IStorage,
     ValidationError,
-    AuthorParsed,
+    WriteResult,
+    isErr,
 } from '../util/types';
 import {
-    ValidatorNew_Es4
+    ValidatorEs4
 } from '../validator/es4';
 
 export interface AuthorInfo {
@@ -17,9 +18,8 @@ export interface AuthorInfo {
     pubkey : EncodedKey,
 
     // The rest of this info is stored as JSON in a single document
-    // at /about/~@suzy.xxxxx/profile .
-    // Even if the document has never been written, this will
-    // return a content of {}.
+    // at /about/~@suzy.xxxxx/profile.json
+    // If the document there does not exist, profile is {}.
     profile: AuthorProfile,
 }
 
@@ -42,19 +42,16 @@ export class LayerAbout {
         let infos = authorAddresses.map(authorAddress => this.getAuthorInfo(authorAddress));
         return infos.filter(x => x !== null) as AuthorInfo[];
     }
-    getAuthorInfo(authorAddress : AuthorAddress) : AuthorInfo | null {
-        // returns null when the given author address is invalid (can't be parsed).
-        // otherwise returns an object, within which the profile might be an empty object
-        // if there's no profile document for this author.
-        // TODO: this doesn't verify this author has ever written to the workspace...?
-        // TODO: should this throw a ValidationError instead of returning null?
-        let authorParsed : AuthorParsed;
-        try {
-            authorParsed = ValidatorNew_Es4.parseAuthorAddress(authorAddress);
-        } catch (err) {
-            if (err instanceof ValidationError) { return null; }
-            throw err;
-        }
+    getAuthorInfo(authorAddress : AuthorAddress) : AuthorInfo | ValidationError {
+        // returns a ValidationError when the given author address is invalid (can't be parsed).
+        // Otherwise returns an AuthorInfo object.
+        // If there's no profle document found, then authorIfno.profile will be {}.
+        // TODO: Should this verify this author has written any docs to the workspace...?
+        //       Right now, getAuthorInfo always returns something
+        //       even if the author has never written any docs to the workspace.
+        let authorParsed = ValidatorEs4.parseAuthorAddress(authorAddress);
+        if (isErr(authorParsed)) { return authorParsed; }
+
         let info : AuthorInfo = {
             address: authorParsed.address,
             shortname: authorParsed.shortname,
@@ -71,14 +68,16 @@ export class LayerAbout {
         }
         return info;
     }
-    setMyAuthorProfile(keypair : AuthorKeypair, profile : AuthorProfile | null, timestamp?: number) : boolean {
-        // we can only set our own info, so we don't need an author input parameter.
-        // set profile to null to erase your profile (by writing an empty string to your profile document).
+    setMyAuthorProfile(keypair : AuthorKeypair, profile : AuthorProfile | null, timestamp?: number) : WriteResult | ValidationError {
+        // We can only set our own info, so we don't need an author input parameter (it comes from the keypair).
+        // Set profile to null or {} to erase your profile (by writing an empty string to your profile document).
         // normally timestamp should be omitted.
+        let profileString = (profile === null) ? '' : JSON.stringify(profile);
+        if (profileString === '{}') { profileString = ''; }
         return this.storage.set(keypair, {
             format: 'es.4',
             path: LayerAbout.makeProfilePath(keypair.address),
-            content: profile === null ? '' : JSON.stringify(profile),
+            content: profileString,
             timestamp: timestamp,
         });
     }

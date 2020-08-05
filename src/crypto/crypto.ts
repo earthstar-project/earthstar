@@ -5,13 +5,14 @@ export { LowLevelCrypto };
 import {
     AuthorAddress,
     AuthorKeypair,
-    EncodedHash,
-    EncodedSig,
-    WorkspaceName,
-    EncodedKey,
-    WorkspaceAddress,
     AuthorShortname,
+    EncodedHash,
+    EncodedKey,
+    EncodedSig,
     ValidationError,
+    WorkspaceAddress,
+    WorkspaceName,
+    isErr,
 } from '../util/types';
 import {
     KeypairBuffers,
@@ -23,7 +24,7 @@ import {
     encodeSecret,
 } from './encoding';
 import {
-    ValidatorNew_Es4
+    ValidatorEs4
 } from '../validator/es4';
 
 //================================================================================
@@ -43,31 +44,38 @@ let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : Encode
 export let sha256 = (input : string | Buffer) : EncodedHash =>
     LowLevelCrypto.sha256(input);
 
-export let generateAuthorKeypair = (shortname : string) : AuthorKeypair => {
-    // This throws a ValidationError if the shortname doesn't follow the rules.
+export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | ValidationError => {
+    // This returns a ValidationError if the shortname doesn't follow the rules.
 
     let bufferPair : KeypairBuffers = LowLevelCrypto.generateKeypairBuffers();
     let keypair = {
         address: assembleAuthorAddress(shortname, encodePubkey(bufferPair.pubkey)),
         secret: encodeSecret(bufferPair.secret),
     };
-    // Make sure it's valid (correct length, etc).  Throw error if invalid.
-    ValidatorNew_Es4._assertAuthorIsValid(keypair.address);
+    // Make sure it's valid (correct length, etc).  return error if invalid.
+    let err = ValidatorEs4._checkAuthorIsValid(keypair.address);
+    if (isErr(err)) { return err; }
     return keypair;
 }
 
-export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig => {
+export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig | ValidationError => {
     let keypairBuffers = decodeAuthorKeypair(keypair);
+    if (isErr(keypairBuffers)) { return keypairBuffers; }
     return LowLevelCrypto.sign(keypairBuffers, msg);
 }
 
 export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : string | Buffer) : boolean => {
-    // If authorAddress is bad, this just returns false instead of throwing a ValidationError.
+    // Is the author signature valid?
+    // This returns false on any expected kind of failure:
+    //    bad author address format
+    //    bad signature format (TODO: test this)
+    //    signature format is valid but signature itself is invalid
+    // If an unexpected exception happens, it is re-thrown.
     try {
-        let authorParsed = ValidatorNew_Es4.parseAuthorAddress(authorAddress);
+        let authorParsed = ValidatorEs4.parseAuthorAddress(authorAddress);
+        if (isErr(authorParsed)) { return false; }
         return LowLevelCrypto.verify(decodePubkey(authorParsed.pubkey), sig, msg);
     } catch (err) {
-        if (err instanceof ValidationError) { return false; }
         throw err;
     }
 }

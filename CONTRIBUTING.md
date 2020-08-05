@@ -53,6 +53,54 @@ Use `async`/`await` when handling promises.
 
 Prefer `const` over `let` when possible, but it's not a strict rule.  Don't use `var`.
 
+### Null and undefined
+
+Avoid using `undefined` when possible.  `undefined` tends to occur accidentally (when looking up an object property that doesn't exist), and it can also be ambiguous when an object has an `undefined` property vs. not having the property at all.
+
+Instead, use `null`.
+
+### Errors and exceptions
+
+When a function can have expected kinds of errors, return an Error from the function instead of throwing it.  This helps Typescript to understand the function better and ensures the people calling the function later will be aware of all the possible errors.
+
+```ts
+// return result or Error
+let divideNumbers(a: number, b: number): number | EarthstarError => {
+    if (b === 0) { return new EarthstarError("can't divide by zero"); }
+    return a / b;
+}
+
+// check for errors like this:
+let n = divideNumbers(1, 2);
+if (n instanceof EarthstarError) {
+    // do something
+} else {
+    // n is a number
+}
+
+// or use the helper functions from types.ts
+if (isErr(n)) { ... }
+if (notErr(n)) { ... }
+```
+
+Use subclasses of the built-in node Error class.  They're defined in [types.ts](src/util/types.ts).  Prefer these specific errors to the generic built-in `Error`.
+
+```ts
+class EarthstarError extends Error { ... }
+
+class ValidationError extends EarthstarError { ... }
+class StorageIsClosedError extends EarthstarError { ... }
+... etc ...
+```
+
+It's ok to throw an error in these cases:
+* A function is not implemented yet
+* Class constructors can't return a value, so you can throw an exception there.  This happens in the Storage classes.
+* If the programmer made an obvious mistake, you can throw an error.
+  * Very wrong function arguments
+  * Using a Storage instance after closing it
+  * Low-level system errors like missing files
+
 ### Modules and files
 
 `src/util/types.ts` is the home for widely used types and interfaces.  If a type will be used in more than one file, put it here.
@@ -63,9 +111,11 @@ Prefer `const` over `let` when possible, but it's not a strict rule.  Don't use 
 
 Avoid adding new dependencies.  Choose dependencies carefully; favor well-known and mature modules with few dependencies of their own.
 
-### No streams
+### Avoid streams
 
 Node streams are confusing and inaccessible to many people.  Instead of streams, Earthstar generally does things in batches.  For example: fetch 1000 documents at a time, in a loop, then get the next 1000, etc.
+
+This applies to regular code and network responses.
 
 ## Code formatting
 
@@ -98,7 +148,7 @@ JSON also uses camelCase:
 }
 ```
 
-### Whitespace and semicolons
+### Whitespace, semicolons, punctuation
 
 Use semicolons.  Format functions like this:
 
@@ -128,6 +178,14 @@ let square = (x : number) : number =>
 // yes
 let square = (x: number): number =>
     x * x;
+```
+
+Prefer single quotes to double quotes:
+
+```ts
+let yes = 'yes';
+let no = "no";
+let ok = "I'm a string with an apostrophe so I can use double quotes";
 ```
 
 ### Imports

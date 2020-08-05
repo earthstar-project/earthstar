@@ -1,15 +1,17 @@
 import t = require('tap');
 import {
     AuthorAddress,
+    AuthorKeypair,
     FormatName,
     IStorage,
     IValidator,
+    isErr,
 } from '../util/types';
 import {
     generateAuthorKeypair
 } from '../crypto/crypto';
 import {
-    ValidatorNew_Es4
+    ValidatorEs4
 } from '../validator/es4';
 import {
     StorageMemory
@@ -24,12 +26,15 @@ import {
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let VALIDATORS : IValidator[] = [ValidatorNew_Es4];
+let VALIDATORS : IValidator[] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
-let keypair1 = generateAuthorKeypair('test');
-let keypair2 = generateAuthorKeypair('twoo');
-let keypair3 = generateAuthorKeypair('thre');
+let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;
+let keypair2 = generateAuthorKeypair('twoo') as AuthorKeypair;
+let keypair3 = generateAuthorKeypair('thre') as AuthorKeypair;
+if (isErr(keypair1)) { throw "oops"; }
+if (isErr(keypair2)) { throw "oops"; }
+if (isErr(keypair3)) { throw "oops"; }
 let author1: AuthorAddress = keypair1.address;
 let author2: AuthorAddress = keypair2.address;
 let author3: AuthorAddress = keypair3.address;
@@ -47,7 +52,7 @@ t.test('with empty storage', (t: any) => {
     let about = new LayerAbout(storage);
 
     t.same(about.listAuthorInfos(), [], 'listAuthors empty');
-    t.equal(about.getAuthorInfo('x'), null, 'unparsable author address => null info');
+    t.ok(isErr(about.getAuthorInfo('x')), 'unparsable author address => error');
 
     // add a random document so that this author will be one of the authors in the workspace.
     storage.set(keypair2, {
@@ -90,7 +95,10 @@ t.test('with empty storage', (t: any) => {
 
     t.same(about.listAuthorInfos(), [{...expectedInfo1, profile: profile1b}, expectedInfo2], 'listAuthors again');
 
-    t.true(about.setMyAuthorProfile(keypair1, null), 'clear author profile');
+    t.true(about.setMyAuthorProfile(keypair1, null), 'clear author profile using null');
+    t.same(about.getAuthorInfo(author1), {...expectedInfo1, profile: {}}, 'getAuthorProfile with cleared profile doc');
+
+    t.true(about.setMyAuthorProfile(keypair1, {}), 'clear author profile using {}');
     t.same(about.getAuthorInfo(author1), {...expectedInfo1, profile: {}}, 'getAuthorProfile with cleared profile doc');
 
     t.end();

@@ -1,19 +1,73 @@
 import { Emitter } from './emitter';
 
-export class ValidationError extends Error {
-    constructor(message : string) {
-        super(message);
-        this.name = "ValidationError";
+//================================================================================
+// ERRORS
+
+export enum WriteResult {
+    Accepted = "ACCEPTED",
+    Ignored = "IGNORED",  // the document was already obsolete, or was not wanted by a sync query.
+}
+
+export class EarthstarError extends Error {
+    constructor(message?: string) {
+        super(message || '');
+        this.name = 'EarthstarError';
     }
 }
-export class StorageIsClosedError extends Error {
-    constructor() {
-        super();
-        this.name = "StorageIsClosedError";
+export class ValidationError extends EarthstarError {
+    constructor(message?: string) {
+        super(message || 'Validation error');
+        this.name = 'ValidationError';
+    }
+}
+export class StorageIsClosedError extends EarthstarError {
+    constructor(message?: string) {
+        super(message || 'a Storage instance was used after being closed');
+        this.name = 'StorageIsClosedError';
+    }
+}
+export class NotFoundError extends EarthstarError {
+    constructor(message?: string) {
+        super(message || 'not found');
+        this.name = 'NotFoundError';
     }
 }
 
-export type Path = string;
+export let isErr = <T>(x: T | Error): x is EarthstarError =>
+    x instanceof EarthstarError;
+export let notErr = <T>(x: T | Error): x is T =>
+    !(x instanceof EarthstarError);
+
+export let firstError = <T, E extends EarthstarError>(items : Array<T | E>, otherwise: T) : T | E => {
+    for (let item of items) {
+        if (item instanceof EarthstarError) {
+            return item;
+        }
+    }
+    return otherwise;
+}
+export let firstErrorThunk = <T, E extends EarthstarError>(thunks : Array<() => T | E>, otherwise: T) : T | E => {
+    for (let thunk of thunks) {
+        let value = thunk();
+        if (value instanceof EarthstarError) { return value; }
+    }
+    return otherwise;
+}
+
+/*
+// Err is used throughout Earthstar to return errors from functions
+export type Err = {
+    err: string,
+    [key:string]: any,
+};
+export let isErr = <T>(x : T | Err) : x is Err =>
+    'err' in x;
+export let notErr = <T>(x : T | Err) : x is T =>
+    !isErr(x);
+*/
+
+//================================================================================
+// DOCUMENT FIELDS
 
 // some vocabulary:
 //   WorkspaceAddress = '+' + WorkspaceName + '.' + (WorkspacePubkey | WorkspaceRandom)
@@ -49,10 +103,13 @@ export type AuthorKeypair = {
     secret: EncodedKey,
 };
 
-export type Signature = string;
+export type Path = string;
 
 // A document format such as "es.4".
 export type FormatName = string;
+
+//================================================================================
+// DOCUMENTS
 
 // The main type for Earthstar documents.
 // TODO: is this type specific to the es.4 format, or is it a universal requirement for all Earthstar formats?
@@ -65,7 +122,7 @@ export type Document = {
     author: AuthorAddress,
     timestamp: number,
     deleteAfter?: number,
-    signature: Signature,
+    signature: EncodedSig,
 };
 
 // A more limited version of a Document, used by the Storage.set() method
@@ -80,6 +137,7 @@ export type DocToSet = {
     // no signature - it's generated during setting
 };
 
+//================================================================================
 // Query objects describe how we want to query a Storage instance for documents.
 export interface QueryOpts {
     // An empty query object returns all documents.
@@ -125,6 +183,9 @@ export interface QueryOpts {
     now?: number,
 }
 
+//================================================================================
+// SYNCING
+
 // Options for the Storage.sync() method
 export interface SyncOpts {
     direction?: 'push' | 'pull' | 'both',  // default both
@@ -159,6 +220,7 @@ export interface SyncResults {
     numPulled: number,
 }
 
+//================================================================================
 export interface IValidator {
     // Validators are each responsible for one document format such as "es.4".
     // They are used by Storage instances to
@@ -177,33 +239,32 @@ export interface IValidator {
     format: FormatName;
 
     // Deterministic hash of this version of the document
-    hashDocument(doc: Document): EncodedHash;
+    hashDocument(doc: Document): EncodedHash | ValidationError;
 
     // Add an author signature to the document.
     // The input document needs a signature field to satisfy Typescript, but
     // it will be overwritten here, so you may as well just set signature: '' on the input
-    signDocument(keypair: AuthorKeypair, doc: Document): Document;
+    signDocument(keypair: AuthorKeypair, doc: Document): Document | ValidationError;
 
     // This calls all the following more detailed functions.
-    // Can throw ValidationError.
-    assertDocumentIsValid(doc: Document, now?: number): void;
+    // Returns true if the document is ok.
+    checkDocumentIsValid(doc: Document, now?: number): true | ValidationError;
 
     // These are broken out for easier unit testing.
     // They will not normally be used directly; use the main assertDocumentIsValid instead.
-    // Can throw ValidationError.
-    _assertBasicDocumentValidity(doc: Document): void;  // check for correct fields and datatypes
-    _assertAuthorCanWriteToPath(author: AuthorAddress, path: Path): void;
-    _assertTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): void;
-    _assertPathIsValid(path: Path): void;
-    _assertAuthorIsValid(authorAddress: AuthorAddress): void;
-    _assertWorkspaceIsValid(workspaceAddress: WorkspaceAddress): void;
-    _assertAuthorSignatureIsValid(doc: Document): void;
-    _assertContentMatchesHash(content: string, contentHash: EncodedHash): void;
+    // Returns true on success.
+    _checkBasicDocumentValidity(doc: Document): true | ValidationError;  // check for correct fields and datatypes
+    _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError;
+    _checkTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): true | ValidationError;
+    _checkPathIsValid(path: Path): true | ValidationError;
+    _checkAuthorIsValid(authorAddress: AuthorAddress): true | ValidationError;
+    _checkWorkspaceIsValid(workspaceAddress: WorkspaceAddress): true | ValidationError;
+    _checkAuthorSignatureIsValid(doc: Document): true | ValidationError;
+    _checkContentMatchesHash(content: string, contentHash: EncodedHash): true | ValidationError;
 
     // Parse an address into its parts.
-    // Can throw ValidationError.
-    parseAuthorAddress(addr : AuthorAddress) : AuthorParsed;
-    parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed;
+    parseAuthorAddress(addr : AuthorAddress) : AuthorParsed | ValidationError;
+    parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed | ValidationError;
 
     // TODO: add these methods for building addresses
     // and remove them from crypto.ts and encoding.ts
@@ -214,6 +275,7 @@ export interface IValidatorES4 extends IValidator {
     format: 'es.4';
 }
 
+//================================================================================
 export interface IStorage {
     // A Storage instance holds the documents of a single workspace.
     // To construct one, you need to supply
@@ -270,14 +332,14 @@ export interface IStorage {
     // at the same path (from any author), to guarantee that this write will be the conflict winner.
     //
     // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
-    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): boolean;
+    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): WriteResult | ValidationError;
 
     // Save a document from an external source to this Storage instance.
     // The document must be already signed.
     // This is mostly used for syncing.
     //
     // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
-    ingestDocument(doc: Document, now?: number): boolean;
+    ingestDocument(doc: Document, now?: number): WriteResult | ValidationError;
 
     // Internal helper method to do a one-way pull sync.
     _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;

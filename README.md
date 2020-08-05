@@ -7,7 +7,6 @@
 
 *Alpha - do not use for important data yet*
 
-
 Related tools:
 * [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli) -- command line utility
 * [earthstar-pub](https://github.com/cinnamon-bun/earthstar-pub) -- server to help you sync
@@ -177,58 +176,119 @@ Moderation and blocking support is not built in, but apps can build it on top of
 The main interface to Earthstar is the Storage class:
 
 ```ts
-// A Store is all about a single workspace.
-// Workspaces are separate universes of data
-// that don't sync with each other.
-// You also choose which feed formats you want to support
-// by supplying validators (one for each format).
-constructor(validators : IValidator[], workspace : string)
+export interface IStorage {
+    // A Storage instance holds the documents of a single workspace.
+    // To construct one, you need to supply
+    //   * a workspace address
+    //   * a list of Validator classes, for the document formats you want to support
+    //   * various other options such as database filenames, specific to that kind of Storage
 
-// onChange is called whenever any data changes.
-// it doesn't yet send any details about the changes.
-// subscribe with onChange.subscribe(...cb...);
-onChange: Emitter<undefined>;
+    // The workspace held in this Storage object.
+    workspace: WorkspaceAddress;
 
-// look up a path and get the corresponding content...
-getContent(path: string): string | undefined;
-// or get the whole document, which is an object with more details (author, timestamp...)
-getDocument(path: string): Document | undefined;
+    // onChange is called whenever any data changes:
+    //   * after every set()
+    //   * after every ingestDocument()
+    //   * after each document obtained during a sync (because that happens via ingestDocument())
+    // It doesn't yet send any details about the changes to the callback, but it should.
+    // Subscribe with onChange.subscribe(...cb...);
+    onChange: Emitter<undefined>;
 
-// query with a variety of options - filter by paths and authors, etc
-documents(query?: QueryOpts): Document[];
-paths(query?: QueryOpts): string[];  // return just the paths of matching documents
-contents(query?: QueryOpts): string[];  // return just the contents of matching documents
+    // QUERYING
+    // Return the documents that match the query.
+    // Default sort is path ASC, then timestamp DESC (newest first within same path)
+    //  but query objects will eventually include sort options.
+    documents(query?: QueryOpts): Document[];
+    // Same as documents(), but only return the distinct paths of the matching documents (duplicates removed).
+    paths(query?: QueryOpts): string[];
+    // Same as documents(), but only return the content properties of the matching documents.
+    contents(query?: QueryOpts): string[];
 
-// list all authors who have written
-authors(): EncodedKey[];
+    // List of authors that have ever written in this workspace.
+    authors(now?: number): AuthorAddress[];
 
-// write a document to the database, which will be signed by your author key.
-set(keypair: Keypair, docToSet: DocToSet): boolean;
+    // INDIVIDUAL DOCUMENT LOOKUP
+    // Get one document by path.
+    // Only returns the most recent document at this path.
+    // To get older docs at this path (from other authors), do a query.
+    getDocument(path: string, now?: number): Document | undefined;
+    // Same as getDocument(path).content -- just the content of that document
+    getContent(path: string, now?: number): string | undefined;
 
-// try to import an doc from another Store.
-ingestDocument(doc: Document): boolean;
+    // WRITING
+    // Write a document.
+    // To do this you need to know an author's private key, which is part of the keypair object.
+    // The DocToSet type is similar but smaller than a regular document:
+    //   format: which document format to use
+    //   path
+    //   content
+    //   timestamp: optional.  If absent or zero, the current time is set for you
+    //   - no workspace -- this Storage object knows what workspace it is
+    //   - no author -- it's provided in the keypair argument
+    //   - no signature -- it will be signed for you
+    // Timestamps should only be set manually for testing purposes.  Normally they should be
+    // omitted so they default to now.
+    // The timestamp will also be increased so that it's greater than any previous doc
+    // at the same path (from any author), to guarantee that this write will be the conflict winner.
+    //
+    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
+    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): WriteResult | ValidationError;
 
-// basic sync algorithm.  a faster one will be made later.
-sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
+    // Save a document from an external source to this Storage instance.
+    // The document must be already signed.
+    // This is mostly used for syncing.
+    //
+    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
+    ingestDocument(doc: Document, now?: number): WriteResult | ValidationError;
+
+    // Internal helper method to do a one-way pull sync.
+    _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;
+
+    // TODO: add now? param to _syncFrom and sync
+
+    // Two-way sync to another local Storage instance running in the same process.
+    // This is not network-aware.  Network sync is handled by the Syncer class.
+    sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
+
+    // TODO: Delete data locally.  This deletion will not propagate.
+    // forget(query : QueryOpts) : void;  // same query options as paths()
+
+    // Close this storage.
+    // All functions called after this will throw a StorageIsClosedError,
+    // except you can call close() as many times as you want.
+    // Once closed, a Storage instance cannot be opened again.
+    // TODO: what happens when a long-running process like a sync is happening, and the Storage is closed?
+    close() : void;
+    // Find out if the storage is closed.
+    isClosed() : boolean;
+}
 ```
 
-Usage example:
+Usage example ([readme-example.ts](src/readme-example.ts)):
 ```ts
-const { StorageMemory, ValidatorEs4, generateAuthorKeypair } = require('earthstar');
+import {
+    StorageMemory,
+    ValidatorEs4,
+    generateAuthorKeypair,
+    isErr,
+} from 'earthstar';
 
 // Create a database for a particular workspace, '+gardening.xxxxxxxx'
 // We've chosen to use the latest 'es.4' feed format so we supply the matching validator.
 let storage = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');
 
-// Make up some authors for testing.
+// Users are called "authors".
+// Let's make up some authors for testing.
 // A keypair is { address: '@aaaa.xxx', secret: 'xxx' }.
-// (xxx represents base58-encoded ed25519 keys)
+// (xxx represents base32-encoded ed25519 keys)
 let keypair1 = generateAuthorKeypair('aaaa');
 let keypair2 = generateAuthorKeypair('bbbb');
+if (isErr(keypair1)) { throw "oops"; }  // error could happen if our author shortname broke the rules
+if (isErr(keypair2)) { throw "oops"; }
 let author1 = keypair1.address;
 let author2 = keypair2.address;
 
-// It's a key-value store.
+// You can set documents at specific paths, like a filesystem or key-value store.
 storage.set(keypair1, { format: 'es.4', path: '/wiki/Strawberry', content: 'Tasty' });
 storage.getContent('/wiki/Strawberry'); // --> 'Tasty'
 
@@ -237,34 +297,35 @@ storage.getContent('/wiki/Strawberry'); // --> 'Tasty'
 // Here the same author overwrites their previous document,
 // which is forgotten from the database.
 storage.set(keypair1, { format: 'es.4', path: '/wiki/Strawberry', content: 'Tasty!!' });
-storage.getContent('wiki/Strawberry'); // --> 'Tasty!!'
+storage.getContent('/wiki/Strawberry'); // --> 'Tasty!!'
 
 // Multiple authors can overwrite each other (also by timestamp).
+// Here author 2 writes to the same path.
 storage.set(keypair2, { format: 'es.4', path: '/wiki/Strawberry', content: 'Yum' });
 storage.getContent('wiki/Strawberry'); // --> 'Yum'
 
-// We keep the one most recent document from each author,
+// Within a path we keep the most-recent document from each author,
 // in case we need to do better conflict resolution later.
 // To see the old versions, use a query:
-storage.contents({ path: 'wiki/Strawberry', includeHistory: true });
+storage.contents({ path: '/wiki/Strawberry', includeHistory: true });
 // --> ['Yum', 'Tasty!!']  // newest first
 
 // Get the entire document to see all the metadata as well as the content.
-storage.getDocument('wiki/Strawberry');
-/* --> {
-    format: 'es.4',
-    workspace: '+gardening.xxxxxxxx',
-    path: 'wiki/Strawberry',
-    content: 'Yum',
-    author: '@aaaa.xxxxxxx',
-    timestamp: 1503982037239,  // in microseconds: Date.now()*1000
-    signature: 'xxxxxxxx',
-} */
+storage.getDocument('/wiki/Strawberry');
+// --> {
+//     format: 'es.4',
+//     workspace: '+gardening.xxxxxxxx',
+//     path: '/wiki/Strawberry',
+//     content: 'Yum',
+//     author: '@bbbb.xxxxxxx',
+//     timestamp: 1596676583283000,  // time in microseconds: Date.now()*1000
+//     signature: 'xxxxxxxx',
+// }
 
 // WRITE PERMISSIONS
 //
 // Paths can specify which authors are allowed to write to them.
-// Author names that occur prefixed by '~' in a path can write to that path.
+// Author names in a path prefixed by '~' can write to that path.
 //
 // Examples:
 // (in these docs, "xxx" is shorthand for a long public key)
@@ -277,11 +338,11 @@ storage.getDocument('wiki/Strawberry');
 // Multiple authors:
 //   '/whiteboard/~@aaaa.xxx~@bbbb.xxx'  -- both @aaaa.xxx and @bbbb.xxx can write here
 //
-// Here we'll set the author's display name
+// Here we'll set the author's display name by writing to their profile document.
 storage.set(keypair1, {
     format: 'es.4',
-    path: '/about/~' + keypair1.address + '/name',
-    content: 'Suzie',
+    path: '/about/~' + keypair1.address + '/profile.json',
+    content: JSON.stringify({longname: 'Suzie'}),
 });
 
 // You can do leveldb style queries.
@@ -289,7 +350,7 @@ storage.paths()
 storage.paths({ lowPath: '/abc', limit: 100 })
 storage.paths({ pathPrefix: '/wiki/' })
 
-// You can sync to another Storage with the same workspace address
+// You can sync to another Storage that has the same workspace address
 let storage2 = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');
 storage.sync(storage2);
 // Now storage and storage2 are identical.
@@ -297,25 +358,33 @@ storage.sync(storage2);
 // Get notified when anything changes.
 let unsub = storage.onChange.subscribe(() => console.log('something changed'));
 
-// Later, you can turn off your subscription
+// Later, you can turn off your subscription.
 unsub();
 ```
 ----
 ## Details and notes
 
 ### Signatures
+
 Document hashes are used within signatures and to link to specific versions of a doc.
 
 There's a simple canonical way to hash a doc: mostly you just concat all the fields in a predefined order:
-```
-    sha256([
-        doc.schema,
-        doc.workspace,
-        doc.path,
-        sha256(doc.content),
-        '' + doc.timestamp,
+```ts
+    // How to hash a document (from es4.ts)
+
+    // Fields in alphabetical order.
+    // Convert numbers to strings.
+    // Replace optional properties with '' if they're missing.
+    // Use the contentHash instead of the content.
+    return sha256([
         doc.author,
-    ].join('\n')).hexDigest();
+        doc.contentHash,
+        doc.deleteAfter === undefined ? '' : '' + doc.deleteAfter,
+        doc.format,
+        doc.path,
+        '' + doc.timestamp,
+        doc.workspace,
+    ].join('\n'));
 ```
 None of those fields are allowed to contain newlines (except content, which is hashed for that reason) so newlines are safe to use as a delimiter.
 
@@ -327,8 +396,8 @@ There is no canonical encoding for storage or networking - only the canonical ha
 
 The hash and signature specification may change as the schema evolves beyond `es.4`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
 
-
 ### Sync over duplex streams:
+
 Here's a very simple but inefficient algorithm to start with:
 ```
     sort paths by (path, timestamp DESC, signature ASC)
@@ -340,6 +409,7 @@ Here's a very simple but inefficient algorithm to start with:
 ```
 
 ### Sync over HTTP when only one peer is publicly available:
+
 Here's a very simple but inefficient algorithm to start with:
 ```
     the client side is in charge and does these actions:

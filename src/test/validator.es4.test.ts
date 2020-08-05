@@ -3,25 +3,31 @@ import t = require('tap');
 
 import {
     AuthorAddress,
-    Document,
+    AuthorKeypair,
     AuthorParsed,
-    WorkspaceParsed,
+    Document,
+    ValidationError,
     WorkspaceAddress,
+    WorkspaceParsed,
+    isErr,
+    notErr,
 } from '../util/types';
 import {
     generateAuthorKeypair,
     sha256,
 } from '../crypto/crypto';
 import {
-    ValidatorNew_Es4,
+    ValidatorEs4,
     FUTURE_CUTOFF_MICROSECONDS,
 } from '../validator/es4';
 
-let keypair1 = generateAuthorKeypair('test');
-let author1: AuthorAddress = keypair1.address;
-let keypair2 = generateAuthorKeypair('test');
-let author2: AuthorAddress = keypair2.address;
-let Val = ValidatorNew_Es4;
+let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;
+let keypair2 = generateAuthorKeypair('test') as AuthorKeypair;
+if (isErr(keypair1)) { throw "oops"; }
+if (isErr(keypair2)) { throw "oops"; }
+let author1 = keypair1.address;
+let author2 = keypair2.address;
+let Val = ValidatorEs4;
 
 let snowmanJsString = '☃';
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
@@ -70,7 +76,7 @@ t.test('hashDocument', (t: any) => {
     t.done();
 });
 
-t.test('signDocument and _assertAuthorSignatureIsValid', (t: any) => {
+t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
     let doc: Document = {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
@@ -83,28 +89,41 @@ t.test('signDocument and _assertAuthorSignatureIsValid', (t: any) => {
         signature: '',
     };
 
-    let signedDoc = Val.signDocument(keypair1, doc);
-    t.doesNotThrow(() => Val._assertAuthorSignatureIsValid(signedDoc), 'signature is valid');
-    t.doesNotThrow(() => Val.assertDocumentIsValid(signedDoc, NOW), 'doc is valid');
+    let signedDocOrErr = Val.signDocument(keypair1, doc);
+    if (isErr(signedDocOrErr)) {
+        t.ok(false, 'signature failed but should have succeeded: ' + signedDocOrErr.message);
+        t.done();
+        return;
+    }
+    let signedDoc = signedDocOrErr; // this helps typescript get rid of the possible error type :(
 
-    t.throws(() => Val.signDocument(keypair2, doc), 'doc author must match keypair when signing');
-    t.throws(() => Val._assertAuthorSignatureIsValid({...signedDoc, author: author2}), 'changing author after signing makes signature invalid');
+    t.ok(notErr(Val._checkAuthorSignatureIsValid(signedDoc)), 'signature is valid');
+    t.ok(notErr(Val.checkDocumentIsValid(signedDoc, NOW)), 'doc is valid');
 
-    t.throws(() => Val._assertAuthorSignatureIsValid(doc), 'empty signature is invalid');
-    t.throws(() => Val.assertDocumentIsValid(doc, NOW), 'doc without signature is invalid');
+    t.ok(Val.signDocument(keypair2, doc) instanceof ValidationError,
+        'doc author must match keypair when signing');
+    t.ok(Val._checkAuthorSignatureIsValid({...signedDoc, author: author2}) instanceof ValidationError,
+        'changing author after signing makes signature invalid');
+
+    t.ok(Val._checkAuthorSignatureIsValid(doc) instanceof ValidationError, 'empty signature is invalid');
+    t.ok(Val.checkDocumentIsValid(doc, NOW) instanceof ValidationError, 'doc without signature is invalid');
 
     for (let field of requiredFields) {
         let alteredDocPostSig = delProperty(signedDoc, field);
-        t.throws(() => Val._assertAuthorSignatureIsValid(alteredDocPostSig as any), `deleting property makes signature invalid: ${field}`);
+        t.ok(Val._checkAuthorSignatureIsValid(alteredDocPostSig as any) instanceof ValidationError,
+            `deleting property makes signature invalid: ${field}`);
     }
     for (let field of stringFields) {
-        // verifying content = contentHash is not done by _assertAuthorSignatureIsValid, it's done by _assertContentMatchesHash
+        // verifying content = contentHash is not done by _checkAuthorSignatureIsValid, it's done by _checkContentMatchesHash,
+        // so skip that field here
         if (field === 'content') { continue; }
 
-        t.throws(() => Val._assertAuthorSignatureIsValid({...signedDoc, [field]: 'a'}), `altering string property makes signature invalid: ${field}`);
+        t.ok(Val._checkAuthorSignatureIsValid({...signedDoc, [field]: 'a'}) instanceof ValidationError,
+            `altering string property makes signature invalid: ${field}`);
     }
     for (let field of intFields) {
-        t.throws(() => Val._assertAuthorSignatureIsValid({...signedDoc, [field]: (signedDoc as any)[field]-1}), `altering int property makes signature invalid: ${field}`);
+        t.ok(Val._checkAuthorSignatureIsValid({...signedDoc, [field]: (signedDoc as any)[field]-1}) instanceof ValidationError,
+            `altering int property makes signature invalid: ${field}`);
     }
 
     t.done();
@@ -123,15 +142,22 @@ t.test('assertDocumentIsValid', (t: any) => {
         signature: '',
     };
 
-    let signedDoc = Val.signDocument(keypair1, doc);
-    t.doesNotThrow(() => Val.assertDocumentIsValid(signedDoc, NOW), 'doc is valid');
+    let signedDocOrErr = Val.signDocument(keypair1, doc);
+    if (isErr(signedDocOrErr)) {
+        t.ok(false, 'signature failed but should have succeeded: ' + signedDocOrErr.message);
+        t.done();
+        return;
+    }
+    let signedDoc = signedDocOrErr; // this helps typescript get rid of the possible error type :(
 
-    t.throws(() => Val.signDocument(keypair2, doc), 'doc author must match keypair when signing');
+    t.ok(Val.checkDocumentIsValid(signedDoc, NOW) === true, 'doc is valid');
 
-    t.throws(() => Val.assertDocumentIsValid(doc, NOW), 'doc without signature is invalid');
-    t.throws(() => Val.assertDocumentIsValid({...signedDoc, content: 'abc'}, NOW), 'changing content makes doc invalid');
-    t.throws(() => Val.assertDocumentIsValid({} as any, NOW), 'empty doc is invalid');
-    t.throws(() => Val.assertDocumentIsValid({...signedDoc, extra: 'abc'} as any, NOW), 'extra property makes doc invalid');
+    t.ok(Val.signDocument(keypair2, doc) instanceof ValidationError, 'doc author must match keypair when signing');
+
+    t.ok(Val.checkDocumentIsValid(doc, NOW) instanceof ValidationError, 'doc without signature is invalid');
+    t.ok(Val.checkDocumentIsValid({...signedDoc, content: 'abc'}, NOW) instanceof ValidationError, 'changing content makes doc invalid');
+    t.ok(Val.checkDocumentIsValid({} as any, NOW) instanceof ValidationError, 'empty doc is invalid');
+    t.ok(Val.checkDocumentIsValid({...signedDoc, extra: 'abc'} as any, NOW) instanceof ValidationError, 'extra property makes doc invalid');
 
     let doc2: Document = {
         format: 'es.4',
@@ -144,7 +170,8 @@ t.test('assertDocumentIsValid', (t: any) => {
         signature: '',
     };
     let signedDoc2 = Val.signDocument(keypair1, doc2);
-    t.doesNotThrow(() => Val.assertDocumentIsValid(signedDoc2), 'doc is valid when not supplying a value for NOW, and no deleteAfter');
+    t.ok(notErr(signedDoc2), 'signature succeeded');
+    t.ok(Val.checkDocumentIsValid(signedDoc2 as Document) === true, 'doc is valid when not supplying a value for NOW, and no deleteAfter');
 
     t.done();
 });
@@ -154,7 +181,7 @@ type BasicValidityVector = {
     doc: any,
     note?: string,
 };
-t.test('_assertBasicDocumentValidity', (t: any) => {
+t.test('_checkBasicDocumentValidity', (t: any) => {
     let validDoc = {
             format: 'es.4',
             workspace: 'a',
@@ -205,10 +232,9 @@ t.test('_assertBasicDocumentValidity', (t: any) => {
     }
 
     for (let v of vectors) {
-        let testMethod = v.valid ? t.doesNotThrow : t.throws;
-        testMethod(() => Val._assertBasicDocumentValidity(v.doc),
-            (v.valid ? 'valid doc: ' : 'invalid doc: ') +
-            (v.note || JSON.stringify(v.doc))
+        let testMethod = v.valid ? t.true : t.false;
+        testMethod(notErr(Val._checkBasicDocumentValidity(v.doc)),
+            (v.valid ? 'valid' : 'invalid') + ' doc: ' + (v.note || JSON.stringify(v.doc))
         );
     }
     t.end();
@@ -220,7 +246,7 @@ type AuthorCanWriteVector = {
     path: string,
     note?: string,
 };
-t.test('_assertAuthorCanWriteToPath', (t: any) => {
+t.test('_checkAuthorCanWriteToPath', (t: any) => {
     let vectors: AuthorCanWriteVector[] = [
         { canWrite: true, author: author1, path: '/abc', note: 'a public path' },
         { canWrite: true, author: author1, path: `/${author1}/abc`, note: 'a public path with author name but no tilde' },
@@ -232,11 +258,9 @@ t.test('_assertAuthorCanWriteToPath', (t: any) => {
         { canWrite: false, author: author1, path: `/~/${author1}/abc`, note: 'tilde not touching author address' },
     ];
     for (let v of vectors) {
-        let testMethod = v.canWrite ? t.doesNotThrow : t.throws;
-        testMethod(() => Val._assertAuthorCanWriteToPath(v.author, v.path),
-            ((v.canWrite ? 'author can write to' : "author can't write to")
-            + (v.note ? ` ${v.note}` : '')
-            /*+ ': ' + v.path*/)
+        let testMethod = v.canWrite ? t.true : t.false;
+        testMethod(notErr(Val._checkAuthorCanWriteToPath(v.author, v.path)),
+            `author ${v.canWrite ? 'can' : "can't"} write` + (v.note ? ' to ' + v.note : '')
         );
     }
     t.end();
@@ -249,7 +273,7 @@ type TimestampIsOkVector = {
     now: number,
     note?: string,
 };
-t.test('_assertTimestampIsOk', (t: any) => {
+t.test('_checkTimestampIsOk', (t: any) => {
     let MAX_TIMESTAMP = 9007199254740991;
     let MIN_TIMESTAMP = 10000000000000;
     let vectors: TimestampIsOkVector[] = [
@@ -302,8 +326,8 @@ t.test('_assertTimestampIsOk', (t: any) => {
         { valid: false, timestamp: NOW, deleteAfter: MAX_TIMESTAMP+1, now: NOW, note: 'deleteAfter too large' },
     ];
     for (let v of vectors) {
-        let testMethod = v.valid ? t.doesNotThrow : t.throws;
-        testMethod(() => Val._assertTimestampIsOk(v.timestamp, v.deleteAfter, v.now),
+        let testMethod = v.valid ? t.true : t.false;
+        testMethod(notErr(Val._checkTimestampIsOk(v.timestamp, v.deleteAfter, v.now)),
             (v.valid ? 'valid times: ' : 'invalid times: ')
             + (v.note ? v.note : '')
         );
@@ -316,7 +340,7 @@ type IsValidPathVector = {
     path: string,
     note?: string,
 };
-t.test('_assertPathIsValid', (t: any) => {
+t.test('_checkPathIsValid', (t: any) => {
     let vectors: IsValidPathVector[] = [
         { valid: false, path: '', note: 'empty string' },
         { valid: false, path: ' ', note: 'just a space' },
@@ -349,8 +373,8 @@ t.test('_assertPathIsValid', (t: any) => {
         { valid: true, path: '/\'()-._~!*$&+,:=@%', note: 'all allowed punctuation characters' },
     ];
     for (let v of vectors) {
-        let testMethod = v.valid ? t.doesNotThrow : t.throws;
-        testMethod(() => Val._assertPathIsValid(v.path),
+        let testMethod = v.valid ? t.true : t.false;
+        testMethod(notErr(Val._checkPathIsValid(v.path)),
             `${v.valid ? 'valid' : 'invalid'} path: ${JSON.stringify(v.path)}  ${v.note || ''}`
         );
     }
@@ -429,11 +453,11 @@ t.test('parseAuthorAddress', (t: any) => {
     ];
     for (let v of vectors) {
         if (v.valid) {
-            t.same(Val.parseAuthorAddress(v.address), v.parsed,       'should be parsable: ' + (v.note || v.address));
-            t.doesNotThrow(() => Val._assertAuthorIsValid(v.address), 'should be valid:    ' + (v.note || v.address));
+            t.same(Val.parseAuthorAddress(v.address), v.parsed, 'should be parsable: ' + (v.note || v.address));
+            t.ok(notErr(Val._checkAuthorIsValid(v.address)),    'should be valid:    ' + (v.note || v.address));
         } else {
-            t.throws(() => Val.parseAuthorAddress(v.address),   'should be unparsable: ' + (v.note || v.address));
-            t.throws(() => Val._assertAuthorIsValid(v.address), 'should be invalid:    ' + (v.note || v.address));
+            t.ok(isErr(Val.parseAuthorAddress(v.address)),  'should be unparsable: ' + (v.note || v.address));
+            t.ok(isErr(Val._checkAuthorIsValid(v.address)), 'should be invalid:    ' + (v.note || v.address));
         }
     }
     t.end();
@@ -551,11 +575,11 @@ t.test('parseWorkspaceAddress', (t: any) => {
     ];
     for (let v of vectors) {
         if (v.valid) {
-            t.same(Val.parseWorkspaceAddress(v.address), v.parsed,       'should be parsable: ' + (v.note || v.address));
-            t.doesNotThrow(() => Val._assertWorkspaceIsValid(v.address), 'should be valid:    ' + (v.note || v.address));
+            t.same(Val.parseWorkspaceAddress(v.address), v.parsed, 'should be parsable: ' + (v.note || v.address));
+            t.ok(notErr(Val._checkWorkspaceIsValid(v.address)),    'should be valid:    ' + (v.note || v.address));
         } else {
-            t.throws(() => Val.parseWorkspaceAddress(v.address),   'should be unparsable: ' + (v.note || v.address));
-            t.throws(() => Val._assertWorkspaceIsValid(v.address), 'should be invalid:    ' + (v.note || v.address));
+            t.ok(isErr(Val.parseWorkspaceAddress(v.address)),  'should be unparsable: ' + (v.note || v.address));
+            t.ok(isErr(Val._checkWorkspaceIsValid(v.address)), 'should be invalid:    ' + (v.note || v.address));
         }
     }
     t.end();
@@ -567,7 +591,7 @@ type ContentMatchesHashVector = {
     contentHash: string,
     note?: string,
 };
-t.test('_assertContentMatchesHash', (t: any) => {
+t.test('_checkContentMatchesHash', (t: any) => {
     let vectors: ContentMatchesHashVector[] = [
         { valid: true, content: '', contentHash: sha256('') },
         { valid: true, content: 'abc', contentHash: sha256('abc') },
@@ -578,8 +602,8 @@ t.test('_assertContentMatchesHash', (t: any) => {
         { valid: false, content: 'hello', contentHash: sha256('abc') },
     ];
     for (let v of vectors) {
-        let testMethod = v.valid ? t.doesNotThrow : t.throws;
-        testMethod(() => Val._assertContentMatchesHash(v.content, v.contentHash),
+        let testMethod = v.valid ? t.true : t.false;
+        testMethod(notErr(Val._checkContentMatchesHash(v.content, v.contentHash)),
             `${v.valid ? 'content matches hash' : 'content does not match hash'} ${JSON.stringify(v.contentHash)}  ${v.note || ''}`
         );
     }

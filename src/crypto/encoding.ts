@@ -1,18 +1,20 @@
 import mb = require('multibase');
 import {
+    AuthorAddress,
     AuthorKeypair,
     AuthorShortname,
     Base32String,
-    WorkspaceName,
     EncodedKey,
+    ValidationError,
     WorkspaceAddress,
-    AuthorAddress,
+    WorkspaceName,
+    isErr,
 } from '../util/types';
 import {
     KeypairBuffers,
 } from './cryptoTypes';
 import {
-    ValidatorNew_Es4,
+    ValidatorEs4,
 } from '../validator/es4';
 
 //================================================================================
@@ -52,9 +54,9 @@ export let encodeAuthorKeypair = (shortname : AuthorShortname, pair : KeypairBuf
     secret: encodeSecret(pair.secret),
 });
 
-export let decodeAuthorKeypair = (pair : AuthorKeypair) : KeypairBuffers => {
-    // This throws a ValidationError if the address is bad
-    let authorParsed = ValidatorNew_Es4.parseAuthorAddress(pair.address);
+export let decodeAuthorKeypair = (pair : AuthorKeypair) : KeypairBuffers | ValidationError => {
+    let authorParsed = ValidatorEs4.parseAuthorAddress(pair.address);
+    if (isErr(authorParsed)) { return authorParsed; }
     return {
         pubkey: decodePubkey(authorParsed.pubkey),
         secret: decodeSecret(pair.secret),

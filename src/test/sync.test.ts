@@ -1,9 +1,11 @@
 import t = require('tap');
 import {
     AuthorAddress,
+    AuthorKeypair,
     FormatName,
     IStorage,
     IValidator,
+    isErr,
 } from '../util/types';
 import {
     generateAuthorKeypair
@@ -12,7 +14,7 @@ import {
     StorageMemory,
 } from '../storage/memory';
 import {
-    ValidatorNew_Es4,
+    ValidatorEs4,
 } from '../validator/es4';
 import {
     SyncState,
@@ -23,12 +25,15 @@ import {
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
-let VALIDATORS : IValidator[] = [ValidatorNew_Es4];
+let VALIDATORS : IValidator[] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
-let keypair1 = generateAuthorKeypair('test');
-let keypair2 = generateAuthorKeypair('twoo');
-let keypair3 = generateAuthorKeypair('thre');
+let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;
+let keypair2 = generateAuthorKeypair('twoo') as AuthorKeypair;
+let keypair3 = generateAuthorKeypair('thre') as AuthorKeypair;
+if (isErr(keypair1)) { throw "oops"; }
+if (isErr(keypair2)) { throw "oops"; }
+if (isErr(keypair3)) { throw "oops"; }
 let author1: AuthorAddress = keypair1.address;
 let author2: AuthorAddress = keypair2.address;
 let author3: AuthorAddress = keypair3.address;

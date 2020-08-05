@@ -2,8 +2,13 @@ import {
     AuthorAddress,
     AuthorKeypair,
     IStorage,
+    NotFoundError,
     Path,
     QueryOpts,
+    ValidationError,
+    WriteResult,
+    isErr,
+    notErr,
 } from '../util/types';
 
 export interface WikiPageInfo {
@@ -34,45 +39,40 @@ export class LayerWiki {
     constructor(storage : IStorage) {
         this.storage = storage;
     }
-    static makePagePath(owner : AuthorAddress | 'shared', title : string) : string {
+    static makePagePath(owner : AuthorAddress | 'shared', title : string) : string | ValidationError {
+        // TODO: return an error instead of throwing
         if (owner.startsWith('@')) { owner = '~' + owner; }
-        else if (owner !== 'shared') { throw 'invalid wiki page owner: ' + owner; }
-        if (!title) { throw 'cannot make wiki page with empty title'; }
+        else if (owner !== 'shared') { return new ValidationError('invalid wiki page owner: ' + owner); }
+        if (!title) { return new ValidationError('cannot make wiki page with empty title'); }
         return `/wiki/${owner}/${encodeURIComponent(title)}.md`;
     }
-    static parsePagePath(path : Path) : WikiPageInfo | null {
+    static parsePagePath(path : Path) : WikiPageInfo | ValidationError {
         if (!path.startsWith('/wiki/')) {
-            console.warn('path does not start with "/wiki/":', path);
-            return null;
+            return new ValidationError('path does not start with "/wiki/": ' + path);
         }
         if (!path.endsWith('.md')) {
-            console.warn('path does not end with ".md":', path);
-            return null;
+            return new ValidationError('path does not end with ".md": ' + path);
         }
         let pathNoMd = path.slice(0, -3);  // remove '.md'
         let ownerAndTitle = pathNoMd.slice(6);
         let parts = ownerAndTitle.split('/');
         if (parts.length !== 2) {
-            console.warn('path has wrong number of path segments:', parts);
-            return null;
+            return new ValidationError('path has wrong number of path segments: ' + JSON.stringify(parts));
         }
         let [owner, title] = parts;
         // check owner
         if (!owner.startsWith('~@') && owner !== 'shared') {
-            console.warn('invalid wiki owner: ' + owner);
-            return null;
+            return new ValidationError('invalid wiki owner: ' + owner);
         }
         if (owner.startsWith('~')) { owner = owner.slice(1); }
         // check title
         try {
             title = decodeURIComponent(title);
         } catch (e) {
-            console.warn('invalid wiki percent-encoding: ' + title);
-            return null;
+            return new ValidationError('invalid wiki percent-encoding: ' + title);
         }
         if (title.length === 0) {
-            console.warn('wiki title is an empty string.  invalid.');
-            return null;
+            return new ValidationError('wiki title is an empty string.  invalid.');
         }
         return { path: path, owner, title };
     }
@@ -98,20 +98,18 @@ export class LayerWiki {
 
         let pageInfoOrNulls = this.storage.paths(query)
             .map(path => LayerWiki.parsePagePath(path));
-        let pageInfos = pageInfoOrNulls.filter(pi => pi !== null) as WikiPageInfo[];
+        let pageInfos = pageInfoOrNulls.filter(pi => notErr(pi)) as WikiPageInfo[];
         return pageInfos;
     }
-    getPageDetails(path : Path) : WikiPageDetail | null {
+    getPageDetails(path : Path) : WikiPageDetail | ValidationError | NotFoundError {
+        let pageInfo = LayerWiki.parsePagePath(path);
+        if (isErr(pageInfo)) { return pageInfo; }
+
         let doc = this.storage.getDocument(path);
         if (!doc) {
-            console.warn('missing wiki document at path:', path);
-            return null;
+            return new NotFoundError('missing wiki document at path: ' + path);
         }
-        let pageInfo = LayerWiki.parsePagePath(path);
-        if (pageInfo === null) {
-            console.warn('could not parse wiki path: ' + path);
-            return null;
-        }
+
         let { owner, title } = pageInfo;
         return {
             path : path,
@@ -122,8 +120,9 @@ export class LayerWiki {
             text: doc.content,
         }
     }
-    setPageText(keypair : AuthorKeypair, path : string, text : string, timestamp? : number) : boolean {
+    setPageText(keypair : AuthorKeypair, path : string | ValidationError, text : string, timestamp? : number) : WriteResult | ValidationError {
         // normally timestamp should be omitted.
+        if (isErr(path)) { return path; }
         return this.storage.set(keypair, {
             format: 'es.4',
             path: path,

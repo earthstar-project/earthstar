@@ -3,7 +3,7 @@ import {
     FormatName,
     EncodedHash,
     Path,
-    Signature,
+    EncodedSig,
     WorkspaceAddress,
 } from '../util/types';
 import {
@@ -65,7 +65,7 @@ interface DocCore {
     contentHash: EncodedHash,
     author: AuthorAddress,
     timestamp: number,
-    signature: Signature,
+    signature: EncodedSig,
     deleteAfter?: number,
 };
 interface DocAnyFormat extends DocCore {
@@ -74,7 +74,7 @@ interface DocAnyFormat extends DocCore {
 }
 interface DocES4 extends DocCore {
     format: 'es.4',
-    workspaceSignature?: Signature,
+    workspaceSignature?: EncodedSig,
 }
 
 let MIN_TIMESTAMP = 35184372088832;  // 2**45

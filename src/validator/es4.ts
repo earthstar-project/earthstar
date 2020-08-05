@@ -11,6 +11,7 @@ import {
     ValidationError,
     WorkspaceAddress,
     WorkspaceParsed,
+    isErr,
 } from '../util/types';
 import {
     sha256,
@@ -26,9 +27,10 @@ import {
     isOnlyPrintableAscii,
     onlyHasChars,
     pathChars,
-    workspaceNameChars,
     workspaceAddressChars,
+    workspaceNameChars,
 } from '../util/characters';
+import { isPlainObject } from '../util/helpers';
 
 // Tolerance for accepting messages from the future (because of clock skew between peers)
 export const FUTURE_CUTOFF_MINUTES = 10;
@@ -37,13 +39,11 @@ export const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 10
 // This is always used as a static class
 // e.g. just `ValidatorEs4`, not `new ValidatorEs4()`
 
-// Methods called "assert_____" return nothing on success, and throw a ValidationError on failure.
-
-export const ValidatorNew_Es4 : IValidatorES4 = class {
+export const ValidatorEs4 : IValidatorES4 = class {
     static format: 'es.4' = 'es.4';
-    static hashDocument(doc: Document): EncodedHash {
+    static hashDocument(doc: Document): EncodedHash | ValidationError {
         // Deterministic hash of the document.
-        // Can throw a ValidationError, but only checks for very basic document validity.
+        // Can return a ValidationError, but only checks for very basic document validity.
 
         // The hash of the document is used for signatures and references to specific docs.
         // We use the hash of the content in case we want to drop the actual content
@@ -52,8 +52,8 @@ export const ValidatorNew_Es4 : IValidatorES4 = class {
         // except for content, but content is hashed, so it's safe to
         // use newlines as a field separator.
 
-        // If the document is especially malformed (wrong types or missing fields), throw an error.
-        this._assertBasicDocumentValidity(doc);
+        let err = this._checkBasicDocumentValidity(doc);
+        if (isErr(err)) { return err; }
 
         // Fields in alphabetical order.
         // Convert numbers to strings.
@@ -69,44 +69,59 @@ export const ValidatorNew_Es4 : IValidatorES4 = class {
             doc.workspace,
         ].join('\n'));
     }
-    static signDocument(keypair: AuthorKeypair, doc: Document): Document {
+    static signDocument(keypair: AuthorKeypair, doc: Document): Document | ValidationError {
         // Add an author signature to the document.
         // The input document needs a signature field to satisfy Typescript, but
         // it will be overwritten here, so you may as well just set signature: '' on the input
-        // Can throw a ValidationError (via hashDocument), but only checks for very basic document validity.
+        // Can return a ValidationError (via hashDocument), but only checks for very basic document validity.
 
         if (keypair.address !== doc.author) {
-            throw new ValidationError('when signing a document, keypair address must match document author');
+            return new ValidationError('when signing a document, keypair address must match document author');
         }
 
-        return {
-            ...doc,
-            signature: sign(keypair, this.hashDocument(doc)),
-        };
+        let hash = this.hashDocument(doc);
+        if (isErr(hash)) { return hash; }
+
+        let sig = sign(keypair, hash);
+        if (isErr(sig)) { return sig; }
+
+        return { ...doc, signature: sig };
     }
-    static assertDocumentIsValid(doc: Document, now?: number): void {
-        // Throw a ValidationError if anything is wrong with the document.
+    static checkDocumentIsValid(doc: Document, now?: number): true | ValidationError {
+        // Return a ValidationError if anything is wrong with the document, or true if it's ok.
         // Normally `now` should be omitted so that it defaults to the current time,
         // or you can override it for testing purposes.
-
         if (now === undefined) { now = Date.now() * 1000; }
-        this._assertBasicDocumentValidity(doc);
-        this._assertAuthorCanWriteToPath(doc.author, doc.path);
-        this._assertTimestampIsOk(doc.timestamp, doc.deleteAfter, now);
-        this._assertPathIsValid(doc.path);
-        this._assertAuthorIsValid(doc.author);
-        this._assertWorkspaceIsValid(doc.workspace);
-        this._assertAuthorSignatureIsValid(doc);
-        this._assertContentMatchesHash(doc.content, doc.contentHash);
+        let err1 = this._checkBasicDocumentValidity(doc);
+        if (isErr(err1)) { return err1; }
+        let err2 = this._checkAuthorCanWriteToPath(doc.author, doc.path);
+        if (isErr(err2)) { return err2; }
+        let err3 = this._checkTimestampIsOk(doc.timestamp, doc.deleteAfter, now);
+        if (isErr(err3)) { return err3; }
+        let err4 = this._checkPathIsValid(doc.path);
+        if (isErr(err4)) { return err4; }
+        let err5 = this._checkAuthorIsValid(doc.author);
+        if (isErr(err5)) { return err5; }
+        let err6 = this._checkWorkspaceIsValid(doc.workspace);
+        if (isErr(err6)) { return err6; }
+        let err7 = this._checkAuthorSignatureIsValid(doc);
+        if (isErr(err7)) { return err7; }
+        let err8 = this._checkContentMatchesHash(doc.content, doc.contentHash);
+        if (isErr(err8)) { return err8; }
+        return true;
     }
 
-    static _assertBasicDocumentValidity(doc: Document): void {
+    static _checkBasicDocumentValidity(doc: Document): true | ValidationError {
         // Check that the document has only the expected properties
         // and that they have the expected data types.
-        // Throw a ValidationError, or return nothing on success.
+        // return a ValidationError, or return true on success.
+
+        if (!isPlainObject(doc)) {
+            return new ValidationError('doc must be an object, but is ' + JSON.stringify(doc));
+        }
 
         if (doc.format !== this.format) {
-            throw new ValidationError('invalid format: ' + doc.format);
+            return new ValidationError('invalid format: ' + doc.format);
         }
 
         let validTypes = (
@@ -120,7 +135,7 @@ export const ValidatorNew_Es4 : IValidatorES4 = class {
             && ("deleteAfter" in doc === false || typeof doc.deleteAfter === 'number')
             && typeof doc.signature === 'string'
         );
-        if (!validTypes) { throw new ValidationError('invalid types or missing fields in document'); }
+        if (!validTypes) { return new ValidationError('invalid types or missing fields in document'); }
 
         // Don't allow extra properties in the object
         let keys = Object.keys(doc);
@@ -137,25 +152,26 @@ export const ValidatorNew_Es4 : IValidatorES4 = class {
             'timestamp',
             'workspace',
         ])) {
-            throw new ValidationError('doc has extra fields');
+            return new ValidationError('doc has extra fields');
         }
-
         // TODO: string length limits
+
+        return true;
     }
-    static _assertAuthorCanWriteToPath(author: AuthorAddress, path: Path): void {
+    static _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError {
         // Can the author write to the path?
-        // Throw a ValidationError, or return nothing on success.
+        // return a ValidationError, or return true on success.
 
         // no tilde: it's public, anyone can write
-        if (path.indexOf('~') === -1) { return; }
+        if (path.indexOf('~') === -1) { return true; }
         // path contains "~" + author.  the author can write here.
-        if (path.indexOf('~' + author) !== -1) { return; }
+        if (path.indexOf('~' + author) !== -1) { return true; }
         // else, path contains at least one tilde but not ~@author.  The author can't write here.
-        throw new ValidationError(`author ${author} can't write to path ${path}`);
+        return new ValidationError(`author ${author} can't write to path ${path}`);
     }
-    static _assertTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): void {
+    static _checkTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): true | ValidationError {
         // Check for valid timestamp, and expired ephemeral documents.
-        // Throw a ValidationError, or return nothing on success.
+        // return a ValidationError, or return true on success.
 
         // Timestamps have to be in microseconds.
         // If the timestamp is small enough that it was probably
@@ -163,149 +179,158 @@ export const ValidatorNew_Es4 : IValidatorES4 = class {
         // the message is invalid.
 
         if (typeof timestamp !== 'number' || timestamp !== Math.floor(timestamp)) {
-            throw new ValidationError('timestamp must be an integer');
+            return new ValidationError('timestamp must be an integer');
         }
         if (isNaN(timestamp)) {
-            throw new ValidationError("timestamp can't be NaN");
+            return new ValidationError("timestamp can't be NaN");
         }
 
         if (timestamp <= 9999999999999) {
-            throw new ValidationError('timestamp less than minimum allowed value');
+            return new ValidationError('timestamp less than minimum allowed value');
         }
         // Timestamp must be less than Number.MAX_SAFE_INTEGER.
         if (timestamp > 9007199254740991) {
-            throw new ValidationError('timestamp greater than maximum allowed value');
+            return new ValidationError('timestamp greater than maximum allowed value');
         }
         // Timestamp must not be from the future.
         if (timestamp > now + FUTURE_CUTOFF_MICROSECONDS) {
-            throw new ValidationError('timestamp too far in the future');
+            return new ValidationError('timestamp too far in the future');
         }
         // Ephemeral documents
         if (deleteAfter !== undefined) {
             // basic checks
             if (typeof deleteAfter !== 'number' || deleteAfter !== Math.floor(deleteAfter)) {
-                throw new ValidationError('deleteAfter must be an integer');
+                return new ValidationError('deleteAfter must be an integer');
             }
             if (isNaN(deleteAfter)) {
-                throw new ValidationError("deleteAfter can't be NaN");
+                return new ValidationError("deleteAfter can't be NaN");
             }
 
             if (deleteAfter <= 9999999999999) {
-                throw new ValidationError('deleteAfter less than minimum allowed value');
+                return new ValidationError('deleteAfter less than minimum allowed value');
             }
             // Timestamp must be less than Number.MAX_SAFE_INTEGER.
             if (deleteAfter > 9007199254740991) {
-                throw new ValidationError('deleteAfter greater than maximum allowed value');
+                return new ValidationError('deleteAfter greater than maximum allowed value');
             }
             // Expiration date has passed
             if (now > deleteAfter) {
-                throw new ValidationError('ephemeral doc has expired');
+                return new ValidationError('ephemeral doc has expired');
             }
             // Expired before it was created??
             if (deleteAfter <= timestamp) {
-                throw new ValidationError('ephemeral doc expired before it was created');
+                return new ValidationError('ephemeral doc expired before it was created');
             }
         }
+        return true;
     }
-    static _assertPathIsValid(path: Path): void {
+    static _checkPathIsValid(path: Path): true | ValidationError {
         // Ensure the path matches the spec for allowed path strings.
-        // Throw a ValidationError, or return nothing on success.
+        // return a ValidationError, or return true on success.
 
         // a path is a series of one or more path segments.
         // a path segment is a '/' followed by one or more allowed characters.
 
         if (!path.startsWith('/')) {
-            throw new ValidationError('invalid path: must start with /');
+            return new ValidationError('invalid path: must start with /');
         }
         if (path.endsWith('/')) {
-            throw new ValidationError('invalid path: must not end with /');
+            return new ValidationError('invalid path: must not end with /');
         }
         if (path.startsWith('/@')) {
             // this is disallowed so that we can tell paths and authors apart in cases like this
             // when joining a workspace and a path/author:
             // +gardening.xxxxx/@aaaa.xxxx
             // +gardening.xxxxx/wiki/shared/Bumblebee
-            throw new ValidationError('invalid path: must not start with "/@"');
+            return new ValidationError('invalid path: must not start with "/@"');
         }
         if (path.indexOf('//') !== -1) {
-            throw new ValidationError('invalid path: must not contain two consecutive slashes');
+            return new ValidationError('invalid path: must not contain two consecutive slashes');
         }
         if (!onlyHasChars(path, pathChars)) {
-            throw new ValidationError('invalid path: must not contain disallowed characters');
+            return new ValidationError('invalid path: must not contain disallowed characters');
         }
+        return true;
     }
-    static _assertAuthorIsValid(authorAddress: AuthorAddress): void {
+    static _checkAuthorIsValid(authorAddress: AuthorAddress): true | ValidationError {
         // Ensure the author address matches the spec.
-        // Throw a ValidationError, or return nothing on success.
-        this.parseAuthorAddress(authorAddress);
+        // return a ValidationError, or return true on success.
+        let addr = this.parseAuthorAddress(authorAddress);
+        if (isErr(addr)) { return addr; }
+        return true;
     }
-    static _assertWorkspaceIsValid(workspaceAddress: WorkspaceAddress): void {
+    static _checkWorkspaceIsValid(workspaceAddress: WorkspaceAddress): true | ValidationError {
         // Ensure the workspace address matches the spec.
-        // Throw a ValidationError, or return nothing on success.
-        this.parseWorkspaceAddress(workspaceAddress);
+        // return a ValidationError, or return true on success.
+        let addr = this.parseWorkspaceAddress(workspaceAddress);
+        if (isErr(addr)) { return addr; }
+        return true;
     }
-    static _assertAuthorSignatureIsValid(doc: Document): void {
+    static _checkAuthorSignatureIsValid(doc: Document): true | ValidationError {
         // Check if the signature is good.
-        // Throw a ValidationError, or return nothing on success.
+        // return a ValidationError, or return true on success.
         try {
-            if (verify(doc.author, doc.signature, this.hashDocument(doc)) === false) {
-                throw new ValidationError('signature is invalid');
-            }
-        } catch (e) {
-            throw new ValidationError('signature is invalid');
+            let hash = this.hashDocument(doc);
+            if (isErr(hash)) { return hash; }
+            let verified = verify(doc.author, doc.signature, hash);
+            if (verified === false) { return new ValidationError('signature is invalid'); }
+            return true;
+        } catch (err) {
+            return new ValidationError('signature is invalid');
         }
     }
-    static _assertContentMatchesHash(content: string, contentHash: EncodedHash): void {
+    static _checkContentMatchesHash(content: string, contentHash: EncodedHash): true | ValidationError {
         // Ensure the contentHash matches the actual content.
-        // Throw a ValidationError, or return nothing on success.
+        // return a ValidationError, or return true on success.
 
         // TODO: if content is null, skip this check
         let shaContent = sha256(content);
         if (contentHash !== shaContent) {
-            throw new ValidationError(`content does not match contentHash.  sha256(content) is ${shaContent} but contentHash is ${contentHash}`);
+            return new ValidationError(`content does not match contentHash.  sha256(content) is ${shaContent} but contentHash is ${contentHash}`);
         }
+        return true;
     }
 
-    static parseAuthorAddress(addr : AuthorAddress) : AuthorParsed {
+    static parseAuthorAddress(addr : AuthorAddress) : AuthorParsed | ValidationError {
         // Break apart the address into its parts.
-        // Can throw a ValidationError if the address is not valid.
+        // Can return a ValidationError if the address is not valid.
 
         // example: @suzy.b2hd23dh....
         if (!isOnlyPrintableAscii(addr)) {
-            throw new ValidationError(`author address ${JSON.stringify(addr)} must not have nonprintable or non-ASCII characters`);
+            return new ValidationError(`author address ${JSON.stringify(addr)} must not have nonprintable or non-ASCII characters`);
         }
         if (!addr.startsWith('@')) {
-            throw new ValidationError(`author address ${JSON.stringify(addr)} must start with "@"`);
+            return new ValidationError(`author address ${JSON.stringify(addr)} must start with "@"`);
         }
         if (!onlyHasChars(addr, authorAddressChars)) {
-            throw new ValidationError(`author address ${JSON.stringify(addr)} must not use disallowed characters`);
+            return new ValidationError(`author address ${JSON.stringify(addr)} must not use disallowed characters`);
         }
         let parts = addr.slice(1).split('.');
         if (parts.length !== 2) {
-            throw new ValidationError(`author address ${JSON.stringify(addr)} must be two parts separated by "."`);
+            return new ValidationError(`author address ${JSON.stringify(addr)} must be two parts separated by "."`);
         }
         let [shortname, pubkey] = parts;
         if (shortname.length !== 4) {
-            throw new ValidationError(`author shortname ${JSON.stringify(shortname)} must be 4 characters long`);
+            return new ValidationError(`author shortname ${JSON.stringify(shortname)} must be 4 characters long`);
         }
         if (pubkey.length !== 53) {
             // 53 chars including the leading 'b' == 52 chars of actual base32 data
-            throw new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must be 53 characters long`);
+            return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must be 53 characters long`);
         }
         if (pubkey[0] !== 'b') {
-            throw new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must start with 'b'`);
+            return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must start with 'b'`);
         }
         if (digits.indexOf(shortname[0]) !== -1) {
-            throw new ValidationError(`author shortname ${JSON.stringify(shortname)} must not start with a number`);
+            return new ValidationError(`author shortname ${JSON.stringify(shortname)} must not start with a number`);
         }
         if (digits.indexOf(pubkey[0]) !== -1) {
-            throw new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not start with a number`);
+            return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not start with a number`);
         }
         if (!onlyHasChars(shortname, authorShortnameChars)) {
-            throw new ValidationError(`author shortname ${JSON.stringify(shortname)} must not use disallowed characters`);
+            return new ValidationError(`author shortname ${JSON.stringify(shortname)} must not use disallowed characters`);
         }
         if (!onlyHasChars(pubkey, b32chars)) {
-            throw new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not use disallowed characters`);
+            return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not use disallowed characters`);
         }
         return {
             address: addr,
@@ -313,43 +338,43 @@ export const ValidatorNew_Es4 : IValidatorES4 = class {
             pubkey: pubkey,
         };
     }
-    static parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed {
+    static parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed | ValidationError{
         // Break apart the address into its parts.
-        // Can throw a ValidationError if the address is not valid.
+        // Can return a ValidationError if the address is not valid.
 
         // example unlisted workspace:                  +solarpunk.anythinghere
         // example invite-only (53 chars of pubkey):    +solarpunk.b2ojhodi3...
         if (!isOnlyPrintableAscii(addr)) {
-            throw new ValidationError(`workspace address ${JSON.stringify(addr)} must not have nonprintable or non-ASCII characters`);
+            return new ValidationError(`workspace address ${JSON.stringify(addr)} must not have nonprintable or non-ASCII characters`);
         }
         if (!addr.startsWith('+')) {
-            throw new ValidationError(`workspace address ${JSON.stringify(addr)} must start with "+"`);
+            return new ValidationError(`workspace address ${JSON.stringify(addr)} must start with "+"`);
         }
         if (!onlyHasChars(addr, workspaceAddressChars)) {
-            throw new ValidationError(`workspace address ${JSON.stringify(addr)} must not use disallowed characters`);
+            return new ValidationError(`workspace address ${JSON.stringify(addr)} must not use disallowed characters`);
         }
         let parts = addr.slice(1).split('.');
         if (parts.length !== 2) {
-            throw new ValidationError(`workspace address ${JSON.stringify(addr)} must be two parts separated by "."`);
+            return new ValidationError(`workspace address ${JSON.stringify(addr)} must be two parts separated by "."`);
         }
         let [name, pubkey] = parts;
         if (name.length < 1 || name.length > 15) {
-            throw new ValidationError(`workspace name ${JSON.stringify(name)} must be between 1 and 15 characters long`);
+            return new ValidationError(`workspace name ${JSON.stringify(name)} must be between 1 and 15 characters long`);
         }
         if (pubkey.length < 1 || pubkey.length > 53) {
-            throw new ValidationError(`workspace key ${JSON.stringify(pubkey)} must be between 1 and 53 characters long`);
+            return new ValidationError(`workspace key ${JSON.stringify(pubkey)} must be between 1 and 53 characters long`);
         }
         if (digits.indexOf(name[0]) !== -1) {
-            throw new ValidationError(`workspace name ${JSON.stringify(name)} must not start with a number`);
+            return new ValidationError(`workspace name ${JSON.stringify(name)} must not start with a number`);
         }
         if (digits.indexOf(pubkey[0]) !== -1) {
-            throw new ValidationError(`workspace key ${JSON.stringify(pubkey)} must not start with a number`);
+            return new ValidationError(`workspace key ${JSON.stringify(pubkey)} must not start with a number`);
         }
         if (!onlyHasChars(name, workspaceNameChars)) {
-            throw new ValidationError(`workspace name ${JSON.stringify(name)} must not use disallowed characters`);
+            return new ValidationError(`workspace name ${JSON.stringify(name)} must not use disallowed characters`);
         }
         if (!onlyHasChars(pubkey, alphaLower + digits)) {
-            throw new ValidationError(`workspace key ${JSON.stringify(pubkey)} must not use disallowed characters`);
+            return new ValidationError(`workspace key ${JSON.stringify(pubkey)} must not use disallowed characters`);
         }
         return {
             address: addr,

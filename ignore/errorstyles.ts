@@ -27,6 +27,7 @@ let log = console.log;
 //================================================================================
 // DIFFERENT STYLES OF HANDLING ERRORS
 
+/*
 // Custom error style
 // Our Err type is {err: string}
 let makeDogA = (name : string) : Dog | Err => {
@@ -94,3 +95,4 @@ try {
 } catch (err2) {
     log(err2);  // good, can get error message
 }
+*/

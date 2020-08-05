@@ -3,18 +3,21 @@ import t = require('tap');
 //t.runOnly = true;
 
 import {
-    AuthorAddress,
+    AuthorKeypair,
     Document,
     FormatName,
     IStorage,
     IValidator,
     SyncOpts,
+    WriteResult,
+    isErr,
+    notErr,
 } from '../util/types';
 import {
     generateAuthorKeypair,
     sha256,
 } from '../crypto/crypto';
-import { ValidatorNew_Es4 } from '../validator/es4';
+import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
 import { logTest } from '../util/log';
@@ -25,15 +28,18 @@ import { logTest } from '../util/log';
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 
-let VALIDATORS : IValidator[] = [ValidatorNew_Es4];
+let VALIDATORS : IValidator[] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
-let keypair1 = generateAuthorKeypair('test');
-let keypair2 = generateAuthorKeypair('twoo');
-let keypair3 = generateAuthorKeypair('thre');
-let author1: AuthorAddress = keypair1.address;
-let author2: AuthorAddress = keypair2.address;
-let author3: AuthorAddress = keypair3.address;
+let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;
+let keypair2 = generateAuthorKeypair('twoo') as AuthorKeypair;
+let keypair3 = generateAuthorKeypair('thre') as AuthorKeypair;
+if (isErr(keypair1)) { throw "oops"; }
+if (isErr(keypair2)) { throw "oops"; }
+if (isErr(keypair3)) { throw "oops"; }
+let author1 = keypair1.address;
+let author2 = keypair2.address;
+let author3 = keypair3.address;
 let now = 1500000000000000;
 
 let SEC = 1000000;
@@ -316,25 +322,27 @@ for (let scenario of scenarios) {
             author: author1,
             signature: 'xxx',
         };
-        let signedDoc = ValidatorNew_Es4.signDocument(keypair1, doc1);
-        t.ok(storage.ingestDocument(signedDoc), "successful ingestion");
+        let signedDoc = ValidatorEs4.signDocument(keypair1, doc1) as Document;
+        t.ok(notErr(signedDoc), 'signature succeeded');
+        t.same(storage.ingestDocument(signedDoc), WriteResult.Accepted, "successful ingestion");
         t.equal(storage.getContent('/k1'), 'v1', "getContent worked");
 
-        t.notOk(storage.ingestDocument(doc1), "don't ingest: bad signature");
-        t.notOk(storage.ingestDocument({...signedDoc, format: 'xxx'}), "don't ingest: unknown format");
-        t.notOk(storage.ingestDocument({...signedDoc, timestamp: now / 1000}), "don't ingest: timestamp too small, probably in milliseconds");
-        t.notOk(storage.ingestDocument({...signedDoc, timestamp: now * 2}), "don't ingest: timestamp in future");
-        t.notOk(storage.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}), "don't ingest: timestamp way too large");
-        t.notOk(storage.ingestDocument({...signedDoc, workspace: 'xxx'}), "don't ingest: changed workspace after signing");
+        t.ok(isErr(storage.ingestDocument(doc1)), "don't ingest: bad signature");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, format: 'xxx'})), "don't ingest: unknown format");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now / 1000})), "don't ingest: timestamp too small, probably in milliseconds");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now * 2})), "don't ingest: timestamp in future");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2})), "don't ingest: timestamp way too large");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, workspace: 'xxx'})), "don't ingest: changed workspace after signing");
 
-        let signedDocDifferentWorkspace = ValidatorNew_Es4.signDocument(keypair1, {...doc1, workspace: 'xxx'});
-        t.notOk(storage.ingestDocument(signedDocDifferentWorkspace), "don't ingest: mismatch workspace");
+        let signedDocDifferentWorkspace = ValidatorEs4.signDocument(keypair1, {...doc1, workspace: 'xxx'}) as Document;
+        t.ok(notErr(signedDocDifferentWorkspace), 'signature succeeded');
+        t.ok(isErr(storage.ingestDocument(signedDocDifferentWorkspace)), "don't ingest: mismatch workspace");
 
-        t.notOk(storage.set(keypair1, {
+        t.ok(isErr(storage.set(keypair1, {
             format: 'xxx',
             path: '/k1',
             content: 'v1',
-        }), 'set rejects unknown format');
+        })), 'set rejects unknown format');
 
         let writablePaths = [
             '/hello',
@@ -342,26 +350,24 @@ for (let scenario of scenarios) {
             '/chat/~@ffff.xxxx~' + author1,
         ];
         for (let path of writablePaths) {
-            t.ok(storage.ingestDocument(
-                ValidatorNew_Es4.signDocument(
-                    keypair1,
-                    {...doc1, path: path}
-                )),
-                "do ingest: writable path " + path
-            );
+            let signedDoc2 = ValidatorEs4.signDocument(keypair1, {...doc1, path: path});
+            if (isErr(signedDoc2)) {
+                t.ok(false, 'signature failed: ' + signedDoc2);
+            } else {
+                t.same(storage.ingestDocument(signedDoc2), WriteResult.Accepted, 'do ingest: writable path ' + path);
+            }
         }
         let notWritablePaths = [
-            '/~@ffff.xxxx/about',
+            '/~@ffff.bxxxx/about',
             '/~',
         ];
         for (let path of notWritablePaths) {
-            t.notOk(storage.ingestDocument(
-                ValidatorNew_Es4.signDocument(
-                    keypair1,
-                    {...doc1, path: path}
-                )),
-                "don't ingest: non-writable path " + path
-            );
+            let signedDoc2 = ValidatorEs4.signDocument(keypair1, {...doc1, path: path});
+            if (isErr(signedDoc2)) {
+                t.ok(false, 'signature failed: ' + signedDoc2);
+            } else {
+                t.ok(isErr(storage.ingestDocument(signedDoc2)), "don't ingest: non-writable path " + path);
+            }
         }
 
         t.done();
@@ -371,29 +377,29 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // an expired ephemeral doc can't be set because it's invalid
-        t.notOk(storage.set(keypair1, {
+        t.ok(isErr(storage.set(keypair1, {
                 format: FORMAT,
                 path: '/path1',
                 content: 'aaa',
                 timestamp: now - 60*MIN,
                 deleteAfter: now - 45*MIN,
-        }, now), 'set expired ephemeral document');
+        }, now)), 'set expired ephemeral document');
         t.equal(storage.getContent('/path1', now), undefined, 'temporary doc is not there');
 
         // a good doc.  make sure deleteAfter survives the roundtrip
-        t.ok(storage.set(keypair1, {
+        t.same(storage.set(keypair1, {
                 format: FORMAT,
                 path: '/ephemeral',
                 content: 'bbb',
                 timestamp: now,
                 deleteAfter: now + 3 * DAY,
-        }, now), 'set good ephemeral document');
-        t.ok(storage.set(keypair1, {
+        }, now), WriteResult.Accepted, 'set good ephemeral document');
+        t.same(storage.set(keypair1, {
                 format: FORMAT,
                 path: '/regular',
                 content: 'ccc',
                 timestamp: now,
-        }, now), 'set good regular document');
+        }, now), WriteResult.Accepted, 'set good regular document');
         let ephDoc = storage.getDocument('/ephemeral', now);
         let regDoc = storage.getDocument('/regular', now);
 
@@ -411,13 +417,13 @@ for (let scenario of scenarios) {
 
         // a doc that was valid when set, but expired while sitting in the database, then was read after being expired
         let setExpiringDoc = () => {
-            t.ok(storage.set(keypair1, {
+            t.same(storage.set(keypair1, {
                     format: FORMAT,
                     path: '/expire-in-place',
                     content: 'ccc',
                     timestamp: now - 1,
                     deleteAfter: now + 5 * DAY,
-            }, now), 'set good ephemeral document');
+            }, now), WriteResult.Accepted, 'set good ephemeral document');
         };
 
         if (scenario.description === 'StoreMemory') {
@@ -471,18 +477,18 @@ for (let scenario of scenarios) {
         t.equal(storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
 
         // set a decoy path to make sure the later tests return the correct path
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now}), 'set decoy path');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now}), WriteResult.Accepted, 'set decoy path');
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), 'set new path');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
         t.equal(storage.getContent('/path1'), 'val1.0');
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.2', timestamp: now + 2}), 'overwrite path with newer time');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.2', timestamp: now + 2}), WriteResult.Accepted, 'overwrite path with newer time');
         t.equal(storage.getContent('/path1'), 'val1.2');
 
         // write with an old timestamp - this timestamp should be overridden to the existing timestamp + 1.
         // note that on ingest() the newer timestamp wins, but on set() we adjust the newly created timestamp
         // so it's always greater than the existing ones.
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1', timestamp: now-99}), 'automatically supercede previous timestamp');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1', timestamp: now-99}), WriteResult.Accepted, 'automatically supercede previous timestamp');
         t.equal(storage.getContent('/path1'), 'val1.1', 'superceded newer existing content');
         t.equal(storage.getDocument('/path1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
 
@@ -510,8 +516,8 @@ for (let scenario of scenarios) {
         let paths = '/zzz /aaa /dir /q /qq /qqq /dir/a /dir/b /dir/c'.split(' ');
         let ii = 0;
         for (let path of paths) {
-            t.ok(storage.set(keypair1, {format: FORMAT, path: path, content: 'true', timestamp: now + ii}), 'set path: ' + path),
-                ii += 1;
+            t.same(storage.set(keypair1, {format: FORMAT, path: path, content: 'true', timestamp: now + ii}), WriteResult.Accepted, 'set path: ' + path);
+            ii += 1;
         }
         let sortedPaths = [...paths];
         sortedPaths.sort();
@@ -536,10 +542,10 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // three authors
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'foo', timestamp: now}), 'set data');
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1', timestamp: now + 1}), 'set data');
-        t.ok(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2', timestamp: now + 2}), 'set data');
-        t.ok(storage.set(keypair3, {format: FORMAT, path: '/pathA', content: 'content3', timestamp: now + 3}), 'set data');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'foo', timestamp: now}), WriteResult.Accepted, 'set data');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1', timestamp: now + 1}), WriteResult.Accepted, 'set data');
+        t.same(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2', timestamp: now + 2}), WriteResult.Accepted, 'set data');
+        t.same(storage.set(keypair3, {format: FORMAT, path: '/pathA', content: 'content3', timestamp: now + 3}), WriteResult.Accepted, 'set data');
 
         t.same(storage.authors(), [author1, author3, author2], 'authors');
 
@@ -570,9 +576,9 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // two authors
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.X', timestamp: now + 1}), 'set data');
-        t.ok(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2.Y', timestamp: now + 2}), 'set data');
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.Z', timestamp: now + 3}), 'set data');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.X', timestamp: now + 1}), WriteResult.Accepted, 'set data');
+        t.same(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2.Y', timestamp: now + 2}), WriteResult.Accepted, 'set data');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.Z', timestamp: now + 3}), WriteResult.Accepted, 'set data');
 
         t.same(storage.authors(), [author1, author2], 'authors');
 
@@ -613,20 +619,20 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
        // set decoy paths to make sure the later tests return the correct path
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), 'set decoy path 2');
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), 'set decoy path 1');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'set decoy path 2');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'set decoy path 1');
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), 'set new path');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'set new path');
         t.equal(storage.getContent('/path1'), 'one');
 
         // this will overwrite 'one' but the doc for 'one' will remain in history.
         // history will have 2 docs for this path.
-        t.ok(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), 'update from a second author');
+        t.same(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'update from a second author');
         t.equal(storage.getContent('/path1'), 'two');
 
         // this will replace the old original doc 'one' from this author.
         // history will have 2 docs for this path.
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'three', timestamp: now + 2}), 'update from original author again');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'three', timestamp: now + 2}), WriteResult.Accepted, 'update from original author again');
         t.equal(storage.getContent('/path1'), 'three');
 
         t.equal(storage.paths().length, 3, '3 paths');
@@ -657,10 +663,10 @@ for (let scenario of scenarios) {
         let storage2 = scenario.makeStorage(WORKSPACE);
 
         // set up some paths
-        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), 'author1 set decoy path');
-        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), 'author1 set decoy path');
-        t.ok(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), 'author1 set path1');
-        t.ok(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), 'author2 set path1');
+        t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');
+        t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');
+        t.same(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'author1 set path1');
+        t.same(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');
 
         // sync
         let syncResults = storage1.sync(storage2, { direction: 'push', existing: true, live: false });
@@ -697,20 +703,20 @@ for (let scenario of scenarios) {
             let storage2 = scenario.makeStorage(WORKSPACE);
 
             // set up some paths
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), 'author1 set decoy path');  // winner  (push #1)
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), 'author1 set decoy path');  // winner  (push 2)
+            t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');  // winner  (push #1)
+            t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');  // winner  (push 2)
 
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), 'author1 set path1');      // becomes history  (push 3)
-            t.ok(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), 'author2 set path1');  // winner  (push 4)
+            t.same(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'author1 set path1');      // becomes history  (push 3)
+            t.same(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');  // winner  (push 4)
 
-            t.ok(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '221', timestamp: now}));       // dropped
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '111', timestamp: now + 10}));  // winner  (push 5)
+            t.same(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '221', timestamp: now}), WriteResult.Accepted);       // dropped
+            t.same(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '111', timestamp: now + 10}), WriteResult.Accepted);  // winner  (push 5)
 
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', content: '11', timestamp: now}));       // dropped
-            t.ok(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', content: '22', timestamp: now + 10}));  // winner  (pull 1)
+            t.same(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', content: '11', timestamp: now}), WriteResult.Accepted);       // dropped
+            t.same(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage2', content: '22', timestamp: now + 10}), WriteResult.Accepted);  // winner  (pull 1)
 
-            t.ok(storage1.set(keypair1, {format: FORMAT, path: '/authorConflict', content: 'author1storage1', timestamp: now}));      // becomes history  (push 6)
-            t.ok(storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage2', timestamp: now + 1}));  // winner  (pull 2)
+            t.same(storage1.set(keypair1, {format: FORMAT, path: '/authorConflict', content: 'author1storage1', timestamp: now}), WriteResult.Accepted);      // becomes history  (push 6)
+            t.same(storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage2', timestamp: now + 1}), WriteResult.Accepted);  // winner  (pull 2)
 
             // sync
             let syncResults = storage1.sync(storage2, opts);
@@ -744,9 +750,9 @@ for (let scenario of scenarios) {
         let storageA1 = scenario.makeStorage(WORKSPACE);
         let storageA2 = scenario.makeStorage(WORKSPACE);
         let storageB = scenario.makeStorage(WORKSPACE2);
-        t.ok(storageA1.set(keypair1, {format: FORMAT, path: '/a1', content: 'a1'}));
-        t.ok(storageA2.set(keypair1, {format: FORMAT, path: '/a2', content: 'a2'}));
-        t.ok(storageB.set(keypair1, {format: FORMAT, path: '/b', content: 'b'}));
+        t.same(storageA1.set(keypair1, {format: FORMAT, path: '/a1', content: 'a1'}), WriteResult.Accepted);
+        t.same(storageA2.set(keypair1, {format: FORMAT, path: '/a2', content: 'a2'}), WriteResult.Accepted);
+        t.same(storageB.set(keypair1, {format: FORMAT, path: '/b', content: 'b'}), WriteResult.Accepted);
 
         t.same(storageA1.sync(storageB), { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
         t.same(storageA1.sync(storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
@@ -760,7 +766,7 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // this time let's omit schema and timestamp
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'bar'}));
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'bar'}), WriteResult.Accepted);
 
         // live mode (not implemented yet)
         t.throws(() => storageEmpty1.sync(storageEmpty2, {live: true}), 'live is not implemented yet and should throw');
@@ -797,14 +803,14 @@ for (let scenario of scenarios) {
         let cb = () => { numCalled += 1; }
         let unsub = storage.onChange.subscribe(cb);
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), 'set new path');
-        t.notOk(storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now}), 'invalid set that will be ignored');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
+        t.ok(isErr(storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now})), 'invalid set that will be ignored');
         t.equal(storage.getContent('/path1'), 'val1.0', 'second set was ignored');
 
         t.equal(numCalled, 1, 'callback was called once');
         unsub();
 
-        t.ok(storage.set(keypair1, {format: FORMAT, path: '/path2', content: 'val2.0', timestamp: now + 1}), 'set another path');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path2', content: 'val2.0', timestamp: now + 1}), WriteResult.Accepted, 'set another path');
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 

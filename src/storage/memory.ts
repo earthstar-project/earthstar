@@ -6,14 +6,15 @@ import {
     IStorage,
     IValidator,
     QueryOpts,
+    StorageIsClosedError,
     SyncOpts,
     SyncResults,
-    WorkspaceAddress,
     ValidationError,
-    StorageIsClosedError,
+    WorkspaceAddress,
+    WriteResult,
+    isErr,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
-import { logWarning } from '../util/log';
 import { sha256 } from '../crypto/crypto';
 
 export let _historySortFn = (a: Document, b: Document): number => {
@@ -61,7 +62,8 @@ export class StorageMemory implements IStorage {
         // check if the workspace is valid
         // TODO: try with all the of validators, and only throw an error if they all fail
         let val0 : IValidator = validators[0];
-        val0._assertWorkspaceIsValid(workspace);  // can throw ValidationError
+        let workspaceErr = val0._checkWorkspaceIsValid(workspace);
+        if (isErr(workspaceErr)) { throw workspaceErr; }
         this.workspace = workspace;
 
         this.onChange = new Emitter<undefined>();
@@ -214,7 +216,8 @@ export class StorageMemory implements IStorage {
         return this.getDocument(path, now)?.content;
     }
 
-    ingestDocument(doc : Document, now? : number) : boolean {
+    ingestDocument(doc : Document, now? : number) : WriteResult | ValidationError {
+
         // Given a doc from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
@@ -234,23 +237,15 @@ export class StorageMemory implements IStorage {
 
         let validator = this.validatorMap[doc.format];
         if (validator === undefined) {
-            logWarning(`ingestDocument: unrecognized format ${doc.format}`);
-            return false;
+            return new ValidationError(`ingestDocument: unrecognized format ${doc.format}`);
         }
 
-        try {
-            validator.assertDocumentIsValid(doc, now);
-        } catch (err) {
-            if (err instanceof ValidationError) {
-                logWarning(err.message);
-                return false;
-            }
-        }
+        let err = validator.checkDocumentIsValid(doc, now);
+        if (isErr(err)) { return err; }
 
         // Only accept docs from the same workspace.
         if (doc.workspace !== this.workspace) {
-            logWarning(`ingestDocument: doc from different workspace`);
-            return false;
+            return new ValidationError(`ingestDocument: can't ingest doc from different workspace`);
         }
 
         let existingDocsByPath = this._docs[doc.path] || {};
@@ -273,17 +268,16 @@ export class StorageMemory implements IStorage {
             <= [existingFromSameAuthor.timestamp, existingFromSameAuthor.signature]
             ) {
             // incoming doc is older or identical.  ignore it.
-            logWarning(`ingestDoc: doc older or identical`);
-            return false;
+            return WriteResult.Ignored;
         }
 
         existingDocsByPath[doc.author] = doc;
         this._docs[doc.path] = existingDocsByPath;
         this.onChange.send(undefined);
-        return true;
+        return WriteResult.Accepted;
     }
 
-    set(keypair : AuthorKeypair, docToSet : DocToSet, now?: number) : boolean {
+    set(keypair : AuthorKeypair, docToSet : DocToSet, now?: number) : WriteResult | ValidationError {
         // Store a document.
         // docToSet.timestamp is optional and should normally be omitted or set to 0,
         // in which case it will be set to now.
@@ -297,8 +291,7 @@ export class StorageMemory implements IStorage {
 
         let validator = this.validatorMap[docToSet.format];
         if (validator === undefined) {
-            logWarning(`set: unrecognized format ${docToSet.format}`);
-            return false;
+            return new ValidationError(`set: unrecognized format ${docToSet.format}`);
         }
 
         docToSet.timestamp = docToSet.timestamp || 0;
@@ -324,6 +317,7 @@ export class StorageMemory implements IStorage {
         doc.timestamp = Math.max(doc.timestamp, existingDocTimestamp+1);
 
         let signedDoc = validator.signDocument(keypair, doc);
+        if (isErr(signedDoc)) { return signedDoc; }
         return this.ingestDocument(signedDoc, now);
     }
 
@@ -338,7 +332,7 @@ export class StorageMemory implements IStorage {
         if (existing) {
             for (let doc of otherStore.documents({includeHistory: true})) {
                 let success = this.ingestDocument(doc);
-                if (success) { numSuccess += 1; }
+                if (success === WriteResult.Accepted) { numSuccess += 1; }
             }
         }
         return numSuccess;

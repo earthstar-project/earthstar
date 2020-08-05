@@ -1,5 +1,9 @@
 import t = require('tap');
 import {
+    AuthorKeypair,
+    isErr,
+} from '../util/types';
+import {
     LowLevelCrypto,
     generateAuthorKeypair,
     sha256,
@@ -60,19 +64,23 @@ t.test('sha256 of buffers', (t: any) => {
 });
 
 t.test('generateAuthorKeypair', (t: any) => {
-    t.throws(() => generateAuthorKeypair('abc'), 'throws when author shortname is too short');
-    t.throws(() => generateAuthorKeypair('abcde'), 'throws when author shortname is too long');
-    t.throws(() => generateAuthorKeypair('TEST'), 'throws when author shortname is uppercase');
-    t.throws(() => generateAuthorKeypair('1234'), 'throws when author shortname has numbers');
-    t.throws(() => generateAuthorKeypair('----'), 'throws when author shortname has dashes');
-    t.throws(() => generateAuthorKeypair(''), 'throws when author shortname is empty');
+    t.ok(isErr(generateAuthorKeypair('abc')), 'error when author shortname is too short');
+    t.ok(isErr(generateAuthorKeypair('abcde')), 'error when author shortname is too long');
+    t.ok(isErr(generateAuthorKeypair('TEST')), 'error when author shortname is uppercase');
+    t.ok(isErr(generateAuthorKeypair('1234')), 'error when author shortname has numbers');
+    t.ok(isErr(generateAuthorKeypair('----')), 'error when author shortname has dashes');
+    t.ok(isErr(generateAuthorKeypair('')), 'error when author shortname is empty');
 
     let keypair = generateAuthorKeypair('test');
-    t.equal(typeof keypair.address, 'string', 'keypair has address');
-    t.equal(typeof keypair.secret, 'string', 'keypair has secret');
-    t.equal(keypair.address[0], '@', 'keypair.address starts with @');
-    t.true(keypair.address.startsWith('@test.'), 'keypair.address starts with @test.');
-    t.notEqual(keypair.secret[0], '@', 'keypair.secret does not start with @');
+    if (isErr(keypair)) {
+        t.ok(false, 'should have succeeded but instead was an error: ' + keypair);
+    } else {
+        t.equal(typeof keypair.address, 'string', 'keypair has address');
+        t.equal(typeof keypair.secret, 'string', 'keypair has secret');
+        t.equal(keypair.address[0], '@', 'keypair.address starts with @');
+        t.ok(keypair.address.startsWith('@test.'), 'keypair.address starts with @test.');
+        t.notEqual(keypair.secret[0], '@', 'keypair.secret does not start with @');
+    }
 
     t.end();
 });
@@ -101,23 +109,55 @@ t.test('encode / decode', (t: any) => {
 });
 
 t.test('key conversion from buffer to string and back', (t: any) => {
-    let authPair = generateAuthorKeypair('test');
-    let buffers = decodeAuthorKeypair(authPair);
-    let authPair2 = encodeAuthorKeypair('test', buffers);
-    let buffers2 = decodeAuthorKeypair(authPair);
+    let keypair = generateAuthorKeypair('test');
+    if (isErr(keypair)) {
+        t.ok(false, 'keypair 1 is an error');
+        t.done();
+        return;
+    }
+    let buffers = decodeAuthorKeypair(keypair);
+    if (isErr(buffers)) {
+        t.ok(false, 'buffers is an error');
+        t.done();
+        return;
+    };
+    let keypair2 = encodeAuthorKeypair('test', buffers);
+    if (isErr(keypair2)) {
+        t.ok(false, 'keypair 2 is an error');
+        t.done();
+        return;
+    }
+    let buffers2 = decodeAuthorKeypair(keypair);
+    if (isErr(buffers2)) {
+        t.ok(false, 'buffers2 is an error');
+        t.done();
+        return;
+    };
 
-    t.same(authPair, authPair2, 'keypair encoding/decoding roundtrip (author keypair)');
-    t.same(buffers, buffers2, 'keypair encoding/decoding roundtrip (buffers)');
+    t.same(keypair, keypair2, 'keypair encoding/decoding roundtrip matched (author keypair)');
+    t.same(buffers, buffers2, 'keypair encoding/decoding roundtrip matched (buffers)');
 
     t.done();
 });
 
 t.test('signatures', (t: any) => {
     let input = 'abc';
-    let keypair = generateAuthorKeypair('test');
-    let keypair2 = generateAuthorKeypair('fooo');
+    let keypair = generateAuthorKeypair('test') as AuthorKeypair;
+    let keypair2 = generateAuthorKeypair('fooo') as AuthorKeypair;
+    if (isErr(keypair) || isErr(keypair2)) {
+        t.ok(false, 'keypair generation error');
+        t.done(); return;
+    }
     let sig = sign(keypair, input);
     let sig2 = sign(keypair2, input);
+    if (isErr(sig)) {
+        t.ok(false, 'signature error ' + sig);
+        t.done(); return;
+    }
+    if (isErr(sig2)) {
+        t.ok(false, 'signature error ' + sig2);
+        t.done(); return;
+    }
 
     t.ok(verify(keypair.address, sig, input), 'real signature is valid');
 
@@ -136,8 +176,16 @@ t.test('signatures', (t: any) => {
 
     // encoding of input msg
     let snowmanStringSig = sign(keypair, snowmanJsString);
-    t.ok(verify(keypair.address, snowmanStringSig, snowmanJsString), 'signature roundtrip works on snowman utf-8 string');
     let snowmanBufferSig = sign(keypair, snowmanBufferUtf8);
+    if (isErr(snowmanStringSig)) {
+        t.ok(false, 'signature error ' + snowmanStringSig);
+        t.done(); return;
+    }
+    if (isErr(snowmanBufferSig)) {
+        t.ok(false, 'signature error ' + snowmanBufferSig);
+        t.done(); return;
+    }
+    t.ok(verify(keypair.address, snowmanStringSig, snowmanJsString), 'signature roundtrip works on snowman utf-8 string');
     t.ok(verify(keypair.address, snowmanBufferSig, snowmanBufferUtf8), 'signature roundtrip works on snowman buffer');
 
     t.end();
