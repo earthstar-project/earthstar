@@ -48,26 +48,28 @@ export const ValidatorEs4 : IValidatorES4 = class {
         // The hash of the document is used for signatures and references to specific docs.
         // We use the hash of the content in case we want to drop the actual content
         // and only keep the hash around for verifying signatures.
-        // None of these fields are allowed to contain newlines
-        // except for content, but content is hashed, so it's safe to
-        // use newlines as a field separator.
+        // None of these fields are allowed to contain tabs or newlines
+        // (except content, but we use contentHash instead).
 
         let err = this._checkBasicDocumentValidity(doc);
         if (isErr(err)) { return err; }
 
         // Fields in alphabetical order.
         // Convert numbers to strings.
-        // Replace optional properties with '' if they're missing.
+        // Omit optional properties if they're missing.
         // Use the contentHash instead of the content.
-        return sha256base32([
-            doc.author,
-            doc.contentHash,
-            doc.deleteAfter === undefined ? '' : '' + doc.deleteAfter,
-            doc.format,
-            doc.path,
-            '' + doc.timestamp,
-            doc.workspace,
-        ].join('\n'));
+        // Omit the signature.
+        return sha256base32(
+            `author\t${doc.author}\n` +
+            // (omit content itself)
+            `contentHash\t${doc.contentHash}\n` +
+            (doc.deleteAfter === undefined ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
+            `format\t${doc.format}\n` +
+            `path\t${doc.path}\n` +
+            // (omit signature)
+            `timestamp\t${doc.timestamp}\n` +
+            `workspace\t${doc.workspace}\n`  // \n at the end also, not just between
+        );
     }
     static signDocument(keypair: AuthorKeypair, doc: Document): Document | ValidationError {
         // Add an author signature to the document.

@@ -398,36 +398,22 @@ let unsub = storage.onChange.subscribe(() => console.log('something changed'));
 // Later, you can turn off your subscription.
 unsub();
 ```
+
 ----
+
 ## Details and notes
+
+**NOTE** The rest of this README is somewhat out of date!
 
 ### Signatures
 
-Document hashes are used within signatures and to link to specific versions of a doc.
+Document hashes are used within signatures and could be used to link to specific versions of a doc.
 
-There's a simple canonical way to hash a doc: mostly you just concat all the fields in a predefined order:
-```ts
-    // How to hash a document (from es4.ts)
-
-    // Fields in alphabetical order.
-    // Convert numbers to strings.
-    // Replace optional properties with '' if they're missing.
-    // Use the contentHash instead of the content.
-    return sha256([
-        doc.author,
-        doc.contentHash,
-        doc.deleteAfter === undefined ? '' : '' + doc.deleteAfter,
-        doc.format,
-        doc.path,
-        '' + doc.timestamp,
-        doc.workspace,
-    ].join('\n'));
-```
-None of those fields are allowed to contain newlines (except content, which is hashed for that reason) so newlines are safe to use as a delimiter.
+There's a simple canonical way to hash a document.  See [docs/serialization-and-hashing.md](Serialization and Hashing) for details.
 
 To sign a doc, you sign its hash with the author's secret key.
 
-Note that docs only ever have to get transformed INTO this representation just before hashing -- we never need to convert from this representation BACK into a real doc.
+Note that docs only ever have to get transformed INTO this representation just before hashing -- we never need to convert from this representation BACK into a real doc -- so it can be nice and simple.
 
 There is no canonical encoding for storage or networking - only the canonical hash encoding, above.  Databases and network code can represent the doc in any way they want.
 
@@ -436,6 +422,7 @@ The hash and signature specification may change as the schema evolves beyond `es
 ### Sync over duplex streams:
 
 Here's a very simple but inefficient algorithm to start with:
+
 ```
     sort paths by (path, timestamp DESC, signature ASC)
     filter by my interest query
@@ -448,6 +435,7 @@ Here's a very simple but inefficient algorithm to start with:
 ### Sync over HTTP when only one peer is publicly available:
 
 Here's a very simple but inefficient algorithm to start with:
+
 ```
     the client side is in charge and does these actions:
     sort paths by (path, timestamp DESC, signature ASC)

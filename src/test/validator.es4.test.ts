@@ -72,7 +72,19 @@ t.test('hashDocument', (t: any) => {
         author: '@suzy.xxxxxxxxxxx',
         signature: 'xxxxxxxxxxxxx',
     };
-    t.equal(Val.hashDocument(doc1), 'bcvqc4nz2a5fuxpjoxum2fwollrdp7w3mjf4crpbftyltuojshwlq', 'expected document hash');
+    t.equal(Val.hashDocument(doc1), 'bz6ye6gvzo7w6igkht3qqn4jvrp5qehvcmo5kyp3gldnbbmdy7vdq', 'expected document hash, no deleteAfter');
+    let doc2: Document = {
+        format: 'es.4',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/path1',
+        contentHash: sha256base32('content1'),
+        content: 'content1',
+        timestamp: 1,
+        deleteAfter: 2,  // with deleteAfter
+        author: '@suzy.xxxxxxxxxxx',
+        signature: 'xxxxxxxxxxxxx',
+    };
+    t.equal(Val.hashDocument(doc2), 'bl3yoc4h4iubuev5izxr4trnxrfhnmdoqy2uciajq73quvu22vyna', 'expected document hash, with deleteAfter');
     t.done();
 });
 
