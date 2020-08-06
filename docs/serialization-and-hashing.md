@@ -26,24 +26,25 @@ As of 2020-07-30, document contents must be utf-8 strings.  We don't support raw
 
 ## Hashing documents
 
-This is a **one-way** conversion, memory `-->` bytes.  We use this to do `sha256(bytes)` and get the unique hash of a document.  The hash is then used to make signatures.
+This is a **one-way** conversion, memory `-->` bytes.  We use this to do `hash(bytes)` and get the unique hash of a document.  The hash is then used to make signatures.
 
 It needs to be **very standardized**, so it should be simple, deterministic, and easy to implement in any language.  It can be extra simple because we never need to decode it.
 
 **Good choice:**
 
-Something extremely simple.  We (will soon) use this:
+Something extremely simple.  We do something like this:
 
 ```js
+// psuedocode
 // convert document into one big string
 let serializedDoc = Object.entries(document)
         .sort()  // sort alphabetically by object key
-        .filter(([key, val]) => key !== 'content' && key !== 'signature')
-        .map(([key, val]) => '' + key + '\t' + val + '\n')
+        .filter(([key, val]) => key !== 'content' && key !== 'signature')  // skip actual content, and signature
+        .map(([key, val]) => '' + key + '\t' + val + '\n')  // combine with tabs and newlines
         .join('')
 )
 // hash it
-let docHash = sha256(serializedDoc)
+let docHash = sha256base32(serializedDoc)
 // sign it
 let signedDoc = {
     ...document,
@@ -51,18 +52,20 @@ let signedDoc = {
 }
 ```
 
-Simplified example, with extra spaces added for readability.
+The actual code is in `hashDocument()` in `src/validators/es4.ts`.
+
+Simplified example, with spaces added for readability.
 
 ```
-author  \t  @suzy.xxxxxxxxxxxx  \n
-contentHash  \t  xxxxxxxxxxxxxxxxxx  \n
+author  \t  @suzy.bxxxxxxxxxxxx  \n
+contentHash  \t  bxxxxxxxxx  \n
 format  \t  es.4  \n
 path  \t  /wiki/Kittens  \n
 timestamp  \t  1234567890000  \n
 workspace  \t  +gardening.xxxxxxxxxx  \n
 ```
 
-Note that our `sha256` outputs a base32 encoded string.  See `encoding.ts` for the base32 details.
+Our `sha256base32` does a regular sha256 and outputs the digest as a base32 encoded string.  See `encoding.ts` for the base32 details.
 
 > **Details**
 > 
