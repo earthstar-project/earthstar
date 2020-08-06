@@ -47,7 +47,6 @@
     "@types/isomorphic-fetch": "0.0.35",
     "bencode": "^2.0.1",
     "better-sqlite3": "^7.0.1",
-    "chalk": "^3.0.0",
     "chloride": "^2.2.14",
     "fast-equals": "^2.0.0",
     "isomorphic-fetch": "^2.2.1",
