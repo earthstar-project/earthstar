@@ -6,6 +6,7 @@ import {
 } from './cryptoTypes';
 import {
     decodeSig,
+    encodeHash,
     encodeSig,
 } from './encoding';
 import {
@@ -14,8 +15,9 @@ import {
 } from '../util/types';
 
 export const CryptoChloride : ILowLevelCrypto = class {
-    static sha256(input: string | Buffer) : EncodedHash {
-        return crypto.createHash('sha256').update(input).digest().toString('hex');
+    static sha256base32(input: string | Buffer) : EncodedHash {
+        // TODO: use sodium sha256 instead of node crypto?
+        return encodeHash(crypto.createHash('sha256').update(input).digest());
     }
     static generateKeypairBuffers(seed?: Buffer) : KeypairBuffers {
         // If provided, the seed is used as the secret key.

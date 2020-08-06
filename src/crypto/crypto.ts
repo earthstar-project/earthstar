@@ -41,8 +41,8 @@ let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : Encode
 //================================================================================
 
 
-export let sha256 = (input : string | Buffer) : EncodedHash =>
-    LowLevelCrypto.sha256(input);
+export let sha256base32 = (input : string | Buffer) : EncodedHash =>
+    LowLevelCrypto.sha256base32(input);
 
 export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | ValidationError => {
     // This returns a ValidationError if the shortname doesn't follow the rules.
@@ -61,7 +61,11 @@ export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | Valida
 export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig | ValidationError => {
     let keypairBuffers = decodeAuthorKeypair(keypair);
     if (isErr(keypairBuffers)) { return keypairBuffers; }
-    return LowLevelCrypto.sign(keypairBuffers, msg);
+    try {
+        return LowLevelCrypto.sign(keypairBuffers, msg);
+    } catch (err) {
+        return new ValidationError('crash while signing: ' + err.message);
+    }
 }
 
 export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : string | Buffer) : boolean => {

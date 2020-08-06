@@ -15,7 +15,7 @@ import {
 } from '../util/types';
 import {
     generateAuthorKeypair,
-    sha256,
+    sha256base32,
 } from '../crypto/crypto';
 import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/memory';
@@ -316,7 +316,7 @@ for (let scenario of scenarios) {
             format: FORMAT,
             workspace: WORKSPACE,
             path: '/k1',
-            contentHash: sha256('v1'),
+            contentHash: sha256base32('v1'),
             content: 'v1',
             timestamp: now,
             author: author1,
@@ -505,7 +505,7 @@ for (let scenario of scenarios) {
         if (doc === undefined) { t.ok(false, 'this doc should not be undefined'); }
         else {
             t.notEqual(doc.content, null, 'content should not be null');
-            t.equal(doc.contentHash, sha256(doc.content), 'doc.contentHash matches doc.content after roundtrip');
+            t.equal(doc.contentHash, sha256base32(doc.content), 'doc.contentHash matches doc.content after roundtrip');
         }
 
         t.done();

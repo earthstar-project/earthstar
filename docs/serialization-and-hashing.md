@@ -32,7 +32,8 @@ It needs to be **very standardized**, so it should be simple, deterministic, and
 
 **Good choice:**
 
-Something extremely simple.  We use this:
+Something extremely simple.  We (will soon) use this:
+
 ```js
 // convert document into one big string
 let serializedDoc = Object.entries(document)
@@ -50,7 +51,8 @@ let signedDoc = {
 }
 ```
 
-Simplified example, with extra spaces added for readability
+Simplified example, with extra spaces added for readability.
+
 ```
 author  \t  @suzy.xxxxxxxxxxxx  \n
 contentHash  \t  xxxxxxxxxxxxxxxxxx  \n
@@ -59,6 +61,8 @@ path  \t  /wiki/Kittens  \n
 timestamp  \t  1234567890000  \n
 workspace  \t  +gardening.xxxxxxxxxx  \n
 ```
+
+Note that our `sha256` outputs a base32 encoded string.  See `encoding.ts` for the base32 details.
 
 > **Details**
 > 

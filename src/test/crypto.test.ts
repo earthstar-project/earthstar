@@ -1,4 +1,6 @@
 import t = require('tap');
+//t.runOnly = true;
+
 import {
     AuthorKeypair,
     isErr,
@@ -6,16 +8,18 @@ import {
 import {
     LowLevelCrypto,
     generateAuthorKeypair,
-    sha256,
+    sha256base32,
     sign,
     verify,
 } from '../crypto/crypto';
 import {
     decodeAuthorKeypair,
+    decodeBase32ToBuffer,
     decodePubkey,
     decodeSecret,
     decodeSig,
     encodeAuthorKeypair,
+    encodeBufferToBase32,
     encodePubkey,
     encodeSecret,
     encodeSig,
@@ -30,17 +34,42 @@ t.test('snowman test data', (t: any) => {
     t.end();
 });
 
+t.test('base32 encoding', (t: any) => {
+    let buf = Buffer.from([1, 2, 3, 4, 5]);
+    let b32 = encodeBufferToBase32(buf);
+    let buf2 = decodeBase32ToBuffer(b32);
+    let b32_2 = encodeBufferToBase32(buf2);
+
+    t.same(buf, buf2, 'buffer roundtrip to base32');
+    t.same(b32, b32_2, 'base32 roundtrip to buffer');
+    t.ok(b32.startsWith('b'), 'base32 startswith b');
+
+    t.same(decodeBase32ToBuffer('b'), Buffer.from([]), 'base32 can decode just the string "b" to an empty buffer');
+
+    t.throws(() => decodeBase32ToBuffer(''), 'decoding base32 throws an exception if string is empty');
+    t.throws(() => decodeBase32ToBuffer('abc'), 'decoding base32 throws an exception when it does not start with "b"');
+    t.throws(() => decodeBase32ToBuffer('b123'), 'decoding base32 throws when encountering invalid base32 character');
+    t.throws(() => decodeBase32ToBuffer('babc?xyz'), 'decoding base32 throws when encountering invalid base32 character');
+    t.throws(() => decodeBase32ToBuffer('babc xyz'), 'decoding base32 throws when encountering invalid base32 character');
+    t.throws(() => decodeBase32ToBuffer('b abcxyz'), 'decoding base32 throws when encountering invalid base32 character');
+    t.throws(() => decodeBase32ToBuffer('babcxyz '), 'decoding base32 throws when encountering invalid base32 character');
+    t.throws(() => decodeBase32ToBuffer('babcxyz\n'), 'decoding base32 throws when encountering invalid base32 character');
+    t.throws(() => decodeBase32ToBuffer('BABC'), 'decoding base32 throws when encountering a different multibase encoding');
+
+    t.end();
+});
+
 t.test('sha256 of strings', (t: any) => {
     // prettier-ignore
     let vectors : [string, string][] = [
         // input, output
-        ['', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
-        ['abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
-        [snowmanJsString, '51643361c79ecaef25a8de802de24f570ba25d9c2df1d22d94fade11b4f466cc'],
+        ['', 'b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq'],
+        ['abc', 'bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq'],
+        [snowmanJsString, 'bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga'],
     ];
     for (let [input, output] of vectors) {
-        t.equal(LowLevelCrypto.sha256(input), output, `LowLevelCrypto hash of ${JSON.stringify(input)}`);
-        t.equal(sha256(input), output, `hash of ${JSON.stringify(input)}`);
+        t.equal(LowLevelCrypto.sha256base32(input), output, `LowLevelCrypto hash of ${JSON.stringify(input)}`);
+        t.equal(sha256base32(input), output, `hash of ${JSON.stringify(input)}`);
     }
     t.end();
 });
@@ -49,16 +78,16 @@ t.test('sha256 of buffers', (t: any) => {
     // prettier-ignore
     let vectors : [Buffer, string][] = [
         // input, output
-        [Buffer.from('', 'utf8'), 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
-        [Buffer.from([]), 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
-        [Buffer.from('abc', 'utf8'), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
-        [Buffer.from([97, 98, 99]), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
+        [Buffer.from('', 'utf8'), 'b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq'],
+        [Buffer.from([]), 'b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq'],
+        [Buffer.from('abc', 'utf8'), 'bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq'],
+        [Buffer.from([97, 98, 99]), 'bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq'],
         // snowman in utf-8
-        [snowmanBufferUtf8, '51643361c79ecaef25a8de802de24f570ba25d9c2df1d22d94fade11b4f466cc'],
+        [snowmanBufferUtf8, 'bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga'],
     ];
     for (let [input, output] of vectors) {
-        t.equal(LowLevelCrypto.sha256(input), output, `LowLevelCrypto hash of buffer with bytes: ${JSON.stringify(Array.from(input))}`)
-        t.equal(sha256(input), output, `hash of buffer with bytes: ${JSON.stringify(Array.from(input))}`)
+        t.equal(LowLevelCrypto.sha256base32(input), output, `LowLevelCrypto hash of buffer with bytes: ${JSON.stringify(Array.from(input))}`)
+        t.equal(sha256base32(input), output, `hash of buffer with bytes: ${JSON.stringify(Array.from(input))}`)
     }
     t.end();
 });
@@ -71,21 +100,21 @@ t.test('generateAuthorKeypair', (t: any) => {
     t.ok(isErr(generateAuthorKeypair('----')), 'error when author shortname has dashes');
     t.ok(isErr(generateAuthorKeypair('')), 'error when author shortname is empty');
 
-    let keypair = generateAuthorKeypair('test');
+    let keypair = generateAuthorKeypair('ok99');
     if (isErr(keypair)) {
         t.ok(false, 'should have succeeded but instead was an error: ' + keypair);
     } else {
         t.equal(typeof keypair.address, 'string', 'keypair has address');
         t.equal(typeof keypair.secret, 'string', 'keypair has secret');
         t.equal(keypair.address[0], '@', 'keypair.address starts with @');
-        t.ok(keypair.address.startsWith('@test.'), 'keypair.address starts with @test.');
+        t.ok(keypair.address.startsWith('@ok99.'), 'keypair.address starts with @ok99.');
         t.notEqual(keypair.secret[0], '@', 'keypair.secret does not start with @');
     }
 
     t.end();
 });
 
-t.test('encode / decode', (t: any) => {
+t.test('encode / decode signature, secret, pubkey', (t: any) => {
     let buf = new Buffer([0, 10, 20, 122, 123, 124]);
     let str = encodeSig(buf);
     let buf2 = decodeSig(str);
@@ -136,6 +165,10 @@ t.test('key conversion from buffer to string and back', (t: any) => {
 
     t.same(keypair, keypair2, 'keypair encoding/decoding roundtrip matched (author keypair)');
     t.same(buffers, buffers2, 'keypair encoding/decoding roundtrip matched (buffers)');
+
+    keypair.secret = 'x';
+    let err = decodeAuthorKeypair(keypair);
+    t.ok(isErr(err), 'decodeAuthorKeypair returns an error if the secret is bad base32');
 
     t.done();
 });

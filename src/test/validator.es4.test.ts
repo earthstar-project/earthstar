@@ -14,7 +14,7 @@ import {
 } from '../util/types';
 import {
     generateAuthorKeypair,
-    sha256,
+    sha256base32,
 } from '../crypto/crypto';
 import {
     ValidatorEs4,
@@ -66,13 +66,13 @@ t.test('hashDocument', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/path1',
-        contentHash: sha256('content1'),
+        contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: 1,
         author: '@suzy.xxxxxxxxxxx',
         signature: 'xxxxxxxxxxxxx',
     };
-    t.equal(Val.hashDocument(doc1), '971e8a1cc02c6a6e7be9e81765d0658a2db338f951b6c78ea8c5c3284fa233cf', 'expected document hash');
+    t.equal(Val.hashDocument(doc1), 'bcvqc4nz2a5fuxpjoxum2fwollrdp7w3mjf4crpbftyltuojshwlq', 'expected document hash');
     t.done();
 });
 
@@ -81,7 +81,7 @@ t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
-        contentHash: sha256('content1'),
+        contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: NOW - 10,
         deleteAfter: NOW + 10,
@@ -134,7 +134,7 @@ t.test('assertDocumentIsValid', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
-        contentHash: sha256('content1'),
+        contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: NOW - 10,
         deleteAfter: NOW + 10,
@@ -163,7 +163,7 @@ t.test('assertDocumentIsValid', (t: any) => {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
-        contentHash: sha256('content1'),
+        contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: Date.now() * 1000,
         author: author1,
@@ -593,13 +593,13 @@ type ContentMatchesHashVector = {
 };
 t.test('_checkContentMatchesHash', (t: any) => {
     let vectors: ContentMatchesHashVector[] = [
-        { valid: true, content: '', contentHash: sha256('') },
-        { valid: true, content: 'abc', contentHash: sha256('abc') },
-        { valid: true, content: 'a\nb', contentHash: sha256('a\nb') },
-        { valid: true, content: snowmanJsString, contentHash: sha256(snowmanJsString) },
+        { valid: true, content: '', contentHash: sha256base32('') },
+        { valid: true, content: 'abc', contentHash: sha256base32('abc') },
+        { valid: true, content: 'a\nb', contentHash: sha256base32('a\nb') },
+        { valid: true, content: snowmanJsString, contentHash: sha256base32(snowmanJsString) },
 
         { valid: false, content: '', contentHash: '' },
-        { valid: false, content: 'hello', contentHash: sha256('abc') },
+        { valid: false, content: 'hello', contentHash: sha256base32('abc') },
     ];
     for (let v of vectors) {
         let testMethod = v.valid ? t.true : t.false;

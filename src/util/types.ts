@@ -79,12 +79,11 @@ export type WorkspaceName = string;
 export type AuthorAddress = string;
 export type AuthorShortname = string;
 
-export type HexLower = string;
 export type Base32String = string;
 
-export type EncodedHash = HexLower;  // lowercase hex-encoded sha256 hash
-export type EncodedKey = Base32String; // a pubkey or secret key as base32
-export type EncodedSig = Base32String;
+export type EncodedHash = Base32String;  // hashes are also base32
+export type EncodedKey = Base32String;  // pubkey or secret key as base32
+export type EncodedSig = Base32String;  // signature, as base32
 
 export type AuthorParsed = {
     address: AuthorAddress,

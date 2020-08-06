@@ -15,7 +15,7 @@ import {
     isErr,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
-import { sha256 } from '../crypto/crypto';
+import { sha256base32 } from '../crypto/crypto';
 
 export let _historySortFn = (a: Document, b: Document): number => {
     // When used within one path's documents, puts the winning version first.
@@ -299,7 +299,7 @@ export class StorageMemory implements IStorage {
             format: docToSet.format,
             workspace: this.workspace,
             path: docToSet.path,
-            contentHash: sha256(docToSet.content),
+            contentHash: sha256base32(docToSet.content),
             content: docToSet.content,
             author: keypair.address,
             timestamp: docToSet.timestamp || now,

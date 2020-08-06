@@ -14,7 +14,7 @@ import {
     isErr,
 } from '../util/types';
 import {
-    sha256,
+    sha256base32,
     sign,
     verify,
 } from '../crypto/crypto';
@@ -59,7 +59,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         // Convert numbers to strings.
         // Replace optional properties with '' if they're missing.
         // Use the contentHash instead of the content.
-        return sha256([
+        return sha256base32([
             doc.author,
             doc.contentHash,
             doc.deleteAfter === undefined ? '' : '' + doc.deleteAfter,
@@ -284,7 +284,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         // return a ValidationError, or return true on success.
 
         // TODO: if content is null, skip this check
-        let shaContent = sha256(content);
+        let shaContent = sha256base32(content);
         if (contentHash !== shaContent) {
             return new ValidationError(`content does not match contentHash.  sha256(content) is ${shaContent} but contentHash is ${contentHash}`);
         }

@@ -21,7 +21,7 @@ import {
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { logDebug, logWarning } from '../util/log';
-import { sha256 } from '../crypto/crypto';
+import { sha256base32 } from '../crypto/crypto';
 
 export interface StorageSqliteOpts {
     // mode: create
@@ -451,7 +451,7 @@ export class StorageSqlite implements IStorage {
             format: docToSet.format,
             workspace: this.workspace,
             path: docToSet.path,
-            contentHash: sha256(docToSet.content),
+            contentHash: sha256base32(docToSet.content),
             content: docToSet.content,
             author: keypair.address,
             timestamp: docToSet.timestamp || now,
