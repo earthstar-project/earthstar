@@ -1,3 +1,17 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [How to track causal relationships more carefully: version vectors](#how-to-track-causal-relationships-more-carefully-version-vectors)
+    - [But: we need device ids](#but-we-need-device-ids)
+  - [Version vector example](#version-vector-example)
+  - [Space requirements](#space-requirements)
+    - [No version vectors](#no-version-vectors)
+    - [Extra overhead from version vectors](#extra-overhead-from-version-vectors)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 2020-05-30
 
 # How to track causal relationships more carefully: version vectors

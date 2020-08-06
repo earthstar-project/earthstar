@@ -2,6 +2,15 @@
 
 NOTE This needs to be updated now that we've switched from base58 to base32.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [URL details](#url-details)
+- [Pubs & swarms](#pubs--swarms)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ### URL details
 
 The workspace and author address formats are designed to work well in [URLs](https://tools.ietf.org/html/rfc3986) with two caveats:

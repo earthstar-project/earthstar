@@ -1,5 +1,19 @@
 # Earthstar: Overview
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [Goals](#goals)
+- [Progress so far](#progress-so-far)
+- [How does it work?](#how-does-it-work)
+- [Security and data guarantees](#security-and-data-guarantees)
+- [Write permissions and merge conflicts](#write-permissions-and-merge-conflicts)
+- [Indexing](#indexing)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 ![earthstar logo in purple](&Ev1N+Y27COw+fxOlfgeDN2WKL7vBsC1pM12bHpae6wU=.sha256)
 
 A distributed p2p database / app toolkit that syncs.  Halfway in between SSB and CouchDB.

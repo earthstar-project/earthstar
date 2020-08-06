@@ -1,5 +1,17 @@
 # The Rules of Earthstar
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [Scope](#scope)
+- [Out of scope](#out-of-scope)
+- [Goals and priorities](#goals-and-priorities)
+- [Technical rules and invariants](#technical-rules-and-invariants)
+- [App rules](#app-rules)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Scope
 
 Earthstar is mostly a **format for distributed data** and associated **user identities**.

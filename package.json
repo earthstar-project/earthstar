@@ -14,6 +14,7 @@
   },
   "scripts": {
     "clean": "rm -rf build/* .nyc_output coverage",
+    "toc": "./update-table-of-contents.sh",
     "build": "tsc",
     "watch-test": "onchange --initial --kill --delay 1000 src/*.ts -- npm run build-and-test",
     "start": "node build/main.js",

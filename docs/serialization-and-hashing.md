@@ -1,5 +1,17 @@
 # Serialization and Hashing
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [(Caveat: binary vs text)](#caveat-binary-vs-text)
+- [Hashing documents](#hashing-documents)
+- [Network transport](#network-transport)
+- [Storage](#storage)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 There are 3 scenarios when we need to serialize documents to plain old bytes:
 
 * Hashing

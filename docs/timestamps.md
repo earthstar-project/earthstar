@@ -2,6 +2,16 @@
 
 How does Earthstar handle timestamps, and can it recover from a device with a very inaccurate clock?
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [How Earthstar manages timestamps](#how-earthstar-manages-timestamps)
+- [Handling clock glitches](#handling-clock-glitches)
+- [Failure cases](#failure-cases)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ### How Earthstar manages timestamps
 
 For background, the rules of Earthstar say that each document is independent and any document can be missing.  So we can't use Merkle hash backlinks for ordering, we have to use something like integers which can be put in order even if there are gaps.

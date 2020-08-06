@@ -1,6 +1,17 @@
 2020-07-26
 
-### More detail about syncing
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [More detail about syncing](#more-detail-about-syncing)
+- [Easy, slow sync](#easy-slow-sync)
+- [Efficient sync (not implemented yet)](#efficient-sync-not-implemented-yet)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
+## More detail about syncing
 
 Earthstar peers can be servers or clients or both.  Servers respond to queries, clients request queries.
 
@@ -16,7 +27,7 @@ Clients
 
 For two servers to sync with each other, one of them has to act as a client -- it needs some extra code to drive the sync conversation.  E.g. you'd somehow ask graphQL server A to start a long-running background process that talks as a client to graphQL server B.
 
-### Easy, slow sync
+## Easy, slow sync
 
 Syncing is really basic right now.  [This happens in earthstar's sync.ts](https://github.com/cinnamon-bun/earthstar/blob/master/src/sync.ts#L129-L190)
 
@@ -30,7 +41,7 @@ Client: POST hey, here's all my documents: [doc1, doc2, doc3, doc4]
 Server: ok
 ```
 
-### Efficient sync (not implemented yet)
+## Efficient sync (not implemented yet)
 
 This also adds the concept of "replication queries", where each side can express what data it wants to have.  Maybe a peer only wants wiki documents, or recent documents.
 

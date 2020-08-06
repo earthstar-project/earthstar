@@ -1,4 +1,3 @@
-
 # Earthstar
 
 ![](docs/earthstar-wordmark.png)
@@ -7,20 +6,58 @@
 
 *Alpha - do not use for important data yet*
 
-Related tools:
-* [earthstar-cli](https://github.com/cinnamon-bun/earthstar-cli) -- command line utility
-* [earthstar-pub](https://github.com/cinnamon-bun/earthstar-pub) -- server to help you sync
-* [earthstar-wiki](https://github.com/cinnamon-bun/earthstar-wiki) -- an example app built with Earthstar
-* [earthstar-os](https://github.com/cinnamon-bun/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser
-
-Other docs:
-* [Earthstar concepts and vocabulary](docs/vocabulary.md) -- more details about workspaces, etc
-
 ## Community / how to contribute
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 Chatroom: [`#earthstar:matrix.org`](https://matrix.to/#/!oGfoMKqZnBVrJYjebW:matrix.org)
+
+## Links and docs
+
+Related tools:
+* [earthstar-cli](https://github.com/earthstar-project/earthstar-cli) -- command line utility
+* [earthstar-pub](https://github.com/earthstar-project/earthstar-pub) -- server to help you sync
+* [earthstar-wiki](https://github.com/earthstar-project/earthstar-wiki) -- an example app built with Earthstar
+* [earthstar-os](https://github.com/earthstar-project/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser
+* [earthstar-graphql](https://github.com/earthstar-project/earthstar-graphql) -- A GraphQL server for Earthstar data
+
+Docs for everyone:
+* [Overview](docs/overview.md) -- A quick comparison between Earthstar, CouchDB, and SSB
+* [Rules of Earthstar](docs/rules-of-earthstar.md) -- The scope of the project, and details of the technical invariants of the distributed system.  Read this if you're building an Earthstar app.
+* [Earthstar concepts and vocabulary](docs/vocabulary.md) -- Specification for Earthstar data
+
+Docs for core Earthstar developers:
+* [Serialization and hashing](docs/serialization-and-hashing.md) -- Exploring this topic in more detail
+* [Syncing](docs/syncing.md) -- Exploring this topic in more detail
+* [Fancy conflict resolution](docs/fancy-conflict-resolution.md) -- How to add more complex conflict tracking on top of Earthstar
+* [Timestamps](docs/timestamps.md) -- Exploring the limits of Earthstar's assumptions about timestamps
+* [Urls](docs/urls.md) -- How to build URLs related to Earthstar
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [What kinds of apps can you build with Earthstar?](#what-kinds-of-apps-can-you-build-with-earthstar)
+- [Motivation](#motivation)
+- [Data model](#data-model)
+- [Block diagram](#block-diagram)
+- [Scope, typical usage](#scope-typical-usage)
+- [Editing data; multiple users and devices; conflicts](#editing-data-multiple-users-and-devices-conflicts)
+- [Security properties](#security-properties)
+- [Comparisons](#comparisons)
+- [Use cases](#use-cases)
+- [What doesn't it do?](#what-doesnt-it-do)
+- [Example](#example)
+- [Details and notes](#details-and-notes)
+  - [Signatures](#signatures)
+  - [Sync over duplex streams:](#sync-over-duplex-streams)
+  - [Sync over HTTP when only one peer is publicly available:](#sync-over-http-when-only-one-peer-is-publicly-available)
+  - [HTTP API](#http-api)
+- [Future plans](#future-plans)
+  - [Immutable documents by putting "(hash)" in the path](#immutable-documents-by-putting-hash-in-the-path)
+  - [Path overlays](#path-overlays)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## What kinds of apps can you build with Earthstar?
 

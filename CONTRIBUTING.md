@@ -1,5 +1,27 @@
 # Contributing to Earthstar
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [Purpose](#purpose)
+- [Values](#values)
+- [Code of conduct](#code-of-conduct)
+- [Communication, collaboration, and decision making](#communication-collaboration-and-decision-making)
+- [Security](#security)
+- [Code style](#code-style)
+  - [Null and undefined](#null-and-undefined)
+  - [Errors and exceptions](#errors-and-exceptions)
+  - [Modules and files](#modules-and-files)
+  - [Limited dependencies](#limited-dependencies)
+  - [Avoid streams](#avoid-streams)
+- [Code formatting](#code-formatting)
+  - [Capitalization](#capitalization)
+  - [Whitespace, semicolons, punctuation](#whitespace-semicolons-punctuation)
+  - [Imports](#imports)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Purpose
 
 The goal of this project is to make it easy for people and communities to have their own communications infrastructure, independent of big tech companies and people with specialized tech skills.

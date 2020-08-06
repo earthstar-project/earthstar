@@ -1,5 +1,34 @@
 # Earthstar concepts and vocabulary
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [Author](#author)
+- [Workspace](#workspace)
+- [Document](#document)
+  - [Format](#format)
+  - [Path](#path)
+    - [Valid paths](#valid-paths)
+    - [There are no "folders", only documents](#there-are-no-folders-only-documents)
+  - [Content](#content)
+  - [Timestamp](#timestamp)
+  - [Writing documents](#writing-documents)
+  - [Document History](#document-history)
+  - [Deleting documents](#deleting-documents)
+  - [Path ownership](#path-ownership)
+- [Query](#query)
+- [Pub servers](#pub-servers)
+- [Finding your friends](#finding-your-friends)
+- [URLs and URIs](#urls-and-uris)
+- [Classes](#classes)
+- [Replication / Syncing](#replication--syncing)
+  - [Incoming and Outgoing Replication Queries](#incoming-and-outgoing-replication-queries)
+  - [Transactions, data integrity](#transactions-data-integrity)
+  - [Conflict resolution](#conflict-resolution)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 Earthstar is an:
 * eventually consistent
 * offline-first
