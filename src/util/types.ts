@@ -137,7 +137,7 @@ export type DocToSet = {
 };
 
 //================================================================================
-// Query objects describe how we want to query a Storage instance for documents.
+// Query objects describe how to query a Storage instance for documents.
 export interface QueryOpts {
     // An empty query object returns all documents.
 
@@ -146,10 +146,10 @@ export interface QueryOpts {
 
     path?: string,  // one specific path only.
 
+    pathPrefix?: string,  // paths starting with prefix.
+
     lowPath?: string,  // lowPath <= p 
     highPath?: string,  // p < highPath
-
-    pathPrefix?: string,  // paths starting with prefix.
 
     // Only return the first N documents.
     // This counts the total number of docs returned, counting historical and most-recent versions.
