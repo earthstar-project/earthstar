@@ -4,6 +4,40 @@ Format: `es.4`
 
 Document version: 2020-08-09.1
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [Ingredients](#ingredients)
+  - [ed25519 signatures](#ed25519-signatures)
+  - [base32 encoding](#base32-encoding)
+  - [base64 encoding](#base64-encoding)
+  - [Indexed storage](#indexed-storage)
+- [Vocabulary and concepts](#vocabulary-and-concepts)
+- [Data model](#data-model)
+- [Identities, Authors, Workspaces](#identities-authors-workspaces)
+  - [Character set definitions](#character-set-definitions)
+  - [Author addresses](#author-addresses)
+  - [FAQ: Author Shortnames](#faq-author-shortnames)
+  - [Author profiles](#author-profiles)
+- [Paths and write permissions](#paths-and-write-permissions)
+  - [Paths](#paths)
+  - [Write permissions](#write-permissions)
+  - [Path and filename conventions](#path-and-filename-conventions)
+- [Documents and their fields](#documents-and-their-fields)
+  - [Content](#content)
+  - [Timestamps](#timestamps)
+  - [Ephemeral documents](#ephemeral-documents)
+  - [Document serialization](#document-serialization)
+  - [Hashing and signing](#hashing-and-signing)
+- [Querying](#querying)
+- [Syncing](#syncing)
+  - [Sync queries](#sync-queries)
+  - [Resolving conflicts](#resolving-conflicts)
+  - [Networking](#networking)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 > The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
 > NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED",  "MAY", and
 > "OPTIONAL" in this document are to be interpreted as described in
@@ -452,9 +486,3 @@ export interface QueryOpts {
 ## Resolving conflicts
 
 ## Networking
-
-
-
-
-
-#
