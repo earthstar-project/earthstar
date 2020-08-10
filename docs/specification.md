@@ -17,24 +17,41 @@ Document version: 2020-08-09.1
 - [Data model](#data-model)
 - [Identities, Authors, Workspaces](#identities-authors-workspaces)
   - [Character set definitions](#character-set-definitions)
+  - [Workspace addresses](#workspace-addresses)
+    - [A future feature: invite-only workspaces](#a-future-feature-invite-only-workspaces)
   - [Author addresses](#author-addresses)
   - [FAQ: Author Shortnames](#faq-author-shortnames)
   - [Author profiles](#author-profiles)
 - [Paths and write permissions](#paths-and-write-permissions)
   - [Paths](#paths)
+  - [Path punctuation that has special meaning](#path-punctuation-that-has-special-meaning)
   - [Write permissions](#write-permissions)
   - [Path and filename conventions](#path-and-filename-conventions)
 - [Documents and their fields](#documents-and-their-fields)
+  - [===============](#)
+  - [Author](#author)
+  - [Format](#format)
+    - [Validator responsibilities](#validator-responsibilities)
   - [Content](#content)
+  - [Content Hash](#content-hash)
+  - [Path](#path)
   - [Timestamps](#timestamps)
   - [Ephemeral documents](#ephemeral-documents)
+  - [Signature](#signature)
+  - [Workspace](#workspace)
+  - [===============](#-1)
   - [Document serialization](#document-serialization)
   - [Hashing and signing](#hashing-and-signing)
 - [Querying](#querying)
 - [Syncing](#syncing)
+  - [Workspace secrecy](#workspace-secrecy)
   - [Sync queries](#sync-queries)
   - [Resolving conflicts](#resolving-conflicts)
   - [Networking](#networking)
+- [Future directions](#future-directions)
+  - [Invite-only workspaces](#invite-only-workspaces)
+  - [Encryption](#encryption)
+  - [Immutable documents](#immutable-documents)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -120,13 +137,67 @@ PRINTABLE_ASCII = characters " " to "~", inclusive
                 = hex character code 0x20 to 0x7E inclusive
 ```
 
+## Workspace addresses
+
+```
+WORKSPACE_ADDRESS = "+" NAME "." SUFFIX
+NAME = ALPHA_LOWER ALPHA_LOWER_OR_DIGIT*(0 to 14 characters)
+SUFFIX = ALPHA_LOWER ALPHA_LOWER_OR_DIGIT*(0 to 52 characters)
+```
+
+A workspace address starts with `+` and combines a **name** with a **suffix**.
+
+The name:
+* MUST be 1 to 15 characters long, inclusive.
+* MUST only contain digits and lowercase ASCII letters
+* MUST NOT start with a digit
+
+The suffix:
+* MUST be 1 to 53 characters long, inclusive.
+* MUST only contain digits and lowercase ASCII letters
+* MUST NOT start with a digit
+
+A workspace address MUST have two parts separated by a single period.
+
+No uppercase letters are allowed.
+
+Valid examples:
+
+```
++a.b
++gardening.friends
++gardening.j230d9qjd0q09of4j
++gardening.bnkksi5na3j7ifl5lmvxiyishmoybmu3khlvboxx6ighjv6crya5a
++bestbooks2019.o049fjafo09jaf
+```
+
+> **Why these rules?**
+>
+> These rules allow workspace addresses to be used as the location part of regular URLs, after removing the `+`.
+
+Workspace suffixes may be used in a variety of ways:
+
+* meaningful words similar to domain name TLDs
+* random strings that make the workspace hard to guess
+* public keys in base32 format, starting with `b`, to be used as the **workspace key** in future versions of Earthstar (see below).
+
+Note that anyone can write to and read from a workspace if they know its full workspace address, so it's important to keep workspace addresses secret if you want to limit their audience.
+
+### A future feature: invite-only workspaces
+
+In the future, Earthstar will support **invite-only** workspaces which have an associated **workspace key** and **workspace secret**.  The key is used as the workspace suffix, and the secret is given out-of-band to authors who should be able to write.
+
+Only authors who know the workspace key can write to an invite-only workspace.  They will sign their documents with the workspace secret (in a new field, `workspaceSignature`, in addition to the regular author signature).
+
+This will limit who can write, but anyone knowing the workspace address can still read.  To limit readers, authors may choose to encrypt their document content using the workspace key so that anyone with the workspace secret can decrypt it.
+
 ## Author addresses
 
 ```
 @suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua
 ```
 
-An author address combines a **shortname** with a **public key**.
+An author address starts with `@` and combines a **shortname** with a **public key**.
 
 **Shortnames** are chosen by users when creating an author identity.  They cannot be changed later.  They are exactly 4 lowercase ASCII letters or digits, and cannot start with a digit.
 
@@ -214,7 +285,7 @@ Example:
 
 Display names stored in profile information can be changed frequently and can contain Unicode.
 
-The content of the profile document is JSON, in this schema:
+The content of the profile document is JSON, utf-8, in this schema:
 ```ts
 {
     displayName? : string,  // human-readable name of this author
@@ -223,7 +294,7 @@ The content of the profile document is JSON, in this schema:
 }
 ```
 
-TODO: length limits?
+TODO: length limits on name and bio?
 
 # Paths and write permissions
 
@@ -241,12 +312,12 @@ PATH_SEGMENT = "/" PATH_CHARACTER+
 PATH = PATH_SEGMENT+
 ```
 
-* A path must begin with a `/`
-* A path must not end with a `/`
-* A path must not begin with `/@`
-* Paths may contain upper case ascii letters, and are case sensitive.
-* Paths may only contain the characters listed above.  To include other characters such as Unicode characters, apps SHOULD use [URL-style percent-encoding as defined in RFC3986](https://tools.ietf.org/html/rfc3986#section-2.1).  First encode the string as utf-8, then percent-encode the utf-8 bytes.
-* TODO: maximum length
+* A path MUST begin with a `/`
+* A path MUST NOT end with a `/`
+* A path MUST NOT begin with `/@`
+* Paths MAY contain upper case ascii letters, and are case sensitive.
+* Paths MUST only contain the characters listed above.  To include other characters such as Unicode characters, apps SHOULD use [URL-style percent-encoding as defined in RFC3986](https://tools.ietf.org/html/rfc3986#section-2.1).  First encode the string as utf-8, then percent-encode the utf-8 bytes.
+* TODO: maximum path length
 
 Example paths:
 ```
@@ -262,6 +333,42 @@ Invalid: starts with "/@"
     /@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/profile.json
 
 ```
+
+> **Why these specific punctuation characters?**
+>
+> Earthstar paths are designed to work well in the path portion of a regular web URL.
+
+> **Why can't a path start with `/@`?**
+>
+> When building web URLs out of Earthstar pieces, we may want to use formats like this:
+>
+> ```
+> https://mypub.com/+gardening.friends/wiki/Dolphins
+> https://mypub.com/+gardening.friends/@suzy.bo5sotcncvkr7...  (etc)
+> ```
+> 
+> The restriction on `/@` allows us to tell paths and author addresses apart in this setting.  It also encourages app authors to put their data in a more organized top-level prefix such as `/wiki/` instead of putting each author at the root of the path.
+>
+> It would be nice to use a double slash `//` to begin paths and avoid confusion with authors:
+>
+> ```
+> a template like this:
+> https://mypub.com/:workspace/:path
+>
+> would make a URL like this:
+> https://mypub.com/+gardening.friends//wiki/Dolphins
+>                                      ^
+> ```
+>
+> ...but some webservers treat this as user error and rewrite the double slash to a single slash.  So we have to carefully avoid the double slash when building URLs.
+
+## Path punctuation that has special meaning
+
+* `/` - separates path segments
+* `~` - defines author write permissions
+* `!` - used if and only if the document is ephemeral
+* `%` - for percent-encoding other characters
+* `*` - allowed, but it might be used in path queries, so consider avoiding it
 
 ## Write permissions
 
@@ -315,7 +422,7 @@ There is no way to explicitly signal that document content is binary (encoded as
 
 # Documents and their fields
 
-Example document, shown as JSON:
+An example document shown as JSON, though it can exist in many serialization formats:
 
 ```json
 {
@@ -346,7 +453,47 @@ interface Doc {
 }
 ```
 
-Note that all string fields are limited to printable ASCII characters except for `content`.
+All string fields MUST BE limited to printable ASCII characters except for `content`, which is utf-8.
+
+If any fields are not formatted according to the rules described earlier, the document is invalid.
+
+The `deleteAfter` field is OPTIONAL.  All other fields listed above are REQUIRED.  Additional fields are FORBIDDEN.
+
+The order of fields is unspecified except for hashing and signing purposes (see section below).  For consistency, the recommended canonical order is alphabetical by field name.
+
+## ===============
+
+## Author
+
+The `author` field holds an author address, formatted according to the rules described earlier.
+
+## Format
+
+The format is a short string describing which version of the Earthstar specification to use when interpreting the document.
+
+The current format version is `es.4`.  ("es" is short for Earthstar.)
+
+If the specification is changed in a way that breaks forwards or backwards compatability, the format version MUST be incremented.  The version number SHOULD be a single integer, not a semver.
+
+Other format families may someday exist, such as a hypothetical `ssb.1` which would embed Scuttlebutt messages in Earthstar documents, with special rules for validating the original Scuttlebutt signatures.
+
+### Validator responsibilities
+
+Earthstar libraries SHOULD separate out code related to each format version, so that they can handle old and new documents side-by-side.  Code for handling a format version is called a **Validator**.  Validators are responsible for:
+
+* Hashing documents
+* Signing new documents
+* Checking document validity when ingesting documents from an external source
+  * timestamp validity
+  * formatting of string fields such as author addresses and paths
+  * author write permissions to a path
+  * signature validity
+  * content matches contentHash
+  * etc
+
+Therefore each different format can have different ways of hashing, signing, and validating documents.
+
+TODO: define basic rules that documents of all formats must follow
 
 ## Content
 
@@ -359,6 +506,34 @@ TODO: add an encoding field to the document to make this less ambiguous?
 > **Why no native support for binary data?**
 >
 > Common encodings such as JSON, and protocols built on them such as GraphQL, have to way to represent binary data.
+
+`content` may be an empty string.  The recommended way to remove data from Earthstar is to overwrite the document with a new one, with `content = ""`.
+
+In future versions the `content` will be allowed to be `null`, meaning we don't know what it is.  This allows handling documents without their actual content -- "sparse mode".  This is not allowed in the current version.
+
+## Content Hash
+
+The `contentHash` is the `sha256` hash of the `content` data.  The hash digest is then encoded from binary to base32 following the usual Earthstar format, with a leading `b`.
+
+Note that hash digests are usually encoded in hex format, but we use base32 instead to be consistent with the rest of Earthstar's encodings.
+
+Wrong: `binary hash digest --> hex encoded string --> base32 encoded string`
+
+Correct: `binary hash digest --> base32 encoded string`
+
+Also be careful not to accidentally change the content string to a different encoding (such as utf-16) before hashing it.
+
+> **Why we record the content hash**
+>
+> In future versions we will allow the `content` field to be `null`, so we can handle document metadata without the full size of the content -- "sparse mode".  Document signatures are based on the `contentHash`, not the `content` itself.  This allows us to verify signatures on sparse-mode documents.
+
+## Path
+
+The `path` field contains a string following the path formatting rules described earlier.
+
+The document is invalid if the author does not have permission to write to the path, following the rules described earlier in "Write permissions".
+
+The path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has the optional `deleteAfter` field).
 
 ## Timestamps
 
@@ -413,6 +588,28 @@ The `deleteAfter` field is optional.  If a document is not ephemeral, the field 
 Unlike the `timestamp` field, the `deleteAfter` field is expected to be in the future compared to the current wall-clock time.  Once the `deleteAfter` time is in the past, the document becomes invalid.
 
 The `deleteAfter` time MUST BE strictly greater than the document's `timestamp`.
+
+The document path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral.
+
+> **Why ephemeral documents need a `!` in their path**
+>
+> Regular and ephemeral documents with the same path could interact in surprising ways.  To avoid this, we enforce that they can never collide on the same path.
+>
+> (An ephemeral document could propagate halfway across a network of peers, overwriting a regular document with the same path, and then expire and get deleted everywhere.  Then the regular document would regrow to fill the empty space.
+>
+> But if the ephemeral document traveled across the entire network and exterminated the regular document, and THEN expired, there would be nothing left.
+>
+> Which of these cases occurred would depend on how long the document took to spread, which could be very fast or could take months if there was a peer that was usually offline.  We'd like to avoid this unpredictability.)
+
+## Signature
+
+The ed25519 signature by the author encoded in base32 with a leading `b`.
+
+## Workspace
+
+The `workspace` field holds a workspace address, formatted according to the rules described earlier.
+
+## ===============
 
 ## Document serialization
 
@@ -481,8 +678,18 @@ export interface QueryOpts {
 
 # Syncing
 
+## Workspace secrecy
+
 ## Sync queries
 
 ## Resolving conflicts
 
 ## Networking
+
+# Future directions
+
+## Invite-only workspaces
+
+## Encryption
+
+## Immutable documents
