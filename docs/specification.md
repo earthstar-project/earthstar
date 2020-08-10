@@ -28,7 +28,6 @@ Document version: 2020-08-09.1
   - [Write permissions](#write-permissions)
   - [Path and filename conventions](#path-and-filename-conventions)
 - [Documents and their fields](#documents-and-their-fields)
-  - [===============](#)
   - [Author](#author)
   - [Format](#format)
     - [Validator responsibilities](#validator-responsibilities)
@@ -39,7 +38,6 @@ Document version: 2020-08-09.1
   - [Ephemeral documents](#ephemeral-documents)
   - [Signature](#signature)
   - [Workspace](#workspace)
-  - [===============](#-1)
   - [Document serialization](#document-serialization)
   - [Hashing and signing](#hashing-and-signing)
 - [Querying](#querying)
@@ -461,8 +459,6 @@ The `deleteAfter` field is OPTIONAL.  All other fields listed above are REQUIRED
 
 The order of fields is unspecified except for hashing and signing purposes (see section below).  For consistency, the recommended canonical order is alphabetical by field name.
 
-## ===============
-
 ## Author
 
 The `author` field holds an author address, formatted according to the rules described earlier.
@@ -608,8 +604,6 @@ The ed25519 signature by the author encoded in base32 with a leading `b`.
 ## Workspace
 
 The `workspace` field holds a workspace address, formatted according to the rules described earlier.
-
-## ===============
 
 ## Document serialization
 
