@@ -8,7 +8,7 @@ Document version: 2020-08-09.1
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Contents**
 
-- [Ingredients](#ingredients)
+- [Libraries needed to implement Earthstar](#libraries-needed-to-implement-earthstar)
   - [ed25519 signatures](#ed25519-signatures)
   - [base32 encoding](#base32-encoding)
   - [base64 encoding](#base64-encoding)
@@ -38,8 +38,10 @@ Document version: 2020-08-09.1
   - [Ephemeral documents](#ephemeral-documents)
   - [Signature](#signature)
   - [Workspace](#workspace)
-  - [Document serialization](#document-serialization)
-  - [Hashing and signing](#hashing-and-signing)
+- [Document serialization](#document-serialization)
+  - [Serialization for hashing and signing](#serialization-for-hashing-and-signing)
+  - [Serialization for network](#serialization-for-network)
+  - [Serialization for storage](#serialization-for-storage)
 - [Querying](#querying)
 - [Syncing](#syncing)
   - [Workspace secrecy](#workspace-secrecy)
@@ -59,7 +61,7 @@ Document version: 2020-08-09.1
 > [RFC 2119](https://tools.ietf.org/html/rfc2119).
 > "WILL" means the same as "SHALL".
 
-# Ingredients
+# Libraries needed to implement Earthstar
 
 To make your own Earthstar library, you'll need:
 
@@ -104,7 +106,7 @@ Earthstar messages are typically queried in a variety of ways.  This is easiest 
 
 **Path** -- Similar to a key in leveldb or a path in a filesystem, each document is stored at a specific path.
 
-**Author** -- A person who writes documents to a workspace.  Authors are identified by an ed25519 public key in a format called an **author address**.
+**Author** -- A person who writes documents to a workspace.  Authors are identified by an ed25519 public key in a format called an **author address**.  It's safe for an author to use the same identity from multiple devices simultaneously.
 
 **Workspace** -- A collection of documents.  Workspaces are identified by a **workspace address**.  Workspaces are separate, unrelated worlds of data.  Each document exists within exactly one workspace.
 
@@ -115,6 +117,61 @@ Earthstar messages are typically queried in a variety of ways.  This is easiest 
 **Pub server** -- (short for "public server") -- A peer whose purpose is to provide uptime and connectivity for many users.  Usually these are cloud servers with publically routable IP addresses.
 
 # Data model
+
+A peer MAY hold data from many workspaces.  Each workspace's data is treated independently.  Each document within a workspace is also independent; they don't form a chain or feed; they don't have Merkle backlinks.
+
+A workspace's data is a collection of documents by various authors.  A peer MAY hold some or all of the documents from a workspace, in any combination.  Apps MUST assume that any combination of docs may be missing.
+
+Each document in a workspace exists at a path.  For each path, Earthstar keeps the newest document from each author who has ever written to that path.
+
+In this example, the `/wiki/shared/Flowers` path contains 3 documents, because 3 different authors have written there.  They may have written there hundreds of times, but we only keep the newest document from each author, in that path.
+
+```
+// Simplified example of data stored in a workspace
+
+Workspace: "+gardening.friends"
+  Path: "/wiki/shared/Flowers"
+    Documents in this path:
+      { author: @suzy.b..., timestamp: 1500094, content: 'pretty' }
+      { author: @matt.b..., timestamp: 1500073, content: 'nice petals' }
+      { author: @fern.b..., timestamp: 1500012, content: 'smell good' }
+  Path: "/wiki/shared/Bugs"
+    Documents in this path:
+      { author: @suzy.b..., timestamp: 1503333, content: 'wiggly' }
+```
+
+"Newest" is determined by comparing the `timestamp` field in the documents.  See the next section for details about trusting timestamps.
+
+When looking up a path to retrieve a document, the newest document is returned by default.  Apps can also query for the full set of document versions at a path; the older ones are called **history documents**.
+
+## Ingesting documents
+
+When a new document arrives and an existing one is already there (from the same author and same path), the new document overwrites the old one.  Earthstar libraries MUST actually delete the older, overwritten document.  The author's intent is to remove the old data.
+
+The process of validating and potentially saving an incoming document is called **ingesting**, and it MUST happen to newly obtained documents, whether they come from other peers or are made as local writes.  Earthstar libraries MUST use this ingestion process:
+
+```ts
+// pseudocode
+
+Ingest(newDoc):
+    // check validity -- bad data types, bad signature,
+    // expired ephemeral doc, wrong format string, etc...
+    if !isValid(newDoc):
+        return "rejected an invalid doc"
+
+    // check if it's obsolete
+    let existingDoc = query({author: newDoc.author, path: newDoc.path});
+    if existingDoc exists && existingDoc.timestamp >= newDoc.timestamp;
+        return "ignored an obsolete doc"
+
+    // overwrite
+    if existingDoc exists:
+        remove(existingDoc)
+    save(newDoc)
+    return "accepted a doc"
+```
+
+## Trusting timestamps
 
 TODO
 
@@ -605,13 +662,166 @@ The ed25519 signature by the author encoded in base32 with a leading `b`.
 
 The `workspace` field holds a workspace address, formatted according to the rules described earlier.
 
-## Document serialization
+# Document serialization
 
-TODO
+There are 3 scenarios when we need to serialize a document to a string of bytes:
 
-## Hashing and signing
+* Hashing and signing
+* Network transmission
+* Storage
 
-TODO
+They have different needs and we use different formats for each.
+
+## Serialization for hashing and signing
+
+When an author signs a document, they're actually signing a hash of the document.  We need a deterministic, standardized, and simple way to serialize a document to a sequence of bytes.  This is a **one-way** conversion -- we never need to deserialize this format.
+
+Earthstar libraries MUST use this exact process.
+
+To hash a document:
+
+```
+Sort the document fields in lexicographic order by field name.
+Skip these fields: "content", "signature".
+For each remaining field in the document:
+    If the field value is an integer, convert it to a string.
+    Concatenate (the field name, "\t", the field value, "\n").
+Concatenate all of the above.
+Compute the sha256 hash.
+Encode the binary hash digest in base32 in Earthstar format, with leading "b".
+```
+
+To sign a document:
+
+```
+Compute the document hash.
+Using the document author's keypair (public and private key),
+    sign the document hash.
+Encode the binary signature into base32 in Earthstar format, with leading "b".
+Set document.signature to the base32 string.
+```
+
+Preconditions that make this work:
+* Documents can only hold integers and strings, no floats or nested objects that could increase complexity or be nondeterministic
+* No document field name or field content can contain `\t` or `\n`, except `content`, which is not directly used (we use `contentHash instead`)
+
+The reference implementation is in `hashDocument()` in `src/validators/es4.ts`.  Here's a summary:
+
+```ts
+// Psuedocode
+
+let serializeDocumentForHashing = (doc: Document): string => {
+    // Fields in lexicographic order.
+    // Convert numbers to strings.
+    // Omit optional properties if they're missing.
+    // Use the contentHash instead of the content.
+    // Omit the signature.
+    return (
+        `author\t${doc.author}\n` +
+        `contentHash\t${doc.contentHash}\n` +
+        (doc.deleteAfter === undefined ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
+        `format\t${doc.format}\n` +
+        `path\t${doc.path}\n` +
+        `timestamp\t${doc.timestamp}\n` +
+        `workspace\t${doc.workspace}\n`
+        // Note the \n is on on the last item too
+    );
+}
+
+let hashDocument = (doc: Document): string =>
+    bufferToBase32(
+        sha256AsBuffer(
+            serializeDocumentForHashing(doc)
+        )
+    );
+
+let signDocument = (keypair: authorKeypair, doc: Document): Document => {
+    return {
+        ...doc,
+        signature: sign(keypair, hashDocument(doc))
+    };
+}
+```
+
+Example
+
+```
+INPUT (shown as JSON, but is actually in memory before serialization)
+{
+  "format": "es.4",
+  "workspace": "+gardening.friends",
+  "path": "/wiki/shared/Flowers",
+  "contentHash": "bt3u7gxpvbrsztsm4ndq3ffwlrtnwgtrctlq4352onab2oys56vhq",
+  "content": "Flowers are pretty",
+  "author": "@suzy.bjzee56v2hd6mv5r5ar3xqg3x3oyugf7fejpxnvgquxcubov4rntq",
+  "timestamp": 1597026338596000,
+  "signature": ""  // is empty before signing has occurred
+}
+
+SERIALIZED FOR HASHING:
+author\t@suzy.bjzee56v2hd6mv5r5ar3xqg3x3oyugf7fejpxnvgquxcubov4rntq\n
+contentHash\tbt3u7gxpvbrsztsm4ndq3ffwlrtnwgtrctlq4352onab2oys56vhq\n
+format\tes.4\n
+path\t/wiki/shared/Flowers\n
+timestamp\t1597026338596000\n
+workspace\t+gardening.friends\n
+
+HASHED AND ENCODED AS BASE32:
+b6nyw25gum45gcxbhez3ykx3jopkhlfjj2rnmfb7rt6yhkszvidsa
+
+AUTHOR KEYPAIR:
+{
+  "address": "@suzy.bjzee56v2hd6mv5r5ar3xqg3x3oyugf7fejpxnvgquxcubov4rntq",
+  "secret": "b6jd7p43h7kk77zjhbrgoknsrzpwewqya35yh4t3hvbmqbatkbh2a"
+}
+
+SIGNATURE;
+bjljalsg2mulkut56anrteaejvrrtnjlrwfvswiqsi2psero22qqw7am34z3u3xcw7nx6mha42isfuzae5xda3armky5clrqrewrhgca
+```
+
+> **Why use `contentHash` instead of `content` for hashing documents?
+>
+> This lets us drop the actual content (to save space) but still verify the document signature.  This will be useful in the future for "sparse mode".
+
+## Serialization for network
+
+This is a **two-way** conversion between memory and bytes.
+
+Earthstar doesn't have strong opinions about networking.  This format does not need to be standardized, but it's good to choose widely used familiar tools.  JSON makes a good default choice.
+
+**Good choices**:
+
+* Encodings
+  * JSON
+  * newline-delimited JSON for streaming lots of documents
+  * CBOR
+  * msgpack
+* Protocols
+  * GraphQL (relies on JSON)
+  * REST
+  * gRPC?
+  * muxrpc (from SSB)
+
+## Serialization for storage
+
+This is a **two-way** conversion between memory and bytes.
+
+It does not need to be standardized; each implementation can use its own format.
+
+It needs to support efficient mutation and deletion of documents, and querying by various properties.
+
+It would be nice if this was an archival format (corruption-resistant and widely known).
+
+**Good choices:**
+
+* SQLite
+* Postgres
+* IndexedDB
+* leveldb (with extra indexes)
+* a bunch of JSON files, one for each document (with extra indexes)
+
+For exporting and importing data:
+* one giant newline-delimited JSON file
 
 # Querying
 
@@ -672,13 +882,77 @@ export interface QueryOpts {
 
 # Syncing
 
+Syncing is the process of trading documents between two peers to bring each other up to date.
+
+Syncing can occur locally (within a process, between two Storage instances) as well as across a network.
+
+Documents are locked into specific workspaces; therefore syncing can't transfer documents between workspaces, only between different peers that hold the same workspace.
+
+## Networking
+
+The network protocols used by peers to sync documents are not standardized yet.
+
 ## Workspace secrecy
+
+Knowing a workspace address gives a user the power to read and write to that workspace, so they need to be kept secret.
+
+It MUST be impossible to discover new workspaces through the syncing process.  Peers MUST keep their workspaces secret and only transmit data when they are sure the other peer also knows the address of the same workspace.
+
+Here's an algorithm to exchange workspaces without discovering new ones:
+
+* Peer1 and Peer2 send each other random numbers, and XOR them together into a shared nonce.
+* Each peer shares sha256(workspaceAddress + nonce) for each of their workspaces
+
+The hashes they have in common correspond to the workspaces they both have.
+
+The hashes that are unique to one peer will reveal no information to the other peer.
+
+They can now proceed to sync each of their common workspaces, one at a time.
 
 ## Sync queries
 
+During a sync, apps SHOULD be able to specify which documents they're willing to share, and which they're interested in getting.
+
+Apps do this by defining **Sync queries**.  An app SHOULD be able to define:
+
+* An array of **incoming sync queries** -- what you want
+* An array of **outgoing sync queries** -- what you will share
+
+The queries in each array are additive: if a doument matches any query in the array, the document is chosen.
+
+This contrasts with the behavior of query fields inside each query object, each of which narrows the results down further.
+
+By taking advantage of these two techniques, both AND and OR type behaviour is possible.
+
+Example:
+```ts
+// ask for all the About documents, and the recent Wiki documents
+let incomingQueries = [
+    {
+        pathPrefix: '/about/',
+        includeHistory: true,
+    },
+    {
+        pathPrefix: '/wiki/',
+        includeHistory: true,
+        timestampAfter: 15028732938984
+    },
+];
+
+// only share documents I wrote myself
+let outgoingQueries = [
+    {
+        versionsByAuthor: '@suzy.bjzee56v2hd6mv5r5ar3xqg3x3oyugf7fejpxnvgquxcubov4rntq',
+        includeHistory: true
+    },
+];
+```
+
+(Note: `timestampAfter` is shown for illustration purposes; that query field is not implemented yet)
+
 ## Resolving conflicts
 
-## Networking
+See the Data Model section for details about conflict resolution.
 
 # Future directions
 

@@ -59,6 +59,7 @@ export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | Valida
 }
 
 export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig | ValidationError => {
+    // Returns signature encoded in base32.
     let keypairBuffers = decodeAuthorKeypair(keypair);
     if (isErr(keypairBuffers)) { return keypairBuffers; }
     try {

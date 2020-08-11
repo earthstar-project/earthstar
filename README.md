@@ -27,7 +27,7 @@ Docs for everyone:
 * [Earthstar concepts and vocabulary](docs/vocabulary.md) -- Specification for Earthstar data
 
 Docs for core Earthstar developers:
-* [Serialization and hashing](docs/serialization-and-hashing.md) -- Exploring this topic in more detail
+* The detailed [Earthstar specification](docs/specification.md)
 * [Syncing](docs/syncing.md) -- Exploring this topic in more detail
 * [Fancy conflict resolution](docs/fancy-conflict-resolution.md) -- How to add more complex conflict tracking on top of Earthstar
 * [Timestamps](docs/timestamps.md) -- Exploring the limits of Earthstar's assumptions about timestamps

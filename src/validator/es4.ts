@@ -54,7 +54,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         let err = this._checkBasicDocumentValidity(doc);
         if (isErr(err)) { return err; }
 
-        // Fields in alphabetical order.
+        // Fields in lexicographic order.
         // Convert numbers to strings.
         // Omit optional properties if they're missing.
         // Use the contentHash instead of the content.

@@ -35,9 +35,11 @@ export const CryptoChloride : ILowLevelCrypto = class {
         };
     };
     static sign(keypair : KeypairBuffers, msg : string | Buffer) : EncodedSig {
+        // Return the signature encoded from binary into base32
         let secretBuf = Buffer.concat([keypair.secret, keypair.pubkey]);
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         return encodeSig(
+            // this returns a Buffer
             sodium.crypto_sign_detached(msg, secretBuf)
         );
     }
