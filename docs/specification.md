@@ -1,4 +1,4 @@
-# Earthstar specification
+# Earthstar Specification
 
 Format: `es.4`
 
@@ -8,50 +8,54 @@ Document version: 2020-08-09.1
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Contents**
 
-- [Libraries needed to implement Earthstar](#libraries-needed-to-implement-earthstar)
-  - [ed25519 signatures](#ed25519-signatures)
-  - [base32 encoding](#base32-encoding)
-  - [base64 encoding](#base64-encoding)
-  - [Indexed storage](#indexed-storage)
+- [Libraries Needed to Implement Earthstar](#libraries-needed-to-implement-earthstar)
+  - [ed25519 Signatures](#ed25519-signatures)
+  - [base32 Encoding](#base32-encoding)
+  - [base64 Encoding](#base64-encoding)
+  - [Indexed Storage](#indexed-storage)
 - [Vocabulary and concepts](#vocabulary-and-concepts)
 - [Data model](#data-model)
+  - [Ingesting Documents](#ingesting-documents)
+  - [Timestamps and Clock Skew](#timestamps-and-clock-skew)
 - [Identities, Authors, Workspaces](#identities-authors-workspaces)
-  - [Character set definitions](#character-set-definitions)
-  - [Workspace addresses](#workspace-addresses)
-    - [A future feature: invite-only workspaces](#a-future-feature-invite-only-workspaces)
-  - [Author addresses](#author-addresses)
+  - [Character Set Definitions](#character-set-definitions)
+  - [Workspace Addresses](#workspace-addresses)
+    - [Invite-only Workspaces (coming soon)](#invite-only-workspaces-coming-soon)
+  - [Author Addresses](#author-addresses)
   - [FAQ: Author Shortnames](#faq-author-shortnames)
-  - [Author profiles](#author-profiles)
-- [Paths and write permissions](#paths-and-write-permissions)
+  - [Author Profiles](#author-profiles)
+- [Paths and Write Permissions](#paths-and-write-permissions)
   - [Paths](#paths)
-  - [Path punctuation that has special meaning](#path-punctuation-that-has-special-meaning)
-  - [Write permissions](#write-permissions)
-  - [Path and filename conventions](#path-and-filename-conventions)
-- [Documents and their fields](#documents-and-their-fields)
+  - [Path Characters With Special Meaning](#path-characters-with-special-meaning)
+  - [Write Permissions](#write-permissions)
+  - [Path and Filename Conventions](#path-and-filename-conventions)
+- [Documents and Their Fields](#documents-and-their-fields)
+  - [Document Validity](#document-validity)
   - [Author](#author)
-  - [Format](#format)
-    - [Validator responsibilities](#validator-responsibilities)
   - [Content](#content)
   - [Content Hash](#content-hash)
+  - [Format](#format)
+    - [Format Validator Responsibilities](#format-validator-responsibilities)
   - [Path](#path)
-  - [Timestamps](#timestamps)
-  - [Ephemeral documents](#ephemeral-documents)
+  - [Timestamp](#timestamp)
+  - [Ephemeral documents: deleteAfter](#ephemeral-documents-deleteafter)
   - [Signature](#signature)
   - [Workspace](#workspace)
-- [Document serialization](#document-serialization)
-  - [Serialization for hashing and signing](#serialization-for-hashing-and-signing)
-  - [Serialization for network](#serialization-for-network)
-  - [Serialization for storage](#serialization-for-storage)
+- [Document Serialization](#document-serialization)
+  - [Serialization for Hashing and Signing](#serialization-for-hashing-and-signing)
+  - [Serialization for Network](#serialization-for-network)
+  - [Serialization for Storage](#serialization-for-storage)
 - [Querying](#querying)
 - [Syncing](#syncing)
-  - [Workspace secrecy](#workspace-secrecy)
-  - [Sync queries](#sync-queries)
-  - [Resolving conflicts](#resolving-conflicts)
   - [Networking](#networking)
-- [Future directions](#future-directions)
-  - [Invite-only workspaces](#invite-only-workspaces)
+  - [Workspace Secrecy](#workspace-secrecy)
+  - [Sync Queries](#sync-queries)
+  - [Resolving Conflicts](#resolving-conflicts)
+- [Future Directions](#future-directions)
+  - [Sparse Mode](#sparse-mode)
+  - [Invite-Only Workspaces](#invite-only-workspaces)
   - [Encryption](#encryption)
-  - [Immutable documents](#immutable-documents)
+  - [Immutable Documents](#immutable-documents)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -61,15 +65,15 @@ Document version: 2020-08-09.1
 > [RFC 2119](https://tools.ietf.org/html/rfc2119).
 > "WILL" means the same as "SHALL".
 
-# Libraries needed to implement Earthstar
+# Libraries Needed to Implement Earthstar
 
 To make your own Earthstar library, you'll need:
 
-## ed25519 signatures
+## ed25519 Signatures
 
 This is the same cryptography format used by Secure Scuttlebutt and DAT/hyper.
 
-## base32 encoding
+## base32 Encoding
 
 Almost anywhere that binary data needs to be encoded in Earthstar, it's done with base32: public and private keys, signatures, hashes.  The exception is binary document content which is base64 (see next section).
 
@@ -86,13 +90,13 @@ Libraries MUST be strict when encoding and decoding -- only allow lowercase char
 > * The choice of a specific base32 variant was arbitrary and was influenced by the ones available in the multibase standard, which is widely implemented.
 > * The leading `b` character serves two purposes: it defines which base32 format we're using, and it prevents encoded strings from starting with a digit.  This makes it possible to use encoded strings as standards-complient URL locations, as in `earthstar://gardening.bajfoqa3joia3jao2df`.
 
-## base64 encoding
+## base64 Encoding
 
 Document contents may only contain utf-8 strings, not arbitrary binary bytes.  Applications wishing to store binary data SHOULD encode it as base64.
 
 The recommended format is [RFC4648](https://tools.ietf.org/html/rfc4648#section-4) base64, regular (not-URLsafe), with padding.  This is the same format used by `atob()` and `btoa()` in Javascript.
 
-## Indexed storage
+## Indexed Storage
 
 Earthstar messages are typically queried in a variety of ways.  This is easiest to implement using a database like SQLite, but if you manage your own indexes you can also use a key-value database like leveldb.
 
@@ -118,14 +122,6 @@ Earthstar messages are typically queried in a variety of ways.  This is easiest 
 
 # Data model
 
-A peer MAY hold data from many workspaces.  Each workspace's data is treated independently.  Each document within a workspace is also independent; they don't form a chain or feed; they don't have Merkle backlinks.
-
-A workspace's data is a collection of documents by various authors.  A peer MAY hold some or all of the documents from a workspace, in any combination.  Apps MUST assume that any combination of docs may be missing.
-
-Each document in a workspace exists at a path.  For each path, Earthstar keeps the newest document from each author who has ever written to that path.
-
-In this example, the `/wiki/shared/Flowers` path contains 3 documents, because 3 different authors have written there.  They may have written there hundreds of times, but we only keep the newest document from each author, in that path.
-
 ```
 // Simplified example of data stored in a workspace
 
@@ -140,11 +136,19 @@ Workspace: "+gardening.friends"
       { author: @suzy.b..., timestamp: 1503333, content: 'wiggly' }
 ```
 
+A peer MAY hold data from many workspaces.  Each workspace's data is treated independently.  Each document within a workspace is also independent; they don't form a chain or feed; they don't have Merkle backlinks.
+
+A workspace's data is a collection of documents by various authors.  A peer MAY hold some or all of the documents from a workspace, in any combination.  Apps MUST assume that any combination of docs may be missing.
+
+Each document in a workspace exists at a path.  For each path, Earthstar keeps the newest document from each author who has ever written to that path.
+
+In this example, the `/wiki/shared/Flowers` path contains 3 documents, because 3 different authors have written there.  They may have written there hundreds of times, but we only keep the newest document from each author, in that path.
+
 "Newest" is determined by comparing the `timestamp` field in the documents.  See the next section for details about trusting timestamps.
 
 When looking up a path to retrieve a document, the newest document is returned by default.  Apps can also query for the full set of document versions at a path; the older ones are called **history documents**.
 
-## Ingesting documents
+## Ingesting Documents
 
 When a new document arrives and an existing one is already there (from the same author and same path), the new document overwrites the old one.  Earthstar libraries MUST actually delete the older, overwritten document.  The author's intent is to remove the old data.
 
@@ -171,13 +175,15 @@ Ingest(newDoc):
     return "accepted a doc"
 ```
 
-## Trusting timestamps
+## Timestamps and Clock Skew
 
 TODO
 
+For now, read notes in the Timestamp section, lower in this document.
+
 # Identities, Authors, Workspaces
 
-## Character set definitions
+## Character Set Definitions
 
 ```
 ALPHA_LOWER = "abcdefghijklmnopqrstuvwxyz"
@@ -192,7 +198,7 @@ PRINTABLE_ASCII = characters " " to "~", inclusive
                 = hex character code 0x20 to 0x7E inclusive
 ```
 
-## Workspace addresses
+## Workspace Addresses
 
 ```
 WORKSPACE_ADDRESS = "+" NAME "." SUFFIX
@@ -238,7 +244,7 @@ Workspace suffixes may be used in a variety of ways:
 
 Note that anyone can write to and read from a workspace if they know its full workspace address, so it's important to keep workspace addresses secret if you want to limit their audience.
 
-### A future feature: invite-only workspaces
+### Invite-only Workspaces (coming soon)
 
 In the future, Earthstar will support **invite-only** workspaces which have an associated **workspace key** and **workspace secret**.  The key is used as the workspace suffix, and the secret is given out-of-band to authors who should be able to write.
 
@@ -246,7 +252,7 @@ Only authors who know the workspace key can write to an invite-only workspace.  
 
 This will limit who can write, but anyone knowing the workspace address can still read.  To limit readers, authors may choose to encrypt their document content using the workspace key so that anyone with the workspace secret can decrypt it.
 
-## Author addresses
+## Author Addresses
 
 ```
 @suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua
@@ -327,7 +333,7 @@ Note that authors also have **display names** stored in their **profile document
 >
 > Yes.  They are considered two distinct identities, although you can infer that they belong to the same person.
 
-## Author profiles
+## Author Profiles
 
 An author can have a **profiles** containing display names, biographic information, etc.  Profile data is stored in a document at a predefined path:
 
@@ -351,7 +357,7 @@ The content of the profile document is JSON, utf-8, in this schema:
 
 TODO: length limits on name and bio?
 
-# Paths and write permissions
+# Paths and Write Permissions
 
 ## Paths
 
@@ -370,9 +376,11 @@ PATH = PATH_SEGMENT+
 * A path MUST begin with a `/`
 * A path MUST NOT end with a `/`
 * A path MUST NOT begin with `/@`
-* Paths MAY contain upper case ascii letters, and are case sensitive.
+* Paths MAY contain upper case ASCII letters, and are case sensitive.
 * Paths MUST only contain the characters listed above.  To include other characters such as Unicode characters, apps SHOULD use [URL-style percent-encoding as defined in RFC3986](https://tools.ietf.org/html/rfc3986#section-2.1).  First encode the string as utf-8, then percent-encode the utf-8 bytes.
 * TODO: maximum path length
+
+The shortest valid path is two characters long.
 
 Example paths:
 ```
@@ -381,12 +389,14 @@ Valid:
     /wiki/shared/Dolphins.md
     /about/~@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/profile.json
 
+Invalid: path segment must have one or more path characters
+    /
+
 Invalid: missing leading slash
     todos/123.json
 
 Invalid: starts with "/@"
     /@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/profile.json
-
 ```
 
 > **Why these specific punctuation characters?**
@@ -417,7 +427,7 @@ Invalid: starts with "/@"
 >
 > ...but some webservers treat this as user error and rewrite the double slash to a single slash.  So we have to carefully avoid the double slash when building URLs.
 
-## Path punctuation that has special meaning
+## Path Characters With Special Meaning
 
 * `/` - separates path segments
 * `~` - defines author write permissions
@@ -425,7 +435,7 @@ Invalid: starts with "/@"
 * `%` - for percent-encoding other characters
 * `*` - allowed, but it might be used in path queries, so consider avoiding it
 
-## Write permissions
+## Write Permissions
 
 Paths can encode information about which authors are allowed to write to them.  Documents that break these rules are invalid and will be ignored.
 
@@ -461,7 +471,7 @@ This path can't be written by anyone.  It's **owned** because it contains a `~`,
 
 The `tilde + author address` can occur anywhere in the path: beginning, middle or end.
 
-## Path and filename conventions
+## Path and Filename Conventions
 
 Multiple apps can put data in the same workspace.  Here are guidelines to help them interoperate:
 
@@ -475,7 +485,7 @@ The last path segment SHOULD have a file extension to help applications know how
 
 There is no way to explicitly signal that document content is binary (encoded as base64).  Applications will need to guess based on the file extension.
 
-# Documents and their fields
+# Documents and Their Fields
 
 An example document shown as JSON, though it can exist in many serialization formats:
 
@@ -486,7 +496,7 @@ An example document shown as JSON, though it can exist in many serialization for
   "contentHash": "bt3u7gxpvbrsztsm4ndq3ffwlrtnwgtrctlq4352onab2oys56vhq",
   "format": "es.4",
   "path": "/wiki/shared/Flowers",
-  "signature": "bjljalsg2mulkut56anrteaejvrrtnjlrwfvswiqsi2psero22qqw7am34z3u3xcw7nx6mha42isfuzae5xda3armky5clrqrewrhgca"
+  "signature": "bjljalsg2mulkut56anrteaejvrrtnjlrwfvswiqsi2psero22qqw7am34z3u3xcw7nx6mha42isfuzae5xda3armky5clrqrewrhgca",
   "timestamp": 1597026338596000,
   "workspace": "+gardening.friends",
 }
@@ -499,60 +509,57 @@ interface Doc {
     author: string, // an author address
     content: string, // an arbitary string of utf-8
     contentHash: string, // sha256(content) encoded as base32 with a leading 'b'
-    deleteAfter?: number,  // when the document expires (optional)
+    deleteAfter?: number,  // integer.  when the document expires (optional)
     format: 'es.4', // the format version that this document adheres to.
     path: string, // a path
     signature: string, // ed25519 signature of encoded document, signed by author
-    timestamp: number, // when the document was created
+    timestamp: number, // integer.  when the document was created
     workspace: string, // a workspace address
 }
 ```
 
 All string fields MUST BE limited to printable ASCII characters except for `content`, which is utf-8.
 
-If any fields are not formatted according to the rules described earlier, the document is invalid.
-
 The `deleteAfter` field is OPTIONAL.  All other fields listed above are REQUIRED.  Additional fields are FORBIDDEN.
 
 The order of fields is unspecified except for hashing and signing purposes (see section below).  For consistency, the recommended canonical order is alphabetical by field name.
+
+## Document Validity
+
+A document MUST be valid in order to be ingested into storage, either from a local write or a sync.
+
+Invalid documents MUST be individually ignored during a sync, and the sync MUST NOT be halted just because an invalid document was encountered.  Continue syncing in case there are more valid documents.
+
+Documents can be temporarily invalid depending on their timestamp and the current wall clock.  Next time a sync occurs, maybe some of the invalid documents will have become valid by that time.
+
+To be valid a document MUST pass ALL these rules, which are described in more detail in the following sections:
+
+* `author` is a valid author address string
+* `content` is a string holding utf-8 data
+* `contentHash` is the sha256 hash of the `content`, encoded as base32
+* `timestamp` is an integer between 10^13 and 2^53-2, inclusive
+* `deleteAfter` is absent, or is a timestamp integer in the same range as `timestamp`
+* `format` is a string of printable ASCII characters
+* `path` is a valid path string
+* `signature` is a 104-character base32 string
+* `workspace` is a valid workspace address string which matches the local workspace we are intending to write the document to
+* No extra fields
+* No missing fields (except `deleteAfter`, which is optional)
+* Additional rules about `timestamp` and `deleteAfter` relative to the current wall clock (see below)
+* Author has write permission to path
+* Signature is cryptographically valid
 
 ## Author
 
 The `author` field holds an author address, formatted according to the rules described earlier.
 
-## Format
-
-The format is a short string describing which version of the Earthstar specification to use when interpreting the document.
-
-The current format version is `es.4`.  ("es" is short for Earthstar.)
-
-If the specification is changed in a way that breaks forwards or backwards compatability, the format version MUST be incremented.  The version number SHOULD be a single integer, not a semver.
-
-Other format families may someday exist, such as a hypothetical `ssb.1` which would embed Scuttlebutt messages in Earthstar documents, with special rules for validating the original Scuttlebutt signatures.
-
-### Validator responsibilities
-
-Earthstar libraries SHOULD separate out code related to each format version, so that they can handle old and new documents side-by-side.  Code for handling a format version is called a **Validator**.  Validators are responsible for:
-
-* Hashing documents
-* Signing new documents
-* Checking document validity when ingesting documents from an external source
-  * timestamp validity
-  * formatting of string fields such as author addresses and paths
-  * author write permissions to a path
-  * signature validity
-  * content matches contentHash
-  * etc
-
-Therefore each different format can have different ways of hashing, signing, and validating documents.
-
-TODO: define basic rules that documents of all formats must follow
-
 ## Content
 
-The `content` field contains arbitrary utf-8 encoded data.  To store binary data, apps SHOULD encode it as base64.
+The `content` field contains arbitrary utf-8 encoded data.  If the data is not valid utf-8, the document is still considered valid but the library may return an error when trying to access the document.  (TODO: is this the best way to handle invalid utf-8?)
 
-Apps SHOULD the path's file extension to guess if a document contains textual data or base64-encoded binary data.
+To store raw binary data in a utf-8 string, apps SHOULD encode it as base64.
+
+Apps SHOULD use the path's file extension to guess if a document contains textual data or base64-encoded binary data.
 
 TODO: add an encoding field to the document to make this less ambiguous?
 
@@ -560,9 +567,11 @@ TODO: add an encoding field to the document to make this less ambiguous?
 >
 > Common encodings such as JSON, and protocols built on them such as GraphQL, have to way to represent binary data.
 
-`content` may be an empty string.  The recommended way to remove data from Earthstar is to overwrite the document with a new one, with `content = ""`.
+`content` may be an empty string.  The recommended way to remove data from Earthstar is to overwrite the document with a new one which has `content = ""`.  Documents with empty content MAY be considered to be "deleted" and therefore omitted from some queries so that apps don't see them.
 
 In future versions the `content` will be allowed to be `null`, meaning we don't know what it is.  This allows handling documents without their actual content -- "sparse mode".  This is not allowed in the current version.
+
+TODO: max length of content?
 
 ## Content Hash
 
@@ -580,17 +589,43 @@ Also be careful not to accidentally change the content string to a different enc
 >
 > In future versions we will allow the `content` field to be `null`, so we can handle document metadata without the full size of the content -- "sparse mode".  Document signatures are based on the `contentHash`, not the `content` itself.  This allows us to verify signatures on sparse-mode documents.
 
+## Format
+
+The format is a short string describing which version of the Earthstar specification to use when interpreting the document.
+
+It MUST consist only of printable ASCII characters.  TODO: max length?
+
+The current format version is `es.4` ("es" is short for Earthstar.)
+
+If the specification is changed in a way that breaks forwards or backwards compatability, the format version MUST be incremented.  The version number SHOULD be a single integer, not a semver.
+
+Other format families may someday exist, such as a hypothetical `ssb.1` which would embed Scuttlebutt messages in Earthstar documents, with special rules for validating the original Scuttlebutt signatures.
+
+### Format Validator Responsibilities
+
+Earthstar libraries SHOULD separate out code related to each format version, so that they can handle old and new documents side-by-side.  Code for handling a format version is called a **Validator**.  Validators are responsible for:
+
+* Hashing documents
+* Signing new documents
+* Checking document validity when ingesting documents.  See the Document Validity section for more on this.
+
+Therefore each different format can have different ways of hashing, signing, and validating documents.
+
+TODO: define basic rules that documents of all formats must follow
+
 ## Path
 
 The `path` field contains a string following the path formatting rules described earlier.
 
-The document is invalid if the author does not have permission to write to the path, following the rules described earlier in "Write permissions".
+The document is invalid if the author does not have permission to write to the path, following the rules described earlier in "Write Permissions".
 
 The path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has the optional `deleteAfter` field).
 
-## Timestamps
+The shortest valid path is two characters long.  The longest valid path is TODO.
 
-Timestamp are integer **microseconds** (millionths of a second) since the Unix epoch.
+## Timestamp
+
+Timestamps are integer **microseconds** (millionths of a second) since the Unix epoch.
 
 ```ts
 // javascript
@@ -608,8 +643,8 @@ They MUST be within the following range (inclusive):
 // 10^13
 let MIN_TIMESTAMP = 10000000000000
 
-// 2**53 - 1  (Number.MAX_SAFE_INTEGER)
-let MAX_TIMESTAMP = 9007199254740991
+// 2^53 - 2  (Javascript's Number.MAX_SAFE_INTEGER - 1)
+let MAX_TIMESTAMP = 9007199254740990
 
 timestampIsValid = MIN_TIMESTAMP <= timestamp && timestamp <= MAX_TIMESTAMP;
 ```
@@ -626,7 +661,7 @@ Timestamps MUST NOT be from the future.  A limited tolerance is allowed to accou
 
 Timestamps from the future, beyond the tolerance threshold, are (temporarily) invalid and MUST NOT be accepted in a sync.  They can be accepted later, after they are no longer from the future.
 
-## Ephemeral documents
+## Ephemeral documents: deleteAfter
 
 Ephemeral documents have an expiration date, after which they MUST be proactively deleted by Earthstar libraries.
 
@@ -662,7 +697,7 @@ The ed25519 signature by the author encoded in base32 with a leading `b`.
 
 The `workspace` field holds a workspace address, formatted according to the rules described earlier.
 
-# Document serialization
+# Document Serialization
 
 There are 3 scenarios when we need to serialize a document to a string of bytes:
 
@@ -672,7 +707,7 @@ There are 3 scenarios when we need to serialize a document to a string of bytes:
 
 They have different needs and we use different formats for each.
 
-## Serialization for hashing and signing
+## Serialization for Hashing and Signing
 
 When an author signs a document, they're actually signing a hash of the document.  We need a deterministic, standardized, and simple way to serialize a document to a sequence of bytes.  This is a **one-way** conversion -- we never need to deserialize this format.
 
@@ -783,7 +818,7 @@ bjljalsg2mulkut56anrteaejvrrtnjlrwfvswiqsi2psero22qqw7am34z3u3xcw7nx6mha42isfuza
 >
 > This lets us drop the actual content (to save space) but still verify the document signature.  This will be useful in the future for "sparse mode".
 
-## Serialization for network
+## Serialization for Network
 
 This is a **two-way** conversion between memory and bytes.
 
@@ -802,7 +837,7 @@ Earthstar doesn't have strong opinions about networking.  This format does not n
   * gRPC?
   * muxrpc (from SSB)
 
-## Serialization for storage
+## Serialization for Storage
 
 This is a **two-way** conversion between memory and bytes.
 
@@ -825,7 +860,9 @@ For exporting and importing data:
 
 # Querying
 
-Libraries SHOULD support a standard set of queries against a database of Earthstar messages.  The recommended set, in Typescript format, is:
+Libraries SHOULD support a standard variety of queries against a database of Earthstar messages.  A query is specified by a single object with optional fields for each kind of query operation.
+
+The recommended query object format, expressed in Typescript, is:
 
 ```ts
 // Query objects describe how to query a Storage instance for documents.
@@ -880,6 +917,8 @@ export interface QueryOpts {
 }
 ```
 
+A library MAY support merging multiple queries.  See the Sync Queries section for more details about how this works.
+
 # Syncing
 
 Syncing is the process of trading documents between two peers to bring each other up to date.
@@ -892,7 +931,7 @@ Documents are locked into specific workspaces; therefore syncing can't transfer 
 
 The network protocols used by peers to sync documents are not standardized yet.
 
-## Workspace secrecy
+## Workspace Secrecy
 
 Knowing a workspace address gives a user the power to read and write to that workspace, so they need to be kept secret.
 
@@ -909,7 +948,7 @@ The hashes that are unique to one peer will reveal no information to the other p
 
 They can now proceed to sync each of their common workspaces, one at a time.
 
-## Sync queries
+## Sync Queries
 
 During a sync, apps SHOULD be able to specify which documents they're willing to share, and which they're interested in getting.
 
@@ -950,14 +989,16 @@ let outgoingQueries = [
 
 (Note: `timestampAfter` is shown for illustration purposes; that query field is not implemented yet)
 
-## Resolving conflicts
+## Resolving Conflicts
 
 See the Data Model section for details about conflict resolution.
 
-# Future directions
+# Future Directions
 
-## Invite-only workspaces
+## Sparse Mode
+
+## Invite-Only Workspaces
 
 ## Encryption
 
-## Immutable documents
+## Immutable Documents
