@@ -171,6 +171,11 @@ export interface QueryOpts {
     // If not including history, it's any revision by this author which is a head
     versionsByAuthor?: AuthorAddress,
 
+    // If true, only match documents with content === "" (e.g. deleted documents)
+    // If false, only match documents with content.length >= 1
+    // If omitted, match all documents.
+    contentIsEmpty?: boolean,
+
     // timestamp before and after // TODO
 
     // sort order: TODO

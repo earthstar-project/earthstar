@@ -170,6 +170,13 @@ export class StorageMemory implements IStorage {
             this._removeAllExpiredDocs(now);
         }
 
+        // apply contentIsEmpty filter
+        if (query.contentIsEmpty === true) {
+            docs = docs.filter(doc => doc.content === "");
+        } else if (query.contentIsEmpty === false) {
+            docs = docs.filter(doc => doc.content !== "");
+        }
+
         // limit
         if (query.limit) {
             docs = docs.slice(0, query.limit);

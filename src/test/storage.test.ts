@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import t = require('tap');
-//t.runOnly = true;
+t.runOnly = true;
 
 import {
     AuthorKeypair,
@@ -471,7 +471,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.test(scenario.description + ': one-author store', (t: any) => {
+    t.test(scenario.description + ': basic one-author store', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         t.equal(storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
         t.equal(storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
@@ -535,6 +535,54 @@ for (let scenario of scenarios) {
         t.same(storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
+        t.done();
+    });
+
+    t.only(scenario.description + ': contentIsEmpty queries', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/full', content: 'full', timestamp: now}), WriteResult.Accepted, 'set /full to "full"');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/empty', content: '', timestamp: now}), WriteResult.Accepted, 'set /empty to ""');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/empty2', content: '', timestamp: now}), WriteResult.Accepted, 'set /empty2 to ""');
+
+        t.same(storage.getDocument('/full')?.content, 'full', 'full getDocument.content = "full"');
+        t.same(storage.getContent('/full'), 'full', 'full getContent = "full" ');
+        t.same(storage.getDocument('/empty')?.content, '', 'empty getDocument.content = "empty"');
+        t.same(storage.getContent('/empty'), '', 'empty getContent = "empty"');
+
+        t.same(storage.documents().length, 3, 'documents() length = 3')
+        t.same(storage.paths().length, 3, 'paths() length = 3')
+        t.same(storage.contents().length, 3, 'contents() length = 3')
+
+        t.same(storage.documents({ contentIsEmpty: false }).length, 1, 'documents(contentIsEmpty: false) length = 1')
+        t.same(storage.paths({ contentIsEmpty: false }).length, 1, 'documents(contentIsEmpty: false) length = 1')
+        t.same(storage.contents({ contentIsEmpty: false }).length, 1, 'documents(contentIsEmpty: false) length = 1')
+
+        t.same(storage.documents({ contentIsEmpty: true }).length, 2, 'documents(contentIsEmpty: true) length = 2')
+        t.same(storage.paths({ contentIsEmpty: true }).length, 2, 'documents(contentIsEmpty: true) length = 2')
+        t.same(storage.contents({ contentIsEmpty: true }).length, 2, 'documents(contentIsEmpty: true) length = 2')
+
+        // overwrite full with empty, and vice versa
+        t.same(storage.set(keypair2, {format: FORMAT, path: '/full', content: '', timestamp: now + 2 }), WriteResult.Accepted, 'set /full to "" using author 2');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/empty', content: 'e', timestamp: now + 2}), WriteResult.Accepted, 'set /empty to "e" using author 2');
+
+        t.same(storage.getDocument('/full')?.content, '', 'full getDocument.content = ""');
+        t.same(storage.getContent('/full'), '', 'full getContent = "" ');
+        t.same(storage.getDocument('/empty')?.content, 'e', 'empty getDocument.content = "e"');
+        t.same(storage.getContent('/empty'), 'e', 'empty getContent = "e"');
+
+        if (scenario.description === 'StoreMemory') {
+            // TODO: enable these deleteAfter tests for sqlite too
+            // TODO: test in combination with includeHistory
+            t.same(storage.documents({ path: '/full'                        }).length, 1, 'documents({ path: /full,                       }) length = 1')
+            t.same(storage.documents({ path: '/full', contentIsEmpty: false }).length, 0, 'documents({ path: /full, contentIsEmpty: false }) length = 0')
+            t.same(storage.documents({ path: '/full', contentIsEmpty: true  }).length, 1, 'documents({ path: /full, contentIsEmpty: true  }) length = 1')
+
+            t.same(storage.documents({ path: '/empty'                        }).length, 1, 'documents({ path: /empty,                       }) length = 1')
+            t.same(storage.documents({ path: '/empty', contentIsEmpty: false }).length, 1, 'documents({ path: /empty, contentIsEmpty: false }) length = 1')
+            t.same(storage.documents({ path: '/empty', contentIsEmpty: true  }).length, 0, 'documents({ path: /empty, contentIsEmpty: true  }) length = 0')
+        }
+
         t.done();
     });
 

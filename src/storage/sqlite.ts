@@ -235,6 +235,13 @@ export class StorageSqlite implements IStorage {
             }
         }
 
+        // contentIsEmpty filter
+        if (query.contentIsEmpty === true) {
+            filters.push("content = ''");
+        } else if (query.contentIsEmpty === false) {
+            filters.push("content != ''");
+        }
+
         // limit
         let limitClause = '';
         let limitParams : {[k:string] : any} = {};
