@@ -177,7 +177,7 @@ Ingest(newDoc):
 
 ## Timestamps and Clock Skew
 
-TODO
+TODO: discuss timestamps
 
 For now, read notes in the Timestamp section, lower in this document.
 
@@ -355,7 +355,7 @@ The content of the profile document is JSON, utf-8, in this schema:
 }
 ```
 
-TODO: length limits on name and bio?
+TODO: length limits on profile name and bio?
 
 # Paths and Write Permissions
 
@@ -373,21 +373,25 @@ PATH_SEGMENT = "/" PATH_CHARACTER+
 PATH = PATH_SEGMENT+
 ```
 
+* A path MUST be between 2 and 512 characters long (inclusive).
 * A path MUST begin with a `/`
 * A path MUST NOT end with a `/`
 * A path MUST NOT begin with `/@`
-* Paths MAY contain upper case ASCII letters, and are case sensitive.
-* Paths MUST only contain the characters listed above.  To include other characters such as Unicode characters, apps SHOULD use [URL-style percent-encoding as defined in RFC3986](https://tools.ietf.org/html/rfc3986#section-2.1).  First encode the string as utf-8, then percent-encode the utf-8 bytes.
-* TODO: maximum path length
+* A path MUST NOT contain `//` (because each path segment must have at least one `PATH_CHARACTER`)
+* Paths MAY contain upper and/or or lower case ASCII letters, and are case sensitive.
+* Paths MUST NOT contain any characters except those listed above.  To include other characters such as spaces, double quotes, or non-ASCII characters, apps SHOULD use [URL-style percent-encoding as defined in RFC3986](https://tools.ietf.org/html/rfc3986#section-2.1).  First encode the string as utf-8, then percent-encode the utf-8 bytes.
+* A path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has the optional `deleteAfter` field).
 
-The shortest valid path is two characters long.
-
-Example paths:
+In these examples, `...` is used to shorten author addresses for easier reading.
+`...` is not actually related to the Path specification.
 ```
+Example paths
+
 Valid:
     /todos/123.json
     /wiki/shared/Dolphins.md
-    /about/~@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/profile.json
+    /wiki/shared/Dolphin%20Sounds.md
+    /about/~@suzy.bo5sotcn...fua/profile.json
 
 Invalid: path segment must have one or more path characters
     /
@@ -396,7 +400,7 @@ Invalid: missing leading slash
     todos/123.json
 
 Invalid: starts with "/@"
-    /@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/profile.json
+    /@suzy.bo5sotcn...fua/profile.json
 ```
 
 > **Why these specific punctuation characters?**
@@ -408,19 +412,18 @@ Invalid: starts with "/@"
 > When building web URLs out of Earthstar pieces, we may want to use formats like this:
 >
 > ```
+> https://mypub.com/:workspace/:path_or_author
+>
 > https://mypub.com/+gardening.friends/wiki/Dolphins
 > https://mypub.com/+gardening.friends/@suzy.bo5sotcncvkr7...  (etc)
 > ```
 > 
 > The restriction on `/@` allows us to tell paths and author addresses apart in this setting.  It also encourages app authors to put their data in a more organized top-level prefix such as `/wiki/` instead of putting each author at the root of the path.
 >
-> It would be nice to use a double slash `//` to begin paths and avoid confusion with authors:
+> Another solution was to use a double slash `//` to begin paths and avoid confusion with authors:
 >
 > ```
-> a template like this:
-> https://mypub.com/:workspace/:path
->
-> would make a URL like this:
+> Don't do this:
 > https://mypub.com/+gardening.friends//wiki/Dolphins
 >                                      ^
 > ```
@@ -429,11 +432,11 @@ Invalid: starts with "/@"
 
 ## Path Characters With Special Meaning
 
-* `/` - separates path segments
+* `/` - starts paths; separates path segments
 * `~` - defines author write permissions
 * `!` - used if and only if the document is ephemeral
 * `%` - for percent-encoding other characters
-* `*` - allowed, but it might be used in path queries, so consider avoiding it
+* `*` - allowed, but it might someday be used in path queries, so consider avoiding it
 
 ## Write Permissions
 
@@ -593,7 +596,7 @@ Also be careful not to accidentally change the content string to a different enc
 
 The format is a short string describing which version of the Earthstar specification to use when interpreting the document.
 
-It MUST consist only of printable ASCII characters.  TODO: max length?
+It MUST consist only of printable ASCII characters.  TODO: max length of format?
 
 The current format version is `es.4` ("es" is short for Earthstar.)
 
@@ -615,13 +618,11 @@ TODO: define basic rules that documents of all formats must follow
 
 ## Path
 
-The `path` field contains a string following the path formatting rules described earlier.
+The `path` field is a string following the path formatting rules described earlier in "Paths".
 
 The document is invalid if the author does not have permission to write to the path, following the rules described earlier in "Write Permissions".
 
 The path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has the optional `deleteAfter` field).
-
-The shortest valid path is two characters long.  The longest valid path is TODO.
 
 ## Timestamp
 
@@ -759,18 +760,18 @@ let serializeDocumentForHashing = (doc: Document): string => {
         `path\t${doc.path}\n` +
         `timestamp\t${doc.timestamp}\n` +
         `workspace\t${doc.workspace}\n`
-        // Note the \n is on on the last item too
+        // Note the \n is used on the last item too
     );
 }
 
-let hashDocument = (doc: Document): string =>
+let hashDocument = (doc: Document): Base32String =>
     bufferToBase32(
         sha256AsBuffer(
             serializeDocumentForHashing(doc)
         )
     );
 
-let signDocument = (keypair: authorKeypair, doc: Document): Document => {
+let signDocument = (keypair: AuthorKeypair, doc: Document): Document => {
     return {
         ...doc,
         signature: sign(keypair, hashDocument(doc))

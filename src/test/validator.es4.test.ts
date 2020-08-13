@@ -13,6 +13,9 @@ import {
     notErr,
 } from '../util/types';
 import {
+    stringMult
+} from '../util/helpers';
+import {
     generateAuthorKeypair,
     sha256base32,
 } from '../crypto/crypto';
@@ -358,6 +361,7 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: false, path: ' ', note: 'just a space' },
         { valid: false, path: '\x00', note: 'null byte' },
         { valid: false, path: '/', note: 'just one slash' },
+        { valid: false, path: 'a', note: 'just one letter' },
         { valid: false, path: 'not/starting/with/slash' },
         { valid: false, path: '/ends/with/slash/' },
         { valid: false, path: ' /starts-with-space' },
@@ -383,6 +387,9 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: true, path: '/about/~@suzy.abc/name' },
         { valid: true, path: '/wiki/shared/Garden%20Gnome' },
         { valid: true, path: '/\'()-._~!*$&+,:=@%', note: 'all allowed punctuation characters' },
+
+        { valid: true, path: '/' + stringMult('a', 511), note: '512 characters is allowed' },
+        { valid: false, path: '/' + stringMult('a', 512), note: '513 characters is too long' },
     ];
     for (let v of vectors) {
         let testMethod = v.valid ? t.true : t.false;

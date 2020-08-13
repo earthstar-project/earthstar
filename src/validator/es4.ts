@@ -230,8 +230,8 @@ export const ValidatorEs4 : IValidatorES4 = class {
         // Ensure the path matches the spec for allowed path strings.
         // return a ValidationError, or return true on success.
 
-        // a path is a series of one or more path segments.
-        // a path segment is a '/' followed by one or more allowed characters.
+        // A path is a series of one or more path segments.
+        // A path segment is '/' followed by one or more allowed characters.
 
         if (!path.startsWith('/')) {
             return new ValidationError('invalid path: must start with /');
@@ -240,14 +240,20 @@ export const ValidatorEs4 : IValidatorES4 = class {
             return new ValidationError('invalid path: must not end with /');
         }
         if (path.startsWith('/@')) {
-            // this is disallowed so that we can tell paths and authors apart in cases like this
-            // when joining a workspace and a path/author:
+            // This is disallowed so that we can tell paths and authors apart
+            // when joining a workspace and a path/author in a URL:
             // +gardening.xxxxx/@aaaa.xxxx
             // +gardening.xxxxx/wiki/shared/Bumblebee
             return new ValidationError('invalid path: must not start with "/@"');
         }
         if (path.indexOf('//') !== -1) {
             return new ValidationError('invalid path: must not contain two consecutive slashes');
+        }
+        if (path.length < 2) {
+            return new ValidationError('invalid path: must not be shorter than 2 characters');
+        }
+        if (path.length > 512) {
+            return new ValidationError('invalid path: must not be longer than 512 characters');
         }
         if (!onlyHasChars(path, pathChars)) {
             return new ValidationError('invalid path: must not contain disallowed characters');
