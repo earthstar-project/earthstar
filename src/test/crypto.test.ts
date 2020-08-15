@@ -11,6 +11,7 @@ import {
     sha256base32,
     sign,
     verify,
+    checkAuthorKeypairIsValid,
 } from '../crypto/crypto';
 import {
     decodeAuthorKeypair,
@@ -110,6 +111,59 @@ t.test('generateAuthorKeypair', (t: any) => {
         t.ok(keypair.address.startsWith('@ok99.'), 'keypair.address starts with @ok99.');
         t.notEqual(keypair.secret[0], '@', 'keypair.secret does not start with @');
     }
+
+    t.end();
+});
+
+t.test('authorKeypairIsValid', (t: any) => {
+    let keypair1 = generateAuthorKeypair('onee');
+    let keypair2 = generateAuthorKeypair('twoo');
+    if (isErr(keypair1)) { 
+        t.ok(false, 'keypair1 was not generated successfully');
+        t.end();
+        return;
+    }
+    if (isErr(keypair2)) { 
+        t.ok(false, 'keypair1 was not generated successfully');
+        t.end();
+        return;
+    }
+
+    t.equal(checkAuthorKeypairIsValid(keypair1), true, 'keypair1 is valid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: '',
+        secret: keypair1.secret,
+    })), 'empty address makes keypair invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: keypair1.address + '0',
+        secret: keypair1.secret,
+    })), 'adding char to pubkey makes keypair invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: keypair1.address.slice(0, -8) + '00000000',
+        secret: keypair1.secret,
+    })), 'altering pubkey makes keypair invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: keypair1.address,
+        secret: keypair1.secret.slice(0, -8) + '00000000',
+    })), 'altering secret makes keypair invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: keypair1.address,
+        secret: keypair2.secret,
+    })), 'mixing address and secret from 2 different keypairs is invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: keypair1.address,
+        secret: '',
+    })), 'empty secret makes keypair invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: keypair1.address,
+        secret: keypair1.secret.slice(0, -1) + '1',  // 1 is not a valid b32 character
+    })), 'invalid b32 char in secret makes keypair invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        secret: keypair1.secret,
+    } as any)), 'missing address is invalid');
+    t.ok(isErr(checkAuthorKeypairIsValid({
+        address: keypair1.address,
+    } as any)), 'missing secret is invalid');
 
     t.end();
 });

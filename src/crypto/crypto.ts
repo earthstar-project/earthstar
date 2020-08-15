@@ -84,3 +84,31 @@ export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : stri
         throw err;
     }
 }
+
+export let checkAuthorKeypairIsValid = (keypair : AuthorKeypair) : true | ValidationError => {
+    // Returns...
+    // true on success (format is correct, and secret matches pubkey)
+    // a ValidationError if the secret does not match the pubkey.
+    // a ValidationError if the author address or secret are not validly formatted strings.
+    // a ValidationError if anything else goes wrong
+    //
+    // We check if the secret matches the pubkey by signing something and then validating the signature.
+    try {
+        if (typeof keypair.address !== 'string' || typeof keypair.secret !== 'string') {
+            return new ValidationError('address and secret must be strings');
+        }
+        let addressErr = ValidatorEs4._checkAuthorIsValid(keypair.address);
+        if (isErr(addressErr)) { return addressErr; }
+
+        let msg = 'a test message to sign';
+        let sig = sign(keypair, msg);
+        if (isErr(sig)) { return sig; }
+
+        let isValid = verify(keypair.address, sig, msg);
+
+        if (isValid === false) { return new ValidationError('pubkey does not match secret'); }
+        return true;
+    } catch (err) {
+        return new ValidationError('unexpected error: ' + err.message);
+    }
+}
