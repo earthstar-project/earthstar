@@ -24,9 +24,9 @@ export interface AuthorInfo {
 }
 
 export interface AuthorProfile {
-    longname? : string,
-    bio? : string,  // paragraph-length description of the person
-    hue? : number,  // theme color.  should be an integer between 0 and 360.
+    displayName? : string,  // one line of text to use as human-friendly name.  utf-8
+    bio? : string,  // paragraph-length description of the person.  utf-8.
+    hue? : number,  // theme color.  should be an integer between 0 and 360.  use it as a CSS hue.
 }
 
 export class LayerAbout {

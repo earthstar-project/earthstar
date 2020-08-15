@@ -78,7 +78,7 @@ t.test('with empty storage', (t: any) => {
     t.same(about.getAuthorInfo(author1), expectedInfo1, 'getAuthorProfile for a nonexistant author with no profile doc');
 
     let profile1a : AuthorProfile = {
-        longname: 'Whee ' + sparkleEmoji,
+        displayName: 'Whee ' + sparkleEmoji,
         bio: 'all about me',
         hue: 123,
     };
@@ -88,7 +88,7 @@ t.test('with empty storage', (t: any) => {
     t.same(storage.paths({pathPrefix: '/about/'}), [`/about/~${author1}/profile.json`], 'profile is stored at the expected path');
 
     let profile1b : AuthorProfile = {
-        longname: 'Wheeeeeee ' + sparkleEmoji,
+        displayName: 'Wheeeeeee ' + sparkleEmoji,
     };
     t.true(about.setMyAuthorProfile(keypair1, profile1b), 'set author profile again');
     t.same(about.getAuthorInfo(author1), {...expectedInfo1, profile: profile1b}, 'getAuthorProfile with updated profile doc');

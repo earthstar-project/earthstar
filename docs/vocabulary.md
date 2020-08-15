@@ -55,8 +55,8 @@ A person can use the same author name and key from multiple devices.
      |--| |-----------------------------------------|
     @suzy.6efJ8v8rtwoBxfN5MKeTF2Qqyf6zBmwmv8oAbendBZHP
 
-    LONGNAME: any length, any characters
-    This is stored at the path "/about/~@suzy.6efJ8.../name"
+    DISPLAY NAME: any length, any characters
+    This is stored in the document at "/about/~@suzy.6efJ8.../profile.json"
       Susan ✨
 ```
 

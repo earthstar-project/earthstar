@@ -379,7 +379,7 @@ storage.getDocument('/wiki/Strawberry');
 storage.set(keypair1, {
     format: 'es.4',
     path: '/about/~' + keypair1.address + '/profile.json',
-    content: JSON.stringify({longname: 'Suzie'}),
+    content: JSON.stringify({displayName: 'Suzie'}),
 });
 
 // You can do leveldb style queries.
