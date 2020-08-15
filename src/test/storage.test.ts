@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import t = require('tap');
-t.runOnly = true;
+//t.runOnly = true;
 
 import {
     AuthorKeypair,
@@ -538,7 +538,7 @@ for (let scenario of scenarios) {
         t.done();
     });
 
-    t.only(scenario.description + ': contentIsEmpty queries', (t: any) => {
+    t.test(scenario.description + ': contentIsEmpty queries', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         t.same(storage.set(keypair1, {format: FORMAT, path: '/full', content: 'full', timestamp: now}), WriteResult.Accepted, 'set /full to "full"');
