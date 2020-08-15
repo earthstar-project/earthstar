@@ -93,6 +93,12 @@ export let checkAuthorKeypairIsValid = (keypair : AuthorKeypair) : true | Valida
     // a ValidationError if anything else goes wrong
     //
     // We check if the secret matches the pubkey by signing something and then validating the signature.
+    // However, key generation is deterministic, so it would be more direct to just do this:
+    //
+    //     let pubkeyBuffer = LowLevelCrypto.generateKeypairBuffers(base32toBuffer(keypair.secret))
+    //     then check if pubkeyBuffer matches keypair.address
+    //
+    // ...but this signature trick will work for now.
     try {
         if (typeof keypair.address !== 'string' || typeof keypair.secret !== 'string') {
             return new ValidationError('address and secret must be strings');
