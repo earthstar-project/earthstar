@@ -48,8 +48,8 @@ let _lengthenDerSecret = (b : Buffer) : Buffer =>
     Buffer.concat([_derPrefixSecret, b]);
 
 export const CryptoNode : ILowLevelCrypto = class {
-    static sha256base32(input: string | Buffer): EncodedHash {
-        return encodeHash(crypto.createHash('sha256').update(input).digest());
+    static sha256(input: string | Buffer) : Buffer {
+        return crypto.createHash('sha256').update(input).digest();
     }
     static generateKeypairBuffers() : KeypairBuffers {
         return _shortenDer(_generateKeypairDerBuffers());

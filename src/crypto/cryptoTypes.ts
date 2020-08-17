@@ -9,7 +9,7 @@ export interface KeypairBuffers {
 }
 
 export interface ILowLevelCrypto {
-    sha256base32(input: string | Buffer): EncodedHash;
+    sha256(input: string | Buffer): Buffer;
     generateKeypairBuffers(): KeypairBuffers;
     sign(keypair: KeypairBuffers, msg: string | Buffer): EncodedSig;
     verify(publicKey: Buffer, sig: EncodedSig, msg: string | Buffer): boolean;

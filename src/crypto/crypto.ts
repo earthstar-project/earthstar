@@ -20,6 +20,7 @@ import {
 import {
     decodeAuthorKeypair,
     decodePubkey,
+    encodeHash,
     encodePubkey,
     encodeSecret,
 } from './encoding';
@@ -42,7 +43,7 @@ let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : Encode
 
 
 export let sha256base32 = (input : string | Buffer) : EncodedHash =>
-    LowLevelCrypto.sha256base32(input);
+    encodeHash(LowLevelCrypto.sha256(input));
 
 export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | ValidationError => {
     // This returns a ValidationError if the shortname doesn't follow the rules.
@@ -118,3 +119,4 @@ export let checkAuthorKeypairIsValid = (keypair : AuthorKeypair) : true | Valida
         return new ValidationError('unexpected error: ' + err.message);
     }
 }
+

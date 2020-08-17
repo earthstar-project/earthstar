@@ -69,7 +69,6 @@ t.test('sha256 of strings', (t: any) => {
         [snowmanJsString, 'bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga'],
     ];
     for (let [input, output] of vectors) {
-        t.equal(LowLevelCrypto.sha256base32(input), output, `LowLevelCrypto hash of ${JSON.stringify(input)}`);
         t.equal(sha256base32(input), output, `hash of ${JSON.stringify(input)}`);
     }
     t.end();
@@ -87,7 +86,6 @@ t.test('sha256 of buffers', (t: any) => {
         [snowmanBufferUtf8, 'bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga'],
     ];
     for (let [input, output] of vectors) {
-        t.equal(LowLevelCrypto.sha256base32(input), output, `LowLevelCrypto hash of buffer with bytes: ${JSON.stringify(Array.from(input))}`)
         t.equal(sha256base32(input), output, `hash of buffer with bytes: ${JSON.stringify(Array.from(input))}`)
     }
     t.end();
