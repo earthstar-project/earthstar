@@ -120,7 +120,7 @@ export type Document = {
     content: string,  // TODO: eventually, this should be "string | null"
     author: AuthorAddress,
     timestamp: number,
-    deleteAfter?: number,
+    deleteAfter: number | null,
     signature: EncodedSig,
 };
 
@@ -130,7 +130,7 @@ export type DocToSet = {
     path: Path,
     content: string,
     timestamp?: number,  // timestamp only for testing, usually omitted
-    deleteAfter?: number,
+    deleteAfter?: number | null,  // for ephemeral documents.  omit to get null
     // workspace is implied by the storage we put it into
     // no author - the whole keypair is provided separately when setting
     // no signature - it's generated during setting
@@ -259,7 +259,7 @@ export interface IValidator {
     // Returns true on success.
     _checkBasicDocumentValidity(doc: Document): true | ValidationError;  // check for correct fields and datatypes
     _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError;
-    _checkTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): true | ValidationError;
+    _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError;
     _checkPathIsValid(path: Path): true | ValidationError;
     _checkAuthorIsValid(authorAddress: AuthorAddress): true | ValidationError;
     _checkWorkspaceIsValid(workspaceAddress: WorkspaceAddress): true | ValidationError;

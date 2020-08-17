@@ -51,9 +51,8 @@ let DAY = HOUR * 24;
 // Document properties
 let stringFields = 'format workspace path contentHash content author signature'.split(' ');
 let intFields = 'timestamp deleteAfter'.split(' ');
-let optionalFields = ['deleteAfter'];
+let nullableFields = ['deleteAfter'];
 let allFields = stringFields.concat(intFields);
-let requiredFields = allFields.filter(f => optionalFields.indexOf(f) === -1);
 
 type Ob = {[key:string]: any};
 let delProperty = (obj: Ob, name: string) : Ob => {
@@ -72,10 +71,11 @@ t.test('hashDocument', (t: any) => {
         contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: 1,
+        deleteAfter: null,
         author: '@suzy.xxxxxxxxxxx',
         signature: 'xxxxxxxxxxxxx',
     };
-    t.equal(Val.hashDocument(doc1), 'bz6ye6gvzo7w6igkht3qqn4jvrp5qehvcmo5kyp3gldnbbmdy7vdq', 'expected document hash, no deleteAfter');
+    t.equal(Val.hashDocument(doc1), 'bz6ye6gvzo7w6igkht3qqn4jvrp5qehvcmo5kyp3gldnbbmdy7vdq', 'expected document hash, deleteAfter null');
     let doc2: Document = {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
@@ -123,7 +123,7 @@ t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
     t.ok(Val._checkAuthorSignatureIsValid(doc) instanceof ValidationError, 'empty signature is invalid');
     t.ok(Val.checkDocumentIsValid(doc, NOW) instanceof ValidationError, 'doc without signature is invalid');
 
-    for (let field of requiredFields) {
+    for (let field of allFields) {
         let alteredDocPostSig = delProperty(signedDoc, field);
         t.ok(Val._checkAuthorSignatureIsValid(alteredDocPostSig as any) instanceof ValidationError,
             `deleting property makes signature invalid: ${field}`);
@@ -181,6 +181,7 @@ t.test('assertDocumentIsValid', (t: any) => {
         contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: Date.now() * 1000,
+        deleteAfter: null,
         author: author1,
         signature: '',
     };
@@ -198,20 +199,20 @@ type BasicValidityVector = {
 };
 t.test('_checkBasicDocumentValidity', (t: any) => {
     let validDoc = {
-            format: 'es.4',
-            workspace: 'a',
-            path: 'a',
-            contentHash: 'a',
-            content: 'a',  // TODO: test null content, once we allow that
-            author: 'a',
-            timestamp: 123,
-            deleteAfter: 123,
-            signature: 'a',
+        format: 'es.4',
+        workspace: 'a',
+        path: 'a',
+        contentHash: 'a',
+        content: 'a',  // TODO: test null content, once we allow that
+        author: 'a',
+        timestamp: 123,
+        deleteAfter: 123,
+        signature: 'a',
     };
 
     let vectors: BasicValidityVector[] = [
         { valid: true, doc: validDoc, note: 'basic valid doc' },
-        { valid: true, doc: delProperty(validDoc, 'deleteAfter'), note: 'deleteAfter property is optional' },
+        { valid: true, doc: {...validDoc, deleteAfter: null}, note: 'deleteAfter: null is valid' },
 
         { valid: false, doc: null},
         { valid: false, doc: undefined},
@@ -222,27 +223,36 @@ t.test('_checkBasicDocumentValidity', (t: any) => {
         { valid: false, doc: ''},
         { valid: false, doc: 'hello'},
 
-        { valid: false, doc: {...validDoc, extra: 'a'}, note: 'extra property' },
-        { valid: false, doc: {...validDoc, format: '???'}, note: 'unknown format' },
+        { valid: false, doc: delProperty(validDoc, 'deleteAfter'), note: 'deleteAfter property is required' },
+        { valid: false, doc: {...validDoc, extra: 'a'}, note: 'extra property is invalid' },
+        { valid: false, doc: {...validDoc, format: '???'}, note: 'unknown format is invalid' },
     ];
 
     for (let field of allFields) {
-        vectors.push({ valid: false, doc: {...validDoc, [field]: null}, note: `${field} = null` });
+        // no fields can have these values: undefined, true, false, [], {}
         vectors.push({ valid: false, doc: {...validDoc, [field]: undefined}, note: `${field} = undefined` });
         vectors.push({ valid: false, doc: {...validDoc, [field]: true}, note: `${field} = true` });
         vectors.push({ valid: false, doc: {...validDoc, [field]: false}, note: `${field} = false` });
         vectors.push({ valid: false, doc: {...validDoc, [field]: []}, note: `${field} = []` });
         vectors.push({ valid: false, doc: {...validDoc, [field]: {}}, note: `${field} = {}` });
 
-        let isOptional = optionalFields.indexOf(field) !== -1;
-        vectors.push({ valid: isOptional, doc: delProperty(validDoc, field), note: `${field} is missing` });
+        // only nullable fields can be null
+        let isNullable = nullableFields.indexOf(field) !== -1;
+        vectors.push({ valid: isNullable, doc: {...validDoc, [field]: null }, note: `${field} is null` });
+
+        // no fields can be missing
+        vectors.push({ valid: false, doc: delProperty(validDoc, field), note: `${field} is missing` });
 
         if (stringFields.indexOf(field) !== -1) {
+            // string fields can't be numbers
             vectors.push({ valid: false, doc: {...validDoc, [field]: 123}, note: `${field} = 123` });
             vectors.push({ valid: false, doc: {...validDoc, [field]: 123.4}, note: `${field} = 123.4` });
         }
         if (intFields.indexOf(field) !== -1) {
+            // int fields can't be strings, NaN, or floats
             vectors.push({ valid: false, doc: {...validDoc, [field]: 'a'}, note: `${field} = 'a'` });
+            vectors.push({ valid: false, doc: {...validDoc, [field]: NaN}, note: `${field} = NaN` });
+            vectors.push({ valid: false, doc: {...validDoc, [field]: (validDoc as any)[field] + 0.1}, note: `${field} = float` });
         }
     }
 
@@ -317,15 +327,15 @@ t.test('_checkTimestampIsOk', (t: any) => {
         { valid: true, timestamp: NOW + FUTURE_CUTOFF_MICROSECONDS - 1, now: NOW, note: 'timestamp from the near future' },
         { valid: false, timestamp: NOW + FUTURE_CUTOFF_MICROSECONDS + 1, now: NOW, note: 'timestamp from the far future' },
 
+        // deleteAfter
         { valid: true, timestamp: NOW - 5, deleteAfter: NOW + 5, now: NOW, note: 'living ephemeral doc' },
         { valid: false, timestamp: NOW + 8, deleteAfter: NOW + 5, now: NOW, note: 'jumbled ephemeral doc (deleteAfter before timestamp)' },
         { valid: false, timestamp: NOW - 5, deleteAfter: NOW - 1, now: NOW, note: 'expired ephemeral doc' },
 
-        // deleteAfter
+        { valid: true,  timestamp: NOW, deleteAfter: null as any, now: NOW, note: 'null deleteAfter is ok' },
         { valid: false, timestamp: NOW, deleteAfter: NOW - 0.2, now: NOW, note: 'non-integer deleteAfter' },
         { valid: false, timestamp: NOW, deleteAfter: NaN, now: NOW, note: 'NaN deleteAfter' },
-        { valid: false, timestamp: NOW, deleteAfter: null as any, now: NOW, note: 'null deleteAfter' },
-        { valid: true, timestamp: NOW, deleteAfter: undefined as any, now: NOW, note: 'undefined deleteAfter' }, // undefined is ok, though normally it should be missing
+        { valid: false, timestamp: NOW, deleteAfter: undefined as any, now: NOW, note: 'undefined deleteAfter' },
         { valid: false, timestamp: NOW, deleteAfter: false as any, now: NOW, note: 'false deleteAfter' },
         { valid: false, timestamp: NOW, deleteAfter: true as any, now: NOW, note: 'true deleteAfter' },
         { valid: false, timestamp: NOW, deleteAfter: ('' + NOW) as any, now: NOW, note: 'string deleteAfter' },
@@ -342,7 +352,7 @@ t.test('_checkTimestampIsOk', (t: any) => {
     ];
     for (let v of vectors) {
         let testMethod = v.valid ? t.true : t.false;
-        testMethod(notErr(Val._checkTimestampIsOk(v.timestamp, v.deleteAfter, v.now)),
+        testMethod(notErr(Val._checkTimestampIsOk(v.timestamp, 'deleteAfter' in v ? (v.deleteAfter as number) : null, v.now)),
             (v.valid ? 'valid times: ' : 'invalid times: ')
             + (v.note ? v.note : '')
         );

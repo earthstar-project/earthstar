@@ -319,6 +319,7 @@ for (let scenario of scenarios) {
             contentHash: sha256base32('v1'),
             content: 'v1',
             timestamp: now,
+            deleteAfter: null,
             author: author1,
             signature: 'xxx',
         };
@@ -412,7 +413,7 @@ for (let scenario of scenarios) {
         if (regDoc === undefined) {
             t.true(false, 'regDoc was not set, or not retrieved');
         } else {
-            t.false('deleteAfter' in (regDoc as any), 'as expected, regular doc does not have deleteAfter property');
+            t.equal(regDoc.deleteAfter, null, 'as expected, regular doc has deleteAfter: null');
         }
 
         // a doc that was valid when set, but expired while sitting in the database, then was read after being expired

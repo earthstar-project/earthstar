@@ -36,9 +36,14 @@ import { isPlainObject } from '../util/helpers';
 export const FUTURE_CUTOFF_MINUTES = 10;
 export const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 1000;
 
+let isInt = (n : number) : boolean =>
+    typeof n === 'number' && !isNaN(n) && n === Math.floor(n);
+
+let isIntOrNull = (n : number | null) : boolean =>
+    n === null || isInt(n)
+
 // This is always used as a static class
 // e.g. just `ValidatorEs4`, not `new ValidatorEs4()`
-
 export const ValidatorEs4 : IValidatorES4 = class {
     static format: 'es.4' = 'es.4';
     static hashDocument(doc: Document): EncodedHash | ValidationError {
@@ -54,19 +59,19 @@ export const ValidatorEs4 : IValidatorES4 = class {
         let err = this._checkBasicDocumentValidity(doc);
         if (isErr(err)) { return err; }
 
-        // Fields in lexicographic order.
-        // Convert numbers to strings.
-        // Omit optional properties if they're missing.
-        // Use the contentHash instead of the content.
-        // Omit the signature.
+        // Sort fields in lexicographic order by field name.
+        // let result = ''
+        // For each field,
+        //     skip "content" and "signature" fields.
+        //     skip fields with value === null.
+        //     result += fieldname + "\t" + convertToString(value) + "\n"
+        // return base32encode(sha256(result).binaryDigest())
         return sha256base32(
             `author\t${doc.author}\n` +
-            // (omit content itself)
             `contentHash\t${doc.contentHash}\n` +
-            (doc.deleteAfter === undefined ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
+            (doc.deleteAfter === null ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
             `format\t${doc.format}\n` +
             `path\t${doc.path}\n` +
-            // (omit signature)
             `timestamp\t${doc.timestamp}\n` +
             `workspace\t${doc.workspace}\n`  // \n at the end also, not just between
         );
@@ -111,6 +116,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         let err8 = this._checkContentMatchesHash(doc.content, doc.contentHash);
         if (isErr(err8)) { return err8; }
         return true;
+        // TODO: rules about '!' in path of ephemeral documents
     }
 
     static _checkBasicDocumentValidity(doc: Document): true | ValidationError {
@@ -133,16 +139,14 @@ export const ValidatorEs4 : IValidatorES4 = class {
             && typeof doc.contentHash === 'string'
             && typeof doc.content === 'string'  // TODO: or null
             && typeof doc.author === 'string'
-            && typeof doc.timestamp === 'number'
-            && ("deleteAfter" in doc === false || typeof doc.deleteAfter === 'number')
+            && isInt(doc.timestamp)
+            && isIntOrNull(doc.deleteAfter)
             && typeof doc.signature === 'string'
         );
         if (!validTypes) { return new ValidationError('invalid types or missing fields in document'); }
 
         // Don't allow extra properties in the object
-        let keys = Object.keys(doc);
-        if (keys.indexOf('deleteAfter') === -1) { keys.push('deleteAfter'); }
-        keys.sort();
+        let keys = Object.keys(doc).sort();
         if (!deepEqual(keys, [
             'author',
             'content',
@@ -156,6 +160,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         ])) {
             return new ValidationError('doc has extra fields');
         }
+
         // TODO: string length limits
 
         return true;
@@ -171,7 +176,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         // else, path contains at least one tilde but not ~@author.  The author can't write here.
         return new ValidationError(`author ${author} can't write to path ${path}`);
     }
-    static _checkTimestampIsOk(timestamp: number, deleteAfter: number | undefined, now: number): true | ValidationError {
+    static _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError {
         // Check for valid timestamp, and expired ephemeral documents.
         // return a ValidationError, or return true on success.
 
@@ -199,7 +204,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
             return new ValidationError('timestamp too far in the future');
         }
         // Ephemeral documents
-        if (deleteAfter !== undefined) {
+        if (deleteAfter !== null) {
             // basic checks
             if (typeof deleteAfter !== 'number' || deleteAfter !== Math.floor(deleteAfter)) {
                 return new ValidationError('deleteAfter must be an integer');

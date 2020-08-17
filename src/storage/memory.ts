@@ -79,7 +79,7 @@ export class StorageMemory implements IStorage {
         let authorToDoc = this._docs[path];
         if (authorToDoc === undefined) { return; }
         for (let [author, doc] of Object.entries(authorToDoc)) {
-            if (doc.deleteAfter !== undefined && now > doc.deleteAfter) {
+            if (doc.deleteAfter !== null && now > doc.deleteAfter) {
                 delete authorToDoc[author];
             }
         }
@@ -164,7 +164,7 @@ export class StorageMemory implements IStorage {
         // remove expired ephemeral docs from our results
         let now = query.now || Date.now() * 1000;
         let originalCount = docs.length;
-        docs = docs.filter(doc => doc.deleteAfter === undefined || doc.deleteAfter >= now);
+        docs = docs.filter(doc => doc.deleteAfter === null || doc.deleteAfter >= now);
         if (originalCount !== docs.length) {
             // and if there were any, also trigger a check of the entire database to remove expired docs
             this._removeAllExpiredDocs(now);
@@ -261,7 +261,7 @@ export class StorageMemory implements IStorage {
         // if the existing doc from same author is expired, it should be deleted.
         // but we can just pretend we didn't see it and let it get overwritten by the incoming doc.
         if (existingFromSameAuthor !== undefined) {
-            if (existingFromSameAuthor.deleteAfter !== undefined) {
+            if (existingFromSameAuthor.deleteAfter !== null) {
                 if (now > existingFromSameAuthor.deleteAfter) {
                     existingFromSameAuthor = undefined;
                 }
@@ -310,10 +310,8 @@ export class StorageMemory implements IStorage {
             content: docToSet.content,
             author: keypair.address,
             timestamp: docToSet.timestamp || now,
+            deleteAfter: docToSet.deleteAfter || null,
             signature: '',
-        }
-        if (docToSet.deleteAfter !== undefined) {
-            doc.deleteAfter = docToSet.deleteAfter;
         }
 
         // If there's an existing doc from anyone,

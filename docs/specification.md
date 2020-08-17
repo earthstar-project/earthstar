@@ -380,7 +380,7 @@ PATH = PATH_SEGMENT+
 * A path MUST NOT contain `//` (because each path segment must have at least one `PATH_CHARACTER`)
 * Paths MAY contain upper and/or or lower case ASCII letters, and are case sensitive.
 * Paths MUST NOT contain any characters except those listed above.  To include other characters such as spaces, double quotes, or non-ASCII characters, apps SHOULD use [URL-style percent-encoding as defined in RFC3986](https://tools.ietf.org/html/rfc3986#section-2.1).  First encode the string as utf-8, then percent-encode the utf-8 bytes.
-* A path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has the optional `deleteAfter` field).
+* A path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has a non-null `deleteAfter`).
 
 In these examples, `...` is used to shorten author addresses for easier reading.
 `...` is not actually related to the Path specification.
@@ -512,7 +512,7 @@ interface Doc {
     author: string, // an author address
     content: string, // an arbitary string of utf-8
     contentHash: string, // sha256(content) encoded as base32 with a leading 'b'
-    deleteAfter?: number,  // integer.  when the document expires (optional)
+    deleteAfter: number | null,  // integer.  when the document expires.  null for non-expiring documents.
     format: 'es.4', // the format version that this document adheres to.
     path: string, // a path
     signature: string, // ed25519 signature of encoded document, signed by author
@@ -521,9 +521,11 @@ interface Doc {
 }
 ```
 
+All fields are REQUIRED.  Extra fields are FORBIDDEN.
+
 All string fields MUST BE limited to printable ASCII characters except for `content`, which is utf-8.
 
-The `deleteAfter` field is OPTIONAL.  All other fields listed above are REQUIRED.  Additional fields are FORBIDDEN.
+All number fields MUST BE integers (or null, in some cases), and cannot be NaN.
 
 The order of fields is unspecified except for hashing and signing purposes (see section below).  For consistency, the recommended canonical order is alphabetical by field name.
 
@@ -541,13 +543,13 @@ To be valid a document MUST pass ALL these rules, which are described in more de
 * `content` is a string holding utf-8 data
 * `contentHash` is the sha256 hash of the `content`, encoded as base32
 * `timestamp` is an integer between 10^13 and 2^53-2, inclusive
-* `deleteAfter` is absent, or is a timestamp integer in the same range as `timestamp`
+* `deleteAfter` is null, or is a timestamp integer in the same range as `timestamp`
 * `format` is a string of printable ASCII characters
 * `path` is a valid path string
 * `signature` is a 104-character base32 string
 * `workspace` is a valid workspace address string which matches the local workspace we are intending to write the document to
 * No extra fields
-* No missing fields (except `deleteAfter`, which is optional)
+* No missing fields
 * Additional rules about `timestamp` and `deleteAfter` relative to the current wall clock (see below)
 * Author has write permission to path
 * Signature is cryptographically valid
@@ -622,7 +624,7 @@ The `path` field is a string following the path formatting rules described earli
 
 The document is invalid if the author does not have permission to write to the path, following the rules described earlier in "Write Permissions".
 
-The path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has the optional `deleteAfter` field).
+The path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has non-null `deleteAfter`).
 
 ## Timestamp
 
@@ -664,7 +666,7 @@ Timestamps from the future, beyond the tolerance threshold, are (temporarily) in
 
 ## Ephemeral documents: deleteAfter
 
-Ephemeral documents have an expiration date, after which they MUST be proactively deleted by Earthstar libraries.
+Documents may be regular or ephemeral.  Ephemeral documents have an expiration date, after which they MUST be proactively deleted by Earthstar libraries.
 
 Libraries MUST check for and delete all expired documents at least once an hour (while they are running).  Deleted documents MUST be physically deleted, not just marked as ignored.
 
@@ -672,7 +674,7 @@ Libraries MUST filter out recently expired documents from queries and lookups.  
 
 The `deleteAfter` field holds the timestamp after which a document is to be deleted.  It is a timestamp with the same format and range as the regular `timestamp` field.
 
-The `deleteAfter` field is optional.  If a document is not ephemeral, the field SHOULD BE omitted if possible; otherwise it may be set to `null` or `-1`.
+Regular, non-ephemeral documents have `deleteAfter: null`.  The field is still required and may not be omitted.
 
 Unlike the `timestamp` field, the `deleteAfter` field is expected to be in the future compared to the current wall-clock time.  Once the `deleteAfter` time is in the past, the document becomes invalid.
 
@@ -714,62 +716,79 @@ When an author signs a document, they're actually signing a hash of the document
 
 Earthstar libraries MUST use this exact process.
 
-To hash a document:
+To hash a document (pseudocode):
 
 ```
-Sort the document fields in lexicographic order by field name.
-Skip these fields: "content", "signature".
-For each remaining field in the document:
-    If the field value is an integer, convert it to a string.
-    Concatenate (the field name, "\t", the field value, "\n").
-Concatenate all of the above.
-Compute the sha256 hash.
-Encode the binary hash digest in base32 in Earthstar format, with leading "b".
+let hashDocument(document) : string => {
+    // Get a deterministic hash of a document as a base32 string.
+    // Preconditions:
+    //   All string fields must be printable ASCII only
+    //   Fields must have one of the following types:
+    //       string
+    //       string | null
+    //       integer
+    //       integer | null
+    //   Note that "string | integer" is not allowed
+
+    let accum : string = '';
+    For each field and value in the document, sorted in lexicographic order by field name:
+        if (field === 'content' || field === 'signature') { continue; }
+        if (value === null) { continue; }
+        accum += fieldname + "\t" + value + "\n"  // convert integers to string here
+    let binaryHashDigest = sha256(accum).digest();
+    return base32encode(binaryHashDigest);  // in Earthstar b32 format with leading 'b'
+}
 ```
 
-To sign a document:
+To sign a document (pseudocode)
 
 ```
-Compute the document hash.
-Using the document author's keypair (public and private key),
-    sign the document hash.
-Encode the binary signature into base32 in Earthstar format, with leading "b".
-Set document.signature to the base32 string.
+let signDocument(authorKeypair, document) : void => {
+    // Sign the document and store the signature into the document (mutating it).
+    // Keypair contains a pubkey and a private key
+
+    let binarySignature = ed25519sign(authorKeypair, hashDocument(document));
+    let base32signature = base32encode(binarySignature);  // in Earthstar b32 format with leading 'b'
+    document.signature = base32signature;
+}
 ```
 
 Preconditions that make this work:
-* Documents can only hold integers and strings, no floats or nested objects that could increase complexity or be nondeterministic
+* Documents can only hold integers, strings, and null -- no floats or nested objects that could increase complexity or be nondeterministic
 * No document field name or field content can contain `\t` or `\n`, except `content`, which is not directly used (we use `contentHash instead`)
 
 The reference implementation is in `hashDocument()` in `src/validators/es4.ts`.  Here's a summary:
 
 ```ts
-// Psuedocode
+// Typescript-style psuedocode
 
 let serializeDocumentForHashing = (doc: Document): string => {
     // Fields in lexicographic order.
     // Convert numbers to strings.
-    // Omit optional properties if they're missing.
+    // Omit null properties.
     // Use the contentHash instead of the content.
     // Omit the signature.
     return (
         `author\t${doc.author}\n` +
         `contentHash\t${doc.contentHash}\n` +
-        (doc.deleteAfter === undefined ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
+        (doc.deleteAfter === null
+            ? ''
+            : `deleteAfter\t${doc.deleteAfter}\n`) +
         `format\t${doc.format}\n` +
         `path\t${doc.path}\n` +
         `timestamp\t${doc.timestamp}\n` +
         `workspace\t${doc.workspace}\n`
-        // Note the \n is used on the last item too
+        // Note the \n is included on the last item too
     );
 }
 
-let hashDocument = (doc: Document): Base32String =>
-    bufferToBase32(
+let hashDocument = (doc: Document): Base32String => {
+    return bufferToBase32(
         sha256AsBuffer(
             serializeDocumentForHashing(doc)
         )
     );
+}
 
 let signDocument = (keypair: AuthorKeypair, doc: Document): Document => {
     return {
@@ -791,6 +810,7 @@ INPUT (shown as JSON, but is actually in memory before serialization)
   "content": "Flowers are pretty",
   "author": "@suzy.bjzee56v2hd6mv5r5ar3xqg3x3oyugf7fejpxnvgquxcubov4rntq",
   "timestamp": 1597026338596000,
+  "deleteAfter": null,
   "signature": ""  // is empty before signing has occurred
 }
 

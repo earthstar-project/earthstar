@@ -145,7 +145,7 @@ export class StorageSqlite implements IStorage {
                 content TEXT NOT NULL, -- TODO: allow null
                 author TEXT NOT NULL,
                 timestamp NUMBER NOT NULL,
-                deleteAfter NUMBER,  -- optional, can be null
+                deleteAfter NUMBER,  -- can be null
                 signature TEXT NOT NULL,
                 PRIMARY KEY(path, author)
             );
@@ -284,11 +284,6 @@ export class StorageSqlite implements IStorage {
         logDebug('having params', havingParams);
         logDebug('limit params', limitParams);
         let docs : Document[] = this.db.prepare(queryString).all({...filterParams, ...havingParams, ...limitParams});
-        for (let doc of docs) {
-            if (doc.deleteAfter === null) {
-                delete doc.deleteAfter;
-            }
-        }
         logDebug('result:', docs);
         return docs;
     }
@@ -345,10 +340,6 @@ export class StorageSqlite implements IStorage {
             ORDER BY timestamp DESC, signature DESC  -- break ties with signature
             LIMIT 1;
         `).get({ path: path });
-        // when not set, deleteAfter is NULL in the database but missing from the javascript object
-        if (result !== undefined && result.deleteAfter === null) {
-            delete result.deleteAfter;
-        }
         logDebug('getDocument result:', result);
         return result;
     }
@@ -403,7 +394,7 @@ export class StorageSqlite implements IStorage {
 
         // check if existing doc is expired
         if (existingSameAuthorSamePath !== undefined) {
-            if (existingSameAuthorSamePath.deleteAfter !== null) {  // null because we store it as null in sqlite instead of undefined
+            if (existingSameAuthorSamePath.deleteAfter !== null) {
                 if (now > existingSameAuthorSamePath.deleteAfter) {
                     // existing doc is expired, so ignore it.
                     // it will get replaced by the new one we're inserting.
@@ -423,16 +414,11 @@ export class StorageSqlite implements IStorage {
             return WriteResult.Ignored;
         }
 
-        // if deleteAfter is missing, set it NULL for sqlite
-        let docToSet = {
-            ...doc,
-            deleteAfter: doc.deleteAfter === undefined ? null : doc.deleteAfter,
-        }
         // Insert new doc, replacing old doc if there is one
         this.db.prepare(`
             INSERT OR REPLACE INTO docs (format, workspace, path, contentHash, content, author, timestamp, deleteAfter, signature)
             VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature);
-        `).run(docToSet);
+        `).run(doc);
         this.onChange.send(undefined);
         return WriteResult.Accepted;
     }
@@ -462,10 +448,8 @@ export class StorageSqlite implements IStorage {
             content: docToSet.content,
             author: keypair.address,
             timestamp: docToSet.timestamp || now,
+            deleteAfter: docToSet.deleteAfter || null,
             signature: '',
-        }
-        if (docToSet.deleteAfter !== undefined) {
-            doc.deleteAfter = docToSet.deleteAfter;
         }
 
         // If there's an existing doc from anyone,
