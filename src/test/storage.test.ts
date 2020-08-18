@@ -380,17 +380,17 @@ for (let scenario of scenarios) {
         // an expired ephemeral doc can't be set because it's invalid
         t.ok(isErr(storage.set(keypair1, {
                 format: FORMAT,
-                path: '/path1',
+                path: '/path1!',
                 content: 'aaa',
                 timestamp: now - 60*MIN,
                 deleteAfter: now - 45*MIN,
         }, now)), 'set expired ephemeral document');
-        t.equal(storage.getContent('/path1', now), undefined, 'temporary doc is not there');
+        t.equal(storage.getContent('/path1!', now), undefined, 'temporary doc is not there');
 
         // a good doc.  make sure deleteAfter survives the roundtrip
         t.same(storage.set(keypair1, {
                 format: FORMAT,
-                path: '/ephemeral',
+                path: '/ephemeral!',
                 content: 'bbb',
                 timestamp: now,
                 deleteAfter: now + 3 * DAY,
@@ -401,7 +401,7 @@ for (let scenario of scenarios) {
                 content: 'ccc',
                 timestamp: now,
         }, now), WriteResult.Accepted, 'set good regular document');
-        let ephDoc = storage.getDocument('/ephemeral', now);
+        let ephDoc = storage.getDocument('/ephemeral!', now);
         let regDoc = storage.getDocument('/regular', now);
 
         if (ephDoc === undefined) {
@@ -420,7 +420,7 @@ for (let scenario of scenarios) {
         let setExpiringDoc = () => {
             t.same(storage.set(keypair1, {
                     format: FORMAT,
-                    path: '/expire-in-place',
+                    path: '/expire-in-place!',
                     content: 'ccc',
                     timestamp: now - 1,
                     deleteAfter: now + 5 * DAY,
@@ -434,17 +434,17 @@ for (let scenario of scenarios) {
             // set now ahead, try to get the doc, which should delete it.
             // rewind now again, and the doc should still be gone because it was deleted.
             setExpiringDoc();
-            t.notEqual(storage.getDocument('/expire-in-place', now          ), undefined, 'getDocument(): doc was there');
-            t.equal(   storage.getDocument('/expire-in-place', now + 8 * DAY), undefined, 'getDocument(): doc expired in place');
-            t.equal(   storage.getDocument('/expire-in-place', now          ), undefined, 'getDocument(): doc was deleted after expiring');
+            t.notEqual(storage.getDocument('/expire-in-place!', now          ), undefined, 'getDocument(): doc was there');
+            t.equal(   storage.getDocument('/expire-in-place!', now + 8 * DAY), undefined, 'getDocument(): doc expired in place');
+            t.equal(   storage.getDocument('/expire-in-place!', now          ), undefined, 'getDocument(): doc was deleted after expiring');
 
             setExpiringDoc();
-            t.equal(storage.getContent('/expire-in-place', now          ), 'ccc',     'getContent(): doc was there');
-            t.equal(storage.getContent('/expire-in-place', now + 8 * DAY), undefined, 'getContent(): doc expired in place');
-            t.equal(storage.getContent('/expire-in-place', now          ), undefined, 'getContent(): doc was deleted after expiring');
+            t.equal(storage.getContent('/expire-in-place!', now          ), 'ccc',     'getContent(): doc was there');
+            t.equal(storage.getContent('/expire-in-place!', now + 8 * DAY), undefined, 'getContent(): doc expired in place');
+            t.equal(storage.getContent('/expire-in-place!', now          ), undefined, 'getContent(): doc was deleted after expiring');
 
             setExpiringDoc();
-            t.same(storage.paths({pathPrefix: '/exp', now: now          }), ['/expire-in-place'], 'paths(): doc was there');
+            t.same(storage.paths({pathPrefix: '/exp', now: now          }), ['/expire-in-place!'], 'paths(): doc was there');
             t.same(storage.paths({pathPrefix: '/exp', now: now + 8 * DAY}), [], 'paths(): doc expired in place');
             t.same(storage.paths({pathPrefix: '/exp', now: now          }), [], 'paths(): doc was deleted after expiring');
 
