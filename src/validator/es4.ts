@@ -105,7 +105,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         if (isErr(err2)) { return err2; }
         let err3 = this._checkTimestampIsOk(doc.timestamp, doc.deleteAfter, now);
         if (isErr(err3)) { return err3; }
-        let err4 = this._checkPathIsValid(doc.path);
+        let err4 = this._checkPathIsValid(doc.path, doc.deleteAfter);
         if (isErr(err4)) { return err4; }
         let err5 = this._checkAuthorIsValid(doc.author);
         if (isErr(err5)) { return err5; }
@@ -116,7 +116,6 @@ export const ValidatorEs4 : IValidatorES4 = class {
         let err8 = this._checkContentMatchesHash(doc.content, doc.contentHash);
         if (isErr(err8)) { return err8; }
         return true;
-        // TODO: rules about '!' in path of ephemeral documents
     }
 
     static _checkBasicDocumentValidity(doc: Document): true | ValidationError {
@@ -231,8 +230,13 @@ export const ValidatorEs4 : IValidatorES4 = class {
         }
         return true;
     }
-    static _checkPathIsValid(path: Path): true | ValidationError {
+    static _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError {
         // Ensure the path matches the spec for allowed path strings.
+        //
+        // Path validity depends on if the document is ephemeral or not.  To check
+        // that rule, supply deleteAfter.  Omit deleteAfter to skip checking that rule
+        // (e.g. to just check if a path is potentially valid, ephemeral or not).
+        //
         // return a ValidationError, or return true on success.
 
         // A path is a series of one or more path segments.
@@ -263,6 +267,17 @@ export const ValidatorEs4 : IValidatorES4 = class {
         if (!onlyHasChars(path, pathChars)) {
             return new ValidationError('invalid path: must not contain disallowed characters');
         }
+
+        if (deleteAfter !== undefined) {
+            // path must contain at least one '!', if and only if the document is ephemeral
+            if (path.indexOf('!') === -1 && deleteAfter !== null) {
+                return new ValidationError("when deleteAfter is set, path must contain '!'");
+            }
+            if (path.indexOf('!') !== -1 && deleteAfter === null) {
+                return new ValidationError("when deleteAfter is null, path must not contain '!'");
+            }
+        }
+
         return true;
     }
     static _checkAuthorIsValid(authorAddress: AuthorAddress): true | ValidationError {

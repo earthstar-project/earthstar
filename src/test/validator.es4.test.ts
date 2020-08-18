@@ -95,7 +95,7 @@ t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
     let doc: Document = {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
-        path: '/k1',
+        path: '/k1!',
         contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: NOW - 10,
@@ -144,11 +144,11 @@ t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
     t.done();
 });
 
-t.test('assertDocumentIsValid', (t: any) => {
-    let doc: Document = {
+t.test('checkDocumentIsValid', (t: any) => {
+    let ephDoc: Document = {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
-        path: '/k1',
+        path: '/k1!',
         contentHash: sha256base32('content1'),
         content: 'content1',
         timestamp: NOW - 10,
@@ -157,7 +157,7 @@ t.test('assertDocumentIsValid', (t: any) => {
         signature: '',
     };
 
-    let signedDocOrErr = Val.signDocument(keypair1, doc);
+    let signedDocOrErr = Val.signDocument(keypair1, ephDoc);
     if (isErr(signedDocOrErr)) {
         t.ok(false, 'signature failed but should have succeeded: ' + signedDocOrErr.message);
         t.done();
@@ -167,14 +167,14 @@ t.test('assertDocumentIsValid', (t: any) => {
 
     t.ok(Val.checkDocumentIsValid(signedDoc, NOW) === true, 'doc is valid');
 
-    t.ok(Val.signDocument(keypair2, doc) instanceof ValidationError, 'doc author must match keypair when signing');
+    t.ok(Val.signDocument(keypair2, ephDoc) instanceof ValidationError, 'doc author must match keypair when signing');
 
-    t.ok(Val.checkDocumentIsValid(doc, NOW) instanceof ValidationError, 'doc without signature is invalid');
-    t.ok(Val.checkDocumentIsValid({...signedDoc, content: 'abc'}, NOW) instanceof ValidationError, 'changing content makes doc invalid');
+    t.ok(Val.checkDocumentIsValid(ephDoc, NOW) instanceof ValidationError, 'doc without signature is invalid');
+    t.ok(Val.checkDocumentIsValid({...signedDoc, content: 'abc'}, NOW) instanceof ValidationError, 'changing content after signing makes doc invalid');
     t.ok(Val.checkDocumentIsValid({} as any, NOW) instanceof ValidationError, 'empty doc is invalid');
     t.ok(Val.checkDocumentIsValid({...signedDoc, extra: 'abc'} as any, NOW) instanceof ValidationError, 'extra property makes doc invalid');
 
-    let doc2: Document = {
+    let regDoc: Document = {
         format: 'es.4',
         workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
         path: '/k1',
@@ -185,7 +185,7 @@ t.test('assertDocumentIsValid', (t: any) => {
         author: author1,
         signature: '',
     };
-    let signedDoc2 = Val.signDocument(keypair1, doc2);
+    let signedDoc2 = Val.signDocument(keypair1, regDoc);
     t.ok(notErr(signedDoc2), 'signature succeeded');
     t.ok(Val.checkDocumentIsValid(signedDoc2 as Document) === true, 'doc is valid when not supplying a value for NOW, and no deleteAfter');
 
@@ -363,10 +363,36 @@ t.test('_checkTimestampIsOk', (t: any) => {
 type IsValidPathVector = {
     valid: boolean,
     path: string,
+    deleteAfter?: number | null,
     note?: string,
 };
 t.test('_checkPathIsValid', (t: any) => {
     let vectors: IsValidPathVector[] = [
+        // valid
+        { valid: true, path: '/foo' },
+        { valid: true, path: '/FOO', note: 'uppercase' },
+        { valid: true, path: '/1234/5678', note: 'digits' },
+        { valid: true, path: '/a/b/c/d/e/f/g/h' },
+        { valid: true, path: '/about/~@suzy.abc/name' },
+        { valid: true, path: '/wiki/shared/Garden%20Gnome' },
+        { valid: true, path: '/\'()-._~!*$&+,:=@%', note: 'all allowed punctuation characters' },
+
+        // ephemeral documents and '!'
+        { valid: true, path: '/foo', deleteAfter: null, note: 'proper regular path with no !' },
+        { valid: false, path: '/foo!', deleteAfter: null, note: 'bad: regular doc with !' },
+        { valid: false, path: '/foo!!', deleteAfter: null, note: 'bad: regular doc with !!' },
+        { valid: false, path: '/!foo', deleteAfter: null, note: 'bad: regular doc with !' },
+
+        { valid: false, path: '/foo', deleteAfter: 123, note: 'bad: ephemeral doc but no !' },
+        { valid: true, path: '/foo!', deleteAfter: 123 , note: 'proper ephemeral path with !'},
+        { valid: true, path: '/foo!!', deleteAfter: 123 , note: 'proper ephemeral path with !!'},
+        { valid: true, path: '/!foo', deleteAfter: 123 , note: 'proper ephemeral path with !'},
+
+        // length
+        { valid: true, path: '/' + stringMult('a', 511), note: '512 characters is allowed' },
+        { valid: false, path: '/' + stringMult('a', 512), note: '513 characters is too long' },
+
+        // invalid
         { valid: false, path: '', note: 'empty string' },
         { valid: false, path: ' ', note: 'just a space' },
         { valid: false, path: '\x00', note: 'null byte' },
@@ -390,20 +416,10 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: false, path: '/' + snowmanJs2, note: 'snowman 2' },
         { valid: false, path: '/' + snowmanU, note: 'snowman 3' },
 
-        { valid: true, path: '/foo' },
-        { valid: true, path: '/FOO', note: 'uppercase' },
-        { valid: true, path: '/1234/5678', note: 'digits' },
-        { valid: true, path: '/a/b/c/d/e/f/g/h' },
-        { valid: true, path: '/about/~@suzy.abc/name' },
-        { valid: true, path: '/wiki/shared/Garden%20Gnome' },
-        { valid: true, path: '/\'()-._~!*$&+,:=@%', note: 'all allowed punctuation characters' },
-
-        { valid: true, path: '/' + stringMult('a', 511), note: '512 characters is allowed' },
-        { valid: false, path: '/' + stringMult('a', 512), note: '513 characters is too long' },
     ];
     for (let v of vectors) {
         let testMethod = v.valid ? t.true : t.false;
-        testMethod(notErr(Val._checkPathIsValid(v.path)),
+        testMethod(notErr(Val._checkPathIsValid(v.path, v.deleteAfter)),
             `${v.valid ? 'valid' : 'invalid'} path: ${JSON.stringify(v.path)}  ${v.note || ''}`
         );
     }

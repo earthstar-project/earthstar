@@ -260,7 +260,7 @@ export interface IValidator {
     _checkBasicDocumentValidity(doc: Document): true | ValidationError;  // check for correct fields and datatypes
     _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError;
     _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError;
-    _checkPathIsValid(path: Path): true | ValidationError;
+    _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError;
     _checkAuthorIsValid(authorAddress: AuthorAddress): true | ValidationError;
     _checkWorkspaceIsValid(workspaceAddress: WorkspaceAddress): true | ValidationError;
     _checkAuthorSignatureIsValid(doc: Document): true | ValidationError;
