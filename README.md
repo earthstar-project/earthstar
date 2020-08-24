@@ -2,7 +2,7 @@
 
 ![](docs/earthstar-wordmark.png)
 
-## An offline-first, distributed, syncable, embedded document database for use in p2p software
+## An offline-first, distributed, syncable, embedded document database for use in p2p software -- in browsers and outside of browsers
 
 *Alpha - do not use for important data yet*
 
@@ -111,7 +111,7 @@ A more detailed look at this Javascript implementation:
 
 ## Scope, typical usage
 
-Each user will have their own instance of an Earthstar database, maybe in their browser or embedded in an Electron app.  There might also be some instances on cloud servers ("pubs").  The databases can sync with each other across HTTP or duplex stream connections.
+Each user will have their own instance of an Earthstar database in whatever app they're using -- in the browser or native.  There might also be some instances on cloud servers ("pubs").  The databases can sync with each other across HTTP or duplex stream connections.
 
 Each database instance can hold a subset of the entire data, specified by a query such as "paths starting with a certain substring", "paths written after a certain timestamp", etc.
 
