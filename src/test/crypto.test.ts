@@ -186,32 +186,32 @@ t.test('encode / decode signature, secret, pubkey', (t: any) => {
     t.same(buf, buf2, 'encodePubkey roundtrip: buffer');
     t.same(str, str2, 'encodePubkey roundtrip: string');
 
-    t.done();
+    t.end();
 });
 
 t.test('key conversion from buffer to string and back', (t: any) => {
     let keypair = generateAuthorKeypair('test');
     if (isErr(keypair)) {
         t.ok(false, 'keypair 1 is an error');
-        t.done();
+        t.end();
         return;
     }
     let buffers = decodeAuthorKeypair(keypair);
     if (isErr(buffers)) {
         t.ok(false, 'buffers is an error');
-        t.done();
+        t.end();
         return;
     };
     let keypair2 = encodeAuthorKeypair('test', buffers);
     if (isErr(keypair2)) {
         t.ok(false, 'keypair 2 is an error');
-        t.done();
+        t.end();
         return;
     }
     let buffers2 = decodeAuthorKeypair(keypair);
     if (isErr(buffers2)) {
         t.ok(false, 'buffers2 is an error');
-        t.done();
+        t.end();
         return;
     };
 
@@ -222,7 +222,7 @@ t.test('key conversion from buffer to string and back', (t: any) => {
     let err = decodeAuthorKeypair(keypair);
     t.ok(isErr(err), 'decodeAuthorKeypair returns an error if the secret is bad base32');
 
-    t.done();
+    t.end();
 });
 
 t.test('signatures', (t: any) => {
@@ -231,17 +231,17 @@ t.test('signatures', (t: any) => {
     let keypair2 = generateAuthorKeypair('fooo') as AuthorKeypair;
     if (isErr(keypair) || isErr(keypair2)) {
         t.ok(false, 'keypair generation error');
-        t.done(); return;
+        t.end(); return;
     }
     let sig = sign(keypair, input);
     let sig2 = sign(keypair2, input);
     if (isErr(sig)) {
         t.ok(false, 'signature error ' + sig);
-        t.done(); return;
+        t.end(); return;
     }
     if (isErr(sig2)) {
         t.ok(false, 'signature error ' + sig2);
-        t.done(); return;
+        t.end(); return;
     }
 
     t.ok(verify(keypair.address, sig, input), 'real signature is valid');
@@ -264,11 +264,11 @@ t.test('signatures', (t: any) => {
     let snowmanBufferSig = sign(keypair, snowmanBufferUtf8);
     if (isErr(snowmanStringSig)) {
         t.ok(false, 'signature error ' + snowmanStringSig);
-        t.done(); return;
+        t.end(); return;
     }
     if (isErr(snowmanBufferSig)) {
         t.ok(false, 'signature error ' + snowmanBufferSig);
-        t.done(); return;
+        t.end(); return;
     }
     t.ok(verify(keypair.address, snowmanStringSig, snowmanJsString), 'signature roundtrip works on snowman utf-8 string');
     t.ok(verify(keypair.address, snowmanBufferSig, snowmanBufferUtf8), 'signature roundtrip works on snowman buffer');

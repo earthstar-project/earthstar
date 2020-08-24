@@ -10,12 +10,16 @@
   },
   "browser": {
     "./build/index.js": "./build/index.browser.js",
-    "./build/storeSqlite.js": false
+    "./build/storeSqlite.js": false,
+    "tap": "tape"
   },
   "scripts": {
-    "clean": "rm -rf build/* .nyc_output coverage",
+    "clean": "rm -rf build/* .nyc_output coverage browserify-test-bundle",
     "toc": "./update-table-of-contents.sh",
     "build": "tsc",
+    "browserify-for-karma": "mkdir -p browserify-test-bundle && browserify build/test/detRandom.test.js > browserify-test-bundle/bundle.js",
+    "karma-start": "karma start",
+    "test-in-browser": "npm run clean && npm run build && npm run browserify-for-karma && npm run karma-start",
     "watch-test": "onchange --initial --kill --delay 1000 src/*.ts -- npm run build-and-test",
     "start": "node build/main.js",
     "prettier": "prettier --write src/*",
@@ -39,9 +43,15 @@
     "@types/multibase": "^0.6.0",
     "@types/node": "^14.0.3",
     "@types/tap": "^14.10.0",
+    "@types/tape": "^4.13.0",
+    "browserify": "^16.5.2",
+    "karma": "^5.1.1",
+    "karma-chrome-launcher": "^3.1.0",
+    "karma-tap": "^4.2.0",
     "onchange": "^7.0.2",
     "prettier": "^2.0.5",
     "tap": "^14.10.7",
+    "tape": "^5.0.1",
     "typescript": "^3.9.2"
   },
   "dependencies": {

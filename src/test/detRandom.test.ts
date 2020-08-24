@@ -37,13 +37,14 @@ t.test('detRange', (t: any) => {
 });
 
 t.test('detInt', (t: any) => {
-    let results : {[k:string]: boolean} = {};
+    let resultSet : Set<number> = new Set();
     for (let ii = 0; ii < 500; ii++) {
-        let choice = detInt('' + ii, 7, 9);  // integers between 7 and 9, inclusive
-        results[choice] = true;
+        let num = detInt('' + ii, 7, 9);  // integers between 7 and 9, inclusive
+        resultSet.add(num);
     }
-    let keys = Object.keys(results).sort();
-    t.same(keys, [7, 8, 9], 'all items were eventually chosen')
+    let result = [...resultSet];
+    result.sort();
+    t.same(result, [7, 8, 9], 'all items were eventually chosen')
     t.end();
 });
 
@@ -55,6 +56,6 @@ t.test('detChoose', (t: any) => {
         results[choice] = true;
     }
     let keys = Object.keys(results).sort();
-    t.same(keys, inputs, 'all items were eventually chosen')
+    t.same(keys, inputs, 'all items were eventually chosen woo')
     t.end();
 });

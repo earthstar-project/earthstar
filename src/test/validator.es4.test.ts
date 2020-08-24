@@ -88,7 +88,7 @@ t.test('hashDocument', (t: any) => {
         signature: 'xxxxxxxxxxxxx',
     };
     t.equal(Val.hashDocument(doc2), 'bl3yoc4h4iubuev5izxr4trnxrfhnmdoqy2uciajq73quvu22vyna', 'expected document hash, with deleteAfter');
-    t.done();
+    t.end();
 });
 
 t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
@@ -107,7 +107,7 @@ t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
     let signedDocOrErr = Val.signDocument(keypair1, doc);
     if (isErr(signedDocOrErr)) {
         t.ok(false, 'signature failed but should have succeeded: ' + signedDocOrErr.message);
-        t.done();
+        t.end();
         return;
     }
     let signedDoc = signedDocOrErr; // this helps typescript get rid of the possible error type :(
@@ -141,7 +141,7 @@ t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
             `altering int property makes signature invalid: ${field}`);
     }
 
-    t.done();
+    t.end();
 });
 
 t.test('checkDocumentIsValid', (t: any) => {
@@ -160,7 +160,7 @@ t.test('checkDocumentIsValid', (t: any) => {
     let signedDocOrErr = Val.signDocument(keypair1, ephDoc);
     if (isErr(signedDocOrErr)) {
         t.ok(false, 'signature failed but should have succeeded: ' + signedDocOrErr.message);
-        t.done();
+        t.end();
         return;
     }
     let signedDoc = signedDocOrErr; // this helps typescript get rid of the possible error type :(
@@ -189,7 +189,7 @@ t.test('checkDocumentIsValid', (t: any) => {
     t.ok(notErr(signedDoc2), 'signature succeeded');
     t.ok(Val.checkDocumentIsValid(signedDoc2 as Document) === true, 'doc is valid when not supplying a value for NOW, and no deleteAfter');
 
-    t.done();
+    t.end();
 });
 
 type BasicValidityVector = {

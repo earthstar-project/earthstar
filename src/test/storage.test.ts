@@ -73,7 +73,7 @@ let scenarios : Scenario[] = [
 t.test(`StoreMemory: constructor`, (t: any) => {
     t.throws(() => new StorageMemory([], WORKSPACE), 'throws when no validators are provided');
     t.throws(() => new StorageMemory(VALIDATORS, 'bad-workspace-address'), 'throws when workspace address is invalid');
-    t.done();
+    t.end();
 });
 
 //================================================================================
@@ -251,7 +251,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         filename: ':memory:'
     }), 'constructor throws with unrecognized mode');
 
-    t.done();
+    t.end();
 });
 
 t.test(`StoreSqlite: config`, (t: any) => {
@@ -266,7 +266,7 @@ t.test(`StoreSqlite: config`, (t: any) => {
     t.equal(storage._getConfig('foo'), 'bar');
     storage._setConfig('foo', 'baz');
     t.equal(storage._getConfig('foo'), 'baz');
-    t.done();
+    t.end();
 });
 
 //================================================================================
@@ -274,7 +274,7 @@ t.test(`StoreSqlite: config`, (t: any) => {
 
 for (let scenario of scenarios) {
     t.test(`==== starting test of ====${scenario.description}`, (t: any) => {
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': empty store', (t: any) => {
@@ -285,7 +285,7 @@ for (let scenario of scenarios) {
         t.equal(storage.getDocument('xxx'), undefined, 'getDocument undefined');
         t.equal(storage.getContent('xxx'), undefined, 'getContent undefined');
         t.same(storage.authors(), [], 'no authors');
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': close', (t: any) => {
@@ -306,7 +306,7 @@ for (let scenario of scenarios) {
         t.throws(() => storage.paths(), 'paths() throws when closed');
         t.throws(() => storage.set(keypair1, {} as any), 'set() throws when closed');
         t.throws(() => storage.sync(storage2, {}), 'sync() throws when closed');
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': store ingestDocument rejects invalid docs', (t: any) => {
@@ -371,7 +371,7 @@ for (let scenario of scenarios) {
             }
         }
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': deleteAfter', (t: any) => {
@@ -469,7 +469,7 @@ for (let scenario of scenarios) {
         //      and then the original doc is locally gone, but could come back during a sync
         //      depending on how far the expiring doc propagated through the network...
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': basic one-author store', (t: any) => {
@@ -509,7 +509,7 @@ for (let scenario of scenarios) {
             t.equal(doc.contentHash, sha256base32(doc.content), 'doc.contentHash matches doc.content after roundtrip');
         }
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': path queries', (t: any) => {
@@ -536,7 +536,7 @@ for (let scenario of scenarios) {
         t.same(storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': contentIsEmpty queries', (t: any) => {
@@ -584,7 +584,7 @@ for (let scenario of scenarios) {
             t.same(storage.documents({ path: '/empty', contentIsEmpty: true  }).length, 0, 'documents({ path: /empty, contentIsEmpty: true  }) length = 0')
         }
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': limits on queries', (t: any) => {
@@ -618,7 +618,7 @@ for (let scenario of scenarios) {
         t.same(storage.paths( { includeHistory: false, limit: 1 }), ['/foo'], 'paths no history, limit 1');
         t.same(storage.contents({ includeHistory: false, limit: 1 }), ['foo'], 'contents no history, limit 1');
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': path and author queries', (t: any) => {
@@ -661,7 +661,7 @@ for (let scenario of scenarios) {
         //t.same(storage.contents({ participatingAuthor: author2, includeHistory: true }), ['content1.Z', 'content2.Y'], 'participatingAuthor 2, with history');
         //t.same(storage.contents({ participatingAuthor: author2, includeHistory: false }), ['content1.Z'], 'participatingAuthor 2, no history');
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': multi-author writes', (t: any) => {
@@ -704,7 +704,7 @@ for (let scenario of scenarios) {
 
         // TODO: test 2 authors, same timestamps, different signatures
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': sync: push to empty store', (t: any) => {
@@ -738,7 +738,7 @@ for (let scenario of scenarios) {
         //log('sync results 2', syncResults2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing should happen if syncing again');
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': sync: two-way', (t: any) => {
@@ -792,7 +792,7 @@ for (let scenario of scenarios) {
             t.same(storage1.contents({ includeHistory: true }), storage2.contents({ includeHistory: true }), 'contents with history: match');
         }
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': sync: mismatched workspaces', (t: any) => {
@@ -806,7 +806,7 @@ for (let scenario of scenarios) {
         t.same(storageA1.sync(storageB), { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
         t.same(storageA1.sync(storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': sync: misc other options', (t: any) => {
@@ -842,7 +842,7 @@ for (let scenario of scenarios) {
         t.same(storage.sync(storageEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
         t.same(storageEmpty2.sync(storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
 
-        t.done();
+        t.end();
     });
 
     t.test(scenario.description + ': onChange', (t: any) => {
@@ -863,7 +863,7 @@ for (let scenario of scenarios) {
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 
-        t.done();
+        t.end();
     });
 
 }
