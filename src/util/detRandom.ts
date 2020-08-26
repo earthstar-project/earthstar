@@ -21,13 +21,25 @@ import { LowLevelCrypto } from '../crypto/crypto';
 // Consider using md5 instead since this is not security-critical.
 // Consider memoizing these functions for speed.
 
+let readUInt32BE = (buffer : Buffer): number => {
+    // take first 4 bytes of hash and convert to unsigned 32 bit integer (big-endian)
+    // copied here from core node because some browser polyfill can't handle it otherwise
+    // https://github.com/nodejs/node/blob/44161274821a2e81e7a5706c06cf8aa8bd2aa972/lib/internal/buffer.js#L291-L302
+    let offset = 0;
+    const first = buffer[offset];
+    const last = buffer[offset + 3];
+    if (first === undefined || last === undefined) { throw '???' }
+    return first * 2 ** 24 +
+      buffer[++offset] * 2 ** 16 +
+      buffer[++offset] * 2 ** 8 +
+      last;
+}
+
 export let detRandom = (s: string | Buffer): number => {
     // return a random-ish float between 0 and 1, deterministically derived from a hash of the string
 
     let hashBuffer = LowLevelCrypto.sha256(s);
-    // take first 4 bytes of hash and convert to unsigned 32 bit integer (big-endian)
-    // https://github.com/nodejs/node/blob/44161274821a2e81e7a5706c06cf8aa8bd2aa972/lib/internal/buffer.js#L291-L302
-    let randInt = hashBuffer.slice(4).readUInt32BE();
+    let randInt = readUInt32BE(hashBuffer);
     // divide by max possible value
     return randInt / 2 ** 32;
 };
