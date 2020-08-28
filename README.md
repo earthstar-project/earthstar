@@ -4,8 +4,6 @@
 
 ## An offline-first, distributed, syncable, embedded document database for use in p2p software -- in browsers and outside of browsers
 
-*Alpha - do not use for important data yet*
-
 ## Community / how to contribute
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
@@ -14,24 +12,29 @@ Chatroom: [`#earthstar:matrix.org`](https://matrix.to/#/!oGfoMKqZnBVrJYjebW:matr
 
 ## Links and docs
 
-Related tools:
-* [earthstar-cli](https://github.com/earthstar-project/earthstar-cli) -- command line utility
-* [earthstar-pub](https://github.com/earthstar-project/earthstar-pub) -- server to help you sync
-* [earthstar-wiki](https://github.com/earthstar-project/earthstar-wiki) -- an example app built with Earthstar
-* [earthstar-os](https://github.com/earthstar-project/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser
-* [earthstar-graphql](https://github.com/earthstar-project/earthstar-graphql) -- A GraphQL server for Earthstar data
-
 Docs for everyone:
+* **[A Guided Tour of Earthstar](docs/tour.md)** -- Slides and diagrams explaining how it works
+
+Docs for app developers:
 * [Overview](docs/overview.md) -- A quick comparison between Earthstar, CouchDB, and SSB
-* [Rules of Earthstar](docs/rules-of-earthstar.md) -- The scope of the project, and details of the technical invariants of the distributed system.  Read this if you're building an Earthstar app.
-* [Earthstar concepts and vocabulary](docs/vocabulary.md) -- Specification for Earthstar data
+* [Rules of Earthstar](docs/rules-of-earthstar.md) -- The scope of the project, and details of the technical invariants of the distributed system.
 
 Docs for core Earthstar developers:
-* The detailed [Earthstar specification](docs/specification.md)
-* [Syncing](docs/syncing.md) -- Exploring this topic in more detail
-* [Fancy conflict resolution](docs/fancy-conflict-resolution.md) -- How to add more complex conflict tracking on top of Earthstar
-* [Timestamps](docs/timestamps.md) -- Exploring the limits of Earthstar's assumptions about timestamps
+* [Earthstar Specification](docs/specification.md) -- All you need to know to write an Earthstar implementation from scratch
+* [About syncing](docs/syncing.md) -- Exploring this topic in more detail
+* [About fancy conflict resolution](docs/fancy-conflict-resolution.md) -- How to add more complex conflict tracking on top of Earthstar
+* [About timestamps](docs/timestamps.md) -- Exploring the limits of Earthstar's assumptions about timestamps
 * [Urls](docs/urls.md) -- How to build URLs related to Earthstar
+
+Related repos:
+* [earthstar-cli](https://github.com/earthstar-project/earthstar-cli) -- Command line utility
+* [earthstar-pub](https://github.com/earthstar-project/earthstar-pub) -- Server to help you sync
+* [earthstar-graphql](https://github.com/earthstar-project/earthstar-graphql) -- A GraphQL layer for handling Earthstar data
+
+Demo apps:
+* [earthstar-lobby](https://github.com/sgwilym/earthstar-lobby/) -- A guestbook.  [Try it here](https://earthstar-lobby.vercel.app/)
+* [earthstar-wiki](https://github.com/earthstar-project/earthstar-wiki) -- An example app built with Earthstar (deprecated)
+* [earthstar-os](https://github.com/earthstar-project/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser (deprecated)
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
