@@ -16,7 +16,7 @@ Docs for everyone:
 * **[A Guided Tour of Earthstar](docs/tour.md)** -- Slides and diagrams explaining how it works
 
 Docs for app developers:
-* [Overview](docs/overview.md) -- A quick comparison between Earthstar, CouchDB, and SSB
+* [Overview for developers](docs/overview.md) -- A quick comparison between Earthstar, CouchDB, and SSB
 * [Rules of Earthstar](docs/rules-of-earthstar.md) -- The scope of the project, and details of the technical invariants of the distributed system.
 
 Docs for core Earthstar developers:
