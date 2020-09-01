@@ -9,6 +9,7 @@ export class Emitter<T> {
     // callback will run at a time, assuming the event is
     // sent with "await send(...)" and not just "send(...)".
     _callbacks : Callback<T>[] = [];
+    changeKey : number = 0;  // this becomes a new random value with every update
     constructor() {
     }
     subscribe(cb : Callback<T>) : Thunk {
@@ -19,6 +20,7 @@ export class Emitter<T> {
         };
     }
     async send(t : T) : Promise<void> {
+        this.changeKey = Math.random();
         for (let cb of this._callbacks) {
             let result = cb(t);
             if (result instanceof Promise) {
