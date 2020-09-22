@@ -963,16 +963,24 @@ Knowing a workspace address gives a user the power to read and write to that wor
 
 It MUST be impossible to discover new workspaces through the syncing process.  Peers MUST keep their workspaces secret and only transmit data when they are sure the other peer also knows the address of the same workspace.
 
-Here's an algorithm to exchange workspaces without discovering new ones:
+Here's an algorithm to exchange common workspaces without discovering new ones:
 
-* Peer1 and Peer2 send each other random numbers, and XOR them together into a shared nonce.
-* Each peer shares sha256(workspaceAddress + nonce) for each of their workspaces
+* Peer1 and Peer2 each generate a random string of entropy and send the entropy to each other.
+* Each peer shares `sha256(workspaceAddress + entropyFrom1 + entropyFrom2)` for each of their workspaces
 
-The hashes they have in common correspond to the workspaces they both have.
+The hashes they have in common correspond to the workspaces they both know about.
 
-The hashes that are unique to one peer will reveal no information to the other peer.
+The hashes that are unique to one peer will reveal no information to the other peer, except how many workspaces the other peer has.
 
 They can now proceed to sync each of their common workspaces, one at a time.
+
+An eavesdropper observing this exchange will know both pieces of entropy, and can confirm that the peers have or don't have workspaces that the eavesdropper already knows about, but can't un-hash the exchanged values to get the workspace addresses they don't already know.
+
+### A flaw
+
+Once the peers start trading actual workspace data, an eavesdropper can observe the workspace addresses in plaintext in the exchanged documents.
+
+TODO: peers may need to talk to each other over an encrypted and authenticated connection such as [secret-handshake](https://www.npmjs.com/package/secret-handshake).
 
 ## Sync Queries
 
