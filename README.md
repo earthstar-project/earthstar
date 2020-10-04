@@ -173,10 +173,14 @@ Like Scuttlebutt, but:
 Like DAT, but:
 * multi-author, multi-device
 * simpler
+* communicates over HTTP, making it easier to deploy pub servers and run in regular browsers
+* instead of an append-only log, it's a set of mutable items
 
 Like IPFS, but:
 * multi-author, multi-device
 * mutable
+* documents are signed by the author
+* currently more focused on pub servers for replication and not DHT swarms, although swarm support is coming
 
 Like Firebase, but:
 * open source
@@ -199,17 +203,17 @@ These styles of app could be built on top of Earthstar:
 
 ## What doesn't it do?
 
-Earthstar doesn't handle multi-user text editing like Google Docs.  This is a different challenge.  You could probably use a CRDT like Automerge and rely on Earthstar to move and sync the patches it produces.
+Earthstar's conflict resolution chooses entire document versions as winners, it doesn't merge versions together.  This means it's a poor choice for simultaneous multi-user editing of large text documents.  For that, you could use a fancier CRDT like Automerge and rely on Earthstar to move and sync the patches it produces.  Or you can design apps to store large documents as smaller pieces, like paragraphs, or design other ways to collaborate such as comments or chat where people don't simultaneously edit the same text.
 
-It will eventually stream live changes, but it's not designed for low-latency live data.
+It will eventually stream live changes, but it doesn't yet.  For now, syncing is done on demand.
 
-The cryptography is not audited yet.
+The cryptography is not audited yet.  It's based on libsodium which is also used by Scuttlebutt and many other projects.
 
-Earthstar is not focused on anonymity -- more on autonomy.  You could use it over Tor or something.
+Earthstar is more focused on autonomy than on anonymity.  It doesn't have perfect forward secrecy.  Your messages are signed by your key so it's easy to prove which identity said something.  We try to reduce IP address exposure etc, but if you have a serious need for anonymity you should layer it on something like Tor or use other tools that are anonymity-focused.
 
 Earthstar doesn't provide transactions or causality guarantees.
 
-Moderation and blocking support is not built in, but apps can build it on top of Earthstar.
+Moderation and blocking support is not figured out yet but it's important and we'll get there eventually.  In the meantime, apps can layer their own moderation and blocking support on top of Earthstar.
 
 ## Example
 
