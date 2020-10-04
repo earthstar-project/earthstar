@@ -18,6 +18,7 @@ import {
     WorkspaceAddress,
     WriteResult,
     isErr,
+    WriteEvent,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { logDebug, logWarning } from '../util/log';
@@ -46,9 +47,11 @@ export class StorageSqlite implements IStorage {
     db : SqliteDatabase;
     workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
-    onChange : Emitter<undefined>;
+    onWrite : Emitter<WriteEvent>;
+    onChange : Emitter<undefined>;  // deprecated
     _isClosed : boolean = false;
     constructor(opts : StorageSqliteOpts) {
+        this.onWrite = new Emitter<WriteEvent>();
         this.onChange = new Emitter<undefined>();
 
         if (opts.validators.length === 0) {
@@ -350,7 +353,7 @@ export class StorageSqlite implements IStorage {
         return this.getDocument(path, now)?.content;
     }
 
-    ingestDocument(doc : Document, now? : number) : WriteResult | ValidationError {
+    ingestDocument(doc : Document, now? : number, isLocal?: boolean) : WriteResult | ValidationError {
         // Given a doc from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
@@ -419,6 +422,11 @@ export class StorageSqlite implements IStorage {
             INSERT OR REPLACE INTO docs (format, workspace, path, contentHash, content, author, timestamp, deleteAfter, signature)
             VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature);
         `).run(doc);
+        this.onWrite.send({
+            kind: 'DOCUMENT_WRITE',
+            isLocal: isLocal === undefined ? false : isLocal,
+            document: doc,
+        });
         this.onChange.send(undefined);
         return WriteResult.Accepted;
     }
@@ -461,7 +469,7 @@ export class StorageSqlite implements IStorage {
 
         let signedDoc = validator.signDocument(keypair, doc);
         if (isErr(signedDoc)) { return signedDoc; }
-        return this.ingestDocument(signedDoc, now);
+        return this.ingestDocument(signedDoc, now, true);
     }
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {

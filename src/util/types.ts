@@ -280,6 +280,15 @@ export interface IValidatorES4 extends IValidator {
 }
 
 //================================================================================
+
+export type WriteEvent = {
+    kind: 'DOCUMENT_WRITE',
+    // a write is "local" if it comes from IStorage.set()
+    // otherwise it's "remote" (it came from a sync).
+    isLocal: boolean,
+    document: Document,
+}
+
 export interface IStorage {
     // A Storage instance holds the documents of a single workspace.
     // To construct one, you need to supply
@@ -290,12 +299,13 @@ export interface IStorage {
     // The workspace held in this Storage object.
     workspace: WorkspaceAddress;
 
-    // onChange is called whenever any data changes:
+    // onWrite is called whenever any data changes:
     //   * after every set()
     //   * after every ingestDocument()
     //   * after each document obtained during a sync (because that happens via ingestDocument())
-    // It doesn't yet send any details about the changes to the callback, but it should.
-    // Subscribe with onChange.subscribe(...cb...);
+    // Subscribe with onWrite.subscribe(...cb...);
+    // onChange is deprecated.  It's called in the same situations but with no info about the event.
+    onWrite: Emitter<WriteEvent>;
     onChange: Emitter<undefined>;
 
     // QUERYING
@@ -343,7 +353,8 @@ export interface IStorage {
     // This is mostly used for syncing.
     //
     // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
-    ingestDocument(doc: Document, now?: number): WriteResult | ValidationError;
+    // isLocal is used internally to track if this came from a set() operation or not.
+    ingestDocument(doc: Document, now?: number, isLocal?: boolean): WriteResult | ValidationError;
 
     // Internal helper method to do a one-way pull sync.
     _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;

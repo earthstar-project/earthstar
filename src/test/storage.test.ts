@@ -850,7 +850,7 @@ for (let scenario of scenarios) {
 
         let numCalled = 0;
         let cb = () => { numCalled += 1; }
-        let unsub = storage.onChange.subscribe(cb);
+        let unsub = storage.onWrite.subscribe(cb);
 
         t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
         t.ok(isErr(storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now})), 'invalid set that will be ignored');

@@ -13,6 +13,7 @@ import {
     WorkspaceAddress,
     WriteResult,
     isErr,
+    WriteEvent,
 } from '../util/types';
 import { Emitter } from '../util/emitter';
 import { sha256base32 } from '../crypto/crypto';
@@ -52,7 +53,8 @@ export class StorageMemory implements IStorage {
     _docs : {[path:string] : {[author:string] : Document}} = {};
     workspace : WorkspaceAddress;
     validatorMap : {[format: string] : IValidator};
-    onChange : Emitter<undefined>;
+    onWrite : Emitter<WriteEvent>;
+    onChange : Emitter<undefined>;  // deprecated
     _isClosed : boolean = false;
     constructor(validators : IValidator[], workspace : WorkspaceAddress) {
         if (validators.length === 0) {
@@ -66,6 +68,7 @@ export class StorageMemory implements IStorage {
         if (isErr(workspaceErr)) { throw workspaceErr; }
         this.workspace = workspace;
 
+        this.onWrite = new Emitter<WriteEvent>();
         this.onChange = new Emitter<undefined>();
 
         this.validatorMap = {};
@@ -223,8 +226,7 @@ export class StorageMemory implements IStorage {
         return this.getDocument(path, now)?.content;
     }
 
-    ingestDocument(doc : Document, now? : number) : WriteResult | ValidationError {
-
+    ingestDocument(doc : Document, now? : number, isLocal? : boolean) : WriteResult | ValidationError {
         // Given a doc from elsewhere, validate, decide if we want it, and possibly store it.
         // Return true if we kept it, false if we rejected it.
 
@@ -280,6 +282,11 @@ export class StorageMemory implements IStorage {
 
         existingDocsByPath[doc.author] = doc;
         this._docs[doc.path] = existingDocsByPath;
+        this.onWrite.send({
+            kind: 'DOCUMENT_WRITE',
+            isLocal: isLocal === undefined ? false : isLocal,
+            document: doc,
+        });
         this.onChange.send(undefined);
         return WriteResult.Accepted;
     }
@@ -323,7 +330,7 @@ export class StorageMemory implements IStorage {
 
         let signedDoc = validator.signDocument(keypair, doc);
         if (isErr(signedDoc)) { return signedDoc; }
-        return this.ingestDocument(signedDoc, now);
+        return this.ingestDocument(signedDoc, now, true);
     }
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {

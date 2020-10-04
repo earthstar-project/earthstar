@@ -88,7 +88,7 @@ storage.sync(storage2);
 // Now storage and storage2 are identical.
 
 // Get notified when anything changes.
-let unsub = storage.onChange.subscribe(() => console.log('something changed'));
+let unsub = storage.onWrite.subscribe((e) => console.log('something changed'));
 
 // Later, you can turn off your subscription.
 unsub();
