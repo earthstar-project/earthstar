@@ -280,14 +280,24 @@ export class StorageMemory implements IStorage {
             return WriteResult.Ignored;
         }
 
+        // save into our data structure
         existingDocsByPath[doc.author] = doc;
         this._docs[doc.path] = existingDocsByPath;
+
+        // is this newly written document the latest one we have for this path?
+        let pathHistoryDocs = Object.values(existingDocsByPath);
+        pathHistoryDocs.sort(_historySortFn);
+        let isLatest = doc === pathHistoryDocs[0];  // newest docs are first
+
+        // send events
         this.onWrite.send({
             kind: 'DOCUMENT_WRITE',
             isLocal: isLocal === undefined ? false : isLocal,
+            isLatest: isLatest,
             document: doc,
         });
         this.onChange.send(undefined);
+
         return WriteResult.Accepted;
     }
 

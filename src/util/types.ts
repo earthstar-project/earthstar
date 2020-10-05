@@ -283,9 +283,13 @@ export interface IValidatorES4 extends IValidator {
 
 export type WriteEvent = {
     kind: 'DOCUMENT_WRITE',
-    // a write is "local" if it comes from IStorage.set()
+    // A write is "local" if it comes from IStorage.set(),
     // otherwise it's "remote" (it came from a sync).
     isLocal: boolean,
+    // A write is "latest" if it's the one that will come back from a getDocument(path) call.
+    // e.g. it's the history document for that path with the highest timestamp.
+    // If it's not "latest", it's a history document.
+    isLatest: boolean,
     document: Document,
 }
 

@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import sqlite = require('better-sqlite3');
+import { deepEqual } from 'fast-equals';
 import {
     Database as SqliteDatabase
 } from 'better-sqlite3';
@@ -413,7 +414,6 @@ export class StorageSqlite implements IStorage {
             <= [existingSameAuthorSamePath.timestamp, existingSameAuthorSamePath.signature]
             ) {
             // incoming doc is older or identical.  ignore it.
-            logWarning(`ingestDocument: doc older or identical`);
             return WriteResult.Ignored;
         }
 
@@ -422,12 +422,22 @@ export class StorageSqlite implements IStorage {
             INSERT OR REPLACE INTO docs (format, workspace, path, contentHash, content, author, timestamp, deleteAfter, signature)
             VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature);
         `).run(doc);
+
+        // Check if this is the new latest doc.
+        // TODO: optimize this, especially if we got here from set() which already did a getDocument call.
+        // TODO: we can skip this if the onWrite Emitter has no subscribers.
+        let latestDoc = this.getDocument(doc.path, now);
+        let isLatest = deepEqual(doc, latestDoc);
+
+        // Send events.
         this.onWrite.send({
             kind: 'DOCUMENT_WRITE',
             isLocal: isLocal === undefined ? false : isLocal,
+            isLatest: isLatest,
             document: doc,
         });
         this.onChange.send(undefined);
+
         return WriteResult.Accepted;
     }
 

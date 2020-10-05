@@ -12,6 +12,7 @@ import {
     WriteResult,
     isErr,
     notErr,
+    WriteEvent,
 } from '../util/types';
 import {
     generateAuthorKeypair,
@@ -862,6 +863,72 @@ for (let scenario of scenarios) {
         t.same(storage.set(keypair1, {format: FORMAT, path: '/path2', content: 'val2.0', timestamp: now + 1}), WriteResult.Accepted, 'set another path');
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
+
+        t.end();
+    });
+
+    t.test(scenario.description + ': onWrite', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+        let storage2 = scenario.makeStorage(WORKSPACE);
+        let storage3 = scenario.makeStorage(WORKSPACE);
+        let storage4 = scenario.makeStorage(WORKSPACE);
+
+        //let numCalled = 0;
+        //let cb = () => { numCalled += 1; }
+        //let unsub = storage.onWrite.subscribe(cb);
+
+        let events: WriteEvent[] = [];
+        let unsub = storage.onWrite.subscribe((e) => { events.push(e) });
+
+        // set new path
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+1', timestamp: now + 1}), WriteResult.Accepted, '=== set new path from keypair1');
+        t.same(events[events.length-1].document.content, 'val1+1');
+        t.same(events[events.length-1].isLocal, true, 'event is local');
+        t.same(events[events.length-1].isLatest, true, 'event is latest');
+
+        // overwrite from same author
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+2', timestamp: now + 2}), WriteResult.Accepted, '=== update same path from keypair1');
+        t.same(events[events.length-1].document.content, 'val1+2');
+        t.same(events[events.length-1].isLocal, true, 'event is local');
+        t.same(events[events.length-1].isLatest, true, 'event is latest');
+
+        // overwrite from a new author
+        t.same(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+3', timestamp: now + 3}), WriteResult.Accepted, '=== update same path from keypair2');
+        t.same(events[events.length-1].document.content, 'val2+3');
+        t.same(events[events.length-1].isLocal, true, 'event is local');
+        t.same(events[events.length-1].isLatest, true, 'event is latest');
+
+        // old write from same author, synced and ignored
+        t.same(storage2.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1-9', timestamp: now - 9}), WriteResult.Accepted, '=== old write from keypair1, synced');
+        storage._syncFrom(storage2, true, false);
+        t.same(events.length, 3, 'no event happens because nothing happened in the sync');
+        t.same(storage.getContent('/path1'), 'val2+3', 'content is unchanged');
+
+        // new write from same author, synced and used
+        t.same(storage3.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+9', timestamp: now + 9}), WriteResult.Accepted, '=== new write from same author, synced');
+        storage._syncFrom(storage3, true, false);
+        t.same(events.length, 4, 'sync caused an event');
+        t.same(storage.getContent('/path1'), 'val1+9', 'content changed after a sync');
+        t.same(events[events.length-1].document.content, 'val1+9', 'event has corrent content');
+        t.same(events[events.length-1].isLocal, false, 'event is not local (it came from a sync)');
+        t.same(events[events.length-1].isLatest, true, 'event is latest');
+
+        // a write from keypair2 which is synced but not a head
+        // (it's a new latest doc for keypair2, but not a new latest doc overall for this path)
+        t.same(storage4.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+5', timestamp: now + 5}), WriteResult.Accepted, '=== a write into history, synced');
+        let numSynced = storage._syncFrom(storage4, true, false);
+        t.same(numSynced, 1, 'it was synced');
+        t.same(storage.getContent('/path1'), 'val1+9', '(latest) content did not change');
+        t.same(events.length, 5, 'an event happens');
+        t.same(events[events.length-1].document.content, 'val2+5', 'event has correct content');
+        t.same(events[events.length-1].isLocal, false, 'event is not local (it came from a sync)');
+        t.same(events[events.length-1].isLatest, false, 'event is not latest');
+
+        // unsubscribe
+        let prevLen = events.length;
+        unsub();
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/z', content: 'foo'}), WriteResult.Accepted, 'do a write after unsubscribing');
+        t.same(events.length, prevLen, 'no event happens after unsubscribing');
 
         t.end();
     });
