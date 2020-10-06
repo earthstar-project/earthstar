@@ -933,4 +933,29 @@ for (let scenario of scenarios) {
         t.end();
     });
 
+    t.test(scenario.description + ': doc immutability', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+        let storage2 = scenario.makeStorage(WORKSPACE);
+
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
+        let doc = storage.getDocument('/path1');
+        if (doc === undefined) {
+            t.true(false, '???');
+            t.end();
+            return;
+        }
+        t.true(Object.isFrozen(doc), 'getDocument: returned doc is frozen');
+        let docs = storage.documents();
+        for (let doc of docs) {
+            t.true(Object.isFrozen(doc), 'documents: returned doc is frozen');
+        }
+
+        let inputDoc = {...doc};
+        t.false(Object.isFrozen(inputDoc), 'input doc is not frozen');
+        storage2.ingestDocument(inputDoc, now);
+        t.true(Object.isFrozen(inputDoc), 'input doc is now frozen after being ingested');
+
+        t.end();
+    });
+
 }

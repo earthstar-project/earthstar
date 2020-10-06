@@ -289,6 +289,9 @@ export class StorageSqlite implements IStorage {
         logDebug('limit params', limitParams);
         let docs : Document[] = this.db.prepare(queryString).all({...filterParams, ...havingParams, ...limitParams});
         logDebug('result:', docs);
+        for (let doc of docs) {
+            Object.freeze(doc);
+        }
         return docs;
     }
     paths(query? : QueryOpts) : string[] {
@@ -345,6 +348,7 @@ export class StorageSqlite implements IStorage {
             LIMIT 1;
         `).get({ path: path });
         logDebug('getDocument result:', result);
+        if (result !== undefined) { Object.freeze(result); }
         return result;
     }
     getContent(path : string, now? : number) : string | undefined {
@@ -372,6 +376,11 @@ export class StorageSqlite implements IStorage {
         this._assertNotClosed();
 
         now = now || Date.now() * 1000;
+
+        // We don't really need to freeze the input doc --
+        // since we're about to put it into a database --
+        // but let's do it anyway to match the behavior of StorageMemory
+        Object.freeze(doc);
 
         let validator = this.validatorMap[doc.format];
         if (validator === undefined) {

@@ -300,6 +300,14 @@ export interface IStorage {
     //   * a list of Validator classes, for the document formats you want to support
     //   * various other options such as database filenames, specific to that kind of Storage
 
+    // Immutability:
+    //   Document objects should be treated as immutable and never mutated.
+    //   This applies to
+    //   * objects you pass into IStorage (to ingestDocument)
+    //   * objects you get from IStorage (from getDocument, etc).
+    //   The IStorage instance may call Object.freeze() on document objects in both
+    //   of the above cases, to enforce this.
+
     // The workspace held in this Storage object.
     workspace: WorkspaceAddress;
 

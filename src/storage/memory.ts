@@ -244,6 +244,8 @@ export class StorageMemory implements IStorage {
 
         now = now || Date.now() * 1000;
 
+        Object.freeze(doc);
+
         let validator = this.validatorMap[doc.format];
         if (validator === undefined) {
             return new ValidationError(`ingestDocument: unrecognized format ${doc.format}`);
