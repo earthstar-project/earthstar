@@ -345,19 +345,25 @@ export interface IStorage {
     // Write a document.
     // To do this you need to know an author's private key, which is part of the keypair object.
     // The DocToSet type is similar but smaller than a regular document:
+    // {
     //   format: which document format to use
     //   path
     //   content
-    //   timestamp: optional.  If absent or zero, the current time is set for you
+    //   timestamp: optional.  If absent or zero, it will be set to the current time
     //   - no workspace -- this Storage object knows what workspace it is
     //   - no author -- it's provided in the keypair argument
     //   - no signature -- it will be signed for you
+    // }
     // Timestamps should only be set manually for testing purposes.  Normally they should be
-    // omitted so they default to now.
-    // The timestamp will also be increased so that it's greater than any previous doc
-    // at the same path (from any author), to guarantee that this write will be the conflict winner.
+    // omitted so they default to the current time.
+    // If the timestamp is omitted or zero, it will be actually set to
+    //  max(current time, highest existing timestamp in this path)
+    // so that this set() operation will be the winning, latest document in the path.
+    // If the timestamp is supplied, it will not be bumped ahead in this way.
     //
-    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
+    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000.
+    // If affects the default timestamp chosen for the document, and is used when deciding if
+    // ephemeral documents are expired or not.
     set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): WriteResult | ValidationError;
 
     // Save a document from an external source to this Storage instance.

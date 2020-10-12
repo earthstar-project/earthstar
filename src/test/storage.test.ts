@@ -13,6 +13,7 @@ import {
     isErr,
     notErr,
     WriteEvent,
+    ValidationError,
 } from '../util/types';
 import {
     generateAuthorKeypair,
@@ -35,12 +36,15 @@ let FORMAT : FormatName = VALIDATORS[0].format;
 let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;
 let keypair2 = generateAuthorKeypair('twoo') as AuthorKeypair;
 let keypair3 = generateAuthorKeypair('thre') as AuthorKeypair;
+let keypair4 = generateAuthorKeypair('four') as AuthorKeypair;
 if (isErr(keypair1)) { throw "oops"; }
 if (isErr(keypair2)) { throw "oops"; }
 if (isErr(keypair3)) { throw "oops"; }
+if (isErr(keypair4)) { throw "oops"; }
 let author1 = keypair1.address;
 let author2 = keypair2.address;
 let author3 = keypair3.address;
+let author4 = keypair4.address;
 let now = 1500000000000000;
 
 let SEC = 1000000;
@@ -479,18 +483,19 @@ for (let scenario of scenarios) {
         t.equal(storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
 
         // set a decoy path to make sure the later tests return the correct path
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now}), WriteResult.Accepted, 'set decoy path');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now }, now), WriteResult.Accepted, 'set decoy path');
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now }, now), WriteResult.Accepted, 'set new path');
         t.equal(storage.getContent('/path1'), 'val1.0');
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.2', timestamp: now + 2}), WriteResult.Accepted, 'overwrite path with newer time');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.2', timestamp: now + 2 }, now), WriteResult.Accepted, 'overwrite path with newer time');
         t.equal(storage.getContent('/path1'), 'val1.2');
 
         // write with an old timestamp - this timestamp should be overridden to the existing timestamp + 1.
         // note that on ingest() the newer timestamp wins, but on set() we adjust the newly created timestamp
         // so it's always greater than the existing ones.
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1', timestamp: now-99}), WriteResult.Accepted, 'automatically supercede previous timestamp');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1', timestamp: now - 99 }, now), WriteResult.Ignored, 'do not supercede timestamp when providing one manually');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1' }, now), WriteResult.Accepted, 'automatically supercede previous timestamp');
         t.equal(storage.getContent('/path1'), 'val1.1', 'superceded newer existing content');
         t.equal(storage.getDocument('/path1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
 
@@ -958,4 +963,36 @@ for (let scenario of scenarios) {
         t.end();
     });
 
+    t.test(scenario.description + ': set(): manual vs default (bumped) timestamps & bounds-checking timestamps', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+
+        // default timestamps
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now'                       }, now), WriteResult.Accepted, 'absent timestamp: now');
+        t.same(storage.getDocument('/path1')?.timestamp, now, '= now');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now'                       }, now), WriteResult.Accepted, 'absent timestamp: bumped');
+        t.same(storage.getDocument('/path1')?.timestamp, now + 1, '= now + 1');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now', timestamp: 0         }, now), WriteResult.Accepted, 'zero timestamp: bumped');
+        t.same(storage.getDocument('/path1')?.timestamp, now + 2, '= now + 2');
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now', timestamp: undefined }, now), WriteResult.Accepted, 'undefined timestamp: bumped');
+        t.same(storage.getDocument('/path1')?.timestamp, now + 3, '= now + 3');
+
+        // manual timestamps
+        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10}, now), WriteResult.Ignored, 'manual timestamp in past from same author is ignored');
+
+        t.same(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10}, now), WriteResult.Accepted, 'manual timestamp in past');
+        t.same(storage.documents({ includeHistory: true, versionsByAuthor: keypair2.address })[0].timestamp, now - 10, '= now - 10');
+
+        t.same(storage.set(keypair3, {format: FORMAT, path: '/path1', content: 'manual now+10', timestamp: now + 10}, now), WriteResult.Accepted, 'manual timestamp in future');
+        t.same(storage.documents({ includeHistory: true, versionsByAuthor: keypair3.address })[0].timestamp, now + 10, '= now + 10');
+
+        // invalid timestamps
+        t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: Date.now() }, now)
+            instanceof ValidationError, 'millisecond timestamp: rejected');
+        t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', deleteAfter: Date.now() }, now)
+            instanceof ValidationError, 'millisecond deleteAfter: rejected');
+        t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: now, deleteAfter: now - 5 }, now)
+            instanceof ValidationError, 'deleteAfter and timestamp out of order: rejected');
+
+        t.end();
+    });
 }
