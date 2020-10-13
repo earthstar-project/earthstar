@@ -32,6 +32,20 @@ export class NotFoundError extends EarthstarError {
         this.name = 'NotFoundError';
     }
 }
+export class NetworkError extends EarthstarError {
+    // when a pub URL is bad or the network is down
+    constructor(message?: string) {
+        super(message || 'network error');
+        this.name = 'NetworkError';
+    }
+}
+export class ConnectionRefusedError extends EarthstarError {
+    // when a pub won't accept writes
+    constructor(message?: string) {
+        super(message || 'connection refused');
+        this.name = 'ConnectionRefused';
+    }
+}
 
 export let isErr = <T>(x: T | Error): x is EarthstarError =>
     x instanceof EarthstarError;

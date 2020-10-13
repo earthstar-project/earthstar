@@ -6,6 +6,7 @@ export * from './layers/wiki';
 export * from './storage/memory';
 export * from './storage/sqlite';
 export * from './sync';
+export * from './sync2';
 export * from './util/characters';
 export * from './util/detRandom';
 export * from './util/emitter';
