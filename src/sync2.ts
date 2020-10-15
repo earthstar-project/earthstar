@@ -239,7 +239,7 @@ export class OnePubOneWorkspaceSyncer {
         }
         return { ...stats, ...await resp.json() };
     }
-    async pushOnce(): Promise<PushOrPullStats> {
+    async pushOnce(_continueLive: boolean = false): Promise<PushOrPullStats> {
         // Do a single bulk push of all the local documents.
 
         let stats = { ...initialStats };
@@ -276,7 +276,7 @@ export class OnePubOneWorkspaceSyncer {
             logBulkPush(stats);
         }
 
-        if (wasPullStreaming) {
+        if (wasPullStreaming || _continueLive) {
             // TODO: if user calls stopPullStream() while the stream is already stopped
             // because a bulk push is happening, the call to stopPullStream() will have
             // no effect and the stream will resume here anyway.
@@ -288,7 +288,7 @@ export class OnePubOneWorkspaceSyncer {
 
         return stats;
     }
-    async pullOnce(): Promise<PushOrPullStats> {
+    async pullOnce(_continueLive: boolean = false): Promise<PushOrPullStats> {
         // Do a single bulk pull all the pub's documents.
         // Note that pubs only create workspaces when pushed to, not pulled.
         // If the pub doesn't have the workspace, stats.error will be NotFoundError.
@@ -344,15 +344,19 @@ export class OnePubOneWorkspaceSyncer {
         this.state.lastCompletedBulkPull = Date.now() * 1000;
         this._bump();
 
-        if (wasPushStreaming) {
+        if (wasPushStreaming || _continueLive) {
             logSync('resuming push stream stream');
             this.startPushStream();
         }
 
         return stats;
     }
-    async syncOnce() {
+    async syncOnceAndContinueLive() {
+        return await this.syncOnce(true);
+    }
+    async syncOnce(_continueLive: boolean = false) {
         // Do a bulk push and a bulk pull.
+        // if _continueLive, ensure that live streaming is on when the bulk sync is done.
 
         if (this.state.closed) { return; }
         logSync('starting sync: ' + this.domain);
@@ -365,8 +369,8 @@ export class OnePubOneWorkspaceSyncer {
         this._bump();
 
         // TODO: we could actually do this in parallel
-        let pushStats = await this.pushOnce();
-        let pullStats = await this.pullOnce();
+        let pushStats = await this.pushOnce(_continueLive);
+        let pullStats = await this.pullOnce(_continueLive);
 
         logSync('done syncing: ' + this.domain);
         this.state.isBulkSyncing = false;
