@@ -423,7 +423,7 @@ export class StorageSqlite implements IStorage {
 
         // Only accept docs from the same workspace.
         if (doc.workspace !== this.workspace) {
-            return new ValidationError(`ingestDocument: doc from different workspace`);
+            return new ValidationError(`ingestDocument: can't ingest doc from different workspace`);
         }
 
         // check if it's newer than existing doc from same author, same path
@@ -463,7 +463,7 @@ export class StorageSqlite implements IStorage {
             VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature);
         `).run(doc);
 
-        // Check if this is the new latest doc.
+        // Check if this is the new latest doc for this path.
         // TODO: optimize this, especially if we got here from set() which already did a getDocument call.
         // TODO: we can skip this if the onWrite Emitter has no subscribers.
         let latestDoc = this.getDocument(doc.path, now);
@@ -483,8 +483,9 @@ export class StorageSqlite implements IStorage {
 
     set(keypair : AuthorKeypair, docToSet : DocToSet, now?: number) : WriteResult | ValidationError {
         // Store a document.
-        // Timestamp is optional and should normally be omitted or set to 0,
-        // in which case it will be set to now().
+        // docToSet.timestamp is optional and should normally be omitted or set to 0,
+        // in which case it will be set to now.
+        // now should also normally be omitted; it defaults to Date.now()*1000
         // (New writes should always have a timestamp of now() except during
         // unit testing or if you're importing old data.)
         logDebug(`---- set(${JSON.stringify(docToSet.path)}, ${JSON.stringify(docToSet.content)}, ...)`);
@@ -515,7 +516,7 @@ export class StorageSqlite implements IStorage {
             contentHash: sha256base32(docToSet.content),
             content: docToSet.content,
             author: keypair.address,
-            timestamp: docToSet.timestamp || now,
+            timestamp: docToSet.timestamp,
             deleteAfter: docToSet.deleteAfter || null,
             signature: '',
         }

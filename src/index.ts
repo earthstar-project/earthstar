@@ -14,3 +14,9 @@ export * from './util/helpers';
 export * from './util/types';
 export * from './validator/es4';
 export * from './workspace';
+
+export * from './storage2/driverMemory';
+export * from './storage2/driverSqlite';
+export * from './storage2/query2';
+export * from './storage2/storage2';
+export * from './storage2/types2';

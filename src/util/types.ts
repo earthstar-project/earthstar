@@ -61,6 +61,12 @@ export class ConnectionRefusedError extends EarthstarError {
         this.name = 'ConnectionRefused';
     }
 }
+export class NotImplementedError extends EarthstarError {
+    constructor(message?: string) {
+        super(message || 'not implemented yet');
+        this.name = 'NotImplementedError';
+    }
+}
 
 /** Check if any value is a subclass of EarthstarError (return true) or not (return false) */
 export let isErr = <T>(x: T | Error): x is EarthstarError =>
@@ -520,4 +526,31 @@ export interface IStorage {
      * This can be called even if the storage is already closed.
      */
     deleteAndClose(): void;
+}
+
+export interface IStorageAsync {
+    workspace: WorkspaceAddress;
+    onWrite: Emitter<WriteEvent>;
+    onChange: Emitter<undefined>;
+
+    // QUERYING
+    documents(query?: QueryOpts): Promise<Document[]>;
+    paths(query?: QueryOpts): Promise<string[]>;
+    contents(query?: QueryOpts): Promise<string[]>;
+    authors(now?: number): Promise<AuthorAddress[]>;
+
+    // INDIVIDUAL DOCUMENT LOOKUP
+    getDocument(path: string, now?: number): Promise<Document | undefined>;
+    getContent(path: string, now?: number): Promise<string | undefined>;
+
+    // WRITING
+    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): Promise<WriteResult | ValidationError>;
+    ingestDocument(doc: Document, now?: number, isLocal?: boolean): Promise<WriteResult | ValidationError>;
+
+    // SYNC
+    //_syncFrom(otherStore: IStorageAsync, existing: boolean, live: boolean): Promise<number>;
+    //sync(otherStore: IStorageAsync, opts?: SyncOpts): Promise<SyncResults>;
+
+    close() : Promise<void>;
+    isClosed() : boolean;
 }

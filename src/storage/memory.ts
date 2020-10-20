@@ -277,23 +277,23 @@ export class StorageMemory implements IStorage {
         }
 
         let existingDocsByPath = this._docs[doc.path] || {};
-        let existingFromSameAuthor : Document | undefined = existingDocsByPath[doc.author];
+        let existingSameAuthorSamePath : Document | undefined = existingDocsByPath[doc.author];
 
         // if the existing doc from same author is expired, it should be deleted.
         // but we can just pretend we didn't see it and let it get overwritten by the incoming doc.
-        if (existingFromSameAuthor !== undefined) {
-            if (existingFromSameAuthor.deleteAfter !== null) {
-                if (now > existingFromSameAuthor.deleteAfter) {
-                    existingFromSameAuthor = undefined;
+        if (existingSameAuthorSamePath !== undefined) {
+            if (existingSameAuthorSamePath.deleteAfter !== null) {
+                if (now > existingSameAuthorSamePath.deleteAfter) {
+                    existingSameAuthorSamePath = undefined;
                 }
             }
         }
 
         // Compare timestamps.
         // Compare signature to break timestamp ties.
-        if (existingFromSameAuthor !== undefined
+        if (existingSameAuthorSamePath !== undefined
             && [doc.timestamp, doc.signature]
-            <= [existingFromSameAuthor.timestamp, existingFromSameAuthor.signature]
+            <= [existingSameAuthorSamePath.timestamp, existingSameAuthorSamePath.signature]
             ) {
             // incoming doc is older or identical.  ignore it.
             return WriteResult.Ignored;
@@ -303,12 +303,12 @@ export class StorageMemory implements IStorage {
         existingDocsByPath[doc.author] = doc;
         this._docs[doc.path] = existingDocsByPath;
 
-        // is this newly written document the latest one we have for this path?
+        // Check if this is the new latest doc for this path.
         let pathHistoryDocs = Object.values(existingDocsByPath);
         pathHistoryDocs.sort(_historySortFn);
         let isLatest = doc === pathHistoryDocs[0];  // newest docs are first
 
-        // send events
+        // Send events.
         this.onWrite.send({
             kind: 'DOCUMENT_WRITE',
             isLocal: isLocal === undefined ? false : isLocal,
@@ -386,7 +386,7 @@ export class StorageMemory implements IStorage {
 
     _syncFrom(otherStore : IStorage, existing : boolean, live : boolean) : number {
         // Pull all docs from the other Store and ingest them one by one.
-
+        // TODO: set now, or add an instance variable for overriding now
         let numSuccess = 0;
         if (live) {
             // TODO

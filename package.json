@@ -31,8 +31,19 @@
     "test-layer-about": "tap -Rspecy --jobs=1 build/test/layers.about.test.js",
     "test-layer-wiki": "tap -Rspecy --jobs=1 build/test/layers.wiki.test.js",
     "test-storage": "tap -Rspecy --jobs=1 build/test/storage.test.js",
+    "test-storage-async": "tap -Rspecy --jobs=1 build/test/storageAsync.test.js",
     "test-sync": "tap -Rspecy --jobs=1 build/test/sync.test.js",
     "test-validator": "tap -Rspecy --jobs=1 build/test/validator.es4.test.js",
+
+    "test-2": "tap -Rspecy --jobs=1 build/test/*2*.test.js",
+    "test-query2": "tap -Rspecy --jobs=1 build/test/query2.test.js",
+    "test-storage2": "tap -Rspecy --jobs=1 build/test/storage2.test.js",
+    "test-storage2-driver": "tap -Rspecy --jobs=1 build/test/storage2driver.test.js",
+
+    "test-3": "tap -Rspecy --jobs=1 build/test/*3*.test.js",
+    "test-query3": "tap -Rspecy --jobs=1 build/test/query3.test.js",
+    "test-storage3": "tap -Rspecy --jobs=1 build/test/storage3.test.js",
+
     "test-coverage": "npm test -- --coverage-report=lcov",
     "typedoc": "typedoc --out typedoc/ --theme minimal --name Earthstar --includeVersion --readme none src",
     "bench": "node --expose-gc build/test/benchmark.js | tee benchmark.txt",
