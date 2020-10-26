@@ -1,4 +1,4 @@
-2020-10-26T23:43:25.122Z
+2020-10-26T23:54:15.421Z
 StoreMemory
     add 100 docs (each)
     sync 100 docs to empty storage (each)
@@ -90,92 +90,92 @@ StoreSqlite(':memory:')
 
 
 StoreMemory
-        1852 ops / sec: add 100 docs (each)
-        4167 ops / sec: sync 100 docs to empty storage (each)
-        2500 ops / sec: sync 100 docs to full storage (each)
+        1887 ops / sec: add 100 docs (each)
+        4348 ops / sec: sync 100 docs to empty storage (each)
+        2632 ops / sec: sync 100 docs to full storage (each)
              
-        2658 ops / sec: add 101 docs (each)
+        2295 ops / sec: add 101 docs (each)
         5611 ops / sec: sync 101 docs to empty storage (each)
-        2971 ops / sec: sync 101 docs to full storage (each)
+        3061 ops / sec: sync 101 docs to full storage (each)
              
-        3000 ops / sec: add 102 docs (each)
-        5100 ops / sec: sync 102 docs to empty storage (each)
-        2833 ops / sec: sync 102 docs to full storage (each)
+        2757 ops / sec: add 102 docs (each)
+        4636 ops / sec: sync 102 docs to empty storage (each)
+        3000 ops / sec: sync 102 docs to full storage (each)
              
-        2861 ops / sec: add 103 docs (each)
-        5150 ops / sec: sync 103 docs to empty storage (each)
+        3029 ops / sec: add 103 docs (each)
+        4682 ops / sec: sync 103 docs to empty storage (each)
         3121 ops / sec: sync 103 docs to full storage (each)
              
-        3390 ops / sec: add 1000 docs (each)
-        6579 ops / sec: sync 1000 docs to empty storage (each)
-        3891 ops / sec: sync 1000 docs to full storage (each)
+        3289 ops / sec: add 1000 docs (each)
+        6536 ops / sec: sync 1000 docs to empty storage (each)
+        3745 ops / sec: sync 1000 docs to full storage (each)
              
-        3653 ops / sec: add 1001 docs (each)
-        7150 ops / sec: sync 1001 docs to empty storage (each)
-        3735 ops / sec: sync 1001 docs to full storage (each)
+        3763 ops / sec: add 1001 docs (each)
+        7201 ops / sec: sync 1001 docs to empty storage (each)
+        3749 ops / sec: sync 1001 docs to full storage (each)
              
-        3896 ops / sec: add 10000 docs (each)
-        6840 ops / sec: sync 10000 docs to empty storage (each)
-        3515 ops / sec: sync 10000 docs to full storage (each)
+        3906 ops / sec: add 10000 docs (each)
+        7092 ops / sec: sync 10000 docs to empty storage (each)
+        3839 ops / sec: sync 10000 docs to full storage (each)
              
-     2215819 ops / sec: getDocument from 1000 paths x 2 authors
+     2135926 ops / sec: getDocument from 1000 paths x 2 authors
              
-     1906883 ops / sec: docs(path) with 1000 paths x 2 authors
-     9989808 ops / sec: paths(path) with 1000 paths x 2 authors
-     1993861 ops / sec: contents(path) with 1000 paths x 2 authors
+     1993538 ops / sec: docs(path) with 1000 paths x 2 authors
+    10106648 ops / sec: paths(path) with 1000 paths x 2 authors
+     1965840 ops / sec: contents(path) with 1000 paths x 2 authors
              
-        1087 ops / sec: docs(all) with 1000 paths x 2 authors
-         892 ops / sec: paths(all) with 1000 paths x 2 authors
-         902 ops / sec: contents(all) with 1000 paths x 2 authors
+        1092 ops / sec: docs(all) with 1000 paths x 2 authors
+         885 ops / sec: paths(all) with 1000 paths x 2 authors
+         917 ops / sec: contents(all) with 1000 paths x 2 authors
              
-        5383 ops / sec: docs: pathPrefix get 10% of 1000 paths x 2 authors
-        7265 ops / sec: docs: pathPrefix get 1% of 1000 paths x 2 authors
+        5188 ops / sec: docs: pathPrefix get 10% of 1000 paths x 2 authors
+        6782 ops / sec: docs: pathPrefix get 1% of 1000 paths x 2 authors
              
-        1031 ops / sec: docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
-        1107 ops / sec: docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
+        1029 ops / sec: docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
+        1127 ops / sec: docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
 
 StoreSqlite(':memory:')
-        1961 ops / sec: add 100 docs (each)
-        3030 ops / sec: sync 100 docs to empty storage (each)
-        2778 ops / sec: sync 100 docs to full storage (each)
+        2041 ops / sec: add 100 docs (each)
+        2941 ops / sec: sync 100 docs to empty storage (each)
+        2703 ops / sec: sync 100 docs to full storage (each)
              
-        2020 ops / sec: add 101 docs (each)
-        3061 ops / sec: sync 101 docs to empty storage (each)
-        2658 ops / sec: sync 101 docs to full storage (each)
+        1906 ops / sec: add 101 docs (each)
+        2971 ops / sec: sync 101 docs to empty storage (each)
+        2730 ops / sec: sync 101 docs to full storage (each)
              
-        2000 ops / sec: add 102 docs (each)
-        2914 ops / sec: sync 102 docs to empty storage (each)
-        2488 ops / sec: sync 102 docs to full storage (each)
+        1889 ops / sec: add 102 docs (each)
+        2833 ops / sec: sync 102 docs to empty storage (each)
+        2550 ops / sec: sync 102 docs to full storage (each)
              
-        1839 ops / sec: add 103 docs (each)
-        3121 ops / sec: sync 103 docs to empty storage (each)
-        2289 ops / sec: sync 103 docs to full storage (each)
+        1776 ops / sec: add 103 docs (each)
+        2575 ops / sec: sync 103 docs to empty storage (each)
+        2452 ops / sec: sync 103 docs to full storage (each)
              
-        1779 ops / sec: add 1000 docs (each)
-        2915 ops / sec: sync 1000 docs to empty storage (each)
-        2611 ops / sec: sync 1000 docs to full storage (each)
+        1730 ops / sec: add 1000 docs (each)
+        2755 ops / sec: sync 1000 docs to empty storage (each)
+        2646 ops / sec: sync 1000 docs to full storage (each)
              
-        1533 ops / sec: add 1001 docs (each)
-        2885 ops / sec: sync 1001 docs to empty storage (each)
-        2876 ops / sec: sync 1001 docs to full storage (each)
+        1547 ops / sec: add 1001 docs (each)
+        2713 ops / sec: sync 1001 docs to empty storage (each)
+        2860 ops / sec: sync 1001 docs to full storage (each)
              
-         868 ops / sec: add 10000 docs (each)
-        1590 ops / sec: sync 10000 docs to empty storage (each)
-        2723 ops / sec: sync 10000 docs to full storage (each)
+         880 ops / sec: add 10000 docs (each)
+        1519 ops / sec: sync 10000 docs to empty storage (each)
+        2696 ops / sec: sync 10000 docs to full storage (each)
              
-        8223 ops / sec: getDocument from 1000 paths x 2 authors
+        7303 ops / sec: getDocument from 1000 paths x 2 authors
              
-        7240 ops / sec: docs(path) with 1000 paths x 2 authors
-        7212 ops / sec: paths(path) with 1000 paths x 2 authors
-        7292 ops / sec: contents(path) with 1000 paths x 2 authors
+        6640 ops / sec: docs(path) with 1000 paths x 2 authors
+        6810 ops / sec: paths(path) with 1000 paths x 2 authors
+        7074 ops / sec: contents(path) with 1000 paths x 2 authors
              
-         179 ops / sec: docs(all) with 1000 paths x 2 authors
-         175 ops / sec: paths(all) with 1000 paths x 2 authors
+         189 ops / sec: docs(all) with 1000 paths x 2 authors
+         179 ops / sec: paths(all) with 1000 paths x 2 authors
          179 ops / sec: contents(all) with 1000 paths x 2 authors
              
-        1387 ops / sec: docs: pathPrefix get 10% of 1000 paths x 2 authors
-        3523 ops / sec: docs: pathPrefix get 1% of 1000 paths x 2 authors
+        1374 ops / sec: docs: pathPrefix get 10% of 1000 paths x 2 authors
+        3534 ops / sec: docs: pathPrefix get 1% of 1000 paths x 2 authors
              
-         191 ops / sec: docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
-        1163 ops / sec: docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
+         176 ops / sec: docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
+        1104 ops / sec: docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
 

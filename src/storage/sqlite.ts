@@ -154,6 +154,11 @@ export class StorageSqlite implements IStorage {
                 PRIMARY KEY(path, author)
             );
         `).run();
+        // TODO: which if thes indexes do we really need?
+        this.db.prepare(`CREATE INDEX IF NOT EXISTS idx1 ON docs(path, author);`).run();
+        this.db.prepare(`CREATE INDEX IF NOT EXISTS idx2 ON docs(path, timestamp);`).run();
+        this.db.prepare(`CREATE INDEX IF NOT EXISTS idx3 ON docs(timestamp);`).run();
+        this.db.prepare(`CREATE INDEX IF NOT EXISTS idx4 ON docs(author);`).run();
         // the config table is used to store these variables:
         //     workspace - the workspace this store was created for
         this.db.prepare(`
