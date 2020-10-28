@@ -80,6 +80,11 @@ A pulls from B:
 Goals:
 * Protocol can be interrupted and resumed later
 * Nothing breaks if the documents change in the middle of syncing (e.g. because the user edits something).
+* This protocol can be running in parallel, syncing with several peers at the same time
+
+Challenges:
+* We can't pre-compute a giant Merkle Tree because each peer might request a different subset of the data using a sync query
+* This is more than just set replication, because documents are mutable, so we need to include the document timestamps in there somewhere so we can know which one is newer.
 
 Overview
 * Client asks for documents in batches of 1000
@@ -122,10 +127,18 @@ Repeat until server returns an emtpy array.
 
 TODO.  It's almost the same as above but with the roles reversed.
 
-## Optimizations
+## Notes and optimization ideas
+
+* The default sort order is alphabetical by path.  This could be configurable.  The receiving peer should declare its desired sort order in its incoming sync query.  Other choices could be oldest-first and newest-first (by document.timestamp).
 
 * The client could predict the server's list of {path,author,timestamp}.  The server can send just the `sha256` hash of this list, and the client will know if it matches its own prediction.  For this to work:
     * We need to define how to encode the list before hashing it.  JSON is not deterministic enough.
     * The client will have to ask the server for its outgoing sync query, and both sides will have to query and sort results in exactly the same way.
 
 * When the client requests full details of some documents, it can combine its requests into several range queries like `{path_gte: "/wiki/Banana", path_lte: "/wiki/Grape"}`
+
+* Peers could keep track of an additional property of documents, "timestamp received by me", which would increase monotonically within each peer.  Peers could then remember "Last time I talked to Peer X, they gave me a doc they received at 17227308273.  Now I can resume from that point".
+    * Peers would have to remember each other by device ID, not just by author address.
+    * This only works if syncing sorted oldest-first by timestampReceived, and if the sync query has not changed.  Otherwise you might have a gap in the documents which would never be filled.
+    * If a peer does something drastic like removing a workspace and adding it back again, they might need to reset their deviceID.
+    * There is reduced privacy if you can know a device's deviceID and the timestampReceived of its documents.  You could figure out which device is the original source for a document by comparing those timestamps, and you could learn when a user is on their phone, their home computer or work computer.
