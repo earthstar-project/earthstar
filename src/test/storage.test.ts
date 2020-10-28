@@ -129,6 +129,9 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
                 filename: fn,
             })
             t.ok(fs.existsSync(fn), 'create mode created a file');
+            storage.close();
+            storage.close();
+            storage.deleteAndClose();
             storage.deleteAndClose();
             t.ok(!fs.existsSync(fn), 'deleteAndClose() removed the file');
         },
@@ -320,6 +323,7 @@ for (let scenario of scenarios) {
         t.throws(() => storage.sync(storage2, {}), 'sync() throws when closed');
 
         let storage3 = scenario.makeStorage(WORKSPACE);
+        storage3.deleteAndClose();
         storage3.deleteAndClose();
         t.same(storage3.isClosed(), true, 'deleteAndClose closes the workspace');
 

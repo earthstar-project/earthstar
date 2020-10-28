@@ -576,7 +576,7 @@ export class StorageSqlite implements IStorage {
 
     // Close this storage.
     // All Storage functions called after this will throw a StorageIsClosedError
-    // except for close() and isClosed().
+    // except for close(), deleteAndClose(), and isClosed().
     // You can call close() multiple times.
     // Once closed, a Storage instance cannot be opened again.
     close() : void {
@@ -593,10 +593,13 @@ export class StorageSqlite implements IStorage {
 
     // Close the storage and delete the data locally.
     // This deletion will not propagate to other peers and pubs.
+    // This can be called even if the storage is already closed.
     deleteAndClose(): void {
         this.close();
         if (this._filename !== ':memory:') {
-            fs.unlinkSync(this._filename);
+            if (fs.existsSync(this._filename)) {
+                fs.unlinkSync(this._filename);
+            }
         }
     }
 }

@@ -418,7 +418,7 @@ export class StorageMemory implements IStorage {
 
     // Close this storage.
     // All Storage functions called after this will throw a StorageIsClosedError
-    // except for close() and isClosed().
+    // except for close(), deleteAndClose(), and isClosed().
     // You can call close() multiple times.
     // Once closed, a Storage instance cannot be opened again.
     close() : void {
@@ -434,10 +434,10 @@ export class StorageMemory implements IStorage {
 
     // Close the storage and delete the data locally.
     // This deletion will not propagate to other peers and pubs.
+    // This can be called even if the storage is already closed.
     deleteAndClose() : void {
         this.close();
-        // We don't really need to clear the data from memory
-        // but let's do it anyway
+        // We don't really need to clear the data from memory but let's do it anyway
         this._docs = {};
     }
 }
