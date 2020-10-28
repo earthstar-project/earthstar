@@ -51,6 +51,7 @@ export class StorageSqlite implements IStorage {
     onWrite : Emitter<WriteEvent>;
     onChange : Emitter<undefined>;  // deprecated
     _isClosed : boolean = false;
+    _filename : string;
     constructor(opts : StorageSqliteOpts) {
         this.onWrite = new Emitter<WriteEvent>();
         this.onChange = new Emitter<undefined>();
@@ -66,6 +67,8 @@ export class StorageSqlite implements IStorage {
             let workspaceErr = val0._checkWorkspaceIsValid(opts.workspace);
             if (isErr(workspaceErr)) { throw workspaceErr; }
         }
+
+        this._filename = opts.filename;
 
         // in each mode we need to
         // A. check opts for validity
@@ -572,8 +575,9 @@ export class StorageSqlite implements IStorage {
     }
 
     // Close this storage.
-    // All functions called after this will throw a StorageIsClosedError,
-    // except you can call close() as many times as you want.
+    // All Storage functions called after this will throw a StorageIsClosedError
+    // except for close() and isClosed().
+    // You can call close() multiple times.
     // Once closed, a Storage instance cannot be opened again.
     close() : void {
         this._isClosed = true;
@@ -585,5 +589,14 @@ export class StorageSqlite implements IStorage {
     // Find out if the storage is closed.
     isClosed() : boolean {
         return this._isClosed;
+    }
+
+    // Close the storage and delete the data locally.
+    // This deletion will not propagate to other peers and pubs.
+    deleteAndClose(): void {
+        this.close();
+        if (this._filename !== ':memory:') {
+            fs.unlinkSync(this._filename);
+        }
     }
 }

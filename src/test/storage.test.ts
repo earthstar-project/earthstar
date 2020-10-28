@@ -120,13 +120,20 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     // create with real filename
     fn = 'testtesttest1.db';
     clearFn(fn);
-    t.doesNotThrow(() => new StorageSqlite({
-        mode: 'create',
-        workspace: WORKSPACE,
-        validators: VALIDATORS,
-        filename: fn,
-    }), 'create mode works when workspace is provided and a real filename');
-    t.ok(fs.existsSync(fn), 'create mode created a file');
+    t.doesNotThrow(
+        () => {
+            let storage = new StorageSqlite({
+                mode: 'create',
+                workspace: WORKSPACE,
+                validators: VALIDATORS,
+                filename: fn,
+            })
+            t.ok(fs.existsSync(fn), 'create mode created a file');
+            storage.deleteAndClose();
+            t.ok(!fs.existsSync(fn), 'deleteAndClose() removed the file');
+        },
+        'create mode works when workspace is provided and a real filename'
+    );
     clearFn(fn);
 
     // create with existing filename
@@ -311,6 +318,11 @@ for (let scenario of scenarios) {
         t.throws(() => storage.paths(), 'paths() throws when closed');
         t.throws(() => storage.set(keypair1, {} as any), 'set() throws when closed');
         t.throws(() => storage.sync(storage2, {}), 'sync() throws when closed');
+
+        let storage3 = scenario.makeStorage(WORKSPACE);
+        storage3.deleteAndClose();
+        t.same(storage3.isClosed(), true, 'deleteAndClose closes the workspace');
+
         t.end();
     });
 
@@ -778,9 +790,9 @@ for (let scenario of scenarios) {
             //log('sync results', syncResults);
             t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
-            logTest('=================================================');
-            logTest('=================================================');
-            logTest('=================================================');
+            //logTest('=================================================');
+            //logTest('=================================================');
+            //logTest('=================================================');
 
             t.equal(storage1.paths().length, 6, '6 paths');
             t.equal(storage1.documents().length, 6, '6 docs');

@@ -401,11 +401,16 @@ export interface IStorage {
     // forget(query : QueryOpts) : void;  // same query options as paths()
 
     // Close this storage.
-    // All functions called after this will throw a StorageIsClosedError,
-    // except you can call close() as many times as you want.
+    // All Storage functions called after this will throw a StorageIsClosedError
+    // except for close() and isClosed().
+    // You can call close() multiple times.
     // Once closed, a Storage instance cannot be opened again.
     // TODO: what happens when a long-running process like a sync is happening, and the Storage is closed?
     close() : void;
     // Find out if the storage is closed.
     isClosed() : boolean;
+
+    // Close the storage and delete the data locally.
+    // This deletion will not propagate to other peers and pubs.
+    deleteAndClose(): void;
 }
