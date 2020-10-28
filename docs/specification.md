@@ -49,6 +49,7 @@ Document version: 2020-08-09.1
 - [Syncing](#syncing)
   - [Networking](#networking)
   - [Workspace Secrecy](#workspace-secrecy)
+    - [A flaw](#a-flaw)
   - [Sync Queries](#sync-queries)
   - [Resolving Conflicts](#resolving-conflicts)
 - [Future Directions](#future-directions)
