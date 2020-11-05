@@ -8,3 +8,4 @@ ignore/
 src/
 tsconfig.json
 *.sh
+typedoc/
