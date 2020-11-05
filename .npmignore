@@ -1,3 +1,10 @@
+.github/
 .nyc_output/
-coverage/
+.prettierrc
+*.md
+*.txt
+docs/
 ignore/
+src/
+tsconfig.json
+*.sh
