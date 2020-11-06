@@ -14,6 +14,10 @@ import {
     EncodedSig,
 } from '../util/types';
 
+/**
+ * A verison of the ILowLevelCrypto interface backed by Chloride.
+ * Works in the browser.
+ */
 export const CryptoChloride : ILowLevelCrypto = class {
     static sha256(input: string | Buffer) : Buffer {
         // TODO: use sodium sha256 instead of node crypto?

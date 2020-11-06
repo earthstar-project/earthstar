@@ -47,6 +47,11 @@ let _lengthenDerPublic = (b : Buffer) : Buffer =>
 let _lengthenDerSecret = (b : Buffer) : Buffer => 
     Buffer.concat([_derPrefixSecret, b]);
 
+/**
+ * A verison of the ILowLevelCrypto interface backed by native Node crypto functions.
+ * Requires a recent version of Node, perhaps 12+?
+ * Does not work in the browser.
+ */
 export const CryptoNode : ILowLevelCrypto = class {
     static sha256(input: string | Buffer) : Buffer {
         return crypto.createHash('sha256').update(input).digest();

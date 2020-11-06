@@ -29,6 +29,15 @@ export interface AuthorProfile {
     hue? : number,  // theme color.  should be an integer between 0 and 360.  use it as a CSS hue.
 }
 
+/**
+ * An example Layer for storing author information.
+ * 
+ * This is now old and deprecated; it would be better to store each property
+ * in a separate Earthstar document
+ * instead of packing them together into a single JSON document.
+ * 
+ * @deprecated
+ */
 export class LayerAbout {
     storage : IStorage;
     constructor(storage : IStorage) {

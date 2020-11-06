@@ -25,25 +25,47 @@ import { Emitter } from '../util/emitter';
 import { logDebug, logWarning } from '../util/log';
 import { sha256base32 } from '../crypto/crypto';
 
+/**
+ * Options for creating a StorageSqlite instance.
+ * They can be opened in 3 modes:
+ * 
+ * ```
+ * mode: create
+ * workspace: required
+ * file must not exist yet
+ * 
+ * mode: open
+ * workspace: optional
+ * file must exist
+ *
+ * mode: create-or-open  (ensure it exists, create if necessary)
+ * workspace: required
+ * file may or may not exist
+ * ```
+ */
 export interface StorageSqliteOpts {
-    // mode: create
-    // workspace: required
-    // file must not exist yet
-    //
-    // mode: open
-    // workspace: optional
-    // file must exist
-    //
-    // mode: create-or-open  (ensure it exists, create if necessary)
-    // workspace: required
-    // file may or may not exist
-    //
+    /** Several modes for creating or opening existing files.  See above. */
     mode: 'open' | 'create' | 'create-or-open',
+    /** The workspace address, if it's known.  If not, `null`. */
     workspace: WorkspaceAddress | null,
+    /**
+     * An array of 1 or more IValidator classes.
+     * A Storage can hold multiple formats of data, so it can have multiple validators.
+     * The usual choice here is `ValidatorEs4`.
+     */
     validators: IValidator[],  // must provide at least one
+    /** The filename of the sqlite file. */
     filename: string,
 }
 
+/**
+ * A StorageSqlite holds the documents of one workspace in an SQLite file.
+ * 
+ * Only one process should try to use the SQLite file at a time.
+ * 
+ * Read docs for the IStorage interface for details on all these methods.
+ * The only unique thing about StorageSqlite is its constructor.
+ */
 export class StorageSqlite implements IStorage {
     db : SqliteDatabase;
     workspace : WorkspaceAddress;
@@ -52,6 +74,7 @@ export class StorageSqlite implements IStorage {
     onChange : Emitter<undefined>;  // deprecated
     _isClosed : boolean = false;
     _filename : string;
+
     constructor(opts : StorageSqliteOpts) {
         this.onWrite = new Emitter<WriteEvent>();
         this.onChange = new Emitter<undefined>();

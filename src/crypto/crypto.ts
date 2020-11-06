@@ -42,9 +42,18 @@ let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : Encode
 //================================================================================
 
 
+/** Do a sha256 hash, then return the output buffer encoded as base32. */
 export let sha256base32 = (input : string | Buffer) : EncodedHash =>
     encodeHash(LowLevelCrypto.sha256(input));
 
+/**
+ * Generate a new author identity -- a keypair of public and private keys.
+ * 
+ * NOTE: this will return a different keypair every time, even if the shortname is the same.
+ * Shortnames are not unique.
+ * 
+ * @param shortname A 4-character nickname to make the address easier to remember and identify.
+ */
 export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | ValidationError => {
     // This returns a ValidationError if the shortname doesn't follow the rules.
 
@@ -59,8 +68,8 @@ export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | Valida
     return keypair;
 }
 
+/** Sign a message using an Earthstar keypair.  Return a signature encoded in base32. */
 export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig | ValidationError => {
-    // Returns signature encoded in base32.
     let keypairBuffers = decodeAuthorKeypair(keypair);
     if (isErr(keypairBuffers)) { return keypairBuffers; }
     try {
@@ -70,13 +79,17 @@ export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig 
     }
 }
 
+/**
+ * Check if an author signature is valid.
+ * 
+ * This returns false on any expected kind of failure:
+ *   * bad author address format
+ *   * bad signature format (TODO: test this)
+ *   * signature format is valid but signature itself is invalid
+ * 
+ * If an unexpected exception happens, it is re-thrown.
+ */
 export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : string | Buffer) : boolean => {
-    // Is the author signature valid?
-    // This returns false on any expected kind of failure:
-    //    bad author address format
-    //    bad signature format (TODO: test this)
-    //    signature format is valid but signature itself is invalid
-    // If an unexpected exception happens, it is re-thrown.
     try {
         let authorParsed = ValidatorEs4.parseAuthorAddress(authorAddress);
         if (isErr(authorParsed)) { return false; }

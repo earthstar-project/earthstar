@@ -18,9 +18,13 @@ import {
 import { Emitter } from '../util/emitter';
 import { sha256base32 } from '../crypto/crypto';
 
+/**
+ * A sort function that puts the (newest) winning document first,
+ * when use within the docs of a single path.
+ * 
+ * path ASC (abcd), then timestamp DESC (newest first), then signature DESC (to break timestamp ties)
+ */
 export let _historySortFn = (a: Document, b: Document): number => {
-    // When used within one path's documents, puts the winning version first.
-    // path ASC (abcd), then timestamp DESC (newest first), then signature DESC (to break timestamp ties)
     if (a.path > b.path) { return 1; }
     if (a.path < b.path) { return -1; }
     if (a.timestamp < b.timestamp) { return 1; }
@@ -30,6 +34,13 @@ export let _historySortFn = (a: Document, b: Document): number => {
     return 0;
 };
 
+/**
+ * A StorageMemory holds the documents of one workspace in memory.
+ * They will not be saved to persistent storage.
+ * 
+ * Read docs for the IStorage interface for details on all these methods.
+ * The only unique thing about StorageMemory is its constructor.
+ */
 export class StorageMemory implements IStorage {
     /*
     This uses an in-memory data structure:
@@ -56,6 +67,13 @@ export class StorageMemory implements IStorage {
     onWrite : Emitter<WriteEvent>;
     onChange : Emitter<undefined>;  // deprecated
     _isClosed : boolean = false;
+
+    /** Create a new StorageMemory.
+     * @param validators An array of 1 or more IValidator classes.
+     *   A Storage can hold multiple formats of data, so it can have multiple validators.
+     *   The usual choice here is `ValidatorEs4`.
+     * @param workspace The address of the workspace held by this storage.
+     */    
     constructor(validators : IValidator[], workspace : WorkspaceAddress) {
         if (validators.length === 0) {
             throw new Error('must provide at least one validator');
@@ -76,7 +94,6 @@ export class StorageMemory implements IStorage {
             this.validatorMap[validator.format] = validator;
         }
     }
-
 
     _removeExpiredDocsAtPath(path : string, now: number) : void {
         let authorToDoc = this._docs[path];

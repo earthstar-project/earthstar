@@ -31,16 +31,26 @@ let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : Encode
 
 //================================================================================
 
-// For base32 encoding we use rfc4648, no padding, lowercase, prefixed with "b".
-// Base32 character set: "abcdefghijklmnopqrstuvwxyz234567"
-// The Multibase format adds a "b" prefix to specify this particular encoding.
-// We leave the "b" prefix there because we don't want the encoded string
-// to start with a number (so we can use it as a URL location).
-// When decoding, we require it to start with a "b" --
-// no other multibase formats are allowed.
-// The decoding must be strict (it doesn't allow a 1 in place of an i, etc).
+/**
+ * For base32 encoding we use rfc4648, no padding, lowercase, prefixed with "b".
+ * 
+ * Base32 character set: `abcdefghijklmnopqrstuvwxyz234567`
+ * 
+ * The Multibase format adds a "b" prefix to specify this particular encoding.
+ * We leave the "b" prefix there because we don't want the encoded string
+ * to start with a number (so we can use it as a URL location).
+ * 
+ * When decoding, we require it to start with a "b" --
+ * no other multibase formats are allowed.
+ * 
+ * The decoding must be strict (it doesn't allow a 1 in place of an i, etc).
+ */
 export let encodeBufferToBase32 = (buf : Buffer) : Base32String =>
     multibase.encode('base32', buf).toString();
+
+/**
+ * Decode base32 data to a Buffer.  Throw a ValidationError if the string is bad.
+ */
 export let decodeBase32ToBuffer = (str : Base32String) : Buffer => {
     if (!str.startsWith('b')) { throw new ValidationError("can't decode base32 buffer - it should start with a 'b'. " + str); }
     // this can also throw an Error('invalid base32 character')
@@ -56,11 +66,13 @@ export let decodePubkey = decodeBase32ToBuffer;
 export let decodeSecret = decodeBase32ToBuffer;
 export let decodeSig = decodeBase32ToBuffer;
 
+/** Combine a shortname with a raw KeypairBuffers to make an AuthorKeypair */
 export let encodeAuthorKeypair = (shortname : AuthorShortname, pair : KeypairBuffers) : AuthorKeypair => ({
     address: assembleAuthorAddress(shortname, encodePubkey(pair.pubkey)),
     secret: encodeSecret(pair.secret),
 });
 
+/** Convert an AuthorKeypair back into a raw KeypairBuffers for use in crypto operations. */
 export let decodeAuthorKeypair = (pair : AuthorKeypair) : KeypairBuffers | ValidationError => {
     let authorParsed = ValidatorEs4.parseAuthorAddress(pair.address);
     if (isErr(authorParsed)) { return authorParsed; }

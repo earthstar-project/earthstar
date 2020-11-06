@@ -34,6 +34,13 @@ export interface WikiPageDetail {
     /wiki/~@aaaa.xxxxx/Little%20Snails
 */
 
+/**
+ * An example Layer for a wiki app.
+ * 
+ * This is just an example and has gotten old.
+ * 
+ * @deprecated
+ */
 export class LayerWiki {
     storage : IStorage;
     constructor(storage : IStorage) {
