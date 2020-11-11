@@ -149,12 +149,16 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': close', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
+        let storage2 = scenario.makeStorage(WORKSPACE);
 
         t.same(storage.isClosed(), false, 'starts off not closed');
         storage.close();
         t.same(storage.isClosed(), true, 'becomes closed');
         storage.close();
         t.same(storage.isClosed(), true, 'stays closed');
+
+        storage2.destroyAndClose();
+        t.same(storage2.isClosed(), true, 'destroyAndClose also closes');
 
         t.throws(() => storage.authors(), 'contents() throws when closed');
         t.throws(() => storage.paths(), 'paths() throws when closed');
@@ -164,6 +168,7 @@ for (let scenario of scenarios) {
         t.throws(() => storage.getDocument('/a'), 'latestDocument() throws when closed');
         t.throws(() => storage.ingestDocument({} as any, false), 'ingestDocument() throws when closed');
         t.throws(() => storage.set(keypair1, {} as any), 'set() throws when closed');
+        t.throws(() => storage.destroyAndClose(), 'destroyAndClose() throws when closed');
         t.end();
     });
 
@@ -436,25 +441,25 @@ for (let scenario of scenarios) {
                 matches: [],
             },
             // CONTENT SIZE
-            // TODO: test contentSize with utf-8 characters vs bytes
+            // TODO: test contentLength with utf-8 characters vs bytes
             {
-                query: { contentSize: 0 },
+                query: { contentLength: 0 },
                 matches: [i.d0, i.d4],
             },
             {
-                query: { contentSize: 2 },
+                query: { contentLength: 2 },
                 matches: [i.d2],
             },
             {
-                query: { contentSize_gt: 0 },
+                query: { contentLength_gt: 0 },
                 matches: [i.d1, i.d2, i.d5],
             },
             {
-                query: { contentSize_gt: 0, history: 'all' },
+                query: { contentLength_gt: 0, history: 'all' },
                 matches: [i.d1, i.d2, i.d3, i.d5],
             },
             {
-                query: { contentSize_lt: 2 },
+                query: { contentLength_lt: 2 },
                 matches: [i.d0, i.d1, i.d4],
             },
             // HISTORY MODE
@@ -560,8 +565,8 @@ for (let scenario of scenarios) {
     t.test(scenario.description + ': removeExpiredDocuments', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
-        // this should not crash
-        storage.removeExpiredDocuments(now);
+        // this should do nothing on an empty storage
+        storage.discardExpiredDocuments();
 
         // a good doc
         let doc1 = makeDoc({workspace: WORKSPACE, keypair: keypair1, path: '/a', content: 'hello', timestamp: now });
@@ -574,9 +579,11 @@ for (let scenario of scenarios) {
         t.same(storage.paths().length, 2, 'starting off with 2 docs');
 
         // remove expired docs as if we were in the future
-        storage.removeExpiredDocuments(now + 100);
+        storage._now = now + 100;
+        storage.discardExpiredDocuments();
 
         // back in the present, query and only find 1
+        storage._now = now;
         t.same(storage.paths().length, 1, 'only 1 remains after expired doc was removed');
 
         storage.close();
@@ -772,13 +779,13 @@ for (let scenario of scenarios) {
         t.same(storage.paths().length, 3, 'paths() length = 3')
         t.same(storage.contents().length, 3, 'contents() length = 3')
 
-        t.same(storage.documents({ contentSize_gt: 0 }).length, 1, 'documents(contentSize_gt: 0) length = 1')
-        t.same(storage.paths(    { contentSize_gt: 0 }).length, 1, 'paths(contentSize_gt: 0) length = 1')
-        t.same(storage.contents( { contentSize_gt: 0 }).length, 1, 'contents(contentSize_gt: 0) length = 1')
+        t.same(storage.documents({ contentLength_gt: 0 }).length, 1, 'documents(contentLength_gt: 0) length = 1')
+        t.same(storage.paths(    { contentLength_gt: 0 }).length, 1, 'paths(contentLength_gt: 0) length = 1')
+        t.same(storage.contents( { contentLength_gt: 0 }).length, 1, 'contents(contentLength_gt: 0) length = 1')
 
-        t.same(storage.documents({ contentSize: 0 }).length, 2, 'documents(contentSize: 0) length = 2')
-        t.same(storage.paths(    { contentSize: 0 }).length, 2, 'paths(contentSize: 0) length = 2')
-        t.same(storage.contents( { contentSize: 0 }).length, 2, 'contents(contentSize: 0) length = 2')
+        t.same(storage.documents({ contentLength: 0 }).length, 2, 'documents(contentLength: 0) length = 2')
+        t.same(storage.paths(    { contentLength: 0 }).length, 2, 'paths(contentLength: 0) length = 2')
+        t.same(storage.contents( { contentLength: 0 }).length, 2, 'contents(contentLength: 0) length = 2')
 
         // overwrite full with empty, and vice versa
         t.same(storage.set(keypair2, {format: FORMAT, path: '/full',  content: '',  timestamp: now + 2 }), WriteResult.Accepted, 'set /full to "" using author 2');
@@ -789,28 +796,28 @@ for (let scenario of scenarios) {
         t.same(storage.getDocument('/empty')?.content, 'e', 'empty getDocument.content = "e"');
         t.same(storage.getContent('/empty'), 'e', 'empty getContent = "e"');
 
-        // combine path and contentSize queries
+        // combine path and contentLength queries
         // note there are now two docs for each path.
 
         // the head in /full has no content (we changed it, above)
         t.same(storage.documents({ history: 'latest', path: '/full'                    }).length, 1, 'documents({ isHead: true, path: /full,                   }) length = 1')
-        t.same(storage.documents({ history: 'latest', path: '/full', contentSize_gt: 0 }).length, 0, 'documents({ isHead: true, path: /full, contentSize_gt: 0 }) length = 0')
-        t.same(storage.documents({ history: 'latest', path: '/full', contentSize: 0    }).length, 1, 'documents({ isHead: true, path: /full, contentSize: 0    }) length = 1')
+        t.same(storage.documents({ history: 'latest', path: '/full', contentLength_gt: 0 }).length, 0, 'documents({ isHead: true, path: /full, contentLength_gt: 0 }) length = 0')
+        t.same(storage.documents({ history: 'latest', path: '/full', contentLength: 0    }).length, 1, 'documents({ isHead: true, path: /full, contentLength: 0    }) length = 1')
 
         // in /full there's two docs: one has content '' and one has 'full'
         t.same(storage.documents({ history: 'all',    path: '/full'                    }).length, 2, 'documents({               path: /full,                   }) length = 2')
-        t.same(storage.documents({ history: 'all',    path: '/full', contentSize_gt: 0 }).length, 1, 'documents({               path: /full, contentSize_gt: 0 }) length = 1')
-        t.same(storage.documents({ history: 'all',    path: '/full', contentSize: 0    }).length, 1, 'documents({               path: /full, contentSize: 0    }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/full', contentLength_gt: 0 }).length, 1, 'documents({               path: /full, contentLength_gt: 0 }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/full', contentLength: 0    }).length, 1, 'documents({               path: /full, contentLength: 0    }) length = 1')
 
         // the head in /empty has content 'e'
         t.same(storage.documents({ history: 'latest', path: '/empty'                    }).length, 1, 'documents({ isHead: true, path: /empty,                   }) length = 1')
-        t.same(storage.documents({ history: 'latest', path: '/empty', contentSize_gt: 0 }).length, 1, 'documents({ isHead: true, path: /empty, contentSize_gt: 0 }) length = 1')
-        t.same(storage.documents({ history: 'latest', path: '/empty', contentSize: 0    }).length, 0, 'documents({ isHead: true, path: /empty, contentSize: 0    }) length = 0')
+        t.same(storage.documents({ history: 'latest', path: '/empty', contentLength_gt: 0 }).length, 1, 'documents({ isHead: true, path: /empty, contentLength_gt: 0 }) length = 1')
+        t.same(storage.documents({ history: 'latest', path: '/empty', contentLength: 0    }).length, 0, 'documents({ isHead: true, path: /empty, contentLength: 0    }) length = 0')
 
         // in /empty there's two docs: one has content '' and one has 'full'
         t.same(storage.documents({ history: 'all',    path: '/empty'                    }).length, 2, 'documents({               path: /empty,                   }) length = 2')
-        t.same(storage.documents({ history: 'all',    path: '/empty', contentSize_gt: 0 }).length, 1, 'documents({               path: /empty, contentSize_gt: 0 }) length = 1')
-        t.same(storage.documents({ history: 'all',    path: '/empty', contentSize: 0    }).length, 1, 'documents({               path: /empty, contentSize: 0    }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/empty', contentLength_gt: 0 }).length, 1, 'documents({               path: /empty, contentLength_gt: 0 }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/empty', contentLength: 0    }).length, 1, 'documents({               path: /empty, contentLength: 0    }) length = 1')
 
         t.end();
     });

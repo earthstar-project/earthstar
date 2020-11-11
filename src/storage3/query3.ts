@@ -21,6 +21,11 @@ export type HistoryMode =
   | 'all';    // return every individually matching history doc
 
 export interface Query3 {
+    // an empty query matches all (latest) documents.
+    // each filter in the query further reduces the number of results.
+    // the exception is that history = 'latest' by default;
+    // set it to 'all' to include old history documents also.
+
     // filters that affect all documents equally within the same path
     path?: string,
     pathPrefix?: string,
@@ -32,17 +37,13 @@ export interface Query3 {
 
     author?: AuthorAddress,
 
-    contentSize?: number,  // in bytes as utf-8.  skip sparse documents with null content
-    contentSize_gt?: number,
-    contentSize_lt?: number,
+    contentLength?: number,  // in bytes as utf-8.  skip sparse documents with null content
+    contentLength_gt?: number,
+    contentLength_lt?: number,
 
     // other settings
 
-    //isHead?: boolean,  // true to only get head, omit to get all.
-    //                   // this is the actual overall latest doc per path,
-    //                   // not just the latest doc per path that passes the rest of the query.
-
-    history?: HistoryMode,  // default: HEADS
+    history?: HistoryMode,  // default: latest
 
     limit?: number,
     limitBytes?: number,  // sum of content bytes <= limitBytes (stop as soon as possible)
@@ -51,10 +52,17 @@ export interface Query3 {
     // continueAfter: {path, timestamp, ...signature? author? hash?}
 };
 
+interface Query3HistoryAll extends Query3 {
+    history: 'all',
+}
+export type Query3ForForget = Omit<Query3HistoryAll, 'limit' | 'limitBytes'>;
+export type Query3NoLimitBytes = Omit<Query3, 'limitBytes'>;
+
+
 export let validateQuery = (query: Query3): ValidationError | true => {
     if (query.limit !== undefined && query.limit < 0) { return new ValidationError('limit must be >= 0'); }
     if (query.limitBytes !== undefined && query.limitBytes < 0) { return new ValidationError('limitBytes must be >= 0'); }
-    if (query.contentSize !== undefined && query.contentSize < 0) { return new ValidationError('contentSize must be >= 0'); }
+    if (query.contentLength !== undefined && query.contentLength < 0) { return new ValidationError('contentLength must be >= 0'); }
     if (query.history !== undefined && query.history !== 'all' && query.history !== 'latest') {
         return new ValidationError('unknown history mode: ' + query.history);
     }
@@ -92,11 +100,15 @@ export let queryMatchesDoc = (query: Query3, doc: Document): boolean => {
 
     if (query.author !== undefined && !(doc.author === query.author)) { return false; }
 
-    if (query.contentSize !== undefined && !(doc.content.length === query.contentSize)) { return false; }
-    if (query.contentSize_gt !== undefined && !(doc.content.length > query.contentSize_gt)) { return false; }
-    if (query.contentSize_lt !== undefined && !(doc.content.length < query.contentSize_lt)) { return false; }
+    if (query.contentLength !== undefined && !(doc.content.length === query.contentLength)) { return false; }
+    if (query.contentLength_gt !== undefined && !(doc.content.length > query.contentLength_gt)) { return false; }
+    if (query.contentLength_lt !== undefined && !(doc.content.length < query.contentLength_lt)) { return false; }
 
     return true;
+}
+
+export let documentIsExpired = (doc: Document, now: number): boolean => {
+    return (doc.deleteAfter !== null) && (doc.deleteAfter < now);
 }
 
 export let historySortFn = (a: Document, b: Document): number => {

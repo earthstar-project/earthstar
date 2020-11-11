@@ -22,6 +22,7 @@ import {
     cleanUpQuery,
     queryMatchesDoc,
     historySortFn,
+    documentIsExpired,
 } from '../storage3/query3';
 
 //================================================================================
@@ -101,6 +102,23 @@ t.test('cleanUpQuery', (t: any) => {
         let expected = result === 'same' ? query : result;
         t.same(cleanUpQuery(query), expected, note);
     }
+
+    t.end();
+});
+
+t.test('documentIsExpired', (t: any) => {
+    let base = { workspace: WORKSPACE };
+    let inputDocs: Record<string, Document> = {
+        dm1: makeDoc({...base, keypair: keypair1, timestamp: now-10, deleteAfter: now-1, path: '/a', content: ''}),
+        d0:  makeDoc({...base, keypair: keypair1, timestamp: now-10, deleteAfter: now  , path: '/b', content: '1'}),
+        dp1: makeDoc({...base, keypair: keypair1, timestamp: now-10, deleteAfter: now+1, path: '/c', content: '22'}),
+        dx:  makeDoc({...base, keypair: keypair1, timestamp: now-10,                     path: '/c', content: '22'}),
+    };
+
+    t.same(documentIsExpired(inputDocs.dm1, now), true,  'now-1 should be expired');
+    t.same(documentIsExpired(inputDocs.d0 , now), false, 'now   should not be expired');
+    t.same(documentIsExpired(inputDocs.dp1, now), false, 'now+1 should not be expired');
+    t.same(documentIsExpired(inputDocs.dx , now), false, 'permanent document should not be expired');
 
     t.end();
 });
@@ -199,19 +217,19 @@ t.test('queryMatchesDoc', (t: any) => {
         },
         // CONTENT SIZE
         {
-            query: { contentSize: 0 },
+            query: { contentLength: 0 },
             matches: [i.d0, i.d4],
         },
         {
-            query: { contentSize: 2 },
+            query: { contentLength: 2 },
             matches: [i.d2],
         },
         {
-            query: { contentSize_gt: 0 },
+            query: { contentLength_gt: 0 },
             matches: [i.d1, i.d2, i.d3, i.d5],
         },
         {
-            query: { contentSize_lt: 2 },
+            query: { contentLength_lt: 2 },
             matches: [i.d0, i.d1, i.d4],
         },
     ];

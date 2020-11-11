@@ -37,7 +37,10 @@
     "test-3": "tap -Rspecy --jobs=1 build/test/*3*.test.js",
     "test-query3": "tap -Rspecy --jobs=1 build/test/query3.test.js",
     "test-storage3": "tap -Rspecy --jobs=1 build/test/storage3.test.js",
+
     "test-coverage": "npm test -- --coverage-report=lcov",
+    "test-3-coverage": "npm run test-3 -- --coverage-report=lcov",
+
     "typedoc": "typedoc --out typedoc/ --theme minimal --name Earthstar --includeVersion --readme none src",
     "bench": "node --expose-gc build/test/benchmark.js | tee benchmark.txt",
     "build-and-test": "npm run build && npm run test",

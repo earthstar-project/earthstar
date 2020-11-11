@@ -16,7 +16,7 @@ import {
 import {
     IStorage3
 } from './types3';
-import { Query3 } from './query3';
+import { Query3, Query3ForForget, Query3NoLimitBytes } from './query3';
 import { Emitter } from '../util/emitter';
 import { uniq, sorted } from '../util/helpers';
 import { sha256base32 } from '../crypto/crypto';
@@ -78,7 +78,7 @@ export abstract class Storage3Base implements IStorage3 {
         this._assertNotClosed();
         return sorted(uniq(this.documents({ history: 'all' }).map(doc => doc.author)));
     }
-    paths(q?: Query3): string[] {
+    paths(q?: Query3NoLimitBytes): string[] {
         this._assertNotClosed();
         let query = cleanUpQuery(q || {});
 
@@ -238,10 +238,11 @@ export abstract class Storage3Base implements IStorage3 {
         return result;
     }
 
-    abstract removeExpiredDocuments(now: number): void;
+    abstract forgetDocuments(query: Query3ForForget): void;
+    abstract discardExpiredDocuments(): void;
 
     // CLOSE
     close() { this._isClosed = true; }
     isClosed(): boolean { return this._isClosed; }
-    abstract removeAndClose(): void;
+    abstract destroyAndClose(): void;
 }
