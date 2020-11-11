@@ -1,6 +1,8 @@
 import {
     AuthorAddress,
-    Document
+    Document,
+    isErr,
+    ValidationError
 } from '../util/types';
 
 /*
@@ -14,16 +16,16 @@ open questions
 
 */
 
-export interface SimpleQuery3 {
-    // things that are the same for all documents with the same path
+export type HistoryMode =
+    'latest'  // get the overall latest per path (the heads), then apply filters just to those
+  | 'all';    // return every individually matching history doc
+
+export interface Query3 {
+    // filters that affect all documents equally within the same path
     path?: string,
     pathPrefix?: string,
-    limit?: number,
-}
 
-export interface FancyQuery3 extends SimpleQuery3 {
-    // TODO: workspace?
-
+    // filters that differently affect documents within the same path
     timestamp?: number,
     timestamp_gt?: number,
     timestamp_lt?: number,
@@ -34,35 +36,53 @@ export interface FancyQuery3 extends SimpleQuery3 {
     contentSize_gt?: number,
     contentSize_lt?: number,
 
-    isHead?: boolean,  // true to only get head, omit to get all.
-                       // this is the actual overall latest doc per path,
-                       // not just the latest doc per path that passes the rest of the query.
+    // other settings
 
+    //isHead?: boolean,  // true to only get head, omit to get all.
+    //                   // this is the actual overall latest doc per path,
+    //                   // not just the latest doc per path that passes the rest of the query.
+
+    history?: HistoryMode,  // default: HEADS
+
+    limit?: number,
     limitBytes?: number,  // sum of content bytes <= limitBytes (stop as soon as possible)
 
     // sort?: 'newest' | 'oldest' | 'path',  // default is path
     // continueAfter: {path, timestamp, ...signature? author? hash?}
 };
 
-const defaultQuery2 = {
-    // isHead: false,
-    // sort: 'path',
+export let validateQuery = (query: Query3): ValidationError | true => {
+    if (query.limit !== undefined && query.limit < 0) { return new ValidationError('limit must be >= 0'); }
+    if (query.limitBytes !== undefined && query.limitBytes < 0) { return new ValidationError('limitBytes must be >= 0'); }
+    if (query.contentSize !== undefined && query.contentSize < 0) { return new ValidationError('contentSize must be >= 0'); }
+    if (query.history !== undefined && query.history !== 'all' && query.history !== 'latest') {
+        return new ValidationError('unknown history mode: ' + query.history);
+    }
+    return true;
 }
 
-export let cleanUpQuery = (query: FancyQuery3): FancyQuery3 => {
+export let cleanUpQuery = (query: Query3): Query3 => {
+    let isValid = validateQuery(query);
+    if (isErr(isValid)) {
+        // if query is invalid, instead return a special query that will never match anything
+        console.warn(isValid);
+        query = { limit: 0 };
+    }
+
     // set defaults
-    let q = {...defaultQuery2, ...query};
+    let q: Query3 = {
+        history: 'latest',
+        // sort: 'path',
 
-    // TODO: what to do with -1 on limit, contentSize?
-    // TODO: what to do with isHead: false?
-
-    //// limits can be zero but not negative
-    //if (q.limit !== undefined) { q.limit = Math.max(q.limit, 0); }
-    //if (q.limitBytes !== undefined) { q.limitBytes = Math.max(q.limitBytes, 0); }
+        ...query
+    };
     return q;
 }
 
-export let queryMatchesDoc = (query: FancyQuery3, doc: Document): boolean => {
+export let queryMatchesDoc = (query: Query3, doc: Document): boolean => {
+    // only checks individual document properties,
+    // not limit, historyMode, sort, etc
+
     if (query.path !== undefined && !(query.path === doc.path)) { return false; }
     if (query.pathPrefix !== undefined && !(doc.path.startsWith(query.pathPrefix))) { return false; }
 

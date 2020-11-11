@@ -4,7 +4,7 @@ import {
     WorkspaceAddress,
 } from '../util/types';
 import {
-    FancyQuery3,
+    Query3,
     cleanUpQuery,
     historySortFn,
     queryMatchesDoc,
@@ -32,7 +32,7 @@ export class Storage3Memory extends Storage3Base {
         this._config = {};
     }
 
-    documents(q?: FancyQuery3): Document[] {
+    documents(q?: Query3): Document[] {
         this._assertNotClosed();
         let query = cleanUpQuery(q || {});
 
@@ -42,7 +42,9 @@ export class Storage3Memory extends Storage3Base {
         let results: Document[] = [];
 
         let pathsToConsider = Object.keys(this._docs);
+
         /*
+        // TODO: enable these optimizations
         // which paths should we consider?
         let pathsToConsider: string[];
         if (query.path !== undefined) {
@@ -59,15 +61,21 @@ export class Storage3Memory extends Storage3Base {
             // within one path...
             let pathSlots = this._docs[path];
             let docsThisPath = Object.values(pathSlots);
-            // only keep head?
-            if (query.isHead) {
+
+            if (query.history === 'latest') {
+                // only keep head
                 docsThisPath.sort(historySortFn);  // TODO: would be better to sort on insertion instead of read
                 docsThisPath = [docsThisPath[0]];
+            } else if (query.history === 'all') {
+                // keep all docs at this path
             }
+
             // apply the rest of the individual query selectors: path, timestamp, author, contentSize
             // and skip expired ephemeral docs
+            docsThisPath = docsThisPath
+                .filter(doc => queryMatchesDoc(query, doc) && (doc.deleteAfter === null || now <= doc.deleteAfter));
+
             docsThisPath
-                .filter(doc => queryMatchesDoc(query, doc) && (doc.deleteAfter === null || now <= doc.deleteAfter))
                 .forEach(doc => results.push(doc));
 
             // TODO: optimize this:

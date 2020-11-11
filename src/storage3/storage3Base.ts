@@ -16,7 +16,7 @@ import {
 import {
     IStorage3
 } from './types3';
-import { SimpleQuery3, FancyQuery3 } from './query3';
+import { Query3 } from './query3';
 import { Emitter } from '../util/emitter';
 import { uniq, sorted } from '../util/helpers';
 import { sha256base32 } from '../crypto/crypto';
@@ -68,33 +68,39 @@ export abstract class Storage3Base implements IStorage3 {
     // close and remove all
 
     // GET DATA OUT
-    abstract documents(query?: FancyQuery3): Document[];
-    authors(): AuthorAddress[] {
+    abstract documents(query?: Query3): Document[];
+    contents(query?: Query3): string[] {
         this._assertNotClosed();
-        return sorted(uniq(this.documents({}).map(doc => doc.author)));
+        return this.documents(query).map(doc => doc.content);
     }
-    paths(q?: FancyQuery3): string[] {
+    authors(): AuthorAddress[] {
+        // return all authors, even ones that only occur back in the history
+        this._assertNotClosed();
+        return sorted(uniq(this.documents({ history: 'all' }).map(doc => doc.author)));
+    }
+    paths(q?: Query3): string[] {
         this._assertNotClosed();
         let query = cleanUpQuery(q || {});
 
-        // TODO: maybe paths should not be based on a full query -- this is inefficient.
+        // if limit is zero, this will always return []
+        if (query.limit === 0) { return []; }
+
         // to make sure we're counting unique paths, not documents, we have to:
         // remove limit
         let queryNoLimit = { ...query, limit: undefined, limitBytes: undefined };
-        // do query
+        // do query and get unique paths
         let docs = this.documents(queryNoLimit)
         let paths = sorted(uniq(docs.map(doc => doc.path)));
         // re-apply limit
-        if (query.limit === undefined) { return paths; }
-        return paths.slice(0, query.limit);
+        if (query.limit !== undefined) {
+            paths = paths.slice(0, query.limit);
+        }
+        return paths;
     }
-    contents(query?: FancyQuery3): string[] {
-        this._assertNotClosed();
-        return this.documents(query || {}).map(doc => doc.content);
-    }
+
     getDocument(path: string): Document | undefined {
         this._assertNotClosed();
-        return this.documents({ path: path, limit: 1 })[0];
+        return this.documents({ path: path, limit: 1, history: 'latest' })[0];
     }
     getContent(path: string): string | undefined {
         this._assertNotClosed();
@@ -124,14 +130,15 @@ export abstract class Storage3Base implements IStorage3 {
 
         // BEGIN LOCK
 
-        // get existing doc from same author, same path
+        // get existing doc from same author, same path, to decide if the incoming one is newer
         let existingSameAuthor : Document | undefined = this.documents({
             path: doc.path,
             author: doc.author,
+            history: 'all',
         })[0];
 
         // there might be an existingSameAuthor that's ephemeral and has expired.
-        // if so, it will not have been returned from driver.documentQuery.
+        // if so, it will not have been returned from this.documents().
         // we'll just overwrite it with upsertDocument() as if it wasn't there.
 
         // Compare timestamps.

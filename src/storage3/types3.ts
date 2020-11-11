@@ -8,7 +8,7 @@ import {
     WriteEvent,
     WriteResult,
 } from '../util/types';
-import { SimpleQuery3, FancyQuery3 } from './query3';
+import { Query3 } from './query3';
 import { Emitter } from '../util/emitter';
 
 //================================================================================
@@ -25,10 +25,10 @@ export interface IStorage3 {
     deleteAllConfig(): void;  // override
 
     // GET DATA OUT
-    documents(query?: FancyQuery3): Document[];  // override
-    paths(query?: FancyQuery3): string[];
-    contents(query?: FancyQuery3): string[];
-    authors(query?: FancyQuery3): AuthorAddress[];
+    documents(query?: Query3): Document[];  // override
+    contents(query?: Query3): string[];
+    paths(query?: Query3): string[];
+    authors(query?: Query3): AuthorAddress[];
     getDocument(path: string): Document | undefined;
     getContent(path: string): string | undefined;
 

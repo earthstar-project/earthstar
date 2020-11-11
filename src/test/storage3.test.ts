@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import t = require('tap');
 //t.runOnly = true;
 
@@ -26,7 +25,7 @@ import {
     IStorage3,
 } from '../storage3/types3';
 import {
-    historySortFn, FancyQuery3
+    historySortFn, Query3
 } from '../storage3/query3';
 import {
     Storage3Memory
@@ -223,7 +222,7 @@ for (let scenario of scenarios) {
         ].map(opts => makeDoc(opts));
 
         inputDocs.forEach(d => storage._upsertDocument(d));
-        let outputDocs = storage.documents();
+        let outputDocs = storage.documents({ history: 'all' });
 
         t.same(outputDocs.length, inputDocs.length, 'upsert should not overwrite these test cases');
         let sortedInputs = [...inputDocs];
@@ -322,24 +321,25 @@ for (let scenario of scenarios) {
             d0: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/a', content: ''}),
             d1: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/aa', content: '1'}),
             d2: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/aa/x', content: '22'}),
-            d3: makeDoc({...base, keypair: keypair2, timestamp: now + 1, path: '/b', content: '333'}),
+            d3: makeDoc({...base, keypair: keypair2, timestamp: now + 1, path: '/b', content: '333'}),  // this is the only obsolete doc
             d4: makeDoc({...base, keypair: keypair3, timestamp: now + 2, path: '/b', content: ''}),
-            d5: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/cc/x', content: '55555'}),
+            d5: makeDoc({...base, keypair: keypair2, timestamp: now    , path: '/cc/x', content: '55555'}),
         };
         Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
 
         let i = inputDocs;
         type TestCase = {
-            query: FancyQuery3,
+            query: Query3,
             matches: Document[],
             pathMatches?: Document[], // if path query gives a different result than doc query
             note?: string,
         }
         let testCases: TestCase[] = [
-            // EVERYTHING
+            // FOO
+            // EMPTY QUERY
             {
                 query: {},
-                matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
+                matches: [i.d0, i.d1, i.d2, i.d4, i.d5],  // no d3
             },
             // PATH
             {
@@ -347,9 +347,14 @@ for (let scenario of scenarios) {
                 matches: [i.d1],
             },
             {
-                query: { path: '/b' },
+                query: { path: '/b', history: 'all' },
                 matches: [i.d3, i.d4],
-                note: 'two authors at one path',
+                note: 'two authors at one path -- all',
+            },
+            {
+                query: { path: '/b', history: 'latest' },
+                matches: [i.d4],
+                note: 'two authors at one path -- latest',
             },
             {
                 query: { path: 'no such path' },
@@ -374,20 +379,24 @@ for (let scenario of scenarios) {
                 matches: [],
             },
             {
-                query: { timestamp: now + 1 },
+                query: { timestamp: now + 1, history: 'latest' },
+                matches: [],
+            },
+            {
+                query: { timestamp: now + 1, history: 'all' },
                 matches: [i.d3],
             },
             {
                 query: { timestamp_gt: 777 },
-                matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
+                matches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
             {
                 query: { timestamp_gt: 0 },
-                matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
+                matches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
             {
                 query: { timestamp_gt: now },
-                matches: [i.d3, i.d4],
+                matches: [i.d4],
             },
             {
                 query: { timestamp_lt: 0 },
@@ -412,7 +421,15 @@ for (let scenario of scenarios) {
             // AUTHOR
             {
                 query: { author: author1 },
-                matches: [i.d0, i.d1, i.d2, i.d5],
+                matches: [i.d0, i.d1, i.d2],
+            },
+            {
+                query: { author: author2, history: 'all' },
+                matches: [i.d3, i.d5],  // this includes one obsolete doc and one head, from different paths
+            },
+            {
+                query: { author: author2, history: 'latest' },
+                matches: [i.d5],
             },
             {
                 query: { author: author4 },
@@ -430,16 +447,28 @@ for (let scenario of scenarios) {
             },
             {
                 query: { contentSize_gt: 0 },
+                matches: [i.d1, i.d2, i.d5],
+            },
+            {
+                query: { contentSize_gt: 0, history: 'all' },
                 matches: [i.d1, i.d2, i.d3, i.d5],
             },
             {
                 query: { contentSize_lt: 2 },
                 matches: [i.d0, i.d1, i.d4],
             },
-            // ISHEAD
+            // HISTORY MODE
             {
-                query: { isHead: true },
+                query: { },  // default is 'latest'
                 matches: [i.d0, i.d1, i.d2, i.d4, i.d5],  // not d3
+            },
+            {
+                query: { history: 'latest' },
+                matches: [i.d0, i.d1, i.d2, i.d4, i.d5],  // not d3
+            },
+            {
+                query: { history: 'all' },
+                matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],  // include d3
             },
             // LIMIT
             {
@@ -451,9 +480,16 @@ for (let scenario of scenarios) {
                 matches: [i.d0],
             },
             {
-                query: { limit: 5 },
-                // the first 5 documents only have 4 distinct paths between them.
-                // so the first 5 distinct paths reach a little further.
+                query: { limit: 4 },
+                // when history is 'latest' (the default), and there are no other filters,
+                // the number of heads === the number of distinct paths
+                matches: [i.d0, i.d1, i.d2, i.d4],
+                pathMatches: [i.d0, i.d1, i.d2, i.d4],
+            },
+            {
+                query: { limit: 5, history: 'all' },
+                // the first 5 documents (including history) only have 4 distinct paths between them.
+                // so the first 5 distinct paths reach a little further than the first 5 docs.
                 // (limit is applied after distinct-ifying paths)
                 matches: [i.d0, i.d1, i.d2, i.d3, i.d4],
                 pathMatches: [i.d0, i.d1, i.d2, i.d3, i.d5],
@@ -461,6 +497,10 @@ for (let scenario of scenarios) {
             },
             {
                 query: { limit: 999 },
+                matches: [i.d0, i.d1, i.d2, i.d4, i.d5],
+            },
+            {
+                query: { limit: 999, history: 'all' },
                 matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
             },
             // LIMIT BYTES
@@ -469,22 +509,22 @@ for (let scenario of scenarios) {
                 query: { limitBytes: 0 },
                 matches: [],  // don't even get the first '', stop as soon as possible
                 // path queries ignore limitBytes
-                pathMatches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
+                pathMatches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
             {
                 query: { limitBytes: 1 },
                 matches: [i.d0, i.d1],  // '' + '1' <= 1 byte
-                pathMatches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
+                pathMatches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
             {
                 query: { limitBytes: 2 },
                 matches: [i.d0, i.d1],  // '' + '1' <= 1 byte
-                pathMatches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
+                pathMatches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
             {
                 query: { limitBytes: 3 },
                 matches: [i.d0, i.d1, i.d2],  // '' + '1' + '22' <= 3 bytes, don't get the following ''
-                pathMatches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
+                pathMatches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
         ];
         for (let testCase of testCases) {
@@ -752,25 +792,25 @@ for (let scenario of scenarios) {
         // combine path and contentSize queries
         // note there are now two docs for each path.
 
-        // the lastest in /full has no content (we changed it, above)
-        t.same(storage.documents({ isHead: true, path: '/full'                    }).length, 1, 'documents({ isHead: true, path: /full,                   }) length = 1')
-        t.same(storage.documents({ isHead: true, path: '/full', contentSize_gt: 0 }).length, 0, 'documents({ isHead: true, path: /full, contentSize_gt: 0 }) length = 0')
-        t.same(storage.documents({ isHead: true, path: '/full', contentSize: 0    }).length, 1, 'documents({ isHead: true, path: /full, contentSize: 0    }) length = 1')
+        // the head in /full has no content (we changed it, above)
+        t.same(storage.documents({ history: 'latest', path: '/full'                    }).length, 1, 'documents({ isHead: true, path: /full,                   }) length = 1')
+        t.same(storage.documents({ history: 'latest', path: '/full', contentSize_gt: 0 }).length, 0, 'documents({ isHead: true, path: /full, contentSize_gt: 0 }) length = 0')
+        t.same(storage.documents({ history: 'latest', path: '/full', contentSize: 0    }).length, 1, 'documents({ isHead: true, path: /full, contentSize: 0    }) length = 1')
 
         // in /full there's two docs: one has content '' and one has 'full'
-        t.same(storage.documents({               path: '/full'                    }).length, 2, 'documents({               path: /full,                   }) length = 2')
-        t.same(storage.documents({               path: '/full', contentSize_gt: 0 }).length, 1, 'documents({               path: /full, contentSize_gt: 0 }) length = 1')
-        t.same(storage.documents({               path: '/full', contentSize: 0    }).length, 1, 'documents({               path: /full, contentSize: 0    }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/full'                    }).length, 2, 'documents({               path: /full,                   }) length = 2')
+        t.same(storage.documents({ history: 'all',    path: '/full', contentSize_gt: 0 }).length, 1, 'documents({               path: /full, contentSize_gt: 0 }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/full', contentSize: 0    }).length, 1, 'documents({               path: /full, contentSize: 0    }) length = 1')
 
-        // the lastest in /empty has content 'e'
-        t.same(storage.documents({ isHead: true, path: '/empty'                    }).length, 1, 'documents({ isHead: true, path: /empty,                   }) length = 1')
-        t.same(storage.documents({ isHead: true, path: '/empty', contentSize_gt: 0 }).length, 1, 'documents({ isHead: true, path: /empty, contentSize_gt: 0 }) length = 1')
-        t.same(storage.documents({ isHead: true, path: '/empty', contentSize: 0    }).length, 0, 'documents({ isHead: true, path: /empty, contentSize: 0    }) length = 0')
+        // the head in /empty has content 'e'
+        t.same(storage.documents({ history: 'latest', path: '/empty'                    }).length, 1, 'documents({ isHead: true, path: /empty,                   }) length = 1')
+        t.same(storage.documents({ history: 'latest', path: '/empty', contentSize_gt: 0 }).length, 1, 'documents({ isHead: true, path: /empty, contentSize_gt: 0 }) length = 1')
+        t.same(storage.documents({ history: 'latest', path: '/empty', contentSize: 0    }).length, 0, 'documents({ isHead: true, path: /empty, contentSize: 0    }) length = 0')
 
         // in /empty there's two docs: one has content '' and one has 'full'
-        t.same(storage.documents({               path: '/empty'                    }).length, 2, 'documents({               path: /empty,                   }) length = 2')
-        t.same(storage.documents({               path: '/empty', contentSize_gt: 0 }).length, 1, 'documents({               path: /empty, contentSize_gt: 0 }) length = 1')
-        t.same(storage.documents({               path: '/empty', contentSize: 0    }).length, 1, 'documents({               path: /empty, contentSize: 0    }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/empty'                    }).length, 2, 'documents({               path: /empty,                   }) length = 2')
+        t.same(storage.documents({ history: 'all',    path: '/empty', contentSize_gt: 0 }).length, 1, 'documents({               path: /empty, contentSize_gt: 0 }) length = 1')
+        t.same(storage.documents({ history: 'all',    path: '/empty', contentSize: 0    }).length, 1, 'documents({               path: /empty, contentSize: 0    }) length = 1')
 
         t.end();
     });
@@ -788,24 +828,24 @@ for (let scenario of scenarios) {
 
         // queries with limits
         // including all history
-        t.same(storage.paths(   {}), ['/foo', '/pathA'], 'paths with history, no limit');
-        t.same(storage.contents({}), ['foo', 'content3', 'content2', 'content1'], 'contents with history, no limit');
+        t.same(storage.paths(   { history: 'all' }), ['/foo', '/pathA'], 'paths with history, no limit');
+        t.same(storage.contents({ history: 'all' }), ['foo', 'content3', 'content2', 'content1'], 'contents with history, no limit');
 
-        t.same(storage.paths(   { limit: 1 }), ['/foo'], 'paths with history, limit 1');
-        t.same(storage.contents({ limit: 1 }), ['foo'], 'contents with history, limit 1');
+        t.same(storage.paths(   { history: 'all', limit: 1 }), ['/foo'], 'paths with history, limit 1');
+        t.same(storage.contents({ history: 'all', limit: 1 }), ['foo'], 'contents with history, limit 1');
 
-        t.same(storage.paths(   { limit: 2 }), ['/foo', '/pathA'], 'paths with history, limit 2');
-        t.same(storage.contents({ limit: 2 }), ['foo', 'content3'], 'contents with history, limit 2');
+        t.same(storage.paths(   { history: 'all', limit: 2 }), ['/foo', '/pathA'], 'paths with history, limit 2');
+        t.same(storage.contents({ history: 'all', limit: 2 }), ['foo', 'content3'], 'contents with history, limit 2');
 
-        t.same(storage.paths(   { limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
-        t.same(storage.contents({ limit: 3 }), ['foo', 'content3', 'content2'], 'contents with history, limit 3');
+        t.same(storage.paths(   { history: 'all', limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
+        t.same(storage.contents({ history: 'all', limit: 3 }), ['foo', 'content3', 'content2'], 'contents with history, limit 3');
         
         // no history, just heads
-        t.same(storage.paths(   { isHead: true }), ['/foo', '/pathA'], 'paths no history, no limit');
-        t.same(storage.contents({ isHead: true }), ['foo', 'content3'], 'contents no history, no limit');
+        t.same(storage.paths(   { history: 'latest' }), ['/foo', '/pathA'], 'paths no history, no limit');
+        t.same(storage.contents({ history: 'latest' }), ['foo', 'content3'], 'contents no history, no limit');
 
-        t.same(storage.paths(   { isHead: true, limit: 1 }), ['/foo'], 'paths no history, limit 1');
-        t.same(storage.contents({ isHead: true, limit: 1 }), ['foo'], 'contents no history, limit 1');
+        t.same(storage.paths(   { history: 'latest', limit: 1 }), ['/foo'], 'paths no history, limit 1');
+        t.same(storage.contents({ history: 'latest', limit: 1 }), ['foo'], 'contents no history, limit 1');
 
         t.end();
     });
@@ -821,34 +861,35 @@ for (let scenario of scenarios) {
         t.same(storage.authors(), [author1, author2], 'authors');
 
         // path queries
-        t.same(storage.paths(    { path: '/pathA', isHead: true }), ['/pathA'], 'paths with path query');
-        t.same(storage.contents( { path: '/pathA', isHead: true }), ['content1.Z'], 'contents with path query');
-        t.same(storage.documents({ path: '/pathA', isHead: true }).map(d => d.content), ['content1.Z'], 'documents with path query');
+        t.same(storage.paths(    { path: '/pathA', history: 'latest' }), ['/pathA'], 'paths with path query');
+        t.same(storage.contents( { path: '/pathA', history: 'latest' }), ['content1.Z'], 'contents with path query');
+        t.same(storage.documents({ path: '/pathA', history: 'latest' }).map(d => d.content), ['content1.Z'], 'documents with path query');
 
-        t.same(storage.paths(    { path: '/pathA',  }), ['/pathA'], 'paths with path query, history');
-        t.same(storage.contents( { path: '/pathA',  }), ['content1.Z', 'content2.Y'], 'contents with path query, history');
-        t.same(storage.documents({ path: '/pathA',  }).map(d => d.content), ['content1.Z', 'content2.Y'], 'documents with path query, history');
+        t.same(storage.paths(    { path: '/pathA', history: 'all' }), ['/pathA'], 'paths with path query, history');
+        t.same(storage.contents( { path: '/pathA', history: 'all' }), ['content1.Z', 'content2.Y'], 'contents with path query, history');
+        t.same(storage.documents({ path: '/pathA', history: 'all' }).map(d => d.content), ['content1.Z', 'content2.Y'], 'documents with path query, history');
 
         // author
-        t.same(storage.paths({ author: author1               }), ['/pathA'], 'paths author 1, history');
-        t.same(storage.paths({ author: author1, isHead: true }), ['/pathA'], 'paths author 1, no history');
-        t.same(storage.paths({ author: author2               }), ['/pathA'], 'paths author 2, history');
-        t.same(storage.paths({ author: author2, isHead: true }), [], 'paths author 2, no history');
-        t.same(storage.contents({ author: author1               }), ['content1.Z'], 'contents author 1, history');
-        t.same(storage.contents({ author: author1, isHead: true }), ['content1.Z'], 'contents author 1, no history');
-        t.same(storage.contents({ author: author2               }), ['content2.Y'], 'contents author 2, history');
-        t.same(storage.contents({ author: author2, isHead: true }), [], 'contents author 2, no history');
-        t.same(storage.documents({ author: author1               }).length, 1, 'documents author 1, history');
-        t.same(storage.documents({ author: author1, isHead: true }).length, 1, 'documents author 1, no history');
-        t.same(storage.documents({ author: author2               }).length, 1, 'documents author 2, history');
-        t.same(storage.documents({ author: author2, isHead: true }).length, 0, 'documents author 2, no history');
+        t.same(storage.contents({  author: author1, history: 'latest' }), ['content1.Z'], 'contents author 1, no history');
+        t.same(storage.contents({  author: author2, history: 'latest' }), [], 'contents author 2, no history');
+        t.same(storage.documents({ author: author1, history: 'latest' }).length, 1, 'documents author 1, no history');
+        t.same(storage.documents({ author: author2, history: 'latest' }).length, 0, 'documents author 2, no history');
+        t.same(storage.paths({     author: author1, history: 'latest' }), ['/pathA'], 'paths author 1, no history');
+        t.same(storage.paths({     author: author2, history: 'latest' }), [], 'paths author 2, no history');
+
+        t.same(storage.contents({  author: author1, history: 'all' }), ['content1.Z'], 'contents author 1, history');
+        t.same(storage.contents({  author: author2, history: 'all' }), ['content2.Y'], 'contents author 2, history');
+        t.same(storage.documents({ author: author1, history: 'all' }).length, 1, 'documents author 1, history');
+        t.same(storage.documents({ author: author2, history: 'all' }).length, 1, 'documents author 2, history');
+        t.same(storage.paths({     author: author1, history: 'all' }), ['/pathA'], 'paths author 1, history');
+        t.same(storage.paths({     author: author2, history: 'all' }), ['/pathA'], 'paths author 2, history');
 
         //// participatingAuthor
         //// TODO: this has been removed from the latest query options
-        //t.same(storage.contents({ participatingAuthor: author1, includeHistory: true }), ['content1.Z', 'content2.Y'], 'participatingAuthor 1, with history');
-        //t.same(storage.contents({ participatingAuthor: author1, includeHistory: false }), ['content1.Z'], 'participatingAuthor 1, no history');
-        //t.same(storage.contents({ participatingAuthor: author2, includeHistory: true }), ['content1.Z', 'content2.Y'], 'participatingAuthor 2, with history');
-        //t.same(storage.contents({ participatingAuthor: author2, includeHistory: false }), ['content1.Z'], 'participatingAuthor 2, no history');
+        //t.same(storage.contents({ participatingAuthor: author1, history: 'all'  }), ['content1.Z', 'content2.Y'], 'participatingAuthor 1, with history');
+        //t.same(storage.contents({ participatingAuthor: author1, history: 'latest' }), ['content1.Z'], 'participatingAuthor 1, no history');
+        //t.same(storage.contents({ participatingAuthor: author2, history: 'all'  }), ['content1.Z', 'content2.Y'], 'participatingAuthor 2, with history');
+        //t.same(storage.contents({ participatingAuthor: author2, history: 'latest' }), ['content1.Z'], 'participatingAuthor 2, no history');
 
         t.end();
     });
@@ -874,15 +915,15 @@ for (let scenario of scenarios) {
         t.equal(storage.getContent('/path1'), 'three');
 
         t.equal(storage.paths().length, 3, '3 paths');
-        t.equal(storage.contents({ isHead: true }).length, 3, '3 contents with just heads');
-        t.equal(storage.contents().length, 4, '4 contents with history');
+        t.equal(storage.contents({ history: 'latest' }).length, 3, '3 contents with just heads');
+        t.equal(storage.contents({ history: 'all'    }).length, 4, '4 contents with history');
 
         t.same(storage.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths()');
-        t.same(storage.contents({ isHead: true }), ['aaa', 'zzz', 'three'], 'contents() with just heads');
-        t.same(storage.contents(), ['aaa', 'zzz', 'three', 'two'], 'contents with history, newest first');
+        t.same(storage.contents({ history: 'latest' }), ['aaa', 'zzz', 'three'], 'contents() with just heads');
+        t.same(storage.contents({ history: 'all'    }), ['aaa', 'zzz', 'three', 'two'], 'contents with history, newest first');
 
         t.same(
-            storage.documents().map((doc : Document) => doc.author),
+            storage.documents({ history: 'all' }).map((doc : Document) => doc.author),
             [author1, author1, author1, author2],
             'docs with history, newest first, docs should have correct authors'
         );
@@ -898,7 +939,7 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': sync: push to empty store', (t: any) => {
         let storage1 = scenario.makeStorage(WORKSPACE);
-        let storage3 = scenario.makeStorage(WORKSPACE);
+        let storage2 = scenario.makeStorage(WORKSPACE);
 
         // set up some paths
         t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');
@@ -907,22 +948,22 @@ for (let scenario of scenarios) {
         t.same(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');
 
         // sync
-        let syncResults = storage3Sync(storage1, storage3);
+        let syncResults = storage3Sync(storage1, storage2);
         t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 docs (includes history docs).  pulled 0.');
 
         // check results
-        t.same(storage1.paths(), storage3.paths(), 'storage1.paths() == storage3.paths()');
-        t.same(storage1.contents({ isHead: true }), storage3.contents({ isHead: true }), 'storage1 contents == storage3 (heads only)');
-        t.same(storage1.contents(), storage3.contents(), 'storage1 contents with history == storage3');
+        t.same(storage1.paths(), storage2.paths(), 'storage1.paths() == storage3.paths()');
+        t.same(storage1.contents({ history: 'latest' }), storage2.contents({ history: 'latest' }), 'storage1 contents == storage3 (heads only)');
+        t.same(storage1.contents({ history: 'all'    }), storage2.contents({ history: 'all'    }), 'storage1 contents with history == storage3');
 
-        t.same(storage3.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths are as expected');
-        t.same(storage3.getContent('/path1'), 'two', 'latest doc for a path wins on storage3');
-        t.same(storage3.getDocument('/path1')?.content, 'two', 'getDocument has correct content');
-        t.same(storage3.contents({ isHead: true }), ['aaa', 'zzz', 'two'], 'storage3 contents are as expected (heads only)');
-        t.same(storage3.contents(), ['aaa', 'zzz', 'two', 'one'], 'contents with history are as expected');
+        t.same(storage2.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths are as expected');
+        t.same(storage2.getContent('/path1'), 'two', 'latest doc for a path wins on storage3');
+        t.same(storage2.getDocument('/path1')?.content, 'two', 'getDocument has correct content');
+        t.same(storage2.contents({ history: 'latest' }), ['aaa', 'zzz', 'two'], 'storage3 contents are as expected (heads only)');
+        t.same(storage2.contents({ history: 'all'    }), ['aaa', 'zzz', 'two', 'one'], 'contents with history are as expected');
 
         // sync again.  nothing should happen.
-        let syncResults2 = storage3Sync(storage1, storage3);
+        let syncResults2 = storage3Sync(storage1, storage2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing happens if syncing again');
 
         t.end();
@@ -930,7 +971,7 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': sync: two-way', (t: any) => {
         let storage1 = scenario.makeStorage(WORKSPACE);
-        let storage3 = scenario.makeStorage(WORKSPACE);
+        let storage2 = scenario.makeStorage(WORKSPACE);
 
         // set up some paths
         t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');  // winner  (push #1)
@@ -939,33 +980,33 @@ for (let scenario of scenarios) {
         t.same(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'author1 set path1');      // becomes history  (push 3)
         t.same(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');  // winner  (push 4)
 
-        t.same(storage3.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '221', timestamp: now}), WriteResult.Accepted);       // dropped
+        t.same(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '221', timestamp: now}), WriteResult.Accepted);       // dropped
         t.same(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '111', timestamp: now + 10}), WriteResult.Accepted);  // winner  (push 5)
 
         t.same(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage3', content: '11', timestamp: now}), WriteResult.Accepted);       // dropped
-        t.same(storage3.set(keypair1, {format: FORMAT, path: '/latestOnStorage3', content: '22', timestamp: now + 10}), WriteResult.Accepted);  // winner  (pull 1)
+        t.same(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage3', content: '22', timestamp: now + 10}), WriteResult.Accepted);  // winner  (pull 1)
 
         t.same(storage1.set(keypair1, {format: FORMAT, path: '/authorConflict', content: 'author1storage1', timestamp: now}), WriteResult.Accepted);      // becomes history  (push 6)
-        t.same(storage3.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage3', timestamp: now + 1}), WriteResult.Accepted);  // winner  (pull 2)
+        t.same(storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage3', timestamp: now + 1}), WriteResult.Accepted);  // winner  (pull 2)
 
         // sync
-        let syncResults = storage3Sync(storage1, storage3);
+        let syncResults = storage3Sync(storage1, storage2);
         t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
         t.equal(storage1.paths().length, 6, '6 paths');
-        t.equal(storage1.documents({ isHead: true }).length, 6, '6 docs, heads only');
-        t.equal(storage1.documents().length, 8, '8 docs with history');
-        t.equal(storage1.contents({ isHead: true }).length, 6, '6 contents, heads only');
-        t.equal(storage1.contents().length, 8, '8 contents with history');
+        t.equal(storage1.documents({ history: 'latest' }).length, 6, '6 docs, heads only');
+        t.equal(storage1.documents({ history: 'all'    }).length, 8, '8 docs with history');
+        t.equal(storage1.contents({  history: 'latest' }).length, 6, '6 contents, heads only');
+        t.equal(storage1.contents({  history: 'all'    }).length, 8, '8 contents with history');
 
         t.same(storage1.paths(), '/authorConflict /decoy1 /decoy2 /latestOnStorage1 /latestOnStorage3 /path1'.split(' '), 'correct paths on storage1');
-        t.same(storage1.contents({ isHead: true }), 'author2storage3 aaa zzz 111 22 two'.split(' '), 'correct contents on storage1');
+        t.same(storage1.contents({ history: 'latest' }), 'author2storage3 aaa zzz 111 22 two'.split(' '), 'correct contents on storage1');
 
-        t.same(storage1.paths(), storage3.paths(), 'paths match');
-        t.same(storage1.documents({ isHead: true }), storage3.documents({ isHead: true }), 'docs match, heads only');
-        t.same(storage1.documents(), storage3.documents(), 'docs with history: match');
-        t.same(storage1.contents({ isHead: true }), storage3.contents({ isHead: true }), 'contents match, heads only');
-        t.same(storage1.contents(), storage3.contents(), 'contents with history: match');
+        t.same(storage1.paths(), storage2.paths(), 'paths match');
+        t.same(storage1.documents({ history: 'latest' }), storage2.documents({ history: 'latest' }), 'docs match, heads only');
+        t.same(storage1.documents({ history: 'all'    }), storage2.documents({ history: 'all'    }), 'docs with history: match');
+        t.same(storage1.contents({  history: 'latest' }), storage2.contents({  history: 'latest' }), 'contents match, heads only');
+        t.same(storage1.contents({  history: 'all'    }), storage2.contents({  history: 'all'    }), 'contents with history: match');
 
         t.end();
     });
@@ -1009,11 +1050,11 @@ for (let scenario of scenarios) {
         t.end();
     });
 
-    t.test(scenario.description + ': onChange', (t: any) => {
+    t.test(scenario.description + ': onWrite basic test', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let numCalled = 0;
-        let unsub = storage.onWrite.subscribe(() => { numCalled += 1 });
+        let unsub = storage.onWrite.subscribe((e: WriteEvent) => { numCalled += 1 });
 
         t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
         t.ok(isErr(storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now})), 'invalid set that will be ignored');
@@ -1103,7 +1144,7 @@ for (let scenario of scenarios) {
             return;
         }
         t.true(Object.isFrozen(doc), 'getDocument: returned doc is frozen');
-        let docs = storage.documents();
+        let docs = storage.documents({ history: 'all' });
         for (let doc of docs) {
             t.true(Object.isFrozen(doc), 'documents: returned doc is frozen');
         }
@@ -1133,10 +1174,10 @@ for (let scenario of scenarios) {
         t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10}), WriteResult.Ignored, 'manual timestamp in past from same author is ignored');
 
         t.same(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10}), WriteResult.Accepted, 'manual timestamp in past');
-        t.same(storage.documents({ author: keypair2.address })[0].timestamp, now - 10, '= now - 10');
+        t.same(storage.documents({ author: keypair2.address, history: 'all' })[0].timestamp, now - 10, '= now - 10');
 
         t.same(storage.set(keypair3, {format: FORMAT, path: '/path1', content: 'manual now+10', timestamp: now + 10}), WriteResult.Accepted, 'manual timestamp in future');
-        t.same(storage.documents({ author: keypair3.address })[0].timestamp, now + 10, '= now + 10');
+        t.same(storage.documents({ author: keypair3.address, history: 'all' })[0].timestamp, now + 10, '= now + 10');
 
         // invalid timestamps
         t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: Date.now() })
@@ -1172,7 +1213,7 @@ for (let scenario of scenarios) {
         t.end();
     });
 
-    t.test(scenario.description + ': set(): without now override', (t: any) => {
+    t.test(scenario.description + ': set(): without _now override', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         storage._now = null;
 
