@@ -11,6 +11,7 @@ import {
     Path,
     WorkspaceAddress,
     isErr,
+    notErr,
 } from '../util/types';
 import {
     generateAuthorKeypair,
@@ -20,9 +21,10 @@ import { ValidatorEs4 } from '../validator/es4';
 import {
     Query3,
     cleanUpQuery,
-    queryMatchesDoc,
-    historySortFn,
     documentIsExpired,
+    historySortFn,
+    queryMatchesDoc,
+    validateQuery,
 } from '../storage3/query3';
 
 //================================================================================
@@ -94,6 +96,11 @@ t.test('cleanUpQuery', (t: any) => {
         {
             query: {},
             result: { history: 'latest' },
+        },
+        {
+            query: { history: '???' } as any,
+            result: { limit: 0 },
+            note: 'invalid query turns to { limit: 0 }',
         }
     ];
 
@@ -101,6 +108,45 @@ t.test('cleanUpQuery', (t: any) => {
         note = (note || '') + ' ' + JSON.stringify(query);
         let expected = result === 'same' ? query : result;
         t.same(cleanUpQuery(query), expected, note);
+    }
+
+    t.end();
+});
+
+t.test('validateQuery', (t: any) => {
+    type TestCase = {
+        query: Query3,
+        valid: boolean,
+        note?: string,
+    }
+    let testCases: TestCase[] = [
+        { valid: true, query: {}, },
+
+        { valid: true, query: { path: '/a' }, },
+        { valid: true, query: { path: 'not-a-valid-path-but-still-ok-in-query' }, },
+
+        { valid: true,  query: { limit: 1 }, },
+        { valid: true,  query: { limit: 0 }, },
+        { valid: false, query: { limit: -1 }, },
+
+        { valid: true,  query: { limitBytes: 1 }, },
+        { valid: true,  query: { limitBytes: 0 }, },
+        { valid: false, query: { limitBytes: -1 }, },
+
+        { valid: true,  query: { contentLength: 1 }, },
+        { valid: true,  query: { contentLength: 0 }, },
+        { valid: false, query: { contentLength: -1 }, },
+
+        { valid: true,  query: { history: 'all' }, },
+        { valid: true,  query: { history: 'latest' }, },
+        { valid: false, query: { history: null } as any, },
+        { valid: false, query: { history: '???' } as any, },
+    ];
+
+    for (let { query, valid, note } of testCases) {
+        note = (note || '') + ' ' + JSON.stringify(query);
+        let err = validateQuery(query);
+        t.same(notErr(err), valid, note);
     }
 
     t.end();

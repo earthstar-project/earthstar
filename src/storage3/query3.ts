@@ -74,7 +74,7 @@ export let cleanUpQuery = (query: Query3): Query3 => {
     if (isErr(isValid)) {
         // if query is invalid, instead return a special query that will never match anything
         console.warn(isValid);
-        query = { limit: 0 };
+        return { limit: 0 };
     }
 
     // set defaults

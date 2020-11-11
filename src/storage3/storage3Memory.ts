@@ -1,6 +1,7 @@
 import {
     AuthorAddress,
     Document,
+    ValidationError,
     WorkspaceAddress,
 } from '../util/types';
 import {
@@ -70,6 +71,8 @@ export class Storage3Memory extends Storage3Base {
                 docsThisPath = [docsThisPath[0]];
             } else if (query.history === 'all') {
                 // keep all docs at this path
+            } else {
+                throw new ValidationError('unexpected query.history value: ' + JSON.stringify(query.history));
             }
 
             // apply the rest of the individual query selectors: path, timestamp, author, contentLength
@@ -146,7 +149,11 @@ export class Storage3Memory extends Storage3Base {
     }
 
     forgetDocuments(query: Query3ForForget): void {
+        this._assertNotClosed();
         query = cleanUpQuery(query) as Query3ForForget;
+        if (query.history !== 'all') {
+            throw new ValidationError('forgetDocuments can only be called with history: "all"');
+        }
         this._filterDocs((doc) => !queryMatchesDoc(query, doc));
     }
 

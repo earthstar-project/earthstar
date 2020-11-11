@@ -168,6 +168,7 @@ for (let scenario of scenarios) {
         t.throws(() => storage.getDocument('/a'), 'latestDocument() throws when closed');
         t.throws(() => storage.ingestDocument({} as any, false), 'ingestDocument() throws when closed');
         t.throws(() => storage.set(keypair1, {} as any), 'set() throws when closed');
+        t.throws(() => storage.forgetDocuments({ history: 'all' }), 'forgetDocuments() throws when closed');
         t.throws(() => storage.destroyAndClose(), 'destroyAndClose() throws when closed');
         t.end();
     });
@@ -313,6 +314,42 @@ for (let scenario of scenarios) {
                 t.ok(isErr(storage.ingestDocument(signedDoc2, false)), "don't ingest: non-writable or invalid path " + path);
             }
         }
+
+        t.end();
+    });
+
+    t.test(scenario.description + ': forgetDocuments', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+
+        let base = { workspace: WORKSPACE };
+
+        let inputDocs: Record<string, Document> = {
+            d0: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/a', content: ''}),
+            d1: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/aa', content: '1'}),
+            d2: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/aa/x', content: '22'}),
+            d3: makeDoc({...base, keypair: keypair2, timestamp: now + 1, path: '/b', content: '333'}),  // this is the only obsolete doc
+            d4: makeDoc({...base, keypair: keypair3, timestamp: now + 2, path: '/b', content: ''}),
+            d5: makeDoc({...base, keypair: keypair2, timestamp: now    , path: '/cc/x', content: '55555'}),
+        };
+        Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
+
+        storage.forgetDocuments({ contentLength: 3, history: 'all' });
+        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '', '55555'], 'forgot a non-head by contentLength');
+
+        storage.forgetDocuments({ path: '/b', history: 'all' });
+        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '55555'], 'forgot by path');
+
+        storage.forgetDocuments({ path: 'none-such', history: 'all' });
+        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '55555'], 'forgot nothing (no path matched)');
+
+        storage.forgetDocuments({ pathPrefix: '/a', history: 'all' });
+        t.same(storage.contents({ history: 'all' }), ['55555'], 'forgot by path prefix');
+
+        storage.forgetDocuments({ pathPrefix: '/', history: 'all' });
+        t.same(storage.contents({ history: 'all' }), [], 'forgot everything');
+
+        t.throws(() => storage.forgetDocuments({ } as any), 'throws with no history mode');
+        t.throws(() => storage.forgetDocuments({ history: 'latest' } as any), 'throws with history: latest');
 
         t.end();
     });
