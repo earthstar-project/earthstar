@@ -55,6 +55,8 @@ let MIN = SEC * 60;
 let HOUR = MIN * 60;
 let DAY = HOUR * 24;
 
+let SNOWMAN = '☃';  // \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+
 type MakeDocOpts = {
         workspace: WorkspaceAddress,
         keypair: AuthorKeypair,
@@ -165,6 +167,25 @@ t.test('documentIsExpired', (t: any) => {
     t.same(documentIsExpired(inputDocs.d0 , now), false, 'now   should not be expired');
     t.same(documentIsExpired(inputDocs.dp1, now), false, 'now+1 should not be expired');
     t.same(documentIsExpired(inputDocs.dx , now), false, 'permanent document should not be expired');
+
+    t.end();
+});
+
+t.test('unicode characters vs bytes', (t: any) => {
+    let base = { workspace: WORKSPACE };
+    let docs: Document[] = [
+        makeDoc({...base, keypair: keypair1, timestamp: now, path: '/0', content: ''}),
+        makeDoc({...base, keypair: keypair1, timestamp: now, path: '/1', content: '1'}),
+        makeDoc({...base, keypair: keypair1, timestamp: now, path: '/2', content: '22' }),
+        makeDoc({...base, keypair: keypair1, timestamp: now, path: '/3', content: SNOWMAN}),  // 1 unicode character, 3 bytes
+        makeDoc({...base, keypair: keypair2, timestamp: now, path: '/4', content: '4444'}),
+    ];
+    t.same(docs.filter(d => queryMatchesDoc({ contentLength: 0 }, d)).map(d => d.path), ['/0'], 'contentLength 0');
+    t.same(docs.filter(d => queryMatchesDoc({ contentLength: 1 }, d)).map(d => d.path), ['/1'], 'contentLength 1 (no snowman)');
+    t.same(docs.filter(d => queryMatchesDoc({ contentLength: 2 }, d)).map(d => d.path), ['/2'], 'contentLength 2');
+    t.same(docs.filter(d => queryMatchesDoc({ contentLength: 3 }, d)).map(d => d.path), ['/3'], 'contentLength 3 (snowman)');
+    t.same(docs.filter(d => queryMatchesDoc({ contentLength: 4 }, d)).map(d => d.path), ['/4'], 'contentLength 4');
+    t.same(docs.filter(d => queryMatchesDoc({ contentLength: 77 }, d)).map(d => d.path), [], 'contentLength 77');
 
     t.end();
 });

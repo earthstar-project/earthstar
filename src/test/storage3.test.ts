@@ -64,6 +64,8 @@ let MIN = SEC * 60;
 let HOUR = MIN * 60;
 let DAY = HOUR * 24;
 
+let SNOWMAN = '☃';  // \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+
 interface Scenario {
     makeStorage: (workspace : string) => IStorage3,
     description: string,
@@ -350,6 +352,38 @@ for (let scenario of scenarios) {
 
         t.throws(() => storage.forgetDocuments({ } as any), 'throws with no history mode');
         t.throws(() => storage.forgetDocuments({ history: 'latest' } as any), 'throws with history: latest');
+
+        t.end();
+    });
+
+    t.test(scenario.description + ': unicode characters vs bytes', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+
+        let base = { workspace: WORKSPACE };
+
+        let inputDocs: Record<string, Document> = {
+            d0: makeDoc({...base, keypair: keypair1, timestamp: now, path: '/0', content: ''}),
+            d1: makeDoc({...base, keypair: keypair1, timestamp: now, path: '/1', content: '1'}),
+            d2: makeDoc({...base, keypair: keypair1, timestamp: now, path: '/2', content: '22' }),
+            d3: makeDoc({...base, keypair: keypair1, timestamp: now, path: '/3', content: SNOWMAN}),  // 1 unicode character, 3 bytes
+            d4: makeDoc({...base, keypair: keypair2, timestamp: now, path: '/4', content: '4444'}),
+        };
+        Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
+
+        t.same(storage.paths({ contentLength: 0 }), ['/0'], 'paths contentLength 0');
+        t.same(storage.paths({ contentLength: 1 }), ['/1'], 'paths contentLength 1 (should not have snowman in here, "/3")');
+        t.same(storage.paths({ contentLength: 3 }), ['/3'], 'paths contentLength 3 (should have snowman here, "/3")');
+        t.same(storage.paths({ contentLength: 77 }), [], 'paths contentLength 77 (no match)');
+
+        t.same(storage.documents({ limitBytes: 0 }).map(d => d.path), [], 'limitBytes 0');
+        t.same(storage.documents({ limitBytes: 1 }).map(d => d.path), ['/0', '/1'], 'limitBytes 1');
+        t.same(storage.documents({ limitBytes: 2 }).map(d => d.path), ['/0', '/1'], 'limitBytes 2');
+        t.same(storage.documents({ limitBytes: 3 }).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 3');
+        t.same(storage.documents({ limitBytes: 4 }).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 4 no snowman yet...');
+        t.same(storage.documents({ limitBytes: 5 }).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 5 no snowman yet...');
+        t.same(storage.documents({ limitBytes: 6 }).map(d => d.path), ['/0', '/1', '/2', '/3'], 'limitBytes 6 includes snowman');
+        t.same(storage.documents({ limitBytes: 9 }).map(d => d.path), ['/0', '/1', '/2', '/3'], 'limitBytes 9');
+        t.same(storage.documents({ limitBytes: 10 }).map(d => d.path), ['/0', '/1', '/2', '/3', '/4'], 'limitBytes 10');
 
         t.end();
     });

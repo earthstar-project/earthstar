@@ -87,22 +87,25 @@ export let cleanUpQuery = (query: Query3): Query3 => {
     return q;
 }
 
+export let stringLengthInBytes = (s: string): number =>
+    Buffer.byteLength(s, 'utf-8');
+
 export let queryMatchesDoc = (query: Query3, doc: Document): boolean => {
     // only checks individual document properties,
     // not limit, historyMode, sort, etc
 
-    if (query.path !== undefined && !(query.path === doc.path)) { return false; }
+    if (query.path       !== undefined && !(query.path === doc.path)) { return false; }
     if (query.pathPrefix !== undefined && !(doc.path.startsWith(query.pathPrefix))) { return false; }
 
-    if (query.timestamp !== undefined && !(doc.timestamp === query.timestamp)) { return false; }
-    if (query.timestamp_gt !== undefined && !(doc.timestamp > query.timestamp_gt)) { return false; }
-    if (query.timestamp_lt !== undefined && !(doc.timestamp < query.timestamp_lt)) { return false; }
+    if (query.timestamp    !== undefined && !(doc.timestamp === query.timestamp   )) { return false; }
+    if (query.timestamp_gt !== undefined && !(doc.timestamp >   query.timestamp_gt)) { return false; }
+    if (query.timestamp_lt !== undefined && !(doc.timestamp <   query.timestamp_lt)) { return false; }
 
     if (query.author !== undefined && !(doc.author === query.author)) { return false; }
 
-    if (query.contentLength !== undefined && !(doc.content.length === query.contentLength)) { return false; }
-    if (query.contentLength_gt !== undefined && !(doc.content.length > query.contentLength_gt)) { return false; }
-    if (query.contentLength_lt !== undefined && !(doc.content.length < query.contentLength_lt)) { return false; }
+    if (query.contentLength    !== undefined && !(stringLengthInBytes(doc.content) === query.contentLength   )) { return false; }
+    if (query.contentLength_gt !== undefined && !(stringLengthInBytes(doc.content) >   query.contentLength_gt)) { return false; }
+    if (query.contentLength_lt !== undefined && !(stringLengthInBytes(doc.content) <   query.contentLength_lt)) { return false; }
 
     return true;
 }
