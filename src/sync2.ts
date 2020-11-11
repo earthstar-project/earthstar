@@ -5,13 +5,15 @@ import {
     IStorage,
     NetworkError,
     NotFoundError,
+    Thunk,
     WorkspaceAddress,
     WriteResult,
     isErr,
 } from './util/types';
 import {
-    Emitter, Thunk
+    Emitter
 } from './util/emitter';
+
 
 //================================================================================
 // HELPERS
