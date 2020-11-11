@@ -18,7 +18,7 @@ export let storage3Push = (storageA: IStorage3, storageB: IStorage3): number => 
 
     let numSuccess = 0;
     for (let doc of storageA.documents({ history: 'all' })) {
-        let result = storageB.ingestDocument(doc, false);
+        let result = storageB.ingestDocument(doc, storageA.sessionId);
         if (result === WriteResult.Accepted) { numSuccess += 1; }
     }
     return numSuccess;

@@ -10,7 +10,6 @@ import {
     Path,
     ValidationError,
     WorkspaceAddress,
-    WriteEvent,
     WriteResult,
     isErr,
     notErr,
@@ -23,6 +22,7 @@ import { ValidatorEs4 } from '../validator/es4';
 
 import {
     IStorage3,
+    WriteEvent3,
 } from '../storage3/types3';
 import {
     historySortFn, Query3
@@ -168,7 +168,7 @@ for (let scenario of scenarios) {
         t.throws(() => storage.contents(), 'contents() throws when closed');
         t.throws(() => storage.getContent('/a'), 'latestContent() throws when closed');
         t.throws(() => storage.getDocument('/a'), 'latestDocument() throws when closed');
-        t.throws(() => storage.ingestDocument({} as any, false), 'ingestDocument() throws when closed');
+        t.throws(() => storage.ingestDocument({} as any, ''), 'ingestDocument() throws when closed');
         t.throws(() => storage.set(keypair1, {} as any), 'set() throws when closed');
         t.throws(() => storage.forgetDocuments({ history: 'all' }), 'forgetDocuments() throws when closed');
         t.throws(() => storage.destroyAndClose(), 'destroyAndClose() throws when closed');
@@ -263,19 +263,19 @@ for (let scenario of scenarios) {
         };
         let signedDoc = ValidatorEs4.signDocument(keypair1, doc1) as Document;
         t.ok(notErr(signedDoc), 'signature succeeded');
-        t.same(storage.ingestDocument(signedDoc, false), WriteResult.Accepted, "successful ingestion");
+        t.same(storage.ingestDocument(signedDoc, ''), WriteResult.Accepted, "successful ingestion");
         t.equal(storage.getContent('/k1'), 'v1', "latestContent worked");
 
-        t.ok(isErr(storage.ingestDocument(doc1, false)), "don't ingest: bad signature");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, format: 'xxx'}, false)), "don't ingest: unknown format");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now / 1000}, false)), "don't ingest: timestamp too small, probably in milliseconds");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now * 2}, false)), "don't ingest: timestamp in future");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}, false)), "don't ingest: timestamp way too large");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, workspace: 'xxx'}, false)), "don't ingest: changed workspace after signing");
+        t.ok(isErr(storage.ingestDocument(doc1, '')), "don't ingest: bad signature");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, format: 'xxx'}, '')), "don't ingest: unknown format");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now / 1000}, '')), "don't ingest: timestamp too small, probably in milliseconds");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now * 2}, '')), "don't ingest: timestamp in future");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}, '')), "don't ingest: timestamp way too large");
+        t.ok(isErr(storage.ingestDocument({...signedDoc, workspace: 'xxx'}, '')), "don't ingest: changed workspace after signing");
 
         let signedDocDifferentWorkspace = ValidatorEs4.signDocument(keypair1, {...doc1, workspace: '+nope.nope'}) as Document;
         t.ok(notErr(signedDocDifferentWorkspace), 'signature succeeded');
-        t.ok(isErr(storage.ingestDocument(signedDocDifferentWorkspace, false)), "don't ingest: mismatched workspace");
+        t.ok(isErr(storage.ingestDocument(signedDocDifferentWorkspace, '')), "don't ingest: mismatched workspace");
 
         t.ok(isErr(storage.set(keypair1, {
             format: 'xxx',
@@ -293,7 +293,7 @@ for (let scenario of scenarios) {
             if (isErr(signedDoc2)) {
                 t.ok(false, 'signature failed: ' + signedDoc2);
             } else {
-                t.same(storage.ingestDocument(signedDoc2, false), WriteResult.Accepted, 'do ingest: writable path ' + path);
+                t.same(storage.ingestDocument(signedDoc2, ''), WriteResult.Accepted, 'do ingest: writable path ' + path);
             }
         }
         let notWritablePaths = [
@@ -313,7 +313,7 @@ for (let scenario of scenarios) {
             if (isErr(signedDoc2)) {
                 t.ok(false, 'signature failed: ' + signedDoc2);
             } else {
-                t.ok(isErr(storage.ingestDocument(signedDoc2, false)), "don't ingest: non-writable or invalid path " + path);
+                t.ok(isErr(storage.ingestDocument(signedDoc2, '')), "don't ingest: non-writable or invalid path " + path);
             }
         }
 
@@ -1153,13 +1153,13 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let numCalled = 0;
-        let unsub = storage.onWrite.subscribe((e: WriteEvent) => { numCalled += 1 });
+        let unsub = storage.onWrite.subscribe((e: WriteEvent3) => { numCalled += 1 });
 
         t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
         t.ok(isErr(storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now})), 'invalid set that will be ignored');
         t.equal(storage.getContent('/path1'), 'val1.0', 'second set was ignored');
 
-        t.equal(numCalled, 1, 'callback was called once');
+        t.equal(numCalled, 1, 'callback was called once, synchronously');
         unsub();
 
         t.same(storage.set(keypair1, {format: FORMAT, path: '/path2', content: 'val2.0', timestamp: now + 1}), WriteResult.Accepted, 'set another path');
@@ -1175,7 +1175,7 @@ for (let scenario of scenarios) {
         let storage3 = scenario.makeStorage(WORKSPACE);
         let storage4 = scenario.makeStorage(WORKSPACE);
 
-        let events: WriteEvent[] = [];
+        let events: WriteEvent3[] = [];
         let unsub = storage.onWrite.subscribe((e) => { events.push(e) });
 
         // set new path
@@ -1183,6 +1183,7 @@ for (let scenario of scenarios) {
         t.same(events[events.length-1].document.content, 'val1+1');
         t.same(events[events.length-1].isLocal, true, 'event is local');
         t.same(events[events.length-1].isLatest, true, 'event is latest');
+        t.same(events[events.length-1].fromSessionId, storage.sessionId, 'sessionId matches');
 
         // overwrite from same author
         t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+2', timestamp: now + 2}), WriteResult.Accepted, '=== update same path from keypair1');
@@ -1209,6 +1210,7 @@ for (let scenario of scenarios) {
         t.same(storage.getContent('/path1'), 'val1+9', 'content changed after a sync');
         t.same(events[events.length-1].document.content, 'val1+9', 'event has corrent content');
         t.same(events[events.length-1].isLocal, false, 'event is not local (it came from a sync)');
+        t.same(events[events.length-1].fromSessionId, storage3.sessionId, 'sessionId matches other storage');
         t.same(events[events.length-1].isLatest, true, 'event is latest');
 
         // a write from keypair2 which is synced but not a head
@@ -1220,6 +1222,7 @@ for (let scenario of scenarios) {
         t.same(events.length, 5, 'an event happens');
         t.same(events[events.length-1].document.content, 'val2+5', 'event has correct content');
         t.same(events[events.length-1].isLocal, false, 'event is not local (it came from a sync)');
+        t.same(events[events.length-1].fromSessionId, storage4.sessionId, 'sessionId matches other storage');
         t.same(events[events.length-1].isLatest, false, 'event is not latest');
 
         // unsubscribe
@@ -1250,7 +1253,7 @@ for (let scenario of scenarios) {
 
         let inputDoc = {...doc};
         t.false(Object.isFrozen(inputDoc), 'input doc is not frozen');
-        storage2.ingestDocument(inputDoc, true);
+        storage2.ingestDocument(inputDoc, '');
         t.true(Object.isFrozen(inputDoc), 'input doc is now frozen after being ingested');
 
         t.end();

@@ -9,12 +9,12 @@ import {
     StorageIsClosedError,
     ValidationError,
     WorkspaceAddress,
-    WriteEvent,
     WriteResult,
     isErr
 } from '../util/types';
 import {
-    IStorage3
+    IStorage3,
+    WriteEvent3,
 } from './types3';
 import { Query3, Query3ForForget, Query3NoLimitBytes } from './query3';
 import { Emitter } from '../util/emitter';
@@ -24,14 +24,17 @@ import { cleanUpQuery } from '../storage3/query3';
 
 export abstract class Storage3Base implements IStorage3 {
     readonly workspace : WorkspaceAddress;
-    onWrite : Emitter<WriteEvent>;
+    readonly sessionId: string;
+    onWrite : Emitter<WriteEvent3>;
     _now: number | null = null;
+
     _isClosed: boolean = false;
     _validatorMap : {[format: string] : IValidator};
 
     constructor(validators: IValidator[], workspace: WorkspaceAddress) {
         this.workspace = workspace;
-        this.onWrite = new Emitter<WriteEvent>();
+        this.sessionId = '' + Math.random();
+        this.onWrite = new Emitter<WriteEvent3>();
 
         if (validators.length === 0) {
             throw new ValidationError('must provide at least one validator to Storage');
@@ -109,7 +112,7 @@ export abstract class Storage3Base implements IStorage3 {
 
     // PUT DATA IN
     abstract _upsertDocument(doc: Document): void;
-    ingestDocument(doc: Document, isLocal: boolean): WriteResult | ValidationError {
+    ingestDocument(doc: Document, fromSessionId: string): WriteResult | ValidationError {
         this._assertNotClosed();
 
         let now = this._now || (Date.now() * 1000);
@@ -165,9 +168,10 @@ export abstract class Storage3Base implements IStorage3 {
         // Send events.
         this.onWrite.send({
             kind: 'DOCUMENT_WRITE',
-            isLocal: isLocal,
-            isLatest: isLatest,
             document: doc,
+            fromSessionId: fromSessionId,
+            isLocal: fromSessionId === this.sessionId,
+            isLatest: isLatest,
         });
 
         return WriteResult.Accepted;
@@ -232,7 +236,7 @@ export abstract class Storage3Base implements IStorage3 {
         // sign and ingest the doc
         let signedDoc = validator.signDocument(keypair, doc);
         if (isErr(signedDoc)) { return signedDoc; }
-        let result = this.ingestDocument(signedDoc, true);
+        let result = this.ingestDocument(signedDoc, this.sessionId);
 
         // END LOCK
         return result;
