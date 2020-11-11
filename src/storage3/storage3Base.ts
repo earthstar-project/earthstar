@@ -20,7 +20,7 @@ import { SimpleQuery3, FancyQuery3 } from './query3';
 import { Emitter } from '../util/emitter';
 import { uniq, sorted } from '../util/helpers';
 import { sha256base32 } from '../crypto/crypto';
-import { cleanUpQuery } from '../storage2/query2';
+import { cleanUpQuery } from '../storage3/query3';
 
 export abstract class Storage3Base implements IStorage3 {
     readonly workspace : WorkspaceAddress;

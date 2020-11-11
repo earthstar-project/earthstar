@@ -35,11 +35,6 @@
     "test-sync": "tap -Rspecy --jobs=1 build/test/sync.test.js",
     "test-validator": "tap -Rspecy --jobs=1 build/test/validator.es4.test.js",
 
-    "test-2": "tap -Rspecy --jobs=1 build/test/*2*.test.js",
-    "test-query2": "tap -Rspecy --jobs=1 build/test/query2.test.js",
-    "test-storage2": "tap -Rspecy --jobs=1 build/test/storage2.test.js",
-    "test-storage2-driver": "tap -Rspecy --jobs=1 build/test/storage2driver.test.js",
-
     "test-3": "tap -Rspecy --jobs=1 build/test/*3*.test.js",
     "test-query3": "tap -Rspecy --jobs=1 build/test/query3.test.js",
     "test-storage3": "tap -Rspecy --jobs=1 build/test/storage3.test.js",
