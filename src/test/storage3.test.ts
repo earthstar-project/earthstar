@@ -512,7 +512,6 @@ for (let scenario of scenarios) {
                 matches: [],
             },
             // CONTENT SIZE
-            // TODO: test contentLength with utf-8 characters vs bytes
             {
                 query: { contentLength: 0 },
                 matches: [i.d0, i.d4],
@@ -580,7 +579,6 @@ for (let scenario of scenarios) {
                 matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
             },
             // LIMIT BYTES
-            // TODO: test with unicode characters -- should count bytes, not characters
             {
                 query: { limitBytes: 0 },
                 matches: [],  // don't even get the first '', stop as soon as possible
@@ -631,7 +629,30 @@ for (let scenario of scenarios) {
         t.end();
     });
 
-    // TODO: check that expired docs are not returned from queries
+    t.test(scenario.description + ': do not return expired docs', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+
+        // a good doc
+        let doc1 = makeDoc({workspace: WORKSPACE, keypair: keypair1, path: '/a', content: 'hello', timestamp: now });
+        // a doc that will expire
+        let doc2 = makeDoc({workspace: WORKSPACE, keypair: keypair1, path: '/a!', content: 'hello', timestamp: now, deleteAfter: now + 5 });
+
+        storage._upsertDocument(doc1);
+        storage._upsertDocument(doc2);
+
+        t.same(storage.paths(), ['/a', '/a!'], 'paths: starting off with 2 docs');
+        t.same(storage.documents().length, 2, 'documents: starting off with 2 docs');
+        t.ok(storage.getDocument('/a!') !== undefined, 'getDocument: ephemeral doc still exists');
+
+        // jump to the future
+        storage._now = now + 100;
+
+        t.same(storage.paths(), ['/a'] , 'paths: only 1 doc left after the other one expired');
+        t.same(storage.documents().length, 1, 'documents: only 1 left');
+        t.ok(storage.getDocument('/a!') === undefined, 'getDocument returns undefined on expired doc');
+
+        t.end();
+    });
 
     t.test(scenario.description + ': removeExpiredDocuments', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);

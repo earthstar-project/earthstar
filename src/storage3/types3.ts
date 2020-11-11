@@ -18,9 +18,7 @@ export interface IStorage3 {
     onWrite : Emitter<WriteEvent>;
     _now: number | null;  // used for testing time behavior.  is used instead of Date.now().  normally null.
 
-    // TODO:
-    // session id
-    // forget
+    // TODO: session id?
 
     // simple key-value store for config settings
     setConfig(key: string, content: string): void;  // override
