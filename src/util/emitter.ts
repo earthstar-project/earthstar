@@ -9,13 +9,13 @@ export class Emitter<T> {
     // then we will await them here.  In other words, only one
     // callback will run at a time, assuming the event is
     // sent with "await send(...)" and not just "send(...)".
-    _callbacks : Callback<T>[] = [];
-    changeKey : string = 'init';  // this becomes a new random value with every update
+    _callbacks : Set<Callback<T>> = new Set();
+    changeKey : string = '' + Math.random();  // this becomes a new random value with every call to send()
     subscribe(cb : Callback<T>) : Thunk {
-        this._callbacks.push(cb);
+        this._callbacks.add(cb);
         // return an unsubscribe function
         return () => {
-            this._callbacks = this._callbacks.filter(c => c !== cb);
+            this._callbacks.delete(cb);
         };
     }
     async send(t : T) : Promise<void> {
@@ -29,7 +29,7 @@ export class Emitter<T> {
     }
     unsubscribeAll() {
         // clear all subscriptions
-        this._callbacks = [];
+        this._callbacks.clear();
     }
 }
 

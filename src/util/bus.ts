@@ -68,44 +68,50 @@ export class Bus<ChTypes extends Record<string, any>> {
     the special '*' callbacks are run after the others.
 
     */
-    _callbacksByChannel: Partial<Record<keyof ChTypes, Callback<any>[]>> = {};  // channel --> callback[]
-    changeKey : string = 'init';  // this becomes a new random value with every call to send()
+    _callbacksByChannel: Partial<Record<keyof ChTypes, Set<Callback<any>>>> = {};  // channel --> callback[]
+    changeKey : string = '' + Math.random();  // this becomes a new random value with every call to send()
     subscribe<Ch extends keyof ChTypes>(channel: Ch, cb: Callback<ChTypes[Ch]>): Thunk {
-        let existingCbs: Callback<any>[] | undefined = this._callbacksByChannel[channel];
-        let cbs: Callback<any>[] = existingCbs || [];
-        cbs.push(cb);
-        this._callbacksByChannel[channel] = cbs;
+        let cbs: Set<Callback<any>>;
+        if (this._callbacksByChannel[channel]) {
+            cbs = this._callbacksByChannel[channel] as Set<Callback<any>>;
+        } else {
+            cbs = new Set();
+            this._callbacksByChannel[channel] = cbs;
+        }
+        cbs.add(cb);
+
         return () => {
-            let cbs: Callback<any>[] | undefined = this._callbacksByChannel[channel];
+            let cbs = this._callbacksByChannel[channel];
             if (cbs !== undefined) {
-                cbs = cbs.filter((c: any) => c !== cb);
-                if (cbs.length === 0) {
+                cbs.delete(cb);
+                if (cbs.size === 0) {
                     delete this._callbacksByChannel[channel];
-                } else {
-                    this._callbacksByChannel[channel] = cbs;
                 }
             }
         }
     }
     async send<Ch extends keyof ChTypes>(channel: Ch, val: ChTypes[Ch]): Promise<void> {
+        // note: sending to '*' only calls the '*' callbacks
         this.changeKey = '' + Math.random();
-
-        // TODO: if sending to '*', should we call every single callback?
-        // for now we only call the '*' callbacks
-
-        // gather the callbacks to call
-        // regular events send to their own channel's subscribers plus '*' subscribers
-        let cbs: Callback<any>[] = [];
-        cbs = cbs.concat((this._callbacksByChannel[channel] as Callback<any>[] | undefined) || []);
-        if (channel !== '*') {
-            cbs = cbs.concat((this._callbacksByChannel['*'] as Callback<any>[] | undefined) || []);
+        let cbs: Set<Callback<any>> | undefined = this._callbacksByChannel[channel];
+        if (cbs !== undefined) {
+            for (let cb of cbs) {
+                let result = cb(val);
+                if (result instanceof Promise) {
+                    await result;
+                }
+            }
         }
-
-        // call them
-        for (let cb of cbs) {
-            let result = cb(val);
-            if (result instanceof Promise) {
-                await result;
+        // also send to '*', unless we've already because channel is explicitly set to '*'
+        if (channel !== '*') {
+            cbs = this._callbacksByChannel['*'];
+            if (cbs !== undefined) {
+                for (let cb of cbs) {
+                    let result = cb(val);
+                    if (result instanceof Promise) {
+                        await result;
+                    }
+                }
             }
         }
     }
