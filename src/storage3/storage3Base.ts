@@ -23,7 +23,7 @@ import { sha256base32 } from '../crypto/crypto';
 import { cleanUpQuery } from '../storage3/query3';
 
 export abstract class Storage3Base implements IStorage3 {
-    readonly workspace : WorkspaceAddress;
+    workspace : WorkspaceAddress;
     readonly sessionId: string;
     onWrite : Emitter<WriteEvent3>;
     _now: number | null = null;

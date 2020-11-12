@@ -26,6 +26,7 @@ import {
 } from '../storage3/types3';
 import {
     Query3,
+    Query3ForForget,
     sortPathAscAuthorAsc,
 } from '../storage3/query3';
 import {
@@ -36,6 +37,7 @@ import {
     storage3LocalSync,
 } from '../storage3/sync3';
 import { uniq, sorted } from '../util/helpers';
+import { Storage3Sqlite } from '../storage3/storage3Sqlite';
 
 //================================================================================
 // prepare for test scenarios
@@ -79,16 +81,16 @@ let scenarios : Scenario[] = [
             storage._now = now;
             return storage;
         },
-        description: 'Storage3 DriverMemory',
+        description: 'Storage3Memory',
     },
-    //{
-    //    makeStorage: (workspace : string) : IStorage3 => {
-    //        let storage = new Storage3(new DriverSqlite(), VALIDATORS, workspace);
-    //        storage._now = now;
-    //        return storage;
-    //    },
-    //    description: 'Storage3 DriverSqlite',
-    //},
+    {
+        makeStorage: (workspace : string) : IStorage3 => {
+            let storage = new Storage3Sqlite(VALIDATORS, workspace, ':memory:');
+            storage._now = now;
+            return storage;
+        },
+        description: 'Storage3Sqlite',
+    },
 ];
 
 type MakeDocOpts = {
@@ -128,6 +130,12 @@ let makeDoc = (opts: MakeDocOpts): Document => {
 t.test(`Storage3Memory: constructor`, (t: any) => {
     t.throws(() => new Storage3Memory([], WORKSPACE), 'throws when no validators are provided');
     t.throws(() => new Storage3Memory(VALIDATORS, 'bad-workspace-address'), 'throws when workspace address is invalid');
+    t.end();
+});
+
+t.test(`Storage3Sqlite: constructor`, (t: any) => {
+    t.throws(() => new Storage3Sqlite([], WORKSPACE, ':memory:'), 'throws when no validators are provided');
+    t.throws(() => new Storage3Sqlite(VALIDATORS, 'bad-workspace-address', ':memory:'), 'throws when workspace address is invalid');
     t.end();
 });
 
@@ -324,6 +332,7 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': forgetDocuments', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
+        let storage2 = scenario.makeStorage(WORKSPACE);
 
         let base = { workspace: WORKSPACE };
 
@@ -336,6 +345,13 @@ for (let scenario of scenarios) {
             d5: makeDoc({...base, keypair: keypair2, timestamp: now    , path: '/cc/x', content: '55555'}),
         };
         Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
+        Object.values(inputDocs).forEach(d => storage2._upsertDocument(d));
+
+        storage2.forgetDocuments({ history: 'all' });
+        t.same(storage2.contents({ history: 'all' }), [], 'forget everything, no query options');
+
+        storage.forgetDocuments({ history: 'all', limit: 0 } as any as Query3ForForget);
+        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '333', '', '55555'], 'forget with { limit: 0 } forgets nothing');
 
         storage.forgetDocuments({ contentLength: 3, history: 'all' });
         t.same(storage.contents({ history: 'all' }), ['', '1', '22', '', '55555'], 'forgot a non-head by contentLength');
@@ -656,7 +672,7 @@ for (let scenario of scenarios) {
         t.end();
     });
 
-    t.test(scenario.description + ': removeExpiredDocuments', (t: any) => {
+    t.test(scenario.description + ': discardExpiredDocuments', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // this should do nothing on an empty storage

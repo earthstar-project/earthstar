@@ -73,6 +73,7 @@ export class Storage3Memory extends Storage3Base {
             } else if (query.history === 'all') {
                 // keep all docs at this path
             } else {
+                /* istanbul ignore next */
                 throw new ValidationError('unexpected query.history value: ' + JSON.stringify(query.history));
             }
 
@@ -150,9 +151,10 @@ export class Storage3Memory extends Storage3Base {
         }
     }
 
-    forgetDocuments(query: Query3ForForget): void {
+    forgetDocuments(q: Query3ForForget): void {
         this._assertNotClosed();
-        query = cleanUpQuery(query) as Query3ForForget;
+        let query = cleanUpQuery(q);
+        if (query.limit === 0 || query.limitBytes === 0) { return; }
         if (query.history !== 'all') {
             throw new ValidationError('forgetDocuments can only be called with history: "all"');
         }
