@@ -18,12 +18,14 @@ import {
     sha256base32,
 } from '../crypto/crypto';
 import { ValidatorEs4 } from '../validator/es4';
+
 import {
     Query3,
     cleanUpQuery,
     documentIsExpired,
-    historySortFn,
     queryMatchesDoc,
+    sortLatestFirst,
+    sortPathAscAuthorAsc,
     validateQuery,
 } from '../storage3/query3';
 
@@ -36,10 +38,11 @@ let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 let VALIDATORS : IValidator[] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
-let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;
-let keypair2 = generateAuthorKeypair('twoo') as AuthorKeypair;
-let keypair3 = generateAuthorKeypair('thre') as AuthorKeypair;
-let keypair4 = generateAuthorKeypair('four') as AuthorKeypair;
+// tests assume these are in alphabetical order by author shortname
+let keypair1 = generateAuthorKeypair('aut1') as AuthorKeypair;
+let keypair2 = generateAuthorKeypair('aut2') as AuthorKeypair;
+let keypair3 = generateAuthorKeypair('aut3') as AuthorKeypair;
+let keypair4 = generateAuthorKeypair('aut4') as AuthorKeypair;
 if (isErr(keypair1)) { throw "oops"; }
 if (isErr(keypair2)) { throw "oops"; }
 if (isErr(keypair3)) { throw "oops"; }
@@ -87,6 +90,50 @@ let makeDoc = (opts: MakeDocOpts): Document => {
     if (isErr(signedDoc)) { throw signedDoc; }
     return signedDoc;
 }
+
+let shuffleArray = <T>(arr: T[]): void => {
+    arr.sort(() => Math.random() - 0.5);
+}
+
+t.test('sortPathAscAuthorAsc and sortLatestFirst', (t: any) => {
+    // these fake documents are good enough for testing the sort function
+    let dA1 = {path: '/a', author: '@x', timestamp: 100, signature: 'fff', content: 'dA1'} as Document;
+    let dA2 = {path: '/a', author: '@y', timestamp: 107, signature: 'ggg', content: 'dA2'} as Document;
+    let dA3 = {path: '/a', author: '@z', timestamp: 102, signature: 'bbb', content: 'dA3'} as Document;
+    let dB1 = {path: '/b', author: '@x', timestamp: 100, signature: 'aaa', content: 'dB1'} as Document;
+    let dB2 = {path: '/b', author: '@z', timestamp: 102, signature: 'eee', content: 'dB2'} as Document;
+
+    let expectedPathAuthor = [dA1, dA2, dA3, dB1, dB2];
+    let shuffledPathAuthor = [...expectedPathAuthor];
+    for (let ii = 0; ii < 10; ii++) {
+        shuffleArray(shuffledPathAuthor);
+        shuffledPathAuthor.sort(sortPathAscAuthorAsc);
+        t.same(shuffledPathAuthor, expectedPathAuthor, 'sortPathAscAuthorAsc sorted correctly');
+    }
+
+    let expectedLatestFirst = [
+        dA2,       // time: 107
+        dA3, dB2,  // time: 102.  sig: bbb, then eee
+        dB1, dA1,  // time: 100.  sig: aaa, then fff
+    ];
+    let shuffledLatestFirst = [...expectedLatestFirst];
+    for (let ii = 0; ii < 10; ii++) {
+        shuffleArray(shuffledLatestFirst);
+        shuffledLatestFirst.sort(sortLatestFirst);
+        t.same(shuffledLatestFirst, expectedLatestFirst, 'sortLatestFirst sorted correctly');
+    }
+
+    // make sure the sort is stable
+    let expectedClones = [{...dA1}, {...dA1}, {...dA1}, {...dA1}, {...dA1}, {...dA1}, {...dA1}];
+    let shuffledClones = [...expectedClones];
+    shuffleArray(shuffledClones);
+    shuffledClones.sort(sortPathAscAuthorAsc);
+    t.same(shuffledClones, expectedClones, 'sortPathAscAuthorAsc is stable');
+    shuffledClones.sort(sortLatestFirst);
+    t.same(shuffledClones, expectedClones, 'sortLatestFirst is stable');
+
+    t.end();
+});
 
 t.test('cleanUpQuery', (t: any) => {
     type TestCase = {
@@ -300,16 +347,20 @@ t.test('queryMatchesDoc', (t: any) => {
             matches: [i.d0, i.d1, i.d4],
         },
     ];
+    for (let testCase of testCases) {
+        testCase.matches.sort(sortPathAscAuthorAsc);
+    }
 
     // test documentQuery
+    let docSummary = (doc: Document): string =>
+        `${doc.path} = ${doc.content || "''"} by ${doc.author.split('.')[0]}`;
     for (let { query, matches, note } of testCases) {
         note = (note || '') + ' ' + JSON.stringify(query);
         let actualMatches = Object.values(inputDocs).filter(doc => queryMatchesDoc(query, doc));
-        actualMatches.sort(historySortFn);
-        matches.sort(historySortFn);
         if (matches.length !== actualMatches.length) {
             t.same(actualMatches.length, matches.length, `correct number of results: ${note}`);
         } else {
+            t.same(actualMatches.map(docSummary), matches.map(docSummary), `docs match: ${note}`);
             t.same(actualMatches, matches, `all match: ${note}`);
         }
     }

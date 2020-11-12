@@ -25,7 +25,8 @@ import {
     WriteEvent3,
 } from '../storage3/types3';
 import {
-    historySortFn, Query3
+    Query3,
+    sortPathAscAuthorAsc,
 } from '../storage3/query3';
 import {
     Storage3Memory
@@ -45,10 +46,11 @@ let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 let VALIDATORS : IValidator[] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
-let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;
-let keypair2 = generateAuthorKeypair('twoo') as AuthorKeypair;
-let keypair3 = generateAuthorKeypair('thre') as AuthorKeypair;
-let keypair4 = generateAuthorKeypair('four') as AuthorKeypair;
+// tests assume these are in alphabetical order by author shortname
+let keypair1 = generateAuthorKeypair('aut1') as AuthorKeypair;
+let keypair2 = generateAuthorKeypair('aut2') as AuthorKeypair;
+let keypair3 = generateAuthorKeypair('aut3') as AuthorKeypair;
+let keypair4 = generateAuthorKeypair('aut4') as AuthorKeypair;
 if (isErr(keypair1)) { throw "oops"; }
 if (isErr(keypair2)) { throw "oops"; }
 if (isErr(keypair3)) { throw "oops"; }
@@ -234,8 +236,8 @@ for (let scenario of scenarios) {
 
         t.same(outputDocs.length, inputDocs.length, 'upsert should not overwrite these test cases');
         let sortedInputs = [...inputDocs];
-        sortedInputs.sort(historySortFn);
-        t.same(outputDocs, sortedInputs, 'round-trip is deep-equal, and sorted by historySortFn');
+        sortedInputs.sort(sortPathAscAuthorAsc);
+        t.same(outputDocs, sortedInputs, 'round-trip is deep-equal and sorted in expected order');
 
         t.ok(Object.isFrozen(inputDocs[0]), 'upsert inputs are frozen afterwards');
 
@@ -602,7 +604,7 @@ for (let scenario of scenarios) {
             },
         ];
         for (let testCase of testCases) {
-            testCase.matches.sort(historySortFn);
+            testCase.matches.sort(sortPathAscAuthorAsc);
         }
 
         // test documentQuery
@@ -919,25 +921,28 @@ for (let scenario of scenarios) {
 
         // three authors
         t.same(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'foo', timestamp: now}), WriteResult.Accepted, 'set data');
+        // set them out of order to make sure they sort correctly
         t.same(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1', timestamp: now + 1}), WriteResult.Accepted, 'set data');
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2', timestamp: now + 2}), WriteResult.Accepted, 'set data');
         t.same(storage.set(keypair3, {format: FORMAT, path: '/pathA', content: 'content3', timestamp: now + 3}), WriteResult.Accepted, 'set data');
+        t.same(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2', timestamp: now + 2}), WriteResult.Accepted, 'set data');
 
-        t.same(storage.authors(), [author1, author3, author2], 'authors');
+        // (authors are numbered in alphabetical order)
+        t.same(storage.authors(), [author1, author2, author3], 'authors');
 
         // queries with limits
         // including all history
-        t.same(storage.paths(   { history: 'all' }), ['/foo', '/pathA'], 'paths with history, no limit');
-        t.same(storage.contents({ history: 'all' }), ['foo', 'content3', 'content2', 'content1'], 'contents with history, no limit');
 
         t.same(storage.paths(   { history: 'all', limit: 1 }), ['/foo'], 'paths with history, limit 1');
         t.same(storage.contents({ history: 'all', limit: 1 }), ['foo'], 'contents with history, limit 1');
 
         t.same(storage.paths(   { history: 'all', limit: 2 }), ['/foo', '/pathA'], 'paths with history, limit 2');
-        t.same(storage.contents({ history: 'all', limit: 2 }), ['foo', 'content3'], 'contents with history, limit 2');
+        t.same(storage.contents({ history: 'all', limit: 2 }), ['foo', 'content1'], 'contents with history, limit 2');
 
         t.same(storage.paths(   { history: 'all', limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
-        t.same(storage.contents({ history: 'all', limit: 3 }), ['foo', 'content3', 'content2'], 'contents with history, limit 3');
+        t.same(storage.contents({ history: 'all', limit: 3 }), ['foo', 'content1', 'content2'], 'contents with history, limit 3');
+
+        t.same(storage.paths(   { history: 'all' }), ['/foo', '/pathA'], 'paths with history, no limit');
+        t.same(storage.contents({ history: 'all' }), ['foo', 'content1', 'content2', 'content3'], 'contents with history, no limit');
         
         // no history, just heads
         t.same(storage.paths(   { history: 'latest' }), ['/foo', '/pathA'], 'paths no history, no limit');
@@ -1059,7 +1064,7 @@ for (let scenario of scenarios) {
         t.same(storage2.getContent('/path1'), 'two', 'latest doc for a path wins on storage3');
         t.same(storage2.getDocument('/path1')?.content, 'two', 'getDocument has correct content');
         t.same(storage2.contents({ history: 'latest' }), ['aaa', 'zzz', 'two'], 'storage3 contents are as expected (heads only)');
-        t.same(storage2.contents({ history: 'all'    }), ['aaa', 'zzz', 'two', 'one'], 'contents with history are as expected');
+        t.same(storage2.contents({ history: 'all'    }), ['aaa', 'zzz', 'one', 'two'], 'contents with history are as expected');
 
         // sync again.  nothing should happen.
         let syncResults2 = storage3LocalSync(storage1, storage2);

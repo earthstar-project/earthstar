@@ -6,11 +6,12 @@ import {
 } from '../util/types';
 import {
     Query3,
-    cleanUpQuery,
-    historySortFn,
-    queryMatchesDoc,
     Query3ForForget,
+    cleanUpQuery,
     documentIsExpired,
+    queryMatchesDoc,
+    sortLatestFirst,
+    sortPathAscAuthorAsc,
 } from './query3';
 import {
     Storage3Base,
@@ -66,8 +67,8 @@ export class Storage3Memory extends Storage3Base {
             let docsThisPath = Object.values(pathSlots);
 
             if (query.history === 'latest') {
-                // only keep head
-                docsThisPath.sort(historySortFn);  // TODO: would be better to sort on insertion instead of read
+                // only keep latest, and use signature as tiebreaker
+                docsThisPath.sort(sortLatestFirst);
                 docsThisPath = [docsThisPath[0]];
             } else if (query.history === 'all') {
                 // keep all docs at this path
@@ -92,7 +93,8 @@ export class Storage3Memory extends Storage3Base {
             // limit checks below, though.
         }
 
-        results.sort(historySortFn);
+        // sort overall results by path, then author within a path
+        results.sort(sortPathAscAuthorAsc);
 
         // apply limit and limitBytes
         if (query.limit !== undefined) {

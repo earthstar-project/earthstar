@@ -48,7 +48,7 @@ export interface Query3 {
     limit?: number,
     limitBytes?: number,  // sum of content bytes <= limitBytes (stop as soon as possible)
 
-    // sort?: 'newest' | 'oldest' | 'path',  // default is path
+    // sort?: 'newest' | 'oldest' | 'path',  // default is path ASC, author ASC
     // continueAfter: {path, timestamp, ...signature? author? hash?}
 };
 
@@ -114,14 +114,23 @@ export let documentIsExpired = (doc: Document, now: number): boolean => {
     return (doc.deleteAfter !== null) && (doc.deleteAfter < now);
 }
 
-export let historySortFn = (a: Document, b: Document): number => {
-    // When used within one path's documents, puts the winning version first.
-    // path ASC (abcd), then timestamp DESC (newest first), then signature DESC (to break timestamp ties)
-    if (a.path > b.path) { return 1; }
-    if (a.path < b.path) { return -1; }
+export let sortLatestFirst = (a: Document, b: Document): number => {
+    // Used to pick the winning document within one path.
+    // Puts the winning version first.
+    // timestamp DESC (newest first), then signature ASC (to break timestamp ties)
     if (a.timestamp < b.timestamp) { return 1; }
     if (a.timestamp > b.timestamp) { return -1; }
-    if (a.signature < b.signature) { return 1; }
-    if (a.signature > b.signature) { return -1; }
+    if (a.signature > b.signature) { return 1; }  // TODO: test signature sorting
+    if (a.signature < b.signature) { return -1; }
+    return 0;
+};
+
+export let sortPathAscAuthorAsc = (a: Document, b: Document): number => {
+    // Used to sort overall query results.
+    // path ASC, then author ASC within the same path.
+    if (a.path > b.path) { return 1; }
+    if (a.path < b.path) { return -1; }
+    if (a.author > b.author) { return 1; }
+    if (a.author < b.author) { return -1; }
     return 0;
 };
