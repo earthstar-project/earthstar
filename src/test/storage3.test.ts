@@ -33,9 +33,9 @@ import {
     Storage3Memory
 } from '../storage3/storage3Memory';
 import {
-    storage3LocalPush,
-    storage3LocalSync,
-} from '../storage3/sync3';
+    localPush,
+    localSync,
+} from '../storage3/sync3local';
 import { uniq, sorted } from '../util/helpers';
 import { Storage3Sqlite } from '../storage3/storage3Sqlite';
 
@@ -1068,7 +1068,7 @@ for (let scenario of scenarios) {
         t.same(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');
 
         // sync
-        let syncResults = storage3LocalSync(storage1, storage2);
+        let syncResults = localSync(storage1, storage2);
         t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 docs (includes history docs).  pulled 0.');
 
         // check results
@@ -1083,7 +1083,7 @@ for (let scenario of scenarios) {
         t.same(storage2.contents({ history: 'all'    }), ['aaa', 'zzz', 'one', 'two'], 'contents with history are as expected');
 
         // sync again.  nothing should happen.
-        let syncResults2 = storage3LocalSync(storage1, storage2);
+        let syncResults2 = localSync(storage1, storage2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing happens if syncing again');
 
         t.end();
@@ -1110,7 +1110,7 @@ for (let scenario of scenarios) {
         t.same(storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage3', timestamp: now + 1}), WriteResult.Accepted);  // winner  (pull 2)
 
         // sync
-        let syncResults = storage3LocalSync(storage1, storage2);
+        let syncResults = localSync(storage1, storage2);
         t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
         t.equal(storage1.paths().length, 6, '6 paths');
@@ -1139,8 +1139,8 @@ for (let scenario of scenarios) {
         t.same(storageA2.set(keypair1, {format: FORMAT, path: '/a2', content: 'a2'}), WriteResult.Accepted);
         t.same(storageB.set(keypair1, {format: FORMAT, path: '/b', content: 'b'}), WriteResult.Accepted);
 
-        t.same(storage3LocalSync(storageA1, storageB),  { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
-        t.same(storage3LocalSync(storageA1, storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
+        t.same(localSync(storageA1, storageB),  { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
+        t.same(localSync(storageA1, storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
 
         t.end();
     });
@@ -1154,18 +1154,18 @@ for (let scenario of scenarios) {
         t.same(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'bar'}), WriteResult.Accepted);
 
         // sync with empty stores
-        t.same(storage3LocalSync( storageEmpty1, storageEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
-        t.same(storage3LocalPush( storageEmpty1, storageEmpty2), 0, 'push with empty stores');
-        t.same(storage3LocalPush( storageEmpty1, storage      ), 0, 'push from empty to full store');
+        t.same(localSync( storageEmpty1, storageEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(localPush( storageEmpty1, storageEmpty2), 0, 'push with empty stores');
+        t.same(localPush( storageEmpty1, storage      ), 0, 'push from empty to full store');
 
         // sync with self
-        t.same(storage3LocalSync(storage, storage), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
+        t.same(localSync(storage, storage), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
 
         // successful sync
-        t.same(storage3LocalSync(storage, storageEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
-        t.same(storage3LocalSync(storageEmpty2, storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
+        t.same(localSync(storage, storageEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
+        t.same(localSync(storageEmpty2, storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
 
-        t.same(storage3LocalPush(storage, storageEmpty3), 1, 'successful push');
+        t.same(localPush(storage, storageEmpty3), 1, 'successful push');
 
         t.end();
     });
@@ -1220,13 +1220,13 @@ for (let scenario of scenarios) {
 
         // old write from same author, synced and ignored
         t.same(storage2.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1-9', timestamp: now - 9}), WriteResult.Accepted, '=== old write from keypair1, synced');
-        storage3LocalPush(storage2, storage);
+        localPush(storage2, storage);
         t.same(events.length, 3, 'no event happens because nothing happened in the sync');
         t.same(storage.getContent('/path1'), 'val2+3', 'content is unchanged');
 
         // new write from same author, synced and used
         t.same(storage3.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+9', timestamp: now + 9}), WriteResult.Accepted, '=== new write from same author, synced');
-        storage3LocalPush(storage3, storage);
+        localPush(storage3, storage);
         t.same(events.length, 4, 'sync caused an event');
         t.same(storage.getContent('/path1'), 'val1+9', 'content changed after a sync');
         t.same(events[events.length-1].document.content, 'val1+9', 'event has corrent content');
@@ -1237,7 +1237,7 @@ for (let scenario of scenarios) {
         // a write from keypair2 which is synced but not a head
         // (it's a new latest doc for keypair2, but not a new latest doc overall for this path)
         t.same(storage4.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+5', timestamp: now + 5}), WriteResult.Accepted, '=== a write into history, synced');
-        let numSynced = storage3LocalPush(storage4, storage);
+        let numSynced = localPush(storage4, storage);
         t.same(numSynced, 1, 'it was synced');
         t.same(storage.getContent('/path1'), 'val1+9', '(latest) content did not change');
         t.same(events.length, 5, 'an event happens');

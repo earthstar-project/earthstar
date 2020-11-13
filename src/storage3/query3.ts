@@ -118,9 +118,9 @@ export let sortLatestFirst = (a: Document, b: Document): number => {
     // Used to pick the winning document within one path.
     // Puts the winning version first.
     // timestamp DESC (newest first), then signature ASC (to break timestamp ties)
-    if (a.timestamp < b.timestamp) { return 1; }
+    if (a.timestamp < b.timestamp) { return 1; }  // highest timestamp wins...
     if (a.timestamp > b.timestamp) { return -1; }
-    if (a.signature > b.signature) { return 1; }  // TODO: test signature sorting
+    if (a.signature > b.signature) { return 1; }  // if tie, lowest signature wins
     if (a.signature < b.signature) { return -1; }
     return 0;
 };
