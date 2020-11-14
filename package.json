@@ -36,6 +36,7 @@
     "test-validator": "tap -Rspecy --jobs=1 build/test/validator.es4.test.js",
     "test-3": "tap -Rspecy --jobs=1 build/test/*3*.test.js",
     "test-3-query": "tap -Rspecy --jobs=1 build/test/query3.test.js",
+    "test-3-sync": "tap -Rspecy --jobs=1 build/test/sync3incremental.test.js",
     "test-3-storage": "tap -Rspecy --jobs=1 build/test/storage3.test.js",
 
     "test-coverage": "npm test -- --coverage-report=lcov",

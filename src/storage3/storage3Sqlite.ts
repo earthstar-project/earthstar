@@ -282,6 +282,12 @@ export class Storage3Sqlite extends Storage3Base {
             params.contentLength_lt = query.contentLength_lt;
         }
 
+        if (query.continueAfter !== undefined) {
+            havings.push('(path > :continuePath OR (path = :continuePath AND author > :continueAuthor))');
+            params.continuePath = query.continueAfter.path;
+            params.continueAuthor = query.continueAfter.author;
+        }
+
         if (query.limit !== undefined && mode !== 'delete') {
             limit = 'LIMIT :limit';
             params.limit = query.limit;

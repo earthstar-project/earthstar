@@ -248,6 +248,10 @@ t.test('queryMatchesDoc', (t: any) => {
         d5: makeDoc({...base, keypair: keypair1, timestamp: now    , path: '/cc/x', content: '55555'}),
     };
 
+    // NOTE: we can't test history: 'latest' here --
+    // queryMatchesDoc only runs on one document at a time, in isolation,
+    // so it doesn't know if the doc is latest or not.
+
     let i = inputDocs;
     type TestCase = {
         query: Query3,
@@ -345,6 +349,15 @@ t.test('queryMatchesDoc', (t: any) => {
         {
             query: { contentLength_lt: 2 },
             matches: [i.d0, i.d1, i.d4],
+        },
+        // CONTINUE AFTER
+        {
+            query: { continueAfter: { path: '/b', author: author2 } },
+            matches: [i.d4, i.d5],
+        },
+        {
+            query: { continueAfter: { path: '/aa', author: author1 } },
+            matches: [i.d2, i.d3, i.d4, i.d5],
         },
     ];
     for (let testCase of testCases) {

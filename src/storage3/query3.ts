@@ -37,7 +37,7 @@ export interface Query3 {
 
     author?: AuthorAddress,
 
-    contentLength?: number,  // in bytes as utf-8.  skip sparse documents with null content
+    contentLength?: number,  // in bytes as utf-8.  TODO: how to treat sparse docs with null content?
     contentLength_gt?: number,
     contentLength_lt?: number,
 
@@ -48,8 +48,11 @@ export interface Query3 {
     limit?: number,
     limitBytes?: number,  // sum of content bytes <= limitBytes (stop as soon as possible)
 
-    // sort?: 'newest' | 'oldest' | 'path',  // default is path ASC, author ASC
-    // continueAfter: {path, timestamp, ...signature? author? hash?}
+    // start with the next matching item after this one:
+    continueAfter?: {
+        path: string,
+        author: string,
+    },
 };
 
 interface Query3HistoryAll extends Query3 {
@@ -57,7 +60,6 @@ interface Query3HistoryAll extends Query3 {
 }
 export type Query3ForForget = Omit<Query3HistoryAll, 'limit' | 'limitBytes'>;
 export type Query3NoLimitBytes = Omit<Query3, 'limitBytes'>;
-
 
 export let validateQuery = (query: Query3): ValidationError | true => {
     if (query.limit !== undefined && query.limit < 0) { return new ValidationError('limit must be >= 0'); }
@@ -106,6 +108,12 @@ export let queryMatchesDoc = (query: Query3, doc: Document): boolean => {
     if (query.contentLength    !== undefined && !(stringLengthInBytes(doc.content) === query.contentLength   )) { return false; }
     if (query.contentLength_gt !== undefined && !(stringLengthInBytes(doc.content) >   query.contentLength_gt)) { return false; }
     if (query.contentLength_lt !== undefined && !(stringLengthInBytes(doc.content) <   query.contentLength_lt)) { return false; }
+
+    if (query.continueAfter !== undefined) {
+        let { path, author } = query.continueAfter;
+        if (doc.path < path) { return false; }
+        if (doc.path === path && doc.author <= author) { return false; }
+    }
 
     return true;
 }

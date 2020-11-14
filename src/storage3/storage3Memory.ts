@@ -78,6 +78,7 @@ export class Storage3Memory extends Storage3Base {
             }
 
             // apply the rest of the individual query selectors: path, timestamp, author, contentLength
+            // and continueAfter
             // and skip expired ephemeral docs
             docsThisPath = docsThisPath
                 .filter(doc => queryMatchesDoc(query, doc) && (doc.deleteAfter === null || now <= doc.deleteAfter));

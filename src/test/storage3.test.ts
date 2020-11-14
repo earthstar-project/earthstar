@@ -374,6 +374,63 @@ for (let scenario of scenarios) {
         t.end();
     });
 
+    t.test(scenario.description + ': continueAfter', (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+
+        let base = { workspace: WORKSPACE };
+
+        let inputDocs: Record<string, Document> = {
+            d0: makeDoc({...base, keypair: keypair1, timestamp: now,   path: '/a', content: 'a1'}),
+            d1: makeDoc({...base, keypair: keypair2, timestamp: now+1, path: '/a', content: 'a2'}),
+            d2: makeDoc({...base, keypair: keypair1, timestamp: now+1, path: '/b', content: 'b1'}),
+            d3: makeDoc({...base, keypair: keypair2, timestamp: now,   path: '/b', content: 'b2'}),
+            d4: makeDoc({...base, keypair: keypair1, timestamp: now,   path: '/c', content: 'c1'}),
+        };
+        Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
+
+        type TestCase = {
+            query: Query3,
+            contents: string[],
+            note?: string,
+        }
+
+        let testCases: TestCase[] = [
+            // should match every document
+            { query: { history: 'all', continueAfter: { path: '/',  author: author1 }}, contents: 'a1 a2 b1 b2 c1'.split(' ') },
+
+            // advance through with history: all
+            { query: { history: 'all', continueAfter: { path: '/a', author: '' }}     , contents: 'a1 a2 b1 b2 c1'.split(' ') },
+            { query: { history: 'all', continueAfter: { path: '/a', author: author1 }}, contents: 'a2 b1 b2 c1'.split(' ') },
+            { query: { history: 'all', continueAfter: { path: '/a', author: author2 }}, contents: 'b1 b2 c1'.split(' ') },
+            { query: { history: 'all', continueAfter: { path: '/a', author: author3 }}, contents: 'b1 b2 c1'.split(' ') },
+            { query: { history: 'all', continueAfter: { path: '/b', author: author1 }}, contents: 'b2 c1'.split(' ') },
+            { query: { history: 'all', continueAfter: { path: '/b', author: author2 }}, contents: 'c1'.split(' ') },
+            { query: { history: 'all', continueAfter: { path: '/f', author: '' }}     , contents: [] },
+
+            // advance through with history: latest
+            { query: { history: 'latest', continueAfter: { path: '/',  author: ''      }}, contents: 'a2 b1 c1'.split(' ') },
+            { query: { history: 'latest', continueAfter: { path: '/a', author: author1 }}, contents: 'a2 b1 c1'.split(' ') },
+            { query: { history: 'latest', continueAfter: { path: '/a', author: author2 }}, contents: 'b1 c1'.split(' ') },
+            { query: { history: 'latest', continueAfter: { path: '/b', author: author1 }}, contents: 'c1'.split(' ') },
+            { query: { history: 'latest', continueAfter: { path: '/b', author: author2 }}, contents: 'c1'.split(' ') },
+            { query: { history: 'latest', continueAfter: { path: '/c', author: author1 }}, contents: [] },
+            { query: { history: 'latest', continueAfter: { path: '/f', author: ''      }}, contents: [] },
+
+            // filter by something else too
+            { query: { history: 'all', timestamp_gt: now, continueAfter: { path: '/a', author: '' }}     , contents: 'a2 b1'.split(' ') },
+            { query: { history: 'all', timestamp_gt: now, continueAfter: { path: '/a', author: author2 }}, contents: 'b1'.split(' ') },
+            { query: { history: 'all', timestamp_gt: now, continueAfter: { path: '/b', author: author1 }}, contents: [] },
+        ];
+
+        for (let { query, contents, note } of testCases) {
+            note = (note || '') + ' ' + JSON.stringify(contents);
+            let actualContents = storage.contents(query);
+            t.same(actualContents, contents, `continueAfter: ${note}`);
+        }
+
+        t.end();
+    });
+
     t.test(scenario.description + ': unicode characters vs bytes', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
