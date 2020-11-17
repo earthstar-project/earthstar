@@ -1,5 +1,4 @@
 import {
-    AuthorAddress,
     Document,
     IValidator,
     ValidationError,

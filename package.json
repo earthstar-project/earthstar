@@ -38,10 +38,8 @@
     "test-3-query": "tap -Rspecy --jobs=1 build/test/query3.test.js",
     "test-3-sync": "tap -Rspecy --jobs=1 build/test/sync3incremental.test.js",
     "test-3-storage": "tap -Rspecy --jobs=1 build/test/storage3.test.js",
-
     "test-coverage": "npm test -- --coverage-report=lcov",
     "test-3-coverage": "npm run test-3 -- --coverage-report=lcov",
-
     "typedoc": "typedoc --out typedoc/ --theme minimal --name Earthstar --includeVersion --readme none src",
     "bench": "node --expose-gc build/test/benchmark.js | tee benchmark.txt",
     "build-and-test": "npm run build && npm run test",
@@ -52,6 +50,7 @@
   "devDependencies": {
     "@types/bencode": "^2.0.0",
     "@types/better-sqlite3": "^5.4.0",
+    "@types/lodash.debounce": "^4.0.6",
     "@types/multibase": "^0.6.0",
     "@types/node": "^14.0.3",
     "@types/tap": "^14.10.0",
@@ -74,6 +73,7 @@
     "chloride": "^2.2.14",
     "fast-equals": "^2.0.0",
     "isomorphic-fetch": "^2.2.1",
+    "lodash.debounce": "^4.0.8",
     "multibase": "^0.7.0",
     "tslib": "^2.0.0"
   }
