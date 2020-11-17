@@ -1,6 +1,7 @@
 import {
     AuthorAddress,
     Document,
+    IValidator,
     ValidationError,
     WorkspaceAddress,
 } from '../util/types';
@@ -22,6 +23,10 @@ import {
 export class Storage3Memory extends Storage3Base {
     _docs: Record<string, Record<string, Document>> = {};  // { path: { author: document }}
     _config: Record<string, string> = {};
+
+    constructor(validators: IValidator[], workspace: WorkspaceAddress) {
+        super(validators, workspace);
+    }
 
     setConfig(key: string, content: string): void {
         this._config[key] = content;
@@ -168,10 +173,10 @@ export class Storage3Memory extends Storage3Base {
         this._filterDocs((doc) => !documentIsExpired(doc, now));
     }
 
-    destroyAndClose(): void {
+    closeAndForgetWorkspace(): void {
         this._assertNotClosed();
+        this.close();
         this._docs = {};
         this._config = {};
-        this.close();
     }
 }

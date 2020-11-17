@@ -36,7 +36,7 @@ import {
     localPush,
     localSync,
 } from '../storage3/sync3local';
-import { uniq, sorted } from '../util/helpers';
+import { uniq, sorted, sleep } from '../util/helpers';
 import { Storage3Sqlite } from '../storage3/storage3Sqlite';
 
 //================================================================================
@@ -161,16 +161,12 @@ for (let scenario of scenarios) {
 
     t.test(scenario.description + ': close', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
-        let storage2 = scenario.makeStorage(WORKSPACE);
 
         t.same(storage.isClosed(), false, 'starts off not closed');
         storage.close();
         t.same(storage.isClosed(), true, 'becomes closed');
         storage.close();
         t.same(storage.isClosed(), true, 'stays closed');
-
-        storage2.destroyAndClose();
-        t.same(storage2.isClosed(), true, 'destroyAndClose also closes');
 
         t.throws(() => storage.authors(), 'contents() throws when closed');
         t.throws(() => storage.paths(), 'paths() throws when closed');
@@ -181,7 +177,12 @@ for (let scenario of scenarios) {
         t.throws(() => storage.ingestDocument({} as any, ''), 'ingestDocument() throws when closed');
         t.throws(() => storage.set(keypair1, {} as any), 'set() throws when closed');
         t.throws(() => storage.forgetDocuments({ history: 'all' }), 'forgetDocuments() throws when closed');
-        t.throws(() => storage.destroyAndClose(), 'destroyAndClose() throws when closed');
+        t.throws(() => storage.closeAndForgetWorkspace(), 'closeAndForgetWorkspace() throws when closed');
+
+        let storage2 = scenario.makeStorage(WORKSPACE);
+        storage2.closeAndForgetWorkspace();
+        t.same(storage2.isClosed(), true, 'closeAndForgetWorkspace also closes');
+
         t.end();
     });
 
@@ -1223,6 +1224,28 @@ for (let scenario of scenarios) {
         t.same(localSync(storageEmpty2, storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
 
         t.same(localPush(storage, storageEmpty3), 1, 'successful push');
+
+        t.end();
+    });
+
+    t.test(scenario.description + ': onReady, onWillClose, onDidClose', async (t: any) => {
+        let storage = scenario.makeStorage(WORKSPACE);
+
+        let log: string[] = [];
+        storage.onWillClose.subscribe(() => { log.push('onWillClose'); });
+        storage.onDidClose.subscribe(() => { log.push('onDidClose'); });
+        storage.close();
+        t.same(log, ['onWillClose', 'onDidClose'], 'onClose fires as expected');
+
+        let storage2 = scenario.makeStorage(WORKSPACE);
+
+        let log2: string[] = [];
+        let unsubA = storage2.onWillClose.subscribe(() => { log2.push('onWillClose'); });
+        let unsubB = storage2.onDidClose.subscribe(() => { log2.push('onDidClose'); });
+        unsubA();
+        unsubB();
+        storage2.close();
+        t.same(log2, [], 'onClose does not fire if unsubscribed');
 
         t.end();
     });

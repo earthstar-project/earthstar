@@ -51,8 +51,13 @@ export type WriteEvent3 = {
 export interface IStorage3 {
     readonly workspace : WorkspaceAddress;
     readonly sessionId: string;  // gets a new random value every time the program runs
-    onWrite : Emitter<WriteEvent3>;
     _now: number | null;  // used for testing time behavior.  is used instead of Date.now().  normally null.
+
+    // events
+
+    onWrite: Emitter<WriteEvent3>;  // fired synchronously just after each document write
+    onWillClose: Emitter<undefined>;  // fired synchronously at the beginning of close()
+    onDidClose: Emitter<undefined>;  // fired synchronously at the end of close()
 
     // TODO: session id?
 
@@ -80,7 +85,7 @@ export interface IStorage3 {
     discardExpiredDocuments(): void;  // override
 
     // CLOSE
-    close(): void;
     isClosed(): boolean;
-    destroyAndClose(): void  // override
+    close(): void;  // override if needed; remember to fire onWillClose and onDidClose
+    closeAndForgetWorkspace(): void  // override
 }

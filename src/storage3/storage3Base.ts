@@ -25,8 +25,10 @@ import { cleanUpQuery } from '../storage3/query3';
 export abstract class Storage3Base implements IStorage3 {
     workspace : WorkspaceAddress;
     readonly sessionId: string;
-    onWrite : Emitter<WriteEvent3>;
     _now: number | null = null;
+    onWrite: Emitter<WriteEvent3>;
+    onWillClose: Emitter<undefined>;
+    onDidClose: Emitter<undefined>;
 
     _isClosed: boolean = false;
     _validatorMap : {[format: string] : IValidator};
@@ -34,7 +36,10 @@ export abstract class Storage3Base implements IStorage3 {
     constructor(validators: IValidator[], workspace: WorkspaceAddress) {
         this.workspace = workspace;
         this.sessionId = '' + Math.random();
+
         this.onWrite = new Emitter<WriteEvent3>();
+        this.onWillClose = new Emitter<undefined>();
+        this.onDidClose = new Emitter<undefined>();
 
         if (validators.length === 0) {
             throw new ValidationError('must provide at least one validator to Storage');
@@ -246,7 +251,11 @@ export abstract class Storage3Base implements IStorage3 {
     abstract discardExpiredDocuments(): void;
 
     // CLOSE
-    close() { this._isClosed = true; }
     isClosed(): boolean { return this._isClosed; }
-    abstract destroyAndClose(): void;
+    close() {
+        this.onWillClose.send(undefined);
+        this._isClosed = true;
+        this.onDidClose.send(undefined);
+    }
+    abstract closeAndForgetWorkspace(): void;
 }

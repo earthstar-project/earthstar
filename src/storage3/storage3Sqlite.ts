@@ -446,19 +446,21 @@ export class Storage3Sqlite extends Storage3Base {
 
     close(): void {
         logDebug('sqlite\.close()');
+        this.onWillClose.send(undefined);
         this._isClosed = true;
         this.db.close();
+        this.onDidClose.send(undefined);
     }
 
-    destroyAndClose(): void {
-        logDebug('sqlite\.destroyAndClose()');
+    closeAndForgetWorkspace(): void {
+        logDebug('sqlite\.closeAndForgetWorkspace()');
         this._assertNotClosed();
+        this.close();
         if (this._fn !== ':memory:') {
             // delete the sqlite file
             if (fs.existsSync(this._fn)) {
                 fs.unlinkSync(this._fn);
             }
         }
-        this.close();
     }
 }
