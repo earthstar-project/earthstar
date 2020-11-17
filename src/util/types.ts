@@ -54,6 +54,12 @@ export class NetworkError extends EarthstarError {
         this.name = 'NetworkError';
     }
 }
+export class TimeoutError extends EarthstarError {
+    constructor(message?: string) {
+        super(message || 'timeout error');
+        this.name = 'TimeoutError';
+    }
+}
 /** A pub won't accept writes */
 export class ConnectionRefusedError extends EarthstarError {
     constructor(message?: string) {

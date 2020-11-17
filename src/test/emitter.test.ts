@@ -5,6 +5,7 @@ import {
     Emitter,
     subscribeToManyEmitters,
 } from '../util/emitter';
+import {TimeoutError} from '../util/types';
 import {
     sleep
 } from '../util/helpers';
@@ -73,6 +74,63 @@ t.test('emitter subscribeToMany', async (t: any) => {
     e2.send(3);
 
     t.same(logs, [1, 2], 'unsub works');
+
+    t.end();
+});
+
+t.test('emitter await next', async (t: any) => {
+    let e = new Emitter<number>();
+
+    let logs: string[] = [];
+    setTimeout(() => { e.send(1); logs.push('send1'); }, 50);
+    setTimeout(() => { e.send(2); logs.push('send2'); }, 100);
+
+    logs.push('await1');
+    let n1 = await e.next();
+    logs.push('got1');
+
+    logs.push('await2');
+    let n2 = await e.next();
+    logs.push('got2');
+
+    t.same(n1, 1, 'got expected value 1');
+    t.same(n2, 2, 'got expected value 2');
+    t.same(logs, ['await1', 'send1', 'got1', 'await2', 'send2', 'got2'], 'everything ran in expected order');
+
+    t.end();
+});
+
+t.test('emitter await next with timeout', async (t: any) => {
+    let e = new Emitter<number>();
+
+    let logs: string[] = [];
+    setTimeout(() => { e.send(1); logs.push('send1'); }, 50);
+    setTimeout(() => { e.send(2); logs.push('send2'); }, 100);
+
+    // get next with a timeout that's too short
+    try {
+        logs.push('await1');
+        let n1 = await e.next(10);
+        t.ok(false, 'should have thrown TimeoutError');
+        logs.push('got1');
+    } catch(err) {
+        if (err instanceof TimeoutError) {
+            t.ok(true, 'got TimeoutError as expected');
+        } else {
+            throw err;
+        }
+    }
+
+    // get next with ok timeout (this will get send 1)
+    logs.push('await2');
+    let n1 = await e.next(200);
+    t.same(n1, 1, 'got expected value 1');
+    logs.push('got2');
+
+    // wait for send 2 to happen
+    await sleep(250);
+
+    t.same(logs, ['await1', 'await2', 'send1', 'got2', 'send2'], 'expected logs');
 
     t.end();
 });
