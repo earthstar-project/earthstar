@@ -156,6 +156,7 @@ for (let scenario of scenarios) {
         t.same(storage.contents(), [], 'no contents');
         t.equal(storage.getDocument('xxx'), undefined, 'getDocument undefined');
         t.equal(storage.getDocument('xxx'), undefined, 'getContent undefined');
+        storage.close();
         t.end();
     });
 
@@ -168,7 +169,7 @@ for (let scenario of scenarios) {
         storage.close();
         t.same(storage.isClosed(), true, 'stays closed');
 
-        t.throws(() => storage.authors(), 'contents() throws when closed');
+        t.throws(() => storage.authors(), 'authors() throws when closed');
         t.throws(() => storage.paths(), 'paths() throws when closed');
         t.throws(() => storage.documents(), 'documents() throws when closed');
         t.throws(() => storage.contents(), 'contents() throws when closed');
@@ -328,6 +329,7 @@ for (let scenario of scenarios) {
             }
         }
 
+        storage.close();
         t.end();
     });
 
@@ -372,6 +374,8 @@ for (let scenario of scenarios) {
         t.throws(() => storage.forgetDocuments({ } as any), 'throws with no history mode');
         t.throws(() => storage.forgetDocuments({ history: 'latest' } as any), 'throws with history: latest');
 
+        storage.close();
+        storage2.close();
         t.end();
     });
 
@@ -429,6 +433,7 @@ for (let scenario of scenarios) {
             t.same(actualContents, contents, `continueAfter: ${note}`);
         }
 
+        storage.close();
         t.end();
     });
 
@@ -461,6 +466,7 @@ for (let scenario of scenarios) {
         t.same(storage.documents({ limitBytes: 9 }).map(d => d.path), ['/0', '/1', '/2', '/3'], 'limitBytes 9');
         t.same(storage.documents({ limitBytes: 10 }).map(d => d.path), ['/0', '/1', '/2', '/3', '/4'], 'limitBytes 10');
 
+        storage.close();
         t.end();
     });
 
@@ -727,6 +733,7 @@ for (let scenario of scenarios) {
         t.same(storage.documents().length, 1, 'documents: only 1 left');
         t.ok(storage.getDocument('/a!') === undefined, 'getDocument returns undefined on expired doc');
 
+        storage.close();
         t.end();
     });
 
@@ -859,6 +866,7 @@ for (let scenario of scenarios) {
         // test includeHistory / isHead
         // test limit
 
+        storage.close();
         t.end();
     });
 
@@ -902,6 +910,7 @@ for (let scenario of scenarios) {
             t.equal(doc.contentHash, sha256base32(doc.content), 'doc.contentHash matches doc.content after roundtrip');
         }
 
+        storage.close();
         t.end();
     });
 
@@ -928,6 +937,7 @@ for (let scenario of scenarios) {
         t.same(storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
+        storage.close();
         t.end();
     });
 
@@ -987,6 +997,7 @@ for (let scenario of scenarios) {
         t.same(storage.documents({ history: 'all',    path: '/empty', contentLength_gt: 0 }).length, 1, 'documents({               path: /empty, contentLength_gt: 0 }) length = 1')
         t.same(storage.documents({ history: 'all',    path: '/empty', contentLength: 0    }).length, 1, 'documents({               path: /empty, contentLength: 0    }) length = 1')
 
+        storage.close();
         t.end();
     });
 
@@ -1025,6 +1036,7 @@ for (let scenario of scenarios) {
         t.same(storage.paths(   { history: 'latest', limit: 1 }), ['/foo'], 'paths no history, limit 1');
         t.same(storage.contents({ history: 'latest', limit: 1 }), ['foo'], 'contents no history, limit 1');
 
+        storage.close();
         t.end();
     });
 
@@ -1069,6 +1081,7 @@ for (let scenario of scenarios) {
         //t.same(storage.contents({ participatingAuthor: author2, history: 'all'  }), ['content1.Z', 'content2.Y'], 'participatingAuthor 2, with history');
         //t.same(storage.contents({ participatingAuthor: author2, history: 'latest' }), ['content1.Z'], 'participatingAuthor 2, no history');
 
+        storage.close();
         t.end();
     });
 
@@ -1112,6 +1125,7 @@ for (let scenario of scenarios) {
 
         // TODO: test sorting of docs with 2 authors, same timestamps, different signatures
 
+        storage.close();
         t.end();
     });
 
@@ -1144,6 +1158,8 @@ for (let scenario of scenarios) {
         let syncResults2 = localSync(storage1, storage2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing happens if syncing again');
 
+        storage1.close();
+        storage2.close();
         t.end();
     });
 
@@ -1186,6 +1202,8 @@ for (let scenario of scenarios) {
         t.same(storage1.contents({  history: 'latest' }), storage2.contents({  history: 'latest' }), 'contents match, heads only');
         t.same(storage1.contents({  history: 'all'    }), storage2.contents({  history: 'all'    }), 'contents with history: match');
 
+        storage1.close();
+        storage2.close();
         t.end();
     });
 
@@ -1200,6 +1218,9 @@ for (let scenario of scenarios) {
         t.same(localSync(storageA1, storageB),  { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
         t.same(localSync(storageA1, storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
 
+        storageA1.close();
+        storageA2.close();
+        storageB.close();
         t.end();
     });
 
@@ -1225,6 +1246,10 @@ for (let scenario of scenarios) {
 
         t.same(localPush(storage, storageEmpty3), 1, 'successful push');
 
+        storageEmpty1.close();
+        storageEmpty2.close();
+        storageEmpty3.close();
+        storage.close();
         t.end();
     });
 
@@ -1267,6 +1292,7 @@ for (let scenario of scenarios) {
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 
+        storage.close();
         t.end();
     });
 
@@ -1332,6 +1358,10 @@ for (let scenario of scenarios) {
         t.same(storage.set(keypair1, {format: FORMAT, path: '/z', content: 'foo'}), WriteResult.Accepted, 'do a write after unsubscribing');
         t.same(events.length, prevLen, 'no event happens after unsubscribing');
 
+        storage.close();
+        storage2.close();
+        storage3.close();
+        storage4.close();
         t.end();
     });
 
@@ -1357,6 +1387,8 @@ for (let scenario of scenarios) {
         storage2.ingestDocument(inputDoc, '');
         t.true(Object.isFrozen(inputDoc), 'input doc is now frozen after being ingested');
 
+        storage.close();
+        storage2.close();
         t.end();
     });
 
@@ -1390,6 +1422,7 @@ for (let scenario of scenarios) {
         t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: now, deleteAfter: now - 5 })
             instanceof ValidationError, 'deleteAfter and timestamp out of order: rejected');
 
+        storage.close();
         t.end();
     });
 
@@ -1413,6 +1446,7 @@ for (let scenario of scenarios) {
         let result4 = storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello', timestamp: 3});
         t.ok(result4 instanceof ValidationError, 'set with invalid timestamp causes ValidationError even if a good document exists');
 
+        storage.close();
         t.end();
     });
 
@@ -1438,6 +1472,7 @@ for (let scenario of scenarios) {
         t.same(storage.documents(), [doc], 'documents match');
         t.same(storage.contents(), ['hello'], 'contents match');
 
+        storage.close();
         t.end();
     });
 
@@ -1450,6 +1485,7 @@ for (let scenario of scenarios) {
         t.same(storage.authors(), [], "expired doc does not show up in authors()");
         t.same(storage.getDocument('/path1!'), undefined, "now it's expired and is not returned");
 
+        storage.close();
         t.end();
     });
 
