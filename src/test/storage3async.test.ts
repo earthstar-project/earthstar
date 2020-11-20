@@ -84,7 +84,7 @@ let scenarios : Scenario[] = [
             storage._now = now;
             return storage;
         },
-        description: 'Storage3Memory',
+        description: "Async'd Storage3Memory",
     },
     //{
     //    makeStorage: (workspace : string) : IStorage3Async => {
@@ -92,7 +92,7 @@ let scenarios : Scenario[] = [
     //        storage._now = now;
     //        return storage;
     //    },
-    //    description: 'Storage3Sqlite',
+    //    description: "Async'd Storage3Sqlite",
     //},
 ];
 
@@ -249,8 +249,7 @@ for (let scenario of scenarios) {
         t.end();
     });
 
-    /*
-    t.test(scenario.description + ': store ingestDocument rejects invalid docs', (t: any) => {
+    t.test(scenario.description + ': store ingestDocument rejects invalid docs', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let doc1: Document = {
@@ -266,21 +265,22 @@ for (let scenario of scenarios) {
         };
         let signedDoc = ValidatorEs4.signDocument(keypair1, doc1) as Document;
         t.ok(notErr(signedDoc), 'signature succeeded');
-        t.same(storage.ingestDocument(signedDoc, ''), WriteResult.Accepted, "successful ingestion");
-        t.equal(storage.getContent('/k1'), 'v1', "latestContent worked");
+        t.same(await storage.ingestDocument(signedDoc, ''), WriteResult.Accepted, "successful ingestion");
+        await sleep(150);
+        t.equal(await storage.getContent('/k1'), 'v1', "latestContent worked");
 
-        t.ok(isErr(storage.ingestDocument(doc1, '')), "don't ingest: bad signature");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, format: 'xxx'}, '')), "don't ingest: unknown format");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now / 1000}, '')), "don't ingest: timestamp too small, probably in milliseconds");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: now * 2}, '')), "don't ingest: timestamp in future");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}, '')), "don't ingest: timestamp way too large");
-        t.ok(isErr(storage.ingestDocument({...signedDoc, workspace: 'xxx'}, '')), "don't ingest: changed workspace after signing");
+        t.ok(isErr(await storage.ingestDocument(doc1, '')), "don't ingest: bad signature");
+        t.ok(isErr(await storage.ingestDocument({...signedDoc, format: 'xxx'}, '')), "don't ingest: unknown format");
+        t.ok(isErr(await storage.ingestDocument({...signedDoc, timestamp: now / 1000}, '')), "don't ingest: timestamp too small, probably in milliseconds");
+        t.ok(isErr(await storage.ingestDocument({...signedDoc, timestamp: now * 2}, '')), "don't ingest: timestamp in future");
+        t.ok(isErr(await storage.ingestDocument({...signedDoc, timestamp: Number.MAX_SAFE_INTEGER * 2}, '')), "don't ingest: timestamp way too large");
+        t.ok(isErr(await storage.ingestDocument({...signedDoc, workspace: 'xxx'}, '')), "don't ingest: changed workspace after signing");
 
         let signedDocDifferentWorkspace = ValidatorEs4.signDocument(keypair1, {...doc1, workspace: '+nope.nope'}) as Document;
         t.ok(notErr(signedDocDifferentWorkspace), 'signature succeeded');
-        t.ok(isErr(storage.ingestDocument(signedDocDifferentWorkspace, '')), "don't ingest: mismatched workspace");
+        t.ok(isErr(await storage.ingestDocument(signedDocDifferentWorkspace, '')), "don't ingest: mismatched workspace");
 
-        t.ok(isErr(storage.set(keypair1, {
+        t.ok(isErr(await storage.set(keypair1, {
             format: 'xxx',
             path: '/k1',
             content: 'v1',
@@ -296,7 +296,7 @@ for (let scenario of scenarios) {
             if (isErr(signedDoc2)) {
                 t.ok(false, 'signature failed: ' + signedDoc2);
             } else {
-                t.same(storage.ingestDocument(signedDoc2, ''), WriteResult.Accepted, 'do ingest: writable path ' + path);
+                t.same(await storage.ingestDocument(signedDoc2, ''), WriteResult.Accepted, 'do ingest: writable path ' + path);
             }
         }
         let notWritablePaths = [
@@ -316,14 +316,15 @@ for (let scenario of scenarios) {
             if (isErr(signedDoc2)) {
                 t.ok(false, 'signature failed: ' + signedDoc2);
             } else {
-                t.ok(isErr(storage.ingestDocument(signedDoc2, '')), "don't ingest: non-writable or invalid path " + path);
+                t.ok(isErr(await storage.ingestDocument(signedDoc2, '')), "don't ingest: non-writable or invalid path " + path);
             }
         }
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': forgetDocuments', (t: any) => {
+    t.test(scenario.description + ': forgetDocuments', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         let storage2 = scenario.makeStorage(WORKSPACE);
 
@@ -337,37 +338,54 @@ for (let scenario of scenarios) {
             d4: makeDoc({...base, keypair: keypair3, timestamp: now + 2, path: '/b', content: ''}),
             d5: makeDoc({...base, keypair: keypair2, timestamp: now    , path: '/cc/x', content: '55555'}),
         };
-        Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
-        Object.values(inputDocs).forEach(d => storage2._upsertDocument(d));
+        for (let doc of Object.values(inputDocs)) {
+            await storage._upsertDocument(doc);
+            await storage2._upsertDocument(doc);
+        }
 
-        storage2.forgetDocuments({ history: 'all' });
-        t.same(storage2.contents({ history: 'all' }), [], 'forget everything, no query options');
+        await storage2.forgetDocuments({ history: 'all' });
+        t.same(await storage2.contents({ history: 'all' }), [], 'forget everything, no query options');
 
-        storage.forgetDocuments({ history: 'all', limit: 0 } as any as Query3ForForget);
-        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '333', '', '55555'], 'forget with { limit: 0 } forgets nothing');
+        await storage.forgetDocuments({ history: 'all', limit: 0 } as any as Query3ForForget);
+        t.same(await storage.contents({ history: 'all' }), ['', '1', '22', '333', '', '55555'], 'forget with { limit: 0 } forgets nothing');
 
-        storage.forgetDocuments({ contentLength: 3, history: 'all' });
-        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '', '55555'], 'forgot a non-head by contentLength');
+        await storage.forgetDocuments({ contentLength: 3, history: 'all' });
+        t.same(await storage.contents({ history: 'all' }), ['', '1', '22', '', '55555'], 'forgot a non-head by contentLength');
 
-        storage.forgetDocuments({ path: '/b', history: 'all' });
-        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '55555'], 'forgot by path');
+        await storage.forgetDocuments({ path: '/b', history: 'all' });
+        t.same(await storage.contents({ history: 'all' }), ['', '1', '22', '55555'], 'forgot by path');
 
-        storage.forgetDocuments({ path: 'none-such', history: 'all' });
-        t.same(storage.contents({ history: 'all' }), ['', '1', '22', '55555'], 'forgot nothing (no path matched)');
+        await storage.forgetDocuments({ path: 'none-such', history: 'all' });
+        t.same(await storage.contents({ history: 'all' }), ['', '1', '22', '55555'], 'forgot nothing (no path matched)');
 
-        storage.forgetDocuments({ pathPrefix: '/a', history: 'all' });
-        t.same(storage.contents({ history: 'all' }), ['55555'], 'forgot by path prefix');
+        await storage.forgetDocuments({ pathPrefix: '/a', history: 'all' });
+        t.same(await storage.contents({ history: 'all' }), ['55555'], 'forgot by path prefix');
 
-        storage.forgetDocuments({ pathPrefix: '/', history: 'all' });
-        t.same(storage.contents({ history: 'all' }), [], 'forgot everything');
+        await storage.forgetDocuments({ pathPrefix: '/', history: 'all' });
+        t.same(await storage.contents({ history: 'all' }), [], 'forgot everything');
 
-        t.throws(() => storage.forgetDocuments({ } as any), 'throws with no history mode');
-        t.throws(() => storage.forgetDocuments({ history: 'latest' } as any), 'throws with history: latest');
+        let errMsg = 'should throw with no history mode set in query';
+        try {
+            await storage.forgetDocuments({ } as any)
+            t.ok(false, errMsg + ' but did not throw');
+        } catch (err) {
+            t.ok(err instanceof ValidationError, errMsg);
+        }
 
+        let errMsg2 = "should throw with history: 'latest'";
+        try {
+            await storage.forgetDocuments({ history: 'latest' } as any)
+            t.ok(false, errMsg2 + ' but did not throw');
+        } catch (err) {
+            t.ok(err instanceof ValidationError, errMsg2);
+        }
+
+        await storage.close();
+        await storage2.close();
         t.end();
     });
 
-    t.test(scenario.description + ': continueAfter', (t: any) => {
+    t.test(scenario.description + ': continueAfter', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let base = { workspace: WORKSPACE };
@@ -379,7 +397,9 @@ for (let scenario of scenarios) {
             d3: makeDoc({...base, keypair: keypair2, timestamp: now,   path: '/b', content: 'b2'}),
             d4: makeDoc({...base, keypair: keypair1, timestamp: now,   path: '/c', content: 'c1'}),
         };
-        Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
+        for (let doc of Object.values(inputDocs)) {
+            await storage._upsertDocument(doc);
+        }
 
         type TestCase = {
             query: Query3,
@@ -417,12 +437,14 @@ for (let scenario of scenarios) {
 
         for (let { query, contents, note } of testCases) {
             note = (note || '') + ' ' + JSON.stringify(contents);
-            let actualContents = storage.contents(query);
+            let actualContents = await storage.contents(query);
             t.same(actualContents, contents, `continueAfter: ${note}`);
         }
 
+        await storage.close();
         t.end();
     });
+    /*
 
     t.test(scenario.description + ': unicode characters vs bytes', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);

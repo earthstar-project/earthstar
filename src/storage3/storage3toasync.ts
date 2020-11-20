@@ -106,7 +106,7 @@ export class Storage3ToAsync implements IStorage3Async {
     }
     async getContent(path: string): Promise<string | undefined> {
         await this._sleep();
-        return this._storage.getConfig(path);
+        return this._storage.getContent(path);
     }
 
     // PUT DATA IN
