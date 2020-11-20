@@ -96,14 +96,22 @@ let scenarios : Scenario[] = [
         },
         description: "Async'd Storage3Memory",
     },
-    //{
-    //    makeStorage: (workspace : string) : IStorage3Async => {
-    //        let storage = new Storage3ToAsync(new Storage3Sqlite(VALIDATORS, workspace, ':memory:'), 20);
-    //        storage._now = now;
-    //        return storage;
-    //    },
-    //    description: "Async'd Storage3Sqlite",
-    //},
+    {
+        makeStorage: (workspace : string) : IStorage3 => {
+            let storage = new Storage3Sqlite(VALIDATORS, workspace, ':memory:');
+            storage._now = now;
+            return storage;
+        },
+        description: "Storage3Sqlite",
+    },
+    {
+        makeStorage: (workspace : string) : IStorage3Async => {
+            let storage = new Storage3ToAsync(new Storage3Sqlite(VALIDATORS, workspace, ':memory:'), 10);
+            storage._now = now;
+            return storage;
+        },
+        description: "Async'd Storage3Sqlite",
+    },
 ];
 
 type MakeDocOpts = {
@@ -1269,7 +1277,6 @@ for (let scenario of scenarios) {
         await storage.close();
         t.end();
     });
-    /*
 
     t.test(scenario.description + ': onReady, onWillClose, onDidClose', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
@@ -1277,7 +1284,7 @@ for (let scenario of scenarios) {
         let log: string[] = [];
         storage.onWillClose.subscribe(() => { log.push('onWillClose'); });
         storage.onDidClose.subscribe(() => { log.push('onDidClose'); });
-        storage.close();
+        await storage.close();
         t.same(log, ['onWillClose', 'onDidClose'], 'onClose fires as expected');
 
         let storage2 = scenario.makeStorage(WORKSPACE);
@@ -1287,33 +1294,34 @@ for (let scenario of scenarios) {
         let unsubB = storage2.onDidClose.subscribe(() => { log2.push('onDidClose'); });
         unsubA();
         unsubB();
-        storage2.close();
+        await storage2.close();
         t.same(log2, [], 'onClose does not fire if unsubscribed');
 
         t.end();
     });
 
-    t.test(scenario.description + ': onWrite basic test', (t: any) => {
+    t.test(scenario.description + ': onWrite basic test', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let numCalled = 0;
         let unsub = storage.onWrite.subscribe((e: WriteEvent3) => { numCalled += 1 });
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
-        t.ok(isErr(storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now})), 'invalid set that will be ignored');
-        t.equal(storage.getContent('/path1'), 'val1.0', 'second set was ignored');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
+        t.ok(isErr(await storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now})), 'invalid set that will be ignored');
+        t.equal(await storage.getContent('/path1'), 'val1.0', 'second set was ignored');
 
         t.equal(numCalled, 1, 'callback was called once, synchronously');
         unsub();
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path2', content: 'val2.0', timestamp: now + 1}), WriteResult.Accepted, 'set another path');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path2', content: 'val2.0', timestamp: now + 1}), WriteResult.Accepted, 'set another path');
 
         t.equal(numCalled, 1, 'callback was not called after unsubscribing');
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': onWrite', (t: any) => {
+    t.test(scenario.description + ': onWrite', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         let storage2 = scenario.makeStorage(WORKSPACE);
         let storage3 = scenario.makeStorage(WORKSPACE);
@@ -1323,35 +1331,35 @@ for (let scenario of scenarios) {
         let unsub = storage.onWrite.subscribe((e) => { events.push(e) });
 
         // set new path
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+1', timestamp: now + 1}), WriteResult.Accepted, '=== set new path from keypair1');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+1', timestamp: now + 1}), WriteResult.Accepted, '=== set new path from keypair1');
         t.same(events[events.length-1].document.content, 'val1+1');
         t.same(events[events.length-1].isLocal, true, 'event is local');
         t.same(events[events.length-1].isLatest, true, 'event is latest');
         t.same(events[events.length-1].fromSessionId, storage.sessionId, 'sessionId matches');
 
         // overwrite from same author
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+2', timestamp: now + 2}), WriteResult.Accepted, '=== update same path from keypair1');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+2', timestamp: now + 2}), WriteResult.Accepted, '=== update same path from keypair1');
         t.same(events[events.length-1].document.content, 'val1+2');
         t.same(events[events.length-1].isLocal, true, 'event is local');
         t.same(events[events.length-1].isLatest, true, 'event is latest');
 
         // overwrite from a new author
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+3', timestamp: now + 3}), WriteResult.Accepted, '=== update same path from keypair2');
+        t.same(await storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+3', timestamp: now + 3}), WriteResult.Accepted, '=== update same path from keypair2');
         t.same(events[events.length-1].document.content, 'val2+3');
         t.same(events[events.length-1].isLocal, true, 'event is local');
         t.same(events[events.length-1].isLatest, true, 'event is latest');
 
         // old write from same author, synced and ignored
-        t.same(storage2.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1-9', timestamp: now - 9}), WriteResult.Accepted, '=== old write from keypair1, synced');
-        localPush(storage2, storage);
+        t.same(await storage2.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1-9', timestamp: now - 9}), WriteResult.Accepted, '=== old write from keypair1, synced');
+        await localPushAsync(storage2, storage);
         t.same(events.length, 3, 'no event happens because nothing happened in the sync');
-        t.same(storage.getContent('/path1'), 'val2+3', 'content is unchanged');
+        t.same(await storage.getContent('/path1'), 'val2+3', 'content is unchanged');
 
         // new write from same author, synced and used
-        t.same(storage3.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+9', timestamp: now + 9}), WriteResult.Accepted, '=== new write from same author, synced');
-        localPush(storage3, storage);
+        t.same(await storage3.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+9', timestamp: now + 9}), WriteResult.Accepted, '=== new write from same author, synced');
+        await localPushAsync(storage3, storage);
         t.same(events.length, 4, 'sync caused an event');
-        t.same(storage.getContent('/path1'), 'val1+9', 'content changed after a sync');
+        t.same(await storage.getContent('/path1'), 'val1+9', 'content changed after a sync');
         t.same(events[events.length-1].document.content, 'val1+9', 'event has corrent content');
         t.same(events[events.length-1].isLocal, false, 'event is not local (it came from a sync)');
         t.same(events[events.length-1].fromSessionId, storage3.sessionId, 'sessionId matches other storage');
@@ -1359,10 +1367,10 @@ for (let scenario of scenarios) {
 
         // a write from keypair2 which is synced but not a head
         // (it's a new latest doc for keypair2, but not a new latest doc overall for this path)
-        t.same(storage4.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+5', timestamp: now + 5}), WriteResult.Accepted, '=== a write into history, synced');
-        let numSynced = localPush(storage4, storage);
+        t.same(await storage4.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+5', timestamp: now + 5}), WriteResult.Accepted, '=== a write into history, synced');
+        let numSynced = await localPushAsync(storage4, storage);
         t.same(numSynced, 1, 'it was synced');
-        t.same(storage.getContent('/path1'), 'val1+9', '(latest) content did not change');
+        t.same(await storage.getContent('/path1'), 'val1+9', '(latest) content did not change');
         t.same(events.length, 5, 'an event happens');
         t.same(events[events.length-1].document.content, 'val2+5', 'event has correct content');
         t.same(events[events.length-1].isLocal, false, 'event is not local (it came from a sync)');
@@ -1372,99 +1380,107 @@ for (let scenario of scenarios) {
         // unsubscribe
         let prevLen = events.length;
         unsub();
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/z', content: 'foo'}), WriteResult.Accepted, 'do a write after unsubscribing');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/z', content: 'foo'}), WriteResult.Accepted, 'do a write after unsubscribing');
         t.same(events.length, prevLen, 'no event happens after unsubscribing');
 
+        await storage.close();
+        await storage2.close();
+        await storage3.close();
+        await storage4.close();
         t.end();
     });
 
-    t.test(scenario.description + ': doc immutability', (t: any) => {
+    t.test(scenario.description + ': doc immutability', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         let storage2 = scenario.makeStorage(WORKSPACE);
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
-        let doc = storage.getDocument('/path1');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
+        let doc = await storage.getDocument('/path1');
         if (doc === undefined) {
             t.true(false, '???');
             t.end();
             return;
         }
         t.true(Object.isFrozen(doc), 'getDocument: returned doc is frozen');
-        let docs = storage.documents({ history: 'all' });
+        let docs = await storage.documents({ history: 'all' });
         for (let doc of docs) {
             t.true(Object.isFrozen(doc), 'documents: returned doc is frozen');
         }
 
         let inputDoc = {...doc};
         t.false(Object.isFrozen(inputDoc), 'input doc is not frozen');
-        storage2.ingestDocument(inputDoc, '');
+        await storage2.ingestDocument(inputDoc, '');
         t.true(Object.isFrozen(inputDoc), 'input doc is now frozen after being ingested');
 
+        await storage.close();
+        await storage2.close();
         t.end();
     });
 
-    t.test(scenario.description + ': set(): manual vs default (bumped) timestamps & bounds-checking timestamps', (t: any) => {
+    t.test(scenario.description + ': set(): manual vs default (bumped) timestamps & bounds-checking timestamps', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // default timestamps
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now'                       }), WriteResult.Accepted, 'absent timestamp: now');
-        t.same(storage.getDocument('/path1')?.timestamp, now, '= now');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now'                       }), WriteResult.Accepted, 'absent timestamp: bumped');
-        t.same(storage.getDocument('/path1')?.timestamp, now + 1, '= now + 1');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now', timestamp: 0         }), WriteResult.Accepted, 'zero timestamp: bumped');
-        t.same(storage.getDocument('/path1')?.timestamp, now + 2, '= now + 2');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now', timestamp: undefined }), WriteResult.Accepted, 'undefined timestamp: bumped');
-        t.same(storage.getDocument('/path1')?.timestamp, now + 3, '= now + 3');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now'                       })), WriteResult.Accepted, 'absent timestamp: now');
+        t.same((await storage.getDocument('/path1'))?.timestamp, now, '= now');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now'                       })), WriteResult.Accepted, 'absent timestamp: bumped');
+        t.same((await storage.getDocument('/path1'))?.timestamp, now + 1, '= now + 1');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now', timestamp: 0         })), WriteResult.Accepted, 'zero timestamp: bumped');
+        t.same((await storage.getDocument('/path1'))?.timestamp, now + 2, '= now + 2');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'default now', timestamp: undefined })), WriteResult.Accepted, 'undefined timestamp: bumped');
+        t.same((await storage.getDocument('/path1'))?.timestamp, now + 3, '= now + 3');
 
         // manual timestamps
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10}), WriteResult.Ignored, 'manual timestamp in past from same author is ignored');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10})), WriteResult.Ignored, 'manual timestamp in past from same author is ignored');
 
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10}), WriteResult.Accepted, 'manual timestamp in past');
-        t.same(storage.documents({ author: keypair2.address, history: 'all' })[0].timestamp, now - 10, '= now - 10');
+        t.same((await storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'manual now-10', timestamp: now - 10})), WriteResult.Accepted, 'manual timestamp in past');
+        t.same((await storage.documents({ author: keypair2.address, history: 'all' }))[0].timestamp, now - 10, '= now - 10');
 
-        t.same(storage.set(keypair3, {format: FORMAT, path: '/path1', content: 'manual now+10', timestamp: now + 10}), WriteResult.Accepted, 'manual timestamp in future');
-        t.same(storage.documents({ author: keypair3.address, history: 'all' })[0].timestamp, now + 10, '= now + 10');
+        t.same((await storage.set(keypair3, {format: FORMAT, path: '/path1', content: 'manual now+10', timestamp: now + 10})), WriteResult.Accepted, 'manual timestamp in future');
+        t.same((await storage.documents({ author: keypair3.address, history: 'all' }))[0].timestamp, now + 10, '= now + 10');
 
         // invalid timestamps
-        t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: Date.now() })
+        t.ok(await storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: Date.now() })
             instanceof ValidationError, 'millisecond timestamp: rejected');
-        t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', deleteAfter: Date.now() })
+        t.ok(await storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', deleteAfter: Date.now() })
             instanceof ValidationError, 'millisecond deleteAfter: rejected');
-        t.ok(storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: now, deleteAfter: now - 5 })
+        t.ok(await storage.set(keypair4, {format: FORMAT, path: '/path1', content: 'milliseconds', timestamp: now, deleteAfter: now - 5 })
             instanceof ValidationError, 'deleteAfter and timestamp out of order: rejected');
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': set(): invalid keypair causes error', (t: any) => {
+    t.test(scenario.description + ': set(): invalid keypair causes error', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let keypairBad: AuthorKeypair = {
             address: 'bad address',
             secret: keypair1.secret,
         }
-        let result = storage.set(keypairBad, {format: FORMAT, path: '/path1', content: 'hello'});
+        let result = await storage.set(keypairBad, {format: FORMAT, path: '/path1', content: 'hello'});
         t.ok(result instanceof ValidationError, 'set with invalid keypair causes ValidationError');
 
-        let result2 = storage.set(keypair1, {format: FORMAT, path: 'invalid path', content: 'hello'});
+        let result2 = await storage.set(keypair1, {format: FORMAT, path: 'invalid path', content: 'hello'});
         t.ok(result2 instanceof ValidationError, 'set with invalid path causes ValidationError');
 
-        let result3 = storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello', timestamp: 3});
+        let result3 = await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello', timestamp: 3});
         t.ok(result3 instanceof ValidationError, 'set with invalid timestamp causes ValidationError');
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello'}), WriteResult.Accepted, 'write a valid document');
-        let result4 = storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello', timestamp: 3});
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello'}), WriteResult.Accepted, 'write a valid document');
+        let result4 = await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello', timestamp: 3});
         t.ok(result4 instanceof ValidationError, 'set with invalid timestamp causes ValidationError even if a good document exists');
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': set(): without _now override', (t: any) => {
+    t.test(scenario.description + ': set(): without _now override', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
         storage._now = null;
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello'}), WriteResult.Accepted, 'write a valid document');
-        let doc = storage.getDocument('/path1');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'hello'}), WriteResult.Accepted, 'write a valid document');
+        let doc = await storage.getDocument('/path1');
         if (doc === undefined) {
             t.true(false, '???');
             t.end();
@@ -1476,25 +1492,25 @@ for (let scenario of scenarios) {
         // these are obvious but they help us get 100% code coverage
         // since we're letting the storage get the actual current time
         // instead of relying on _now
-        t.same(storage.authors(), [keypair1.address], 'authors match');
-        t.same(storage.paths(), ['/path1'], 'paths match');
-        t.same(storage.documents(), [doc], 'documents match');
-        t.same(storage.contents(), ['hello'], 'contents match');
+        t.same(await storage.authors(), [keypair1.address], 'authors match');
+        t.same(await storage.paths(), ['/path1'], 'paths match');
+        t.same(await storage.documents(), [doc], 'documents match');
+        t.same(await storage.contents(), ['hello'], 'contents match');
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': overwrite expired ephemeral doc with another one', (t: any) => {
+    t.test(scenario.description + ': overwrite expired ephemeral doc with another one', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1!', content: 'hello', timestamp: now, deleteAfter: now+10}), WriteResult.Accepted, 'write ephemeral doc');
-        t.same(storage.authors(), [keypair1.address], "doc shows up in authors()");
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1!', content: 'hello', timestamp: now, deleteAfter: now+10}), WriteResult.Accepted, 'write ephemeral doc');
+        t.same(await storage.authors(), [keypair1.address], "doc shows up in authors()");
         storage._now = now + 100;
-        t.same(storage.authors(), [], "expired doc does not show up in authors()");
-        t.same(storage.getDocument('/path1!'), undefined, "now it's expired and is not returned");
+        t.same(await storage.authors(), [], "expired doc does not show up in authors()");
+        t.same(await storage.getDocument('/path1!'), undefined, "now it's expired and is not returned");
 
+        await storage.close();
         t.end();
     });
-
-    */
 }

@@ -391,7 +391,8 @@ export class Storage3Sqlite extends Storage3Base {
     */
 
     authors(): AuthorAddress[] {
-        logDebug('sqlite\.authors(now)');
+        logDebug('sqlite\.authors()');
+        this._assertNotClosed();
         let now = this._now || (Date.now() * 1000);
         let docs: Document[] = this.db.prepare(`
             SELECT DISTINCT author FROM docs
@@ -416,6 +417,7 @@ export class Storage3Sqlite extends Storage3Base {
     }
 
     forgetDocuments(q: Query3ForForget): void {
+        logDebug(`sqlite\.forgetDocuments(${JSON.stringify(q)})`);
         this._assertNotClosed();
         let query = cleanUpQuery(q);
         if ((query as Query3).limit === 0 || (query as Query3).limitBytes === 0) { return; }
