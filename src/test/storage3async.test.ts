@@ -36,7 +36,9 @@ import {
 } from '../storage3/storage3Memory';
 import {
     localPush,
+    localPushAsync,
     localSync,
+    localSyncAsync,
 } from '../storage3/sync3local';
 import { uniq, sorted, sleep } from '../util/helpers';
 import { Storage3Sqlite } from '../storage3/storage3Sqlite';
@@ -88,7 +90,7 @@ let scenarios : Scenario[] = [
     },
     {
         makeStorage: (workspace : string) : IStorage3Async => {
-            let storage = new Storage3ToAsync(new Storage3Memory(VALIDATORS, workspace), 20);
+            let storage = new Storage3ToAsync(new Storage3Memory(VALIDATORS, workspace), 10);
             storage._now = now;
             return storage;
         },
@@ -958,307 +960,316 @@ for (let scenario of scenarios) {
         t.same(await storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(await storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(await storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
+
         await storage.close();
         t.end();
     });
 
-    /*
-    t.test(scenario.description + ': contentIsEmpty queries', (t: any) => {
+    t.test(scenario.description + ': contentIsEmpty queries', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/full', content: 'full', timestamp: now}), WriteResult.Accepted, 'set /full to "full"');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/empty', content: '', timestamp: now}), WriteResult.Accepted, 'set /empty to ""');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/empty2', content: '', timestamp: now}), WriteResult.Accepted, 'set /empty2 to ""');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/full', content: 'full', timestamp: now})), WriteResult.Accepted, 'set /full to "full"');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/empty', content: '', timestamp: now})), WriteResult.Accepted, 'set /empty to ""');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/empty2', content: '', timestamp: now})), WriteResult.Accepted, 'set /empty2 to ""');
 
-        t.same(storage.getDocument('/full')?.content, 'full', 'full getDocument.content = "full"');
-        t.same(storage.getContent('/full'), 'full', 'full getContent = "full" ');
-        t.same(storage.getDocument('/empty')?.content, '', 'empty getDocument.content = ""');
-        t.same(storage.getContent('/empty'), '', 'empty getContent = ""');
+        t.same((await storage.getDocument('/full'))?.content, 'full', 'full getDocument.content = "full"');
+        t.same((await storage.getContent('/full')), 'full', 'full getContent = "full" ');
+        t.same((await storage.getDocument('/empty'))?.content, '', 'empty getDocument.content = ""');
+        t.same((await storage.getContent('/empty')), '', 'empty getContent = ""');
 
-        t.same(storage.documents().length, 3, 'documents() length = 3')
-        t.same(storage.paths().length, 3, 'paths() length = 3')
-        t.same(storage.contents().length, 3, 'contents() length = 3')
+        t.same((await storage.documents()).length, 3, 'documents() length = 3')
+        t.same((await storage.paths()).length, 3, 'paths() length = 3')
+        t.same((await storage.contents()).length, 3, 'contents() length = 3')
 
-        t.same(storage.documents({ contentLength_gt: 0 }).length, 1, 'documents(contentLength_gt: 0) length = 1')
-        t.same(storage.paths(    { contentLength_gt: 0 }).length, 1, 'paths(contentLength_gt: 0) length = 1')
-        t.same(storage.contents( { contentLength_gt: 0 }).length, 1, 'contents(contentLength_gt: 0) length = 1')
+        t.same((await storage.documents({ contentLength_gt: 0 })).length, 1, 'documents(contentLength_gt: 0) length = 1')
+        t.same((await storage.paths(    { contentLength_gt: 0 })).length, 1, 'paths(contentLength_gt: 0) length = 1')
+        t.same((await storage.contents( { contentLength_gt: 0 })).length, 1, 'contents(contentLength_gt: 0) length = 1')
 
-        t.same(storage.documents({ contentLength: 0 }).length, 2, 'documents(contentLength: 0) length = 2')
-        t.same(storage.paths(    { contentLength: 0 }).length, 2, 'paths(contentLength: 0) length = 2')
-        t.same(storage.contents( { contentLength: 0 }).length, 2, 'contents(contentLength: 0) length = 2')
+        t.same((await storage.documents({ contentLength: 0 })).length, 2, 'documents(contentLength: 0) length = 2')
+        t.same((await storage.paths(    { contentLength: 0 })).length, 2, 'paths(contentLength: 0) length = 2')
+        t.same((await storage.contents( { contentLength: 0 })).length, 2, 'contents(contentLength: 0) length = 2')
 
         // overwrite full with empty, and vice versa
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/full',  content: '',  timestamp: now + 2 }), WriteResult.Accepted, 'set /full to "" using author 2');
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/empty', content: 'e', timestamp: now + 2 }), WriteResult.Accepted, 'set /empty to "e" using author 2');
+        t.same((await storage.set(keypair2, {format: FORMAT, path: '/full',  content: '',  timestamp: now + 2 })), WriteResult.Accepted, 'set /full to "" using author 2');
+        t.same((await storage.set(keypair2, {format: FORMAT, path: '/empty', content: 'e', timestamp: now + 2 })), WriteResult.Accepted, 'set /empty to "e" using author 2');
 
-        t.same(storage.getDocument('/full')?.content, '', 'full getDocument.content = ""');
-        t.same(storage.getContent('/full'), '', 'full getContent = "" ');
-        t.same(storage.getDocument('/empty')?.content, 'e', 'empty getDocument.content = "e"');
-        t.same(storage.getContent('/empty'), 'e', 'empty getContent = "e"');
+        t.same((await storage.getDocument('/full'))?.content, '', 'full getDocument.content = ""');
+        t.same((await storage.getContent('/full')), '', 'full getContent = "" ');
+        t.same((await storage.getDocument('/empty'))?.content, 'e', 'empty getDocument.content = "e"');
+        t.same((await storage.getContent('/empty')), 'e', 'empty getContent = "e"');
 
         // combine path and contentLength queries
         // note there are now two docs for each path.
 
         // the head in /full has no content (we changed it, above)
-        t.same(storage.documents({ history: 'latest', path: '/full'                    }).length, 1, 'documents({ isHead: true, path: /full,                   }) length = 1')
-        t.same(storage.documents({ history: 'latest', path: '/full', contentLength_gt: 0 }).length, 0, 'documents({ isHead: true, path: /full, contentLength_gt: 0 }) length = 0')
-        t.same(storage.documents({ history: 'latest', path: '/full', contentLength: 0    }).length, 1, 'documents({ isHead: true, path: /full, contentLength: 0    }) length = 1')
+        t.same((await storage.documents({ history: 'latest', path: '/full'                      })).length, 1, 'documents({ isHead: true, path: /full,                   }) length = 1')
+        t.same((await storage.documents({ history: 'latest', path: '/full', contentLength_gt: 0 })).length, 0, 'documents({ isHead: true, path: /full, contentLength_gt: 0 }) length = 0')
+        t.same((await storage.documents({ history: 'latest', path: '/full', contentLength: 0    })).length, 1, 'documents({ isHead: true, path: /full, contentLength: 0    }) length = 1')
 
         // in /full there's two docs: one has content '' and one has 'full'
-        t.same(storage.documents({ history: 'all',    path: '/full'                    }).length, 2, 'documents({               path: /full,                   }) length = 2')
-        t.same(storage.documents({ history: 'all',    path: '/full', contentLength_gt: 0 }).length, 1, 'documents({               path: /full, contentLength_gt: 0 }) length = 1')
-        t.same(storage.documents({ history: 'all',    path: '/full', contentLength: 0    }).length, 1, 'documents({               path: /full, contentLength: 0    }) length = 1')
+        t.same((await storage.documents({ history: 'all',    path: '/full'                      })).length, 2, 'documents({               path: /full,                   }) length = 2')
+        t.same((await storage.documents({ history: 'all',    path: '/full', contentLength_gt: 0 })).length, 1, 'documents({               path: /full, contentLength_gt: 0 }) length = 1')
+        t.same((await storage.documents({ history: 'all',    path: '/full', contentLength: 0    })).length, 1, 'documents({               path: /full, contentLength: 0    }) length = 1')
 
         // the head in /empty has content 'e'
-        t.same(storage.documents({ history: 'latest', path: '/empty'                    }).length, 1, 'documents({ isHead: true, path: /empty,                   }) length = 1')
-        t.same(storage.documents({ history: 'latest', path: '/empty', contentLength_gt: 0 }).length, 1, 'documents({ isHead: true, path: /empty, contentLength_gt: 0 }) length = 1')
-        t.same(storage.documents({ history: 'latest', path: '/empty', contentLength: 0    }).length, 0, 'documents({ isHead: true, path: /empty, contentLength: 0    }) length = 0')
+        t.same((await storage.documents({ history: 'latest', path: '/empty'                      })).length, 1, 'documents({ isHead: true, path: /empty,                   }) length = 1')
+        t.same((await storage.documents({ history: 'latest', path: '/empty', contentLength_gt: 0 })).length, 1, 'documents({ isHead: true, path: /empty, contentLength_gt: 0 }) length = 1')
+        t.same((await storage.documents({ history: 'latest', path: '/empty', contentLength: 0    })).length, 0, 'documents({ isHead: true, path: /empty, contentLength: 0    }) length = 0')
 
         // in /empty there's two docs: one has content '' and one has 'full'
-        t.same(storage.documents({ history: 'all',    path: '/empty'                    }).length, 2, 'documents({               path: /empty,                   }) length = 2')
-        t.same(storage.documents({ history: 'all',    path: '/empty', contentLength_gt: 0 }).length, 1, 'documents({               path: /empty, contentLength_gt: 0 }) length = 1')
-        t.same(storage.documents({ history: 'all',    path: '/empty', contentLength: 0    }).length, 1, 'documents({               path: /empty, contentLength: 0    }) length = 1')
+        t.same((await storage.documents({ history: 'all',    path: '/empty'                      })).length, 2, 'documents({               path: /empty,                   }) length = 2')
+        t.same((await storage.documents({ history: 'all',    path: '/empty', contentLength_gt: 0 })).length, 1, 'documents({               path: /empty, contentLength_gt: 0 }) length = 1')
+        t.same((await storage.documents({ history: 'all',    path: '/empty', contentLength: 0    })).length, 1, 'documents({               path: /empty, contentLength: 0    }) length = 1')
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': limits on queries', (t: any) => {
+    t.test(scenario.description + ': limits on queries', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // three authors
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'foo', timestamp: now}), WriteResult.Accepted, 'set data');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'foo', timestamp: now}), WriteResult.Accepted, 'set data');
         // set them out of order to make sure they sort correctly
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1', timestamp: now + 1}), WriteResult.Accepted, 'set data');
-        t.same(storage.set(keypair3, {format: FORMAT, path: '/pathA', content: 'content3', timestamp: now + 3}), WriteResult.Accepted, 'set data');
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2', timestamp: now + 2}), WriteResult.Accepted, 'set data');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1', timestamp: now + 1}), WriteResult.Accepted, 'set data');
+        t.same(await storage.set(keypair3, {format: FORMAT, path: '/pathA', content: 'content3', timestamp: now + 3}), WriteResult.Accepted, 'set data');
+        t.same(await storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2', timestamp: now + 2}), WriteResult.Accepted, 'set data');
 
         // (authors are numbered in alphabetical order)
-        t.same(storage.authors(), [author1, author2, author3], 'authors');
+        t.same(await storage.authors(), [author1, author2, author3], 'authors');
 
         // queries with limits
         // including all history
 
-        t.same(storage.paths(   { history: 'all', limit: 1 }), ['/foo'], 'paths with history, limit 1');
-        t.same(storage.contents({ history: 'all', limit: 1 }), ['foo'], 'contents with history, limit 1');
+        t.same(await storage.paths(   { history: 'all', limit: 1 }), ['/foo'], 'paths with history, limit 1');
+        t.same(await storage.contents({ history: 'all', limit: 1 }), ['foo'], 'contents with history, limit 1');
 
-        t.same(storage.paths(   { history: 'all', limit: 2 }), ['/foo', '/pathA'], 'paths with history, limit 2');
-        t.same(storage.contents({ history: 'all', limit: 2 }), ['foo', 'content1'], 'contents with history, limit 2');
+        t.same(await storage.paths(   { history: 'all', limit: 2 }), ['/foo', '/pathA'], 'paths with history, limit 2');
+        t.same(await storage.contents({ history: 'all', limit: 2 }), ['foo', 'content1'], 'contents with history, limit 2');
 
-        t.same(storage.paths(   { history: 'all', limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
-        t.same(storage.contents({ history: 'all', limit: 3 }), ['foo', 'content1', 'content2'], 'contents with history, limit 3');
+        t.same(await storage.paths(   { history: 'all', limit: 3 }), ['/foo', '/pathA'], 'paths with history, limit 3');
+        t.same(await storage.contents({ history: 'all', limit: 3 }), ['foo', 'content1', 'content2'], 'contents with history, limit 3');
 
-        t.same(storage.paths(   { history: 'all' }), ['/foo', '/pathA'], 'paths with history, no limit');
-        t.same(storage.contents({ history: 'all' }), ['foo', 'content1', 'content2', 'content3'], 'contents with history, no limit');
+        t.same(await storage.paths(   { history: 'all' }), ['/foo', '/pathA'], 'paths with history, no limit');
+        t.same(await storage.contents({ history: 'all' }), ['foo', 'content1', 'content2', 'content3'], 'contents with history, no limit');
         
         // no history, just heads
-        t.same(storage.paths(   { history: 'latest' }), ['/foo', '/pathA'], 'paths no history, no limit');
-        t.same(storage.contents({ history: 'latest' }), ['foo', 'content3'], 'contents no history, no limit');
+        t.same(await storage.paths(   { history: 'latest' }), ['/foo', '/pathA'], 'paths no history, no limit');
+        t.same(await storage.contents({ history: 'latest' }), ['foo', 'content3'], 'contents no history, no limit');
 
-        t.same(storage.paths(   { history: 'latest', limit: 1 }), ['/foo'], 'paths no history, limit 1');
-        t.same(storage.contents({ history: 'latest', limit: 1 }), ['foo'], 'contents no history, limit 1');
+        t.same(await storage.paths(   { history: 'latest', limit: 1 }), ['/foo'], 'paths no history, limit 1');
+        t.same(await storage.contents({ history: 'latest', limit: 1 }), ['foo'], 'contents no history, limit 1');
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': path and author queries', (t: any) => {
+    t.test(scenario.description + ': path and author queries', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // two authors
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.X', timestamp: now + 1}), WriteResult.Accepted, 'set data');
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2.Y', timestamp: now + 2}), WriteResult.Accepted, 'set data');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.Z', timestamp: now + 3}), WriteResult.Accepted, 'set data');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.X', timestamp: now + 1})), WriteResult.Accepted, 'set data');
+        t.same((await storage.set(keypair2, {format: FORMAT, path: '/pathA', content: 'content2.Y', timestamp: now + 2})), WriteResult.Accepted, 'set data');
+        t.same((await storage.set(keypair1, {format: FORMAT, path: '/pathA', content: 'content1.Z', timestamp: now + 3})), WriteResult.Accepted, 'set data');
 
-        t.same(storage.authors(), [author1, author2], 'authors');
+        t.same((await storage.authors()), [author1, author2], 'authors');
 
         // path queries
-        t.same(storage.paths(    { path: '/pathA', history: 'latest' }), ['/pathA'], 'paths with path query');
-        t.same(storage.contents( { path: '/pathA', history: 'latest' }), ['content1.Z'], 'contents with path query');
-        t.same(storage.documents({ path: '/pathA', history: 'latest' }).map(d => d.content), ['content1.Z'], 'documents with path query');
+        t.same((await storage.paths(    { path: '/pathA', history: 'latest' })), ['/pathA'], 'paths with path query');
+        t.same((await storage.contents( { path: '/pathA', history: 'latest' })), ['content1.Z'], 'contents with path query');
+        t.same((await storage.documents({ path: '/pathA', history: 'latest' })).map(d => d.content), ['content1.Z'], 'documents with path query');
 
-        t.same(storage.paths(    { path: '/pathA', history: 'all' }), ['/pathA'], 'paths with path query, history');
-        t.same(storage.contents( { path: '/pathA', history: 'all' }), ['content1.Z', 'content2.Y'], 'contents with path query, history');
-        t.same(storage.documents({ path: '/pathA', history: 'all' }).map(d => d.content), ['content1.Z', 'content2.Y'], 'documents with path query, history');
+        t.same((await storage.paths(    { path: '/pathA', history: 'all' })), ['/pathA'], 'paths with path query, history');
+        t.same((await storage.contents( { path: '/pathA', history: 'all' })), ['content1.Z', 'content2.Y'], 'contents with path query, history');
+        t.same((await storage.documents({ path: '/pathA', history: 'all' })).map(d => d.content), ['content1.Z', 'content2.Y'], 'documents with path query, history');
 
         // author
-        t.same(storage.contents({  author: author1, history: 'latest' }), ['content1.Z'], 'contents author 1, no history');
-        t.same(storage.contents({  author: author2, history: 'latest' }), [], 'contents author 2, no history');
-        t.same(storage.documents({ author: author1, history: 'latest' }).length, 1, 'documents author 1, no history');
-        t.same(storage.documents({ author: author2, history: 'latest' }).length, 0, 'documents author 2, no history');
-        t.same(storage.paths({     author: author1, history: 'latest' }), ['/pathA'], 'paths author 1, no history');
-        t.same(storage.paths({     author: author2, history: 'latest' }), [], 'paths author 2, no history');
+        t.same((await storage.contents({  author: author1, history: 'latest' })), ['content1.Z'], 'contents author 1, no history');
+        t.same((await storage.contents({  author: author2, history: 'latest' })), [], 'contents author 2, no history');
+        t.same((await storage.documents({ author: author1, history: 'latest' })).length, 1, 'documents author 1, no history');
+        t.same((await storage.documents({ author: author2, history: 'latest' })).length, 0, 'documents author 2, no history');
+        t.same((await storage.paths({     author: author1, history: 'latest' })), ['/pathA'], 'paths author 1, no history');
+        t.same((await storage.paths({     author: author2, history: 'latest' })), [], 'paths author 2, no history');
 
-        t.same(storage.contents({  author: author1, history: 'all' }), ['content1.Z'], 'contents author 1, history');
-        t.same(storage.contents({  author: author2, history: 'all' }), ['content2.Y'], 'contents author 2, history');
-        t.same(storage.documents({ author: author1, history: 'all' }).length, 1, 'documents author 1, history');
-        t.same(storage.documents({ author: author2, history: 'all' }).length, 1, 'documents author 2, history');
-        t.same(storage.paths({     author: author1, history: 'all' }), ['/pathA'], 'paths author 1, history');
-        t.same(storage.paths({     author: author2, history: 'all' }), ['/pathA'], 'paths author 2, history');
+        t.same((await storage.contents({  author: author1, history: 'all' })), ['content1.Z'], 'contents author 1, history');
+        t.same((await storage.contents({  author: author2, history: 'all' })), ['content2.Y'], 'contents author 2, history');
+        t.same((await storage.documents({ author: author1, history: 'all' })).length, 1, 'documents author 1, history');
+        t.same((await storage.documents({ author: author2, history: 'all' })).length, 1, 'documents author 2, history');
+        t.same((await storage.paths({     author: author1, history: 'all' })), ['/pathA'], 'paths author 1, history');
+        t.same((await storage.paths({     author: author2, history: 'all' })), ['/pathA'], 'paths author 2, history');
 
-        //// participatingAuthor
-        //// TODO: this has been removed from the latest query options
-        //t.same(storage.contents({ participatingAuthor: author1, history: 'all'  }), ['content1.Z', 'content2.Y'], 'participatingAuthor 1, with history');
-        //t.same(storage.contents({ participatingAuthor: author1, history: 'latest' }), ['content1.Z'], 'participatingAuthor 1, no history');
-        //t.same(storage.contents({ participatingAuthor: author2, history: 'all'  }), ['content1.Z', 'content2.Y'], 'participatingAuthor 2, with history');
-        //t.same(storage.contents({ participatingAuthor: author2, history: 'latest' }), ['content1.Z'], 'participatingAuthor 2, no history');
-
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': multi-author writes', (t: any) => {
+    t.test(scenario.description + ': multi-author writes', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
-       // set decoy paths to make sure the later tests return the correct path
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'set decoy path 2');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'set decoy path 1');
+        // set decoy paths to make sure the later tests return the correct path
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'set decoy path 2');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'set decoy path 1');
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'set new path');
-        t.equal(storage.getContent('/path1'), 'one');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'set new path');
+        t.equal(await storage.getContent('/path1'), 'one');
 
         // this will overwrite 'one' but the doc for 'one' will remain in history.
         // history will have 2 docs for this path.
-        t.same(storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'update from a second author');
-        t.equal(storage.getContent('/path1'), 'two');
+        t.same(await storage.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'update from a second author');
+        t.equal(await storage.getContent('/path1'), 'two');
 
         // this will replace the old original doc 'one' from this author.
         // history will have 2 docs for this path.
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'three', timestamp: now + 2}), WriteResult.Accepted, 'update from original author again');
-        t.equal(storage.getContent('/path1'), 'three');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'three', timestamp: now + 2}), WriteResult.Accepted, 'update from original author again');
+        t.equal(await storage.getContent('/path1'), 'three');
 
-        t.equal(storage.paths().length, 3, '3 paths');
-        t.equal(storage.contents({ history: 'latest' }).length, 3, '3 contents with just heads');
-        t.equal(storage.contents({ history: 'all'    }).length, 4, '4 contents with history');
+        t.equal((await storage.paths()).length, 3, '3 paths');
+        t.equal((await storage.contents({ history: 'latest' })).length, 3, '3 contents with just heads');
+        t.equal((await storage.contents({ history: 'all'    })).length, 4, '4 contents with history');
 
-        t.same(storage.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths()');
-        t.same(storage.contents({ history: 'latest' }), ['aaa', 'zzz', 'three'], 'contents() with just heads');
-        t.same(storage.contents({ history: 'all'    }), ['aaa', 'zzz', 'three', 'two'], 'contents with history, newest first');
+        t.same(await storage.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths()');
+        t.same(await storage.contents({ history: 'latest' }), ['aaa', 'zzz', 'three'], 'contents() with just heads');
+        t.same(await storage.contents({ history: 'all'    }), ['aaa', 'zzz', 'three', 'two'], 'contents with history, newest first');
 
         t.same(
-            storage.documents({ history: 'all' }).map((doc : Document) => doc.author),
+            (await storage.documents({ history: 'all' })).map((doc : Document) => doc.author),
             [author1, author1, author1, author2],
             'docs with history, newest first, docs should have correct authors'
         );
 
         let sortedAuthors = [author1, author2];
         sortedAuthors.sort();
-        t.same(storage.authors(), sortedAuthors, 'authors');
+        t.same(await storage.authors(), sortedAuthors, 'authors');
 
         // TODO: test sorting of docs with 2 authors, same timestamps, different signatures
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': sync: push to empty store', (t: any) => {
+    t.test(scenario.description + ': sync: push to empty store', async (t: any) => {
         let storage1 = scenario.makeStorage(WORKSPACE);
         let storage2 = scenario.makeStorage(WORKSPACE);
 
         // set up some paths
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'author1 set path1');
-        t.same(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'author1 set path1');
+        t.same(await storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');
 
         // sync
-        let syncResults = localSync(storage1, storage2);
+        let syncResults = await localSyncAsync(storage1, storage2);
         t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 docs (includes history docs).  pulled 0.');
 
         // check results
-        t.same(storage1.paths(), storage2.paths(), 'storage1.paths() == storage3.paths()');
-        t.same(storage1.contents({ history: 'latest' }), storage2.contents({ history: 'latest' }), 'storage1 contents == storage3 (heads only)');
-        t.same(storage1.contents({ history: 'all'    }), storage2.contents({ history: 'all'    }), 'storage1 contents with history == storage3');
+        t.same(await storage1.paths(), await storage2.paths(), 'storage1.paths() == storage2.paths()');
+        t.same(await storage1.contents({ history: 'latest' }), await storage2.contents({ history: 'latest' }), 'storage1 contents == storage2 (heads only)');
+        t.same(await storage1.contents({ history: 'all'    }), await storage2.contents({ history: 'all'    }), 'storage1 contents with history == storage2');
 
-        t.same(storage2.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths are as expected');
-        t.same(storage2.getContent('/path1'), 'two', 'latest doc for a path wins on storage3');
-        t.same(storage2.getDocument('/path1')?.content, 'two', 'getDocument has correct content');
-        t.same(storage2.contents({ history: 'latest' }), ['aaa', 'zzz', 'two'], 'storage3 contents are as expected (heads only)');
-        t.same(storage2.contents({ history: 'all'    }), ['aaa', 'zzz', 'one', 'two'], 'contents with history are as expected');
+        t.same(await storage2.paths(), ['/decoy1', '/decoy2', '/path1'], 'paths are as expected');
+        t.same(await storage2.getContent('/path1'), 'two', 'latest doc for a path wins on storage2');
+        t.same((await storage2.getDocument('/path1'))?.content, 'two', 'getDocument has correct content');
+        t.same(await storage2.contents({ history: 'latest' }), ['aaa', 'zzz', 'two'], 'storage2 contents are as expected (heads only)');
+        t.same(await storage2.contents({ history: 'all'    }), ['aaa', 'zzz', 'one', 'two'], 'contents with history are as expected');
 
         // sync again.  nothing should happen.
-        let syncResults2 = localSync(storage1, storage2);
+        let syncResults2 = await localSyncAsync(storage1, storage2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing happens if syncing again');
 
+        await storage1.close();
+        await storage2.close();
         t.end();
     });
 
-    t.test(scenario.description + ': sync: two-way', (t: any) => {
+    t.test(scenario.description + ': sync: two-way', async (t: any) => {
         let storage1 = scenario.makeStorage(WORKSPACE);
         let storage2 = scenario.makeStorage(WORKSPACE);
 
         // set up some paths
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');  // winner  (push #1)
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');  // winner  (push 2)
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/decoy2', content: 'zzz', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');  // winner  (push #1)
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/decoy1', content: 'aaa', timestamp: now}), WriteResult.Accepted, 'author1 set decoy path');  // winner  (push 2)
 
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'author1 set path1');      // becomes history  (push 3)
-        t.same(storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');  // winner  (push 4)
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/path1', content: 'one', timestamp: now}), WriteResult.Accepted, 'author1 set path1');      // becomes history  (push 3)
+        t.same(await storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');  // winner  (push 4)
 
-        t.same(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '221', timestamp: now}), WriteResult.Accepted);       // dropped
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '111', timestamp: now + 10}), WriteResult.Accepted);  // winner  (push 5)
+        t.same(await storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '221', timestamp: now}), WriteResult.Accepted);       // dropped
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage1', content: '111', timestamp: now + 10}), WriteResult.Accepted);  // winner  (push 5)
 
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage3', content: '11', timestamp: now}), WriteResult.Accepted);       // dropped
-        t.same(storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage3', content: '22', timestamp: now + 10}), WriteResult.Accepted);  // winner  (pull 1)
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/latestOnStorage3', content: '11', timestamp: now}), WriteResult.Accepted);       // dropped
+        t.same(await storage2.set(keypair1, {format: FORMAT, path: '/latestOnStorage3', content: '22', timestamp: now + 10}), WriteResult.Accepted);  // winner  (pull 1)
 
-        t.same(storage1.set(keypair1, {format: FORMAT, path: '/authorConflict', content: 'author1storage1', timestamp: now}), WriteResult.Accepted);      // becomes history  (push 6)
-        t.same(storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage3', timestamp: now + 1}), WriteResult.Accepted);  // winner  (pull 2)
+        t.same(await storage1.set(keypair1, {format: FORMAT, path: '/authorConflict', content: 'author1storage1', timestamp: now}), WriteResult.Accepted);      // becomes history  (push 6)
+        t.same(await storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage3', timestamp: now + 1}), WriteResult.Accepted);  // winner  (pull 2)
 
         // sync
-        let syncResults = localSync(storage1, storage2);
+        let syncResults = await localSyncAsync(storage1, storage2);
         t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
-        t.equal(storage1.paths().length, 6, '6 paths');
-        t.equal(storage1.documents({ history: 'latest' }).length, 6, '6 docs, heads only');
-        t.equal(storage1.documents({ history: 'all'    }).length, 8, '8 docs with history');
-        t.equal(storage1.contents({  history: 'latest' }).length, 6, '6 contents, heads only');
-        t.equal(storage1.contents({  history: 'all'    }).length, 8, '8 contents with history');
+        t.equal((await storage1.paths()).length, 6, '6 paths');
+        t.equal((await storage1.documents({ history: 'latest' })).length, 6, '6 docs, heads only');
+        t.equal((await storage1.documents({ history: 'all'    })).length, 8, '8 docs with history');
+        t.equal((await storage1.contents({  history: 'latest' })).length, 6, '6 contents, heads only');
+        t.equal((await storage1.contents({  history: 'all'    })).length, 8, '8 contents with history');
 
-        t.same(storage1.paths(), '/authorConflict /decoy1 /decoy2 /latestOnStorage1 /latestOnStorage3 /path1'.split(' '), 'correct paths on storage1');
-        t.same(storage1.contents({ history: 'latest' }), 'author2storage3 aaa zzz 111 22 two'.split(' '), 'correct contents on storage1');
+        t.same(await storage1.paths(), '/authorConflict /decoy1 /decoy2 /latestOnStorage1 /latestOnStorage3 /path1'.split(' '), 'correct paths on storage1');
+        t.same(await storage1.contents({ history: 'latest' }), 'author2storage3 aaa zzz 111 22 two'.split(' '), 'correct contents on storage1');
 
-        t.same(storage1.paths(), storage2.paths(), 'paths match');
-        t.same(storage1.documents({ history: 'latest' }), storage2.documents({ history: 'latest' }), 'docs match, heads only');
-        t.same(storage1.documents({ history: 'all'    }), storage2.documents({ history: 'all'    }), 'docs with history: match');
-        t.same(storage1.contents({  history: 'latest' }), storage2.contents({  history: 'latest' }), 'contents match, heads only');
-        t.same(storage1.contents({  history: 'all'    }), storage2.contents({  history: 'all'    }), 'contents with history: match');
+        t.same(await storage1.paths(), await storage2.paths(), 'paths match');
+        t.same(await storage1.documents({ history: 'latest' }), await storage2.documents({ history: 'latest' }), 'docs match, heads only');
+        t.same(await storage1.documents({ history: 'all'    }), await storage2.documents({ history: 'all'    }), 'docs with history: match');
+        t.same(await storage1.contents({  history: 'latest' }), await storage2.contents({  history: 'latest' }), 'contents match, heads only');
+        t.same(await storage1.contents({  history: 'all'    }), await storage2.contents({  history: 'all'    }), 'contents with history: match');
 
+        await storage1.close();
+        await storage2.close();
         t.end();
     });
 
-    t.test(scenario.description + ': sync: mismatched workspaces', (t: any) => {
+    t.test(scenario.description + ': sync: mismatched workspaces', async (t: any) => {
         let storageA1 = scenario.makeStorage(WORKSPACE);
         let storageA2 = scenario.makeStorage(WORKSPACE);
         let storageB = scenario.makeStorage(WORKSPACE2);
-        t.same(storageA1.set(keypair1, {format: FORMAT, path: '/a1', content: 'a1'}), WriteResult.Accepted);
-        t.same(storageA2.set(keypair1, {format: FORMAT, path: '/a2', content: 'a2'}), WriteResult.Accepted);
-        t.same(storageB.set(keypair1, {format: FORMAT, path: '/b', content: 'b'}), WriteResult.Accepted);
+        t.same(await storageA1.set(keypair1, {format: FORMAT, path: '/a1', content: 'a1'}), WriteResult.Accepted);
+        t.same(await storageA2.set(keypair1, {format: FORMAT, path: '/a2', content: 'a2'}), WriteResult.Accepted);
+        t.same(await storageB.set(keypair1, {format: FORMAT, path: '/b', content: 'b'}), WriteResult.Accepted);
 
-        t.same(localSync(storageA1, storageB),  { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
-        t.same(localSync(storageA1, storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
+        t.same(await localSyncAsync(storageA1, storageB),  { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
+        t.same(await localSyncAsync(storageA1, storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
 
+        await storageA1.close();
+        await storageA2.close();
+        await storageB.close();
         t.end();
     });
 
-    t.test(scenario.description + ': sync: misc other options', (t: any) => {
+    t.test(scenario.description + ': sync: misc other options', async (t: any) => {
         let storageEmpty1 = scenario.makeStorage(WORKSPACE);
         let storageEmpty2 = scenario.makeStorage(WORKSPACE);
         let storageEmpty3 = scenario.makeStorage(WORKSPACE);
         let storage = scenario.makeStorage(WORKSPACE);
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'bar'}), WriteResult.Accepted);
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'bar'}), WriteResult.Accepted);
 
         // sync with empty stores
-        t.same(localSync( storageEmpty1, storageEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
-        t.same(localPush( storageEmpty1, storageEmpty2), 0, 'push with empty stores');
-        t.same(localPush( storageEmpty1, storage      ), 0, 'push from empty to full store');
+        t.same(await localSyncAsync( storageEmpty1, storageEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(await localPushAsync( storageEmpty1, storageEmpty2), 0, 'push with empty stores');
+        t.same(await localPushAsync( storageEmpty1, storage      ), 0, 'push from empty to full store');
 
         // sync with self
-        t.same(localSync(storage, storage), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
+        t.same(await localSyncAsync(storage, storage), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
 
         // successful sync
-        t.same(localSync(storage, storageEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
-        t.same(localSync(storageEmpty2, storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
+        t.same(await localSyncAsync(storage, storageEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
+        t.same(await localSyncAsync(storageEmpty2, storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
 
-        t.same(localPush(storage, storageEmpty3), 1, 'successful push');
+        t.same(await localPushAsync(storage, storageEmpty3), 1, 'successful push');
 
+        await storageEmpty1.close();
+        await storageEmpty2.close();
+        await storageEmpty3.close();
+        await storage.close();
         t.end();
     });
+    /*
 
     t.test(scenario.description + ': onReady, onWillClose, onDidClose', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);

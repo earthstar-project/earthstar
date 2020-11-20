@@ -3,7 +3,7 @@ import {
     WriteResult,
 } from '../util/types';
 import {
-    IStorage3,
+    IStorage3, IStorage3Async,
 } from './types3';
 
 /**
@@ -32,6 +32,22 @@ export let localPush = (storageA: IStorage3, storageB: IStorage3): number => {
     }
     return numSuccess;
 }
+export let localPushAsync = async (storageA: IStorage3 | IStorage3Async, storageB: IStorage3 | IStorage3Async): Promise<number> => {
+    // return number of docs successfully pushed
+
+    // don't sync with yourself
+    if (storageA === storageB) { return 0; }
+
+    // don't sync across workspaces
+    if (storageA.workspace !== storageB.workspace) { return 0; }
+
+    let numSuccess = 0;
+    for (let doc of await storageA.documents({ history: 'all' })) {
+        let result = await storageB.ingestDocument(doc, storageA.sessionId);
+        if (result === WriteResult.Accepted) { numSuccess += 1; }
+    }
+    return numSuccess;
+}
 
 /**
  * Bidirectional sync of all documents between storageA and storageB.
@@ -47,5 +63,11 @@ export let localSync = (storageA: IStorage3, storageB: IStorage3): SyncResults =
     return {
         numPushed: localPush(storageA, storageB),
         numPulled: localPush(storageB, storageA),
+    }
+}
+export let localSyncAsync = async (storageA: IStorage3 | IStorage3Async, storageB: IStorage3 | IStorage3Async): Promise<SyncResults> => {
+    return {
+        numPushed: await localPushAsync(storageA, storageB),
+        numPulled: await localPushAsync(storageB, storageA),
     }
 }
