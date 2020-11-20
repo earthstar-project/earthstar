@@ -38,6 +38,7 @@
     "test-3-query": "tap -Rspecy --jobs=1 build/test/query3.test.js",
     "test-3-sync": "tap -Rspecy --jobs=1 build/test/sync3incremental.test.js",
     "test-3-storage": "tap -Rspecy --jobs=1 build/test/storage3.test.js",
+    "test-3-storage-async": "tap -Rspecy --jobs=1 build/test/storage3async.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",
     "test-3-coverage": "npm run test-3 -- --coverage-report=lcov",
     "typedoc": "typedoc --out typedoc/ --theme minimal --name Earthstar --includeVersion --readme none src",
