@@ -53,15 +53,12 @@ export interface IStorage3 {
     readonly sessionId: string;  // gets a new random value every time the program runs
     _now: number | null;  // used for testing time behavior.  is used instead of Date.now().  normally null.
 
-    // events
-
+    // EVENTS
     onWrite: Emitter<WriteEvent3>;  // fired synchronously just after each document write
     onWillClose: Emitter<undefined>;  // fired synchronously at the beginning of close()
     onDidClose: Emitter<undefined>;  // fired synchronously at the end of close()
 
-    // TODO: session id?
-
-    // simple key-value store for config settings
+    // KEY-VALUE STORE for config settings
     setConfig(key: string, content: string): void;  // override
     getConfig(key: string): string | undefined;  // override
     deleteConfig(key: string): void;  // override
@@ -87,5 +84,44 @@ export interface IStorage3 {
     // CLOSE
     isClosed(): boolean;
     close(): void;  // override if needed; remember to fire onWillClose and onDidClose
-    closeAndForgetWorkspace(): void  // override
+    closeAndForgetWorkspace(): void;  // override
+}
+
+export interface IStorage3Async {
+    readonly workspace : WorkspaceAddress;
+    readonly sessionId: string;  // gets a new random value every time the program runs
+    _now: number | null;  // used for testing time behavior.  is used instead of Date.now().  normally null.
+
+    // EVENTS
+    onWrite: Emitter<WriteEvent3>;  // fired synchronously just after each document write
+    onWillClose: Emitter<undefined>;  // fired synchronously at the beginning of close()
+    onDidClose: Emitter<undefined>;  // fired synchronously at the end of close()
+
+    // KEY-VALUE STORE for config settings
+    setConfig(key: string, content: string): Promise<void>;  // override
+    getConfig(key: string): Promise<string | undefined>;  // override
+    deleteConfig(key: string): Promise<void>;  // override
+    deleteAllConfig(): Promise<void>;  // override
+
+    // GET DATA OUT
+    documents(query?: Query3): Promise<Document[]>;  // override
+    contents(query?: Query3): Promise<string[]>;
+    paths(query?: Query3NoLimitBytes): Promise<string[]>;
+    authors(): Promise<AuthorAddress[]>;
+    getDocument(path: string): Promise<Document | undefined>;
+    getContent(path: string): Promise<string | undefined>;
+
+    // PUT DATA IN
+    _upsertDocument(doc: Document): Promise<void>;  // override
+    ingestDocument(doc: Document, fromSessionId: string): Promise<WriteResult | ValidationError>;
+    set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<WriteResult | ValidationError>;
+
+    // REMOVE DATA
+    forgetDocuments(query: Query3ForForget): Promise<void>;  // override
+    discardExpiredDocuments(): Promise<void>;  // override
+
+    // CLOSE
+    isClosed(): boolean;
+    close(): Promise<void>;  // override if needed; remember to fire onWillClose and onDidClose
+    closeAndForgetWorkspace(): Promise<void>;  // override
 }
