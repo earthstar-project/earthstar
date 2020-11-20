@@ -16,6 +16,8 @@ import {
 import { Storage3Memory } from './storage3Memory';
 import { ValidatorEs4 } from '../validator/es4';
 import { logDebug } from '../util/log';
+import { sleep } from '../util/helpers';
+import { Storage3Base } from './storage3Base';
 
 //================================================================================
 
@@ -122,11 +124,65 @@ export async function* fingerprintIteratorZipper(fIter1: AsyncGenerator<Fingerpr
     }
 }
 
+interface Action {
+    action: 'nop-equal' | 'push-missing' | 'pull-missing' | 'push-newer' | 'pull-newer',
+    f1: Fingerprint | undefined,
+    f2: Fingerprint | undefined,
+}
+export async function* zipperToAction(zipper: AsyncGenerator<[Fingerprint | undefined, Fingerprint | undefined], void, unknown>):
+    AsyncGenerator<Action, void, unknown>
+    {
+    for await (let [f1, f2] of zipper) {
+            if (f1 === undefined) {
+                yield { action: 'pull-missing', f1, f2 };
+            }
+            else if (f2 === undefined) {
+                yield { action: 'push-missing', f1, f2 };
+            }
+            else {
+                let [path1, author1, timestamp1, sig1] = f1;
+                let [path2, author2, timestamp2, sig2] = f2;
+                // the zipper ensures that path and author already match
+                let p1Newer = timestamp1 > timestamp2 || (timestamp1 === timestamp2 && sig1 < sig2);
+                let eq = (timestamp1 === timestamp2 && sig1 === sig2);
+                if (eq) {
+                    yield { action: 'nop-equal', f1, f2 };
+                } else if (p1Newer) {
+                    yield { action: 'push-newer', f1, f2 };
+                } else {
+                    yield { action: 'pull-newer', f1, f2 };
+                }
+            }
+    }
+}
 
-let storage = new Storage3Memory([ValidatorEs4], '+foo.bar');
-let f1 = docToFingerprintIterator(localQueryIterator(storage, { history: 'all', limit: 10 }));
-let f2 = docToFingerprintIterator(localQueryIterator(storage, { history: 'all', limit: 10 }));
-let pairs = fingerprintIteratorZipper(f1, f2);
+/**
+ * Return the document matching the fingerprint, or a newer one from the same author and path if there is one.
+ */
+export let lookupFingerprint = (storage: IStorage3, fingerprint: Fingerprint) : Document | undefined => {
+    let [path, author, timestamp, sig] = fingerprint;
+    return storage.documents({ path, author, timestamp_gt: timestamp-1 })[0];
+}
 
+export class PushBuffer {
+    _docs: Document[] = [];
+    _sizeThreshold: number = 3 * 1000000;  // 3 mb
+    _sizeTotal: number = 0;
+    _storage: IStorage3;
+    constructor(storage: IStorage3) {
+        this._storage = storage;
+    }
+    async push(doc: Document) {
+        this._docs.push(doc);
+        this._sizeTotal += doc.content.length;
+        if (this._sizeTotal > this._sizeThreshold) {
+            await this.flush();
+        }
+    }
+    async flush() {
+        // TODO: batch upload to storage
+        this._docs = [];
+    }
+}
 
 

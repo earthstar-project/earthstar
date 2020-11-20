@@ -41,6 +41,9 @@ import {
     docToFingerprintIterator,
     fingerprintIteratorZipper,
     localQueryIterator,
+    zipperToAction,
+    lookupFingerprint,
+    PushBuffer,
 } from '../storage3/sync3incremental';
 import { uniq, sorted } from '../util/helpers';
 import { Storage3Sqlite } from '../storage3/storage3Sqlite';
@@ -164,26 +167,29 @@ for (let scenario of scenarios) {
         let fing1 = docToFingerprintIterator(localQueryIterator(storage1, q1));
         let fing2 = docToFingerprintIterator(localQueryIterator(storage2, q2));
         let zip = fingerprintIteratorZipper(fing1, fing2);
+        let zipActions = zipperToAction(zip);
+
         let summary = (f: Fingerprint | undefined): string | undefined =>
             f === undefined ? undefined : `${f[0]}--${f[1].split('.')[0]}`;
-        for await (let [p1, p2] of zip) {
-            logTest('_');
-            logTest('                  ' + JSON.stringify([p1, p2].map(summary)));
-            if (p1 === undefined) { logTest('  <-- pull (missing from 1)'); }
-            else if (p2 === undefined) { logTest('  --> push (missing from 2)'); }
-            else {
-                let [path1, author1, timestamp1, sig1] = p1;
-                let [path2, author2, timestamp2, sig2] = p2;
-                // the zipper ensures that path and author already match
-                let p1Newer = timestamp1 > timestamp2 || (timestamp1 === timestamp2 && sig1 < sig2);
-                let eq = (timestamp1 === timestamp2 && sig1 === sig2);
-                if (eq) {
-                    logTest('  xxx equal; do nothing');
-                } else if (p1Newer) {
-                    logTest('  --> push (p1 is newer)');
-                } else {
-                    logTest('  <-- pull (p2 is newer)');
+
+        let pushBufferTo2 = new PushBuffer(storage2);
+        for await (let { action, f1, f2 } of zipActions) {
+            if (action === 'nop-equal') {
+                /* do nothing */
+            }
+            else if (action === 'push-missing' || action === 'push-newer') {
+                console.log(`push ${summary(f1)}  storage1 --> storage2`);
+                let doc = lookupFingerprint(storage1, f1 as Fingerprint);
+                if (doc !== undefined) {
+                    pushBufferTo2.push(doc);
                 }
+            }
+            else if (action === 'pull-missing' || action === 'pull-newer') {
+                console.log(`pull ${summary(f2)}  storage1 <-- storage2`);
+                // TODO
+            }
+            else {
+                throw new Error('oops'); // should never happen
             }
         }
 
