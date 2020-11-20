@@ -74,10 +74,18 @@ let DAY = HOUR * 24;
 let SNOWMAN = '☃';  // \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 
 interface Scenario {
-    makeStorage: (workspace : string) => IStorage3Async,
+    makeStorage: (workspace : string) => IStorage3Async | IStorage3,
     description: string,
 }
 let scenarios : Scenario[] = [
+    {
+        makeStorage: (workspace : string) : IStorage3 => {
+            let storage = new Storage3Memory(VALIDATORS, workspace);
+            storage._now = now;
+            return storage;
+        },
+        description: "Storage3Memory",
+    },
     {
         makeStorage: (workspace : string) : IStorage3Async => {
             let storage = new Storage3ToAsync(new Storage3Memory(VALIDATORS, workspace), 20);
@@ -444,9 +452,8 @@ for (let scenario of scenarios) {
         await storage.close();
         t.end();
     });
-    /*
 
-    t.test(scenario.description + ': unicode characters vs bytes', (t: any) => {
+    t.test(scenario.description + ': unicode characters vs bytes', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let base = { workspace: WORKSPACE };
@@ -458,27 +465,30 @@ for (let scenario of scenarios) {
             d3: makeDoc({...base, keypair: keypair1, timestamp: now, path: '/3', content: SNOWMAN}),  // 1 unicode character, 3 bytes
             d4: makeDoc({...base, keypair: keypair2, timestamp: now, path: '/4', content: '4444'}),
         };
-        Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
+        for (let doc of Object.values(inputDocs)) {
+            await storage._upsertDocument(doc);
+        }
 
-        t.same(storage.paths({ contentLength: 0 }), ['/0'], 'paths contentLength 0');
-        t.same(storage.paths({ contentLength: 1 }), ['/1'], 'paths contentLength 1 (should not have snowman in here, "/3")');
-        t.same(storage.paths({ contentLength: 3 }), ['/3'], 'paths contentLength 3 (should have snowman here, "/3")');
-        t.same(storage.paths({ contentLength: 77 }), [], 'paths contentLength 77 (no match)');
+        t.same(await storage.paths({ contentLength: 0 }), ['/0'], 'paths contentLength 0');
+        t.same(await storage.paths({ contentLength: 1 }), ['/1'], 'paths contentLength 1 (should not have snowman in here, "/3")');
+        t.same(await storage.paths({ contentLength: 3 }), ['/3'], 'paths contentLength 3 (should have snowman here, "/3")');
+        t.same(await storage.paths({ contentLength: 77 }), [], 'paths contentLength 77 (no match)');
 
-        t.same(storage.documents({ limitBytes: 0 }).map(d => d.path), [], 'limitBytes 0');
-        t.same(storage.documents({ limitBytes: 1 }).map(d => d.path), ['/0', '/1'], 'limitBytes 1');
-        t.same(storage.documents({ limitBytes: 2 }).map(d => d.path), ['/0', '/1'], 'limitBytes 2');
-        t.same(storage.documents({ limitBytes: 3 }).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 3');
-        t.same(storage.documents({ limitBytes: 4 }).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 4 no snowman yet...');
-        t.same(storage.documents({ limitBytes: 5 }).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 5 no snowman yet...');
-        t.same(storage.documents({ limitBytes: 6 }).map(d => d.path), ['/0', '/1', '/2', '/3'], 'limitBytes 6 includes snowman');
-        t.same(storage.documents({ limitBytes: 9 }).map(d => d.path), ['/0', '/1', '/2', '/3'], 'limitBytes 9');
-        t.same(storage.documents({ limitBytes: 10 }).map(d => d.path), ['/0', '/1', '/2', '/3', '/4'], 'limitBytes 10');
+        t.same((await storage.documents({ limitBytes:  0 })).map(d => d.path), [], 'limitBytes 0');
+        t.same((await storage.documents({ limitBytes:  1 })).map(d => d.path), ['/0', '/1'], 'limitBytes 1');
+        t.same((await storage.documents({ limitBytes:  2 })).map(d => d.path), ['/0', '/1'], 'limitBytes 2');
+        t.same((await storage.documents({ limitBytes:  3 })).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 3');
+        t.same((await storage.documents({ limitBytes:  4 })).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 4 no snowman yet...');
+        t.same((await storage.documents({ limitBytes:  5 })).map(d => d.path), ['/0', '/1', '/2'], 'limitBytes 5 no snowman yet...');
+        t.same((await storage.documents({ limitBytes:  6 })).map(d => d.path), ['/0', '/1', '/2', '/3'], 'limitBytes 6 includes snowman');
+        t.same((await storage.documents({ limitBytes:  9 })).map(d => d.path), ['/0', '/1', '/2', '/3'], 'limitBytes 9');
+        t.same((await storage.documents({ limitBytes: 10 })).map(d => d.path), ['/0', '/1', '/2', '/3', '/4'], 'limitBytes 10');
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': documentQuery and pathQuery', (t: any) => {
+    t.test(scenario.description + ': documentQuery and pathQuery', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let base = { workspace: WORKSPACE };
@@ -491,7 +501,9 @@ for (let scenario of scenarios) {
             d4: makeDoc({...base, keypair: keypair3, timestamp: now + 2, path: '/b', content: ''}),
             d5: makeDoc({...base, keypair: keypair2, timestamp: now    , path: '/cc/x', content: '55555'}),
         };
-        Object.values(inputDocs).forEach(d => storage._upsertDocument(d));
+        for (let doc of Object.values(inputDocs)) {
+            await storage._upsertDocument(doc);
+        }
 
         let i = inputDocs;
         type TestCase = {
@@ -698,7 +710,7 @@ for (let scenario of scenarios) {
         // test documentQuery
         for (let { query, matches, note } of testCases) {
             note = (note || '') + ' ' + JSON.stringify(query);
-            let actualMatches = storage.documents(query);
+            let actualMatches = await storage.documents(query);
             if (matches.length !== actualMatches.length) {
                 t.same(actualMatches.length, matches.length, `documentQuery: correct number of results: ${note}`);
             } else {
@@ -711,15 +723,15 @@ for (let scenario of scenarios) {
             note = (note || '') + ' ' + JSON.stringify(query);
             if (pathMatches !== undefined) { matches = pathMatches; }
             let expectedPaths = sorted(uniq(matches.map(m => m.path)));
-            let actualPaths = storage.paths(query);
+            let actualPaths = await storage.paths(query);
             t.same(actualPaths, expectedPaths, `pathQuery: all match: ${note}`);
         }
 
-        storage.close();
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': do not return expired docs', (t: any) => {
+    t.test(scenario.description + ': do not return expired docs', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // a good doc
@@ -727,80 +739,81 @@ for (let scenario of scenarios) {
         // a doc that will expire
         let doc2 = makeDoc({workspace: WORKSPACE, keypair: keypair1, path: '/a!', content: 'hello', timestamp: now, deleteAfter: now + 5 });
 
-        storage._upsertDocument(doc1);
-        storage._upsertDocument(doc2);
+        await storage._upsertDocument(doc1);
+        await storage._upsertDocument(doc2);
 
-        t.same(storage.paths(), ['/a', '/a!'], 'paths: starting off with 2 docs');
-        t.same(storage.documents().length, 2, 'documents: starting off with 2 docs');
-        t.ok(storage.getDocument('/a!') !== undefined, 'getDocument: ephemeral doc still exists');
+        t.same(await storage.paths(), ['/a', '/a!'], 'paths: starting off with 2 docs');
+        t.same((await storage.documents()).length, 2, 'documents: starting off with 2 docs');
+        t.ok(await storage.getDocument('/a!') !== undefined, 'getDocument: ephemeral doc still exists');
 
         // jump to the future
         storage._now = now + 100;
 
-        t.same(storage.paths(), ['/a'] , 'paths: only 1 doc left after the other one expired');
-        t.same(storage.documents().length, 1, 'documents: only 1 left');
-        t.ok(storage.getDocument('/a!') === undefined, 'getDocument returns undefined on expired doc');
+        t.same(await storage.paths(), ['/a'] , 'paths: only 1 doc left after the other one expired');
+        t.same((await storage.documents()).length, 1, 'documents: only 1 left');
+        t.ok(await storage.getDocument('/a!') === undefined, 'getDocument returns undefined on expired doc');
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': discardExpiredDocuments', (t: any) => {
+    t.test(scenario.description + ': discardExpiredDocuments', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // this should do nothing on an empty storage
-        storage.discardExpiredDocuments();
+        await storage.discardExpiredDocuments();
 
         // a good doc
         let doc1 = makeDoc({workspace: WORKSPACE, keypair: keypair1, path: '/a', content: 'hello', timestamp: now });
         // a doc that will expire
         let doc2 = makeDoc({workspace: WORKSPACE, keypair: keypair1, path: '/a!', content: 'hello', timestamp: now, deleteAfter: now + 5 });
 
-        storage._upsertDocument(doc1);
-        storage._upsertDocument(doc2);
+        await storage._upsertDocument(doc1);
+        await storage._upsertDocument(doc2);
 
-        t.same(storage.paths().length, 2, 'starting off with 2 docs');
+        t.same((await storage.paths()).length, 2, 'starting off with 2 docs');
 
         // remove expired docs as if we were in the future
         storage._now = now + 100;
-        storage.discardExpiredDocuments();
+        await storage.discardExpiredDocuments();
 
         // back in the present, query and only find 1
         storage._now = now;
-        t.same(storage.paths().length, 1, 'only 1 remains after expired doc was removed');
+        t.same((await storage.paths()).length, 1, 'only 1 remains after expired doc was removed');
 
-        storage.close();
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': deleteAfter', (t: any) => {
+    t.test(scenario.description + ': deleteAfter', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
         // an expired ephemeral doc can't be set because it's invalid
-        t.ok(isErr(storage.set(keypair1, {
+        t.ok(isErr(await storage.set(keypair1, {
                 format: FORMAT,
                 path: '/path1!',
                 content: 'aaa',
                 timestamp: now - 60*MIN,
                 deleteAfter: now - 45*MIN,
         })), 'set expired ephemeral document');
-        t.equal(storage.getContent('/path1!'), undefined, 'temporary doc is not there');
+        t.equal(await storage.getContent('/path1!'), undefined, 'temporary doc is not there');
 
         // a good doc.  make sure deleteAfter survives the roundtrip
-        t.same(storage.set(keypair1, {
+        t.same(await storage.set(keypair1, {
                 format: FORMAT,
                 path: '/ephemeral!',
                 content: 'bbb',
                 timestamp: now,
                 deleteAfter: now + 3 * DAY,
         }), WriteResult.Accepted, 'set good ephemeral document');
-        t.same(storage.set(keypair1, {
+        t.same(await storage.set(keypair1, {
                 format: FORMAT,
                 path: '/regular',
                 content: 'ccc',
                 timestamp: now,
         }), WriteResult.Accepted, 'set good regular document');
-        let ephDoc = storage.getDocument('/ephemeral!');
-        let regDoc = storage.getDocument('/regular');
+        let ephDoc = await storage.getDocument('/ephemeral!');
+        let regDoc = await storage.getDocument('/regular');
 
         if (ephDoc === undefined) {
             t.true(false, 'ephDoc was not set, or not retrieved');
@@ -815,16 +828,6 @@ for (let scenario of scenarios) {
         }
 
         // a doc that was valid when set, but expired while sitting in the database, then was read after being expired
-        let setExpiringDoc = () => {
-            t.same(storage.set(keypair1, {
-                    format: FORMAT,
-                    path: '/expire-in-place!',
-                    content: 'ccc',
-                    timestamp: now - 1,
-                    deleteAfter: now + 5 * DAY,
-            }), WriteResult.Accepted, 'set good ephemeral document');
-        };
-
         if (false) {
             // optional behavior: delete expired docs when we encounter them.
             // it's sufficient to just ignore them, not delete them on the spot,
@@ -833,37 +836,48 @@ for (let scenario of scenarios) {
             // set the doc, observe it in place.
             // set now ahead, try to get the doc, which should delete it.
             // rewind now again, and the doc should still be gone because it was deleted.
-            setExpiringDoc();
-            storage._now = now;
-            t.notEqual(storage.getDocument('/expire-in-place!'), undefined, 'getDocument(): doc was there');
-            storage._now = now + 8 * DAY;
-            t.equal(   storage.getDocument('/expire-in-place!'), undefined, 'getDocument(): doc expired in place');
-            storage._now = now;
-            t.equal(   storage.getDocument('/expire-in-place!'), undefined, 'getDocument(): doc was deleted after expiring');
 
-            setExpiringDoc();
-            storage._now = now;
-            t.equal(storage.getContent('/expire-in-place!'), 'ccc',     'getContent(): doc was there');
-            storage._now = now + 8 * DAY;
-            t.equal(storage.getContent('/expire-in-place!'), undefined, 'getContent(): doc expired in place');
-            storage._now = now;
-            t.equal(storage.getContent('/expire-in-place!'), undefined, 'getContent(): doc was deleted after expiring');
+            let setExpiringDoc = async () => {
+                t.same(await storage.set(keypair1, {
+                        format: FORMAT,
+                        path: '/expire-in-place!',
+                        content: 'ccc',
+                        timestamp: now - 1,
+                        deleteAfter: now + 5 * DAY,
+                }), WriteResult.Accepted, 'set good ephemeral document');
+            };
 
-            setExpiringDoc();
+            await setExpiringDoc();
             storage._now = now;
-            t.same(storage.paths({pathPrefix: '/exp'}), ['/expire-in-place!'], 'paths(): doc was there');
+            t.notEqual(await storage.getDocument('/expire-in-place!'), undefined, 'getDocument(): doc was there');
             storage._now = now + 8 * DAY;
-            t.same(storage.paths({pathPrefix: '/exp'}), [], 'paths(): doc expired in place');
+            t.equal(   await storage.getDocument('/expire-in-place!'), undefined, 'getDocument(): doc expired in place');
             storage._now = now;
-            t.same(storage.paths({pathPrefix: '/exp'}), [], 'paths(): doc was deleted after expiring');
+            t.equal(   await storage.getDocument('/expire-in-place!'), undefined, 'getDocument(): doc was deleted after expiring');
 
-            setExpiringDoc();
+            await setExpiringDoc();
             storage._now = now;
-            t.same(storage.documents({pathPrefix: '/exp'}).length, 1, 'documents(): doc was there');
+            t.equal(await storage.getContent('/expire-in-place!'), 'ccc',     'getContent(): doc was there');
             storage._now = now + 8 * DAY;
-            t.same(storage.documents({pathPrefix: '/exp'}).length, 0, 'documents(): doc expired in place');
+            t.equal(await storage.getContent('/expire-in-place!'), undefined, 'getContent(): doc expired in place');
             storage._now = now;
-            t.same(storage.documents({pathPrefix: '/exp'}).length, 0, 'documents(): doc was deleted after expiring');
+            t.equal(await storage.getContent('/expire-in-place!'), undefined, 'getContent(): doc was deleted after expiring');
+
+            await setExpiringDoc();
+            storage._now = now;
+            t.same(await storage.paths({pathPrefix: '/exp'}), ['/expire-in-place!'], 'paths(): doc was there');
+            storage._now = now + 8 * DAY;
+            t.same(await storage.paths({pathPrefix: '/exp'}), [], 'paths(): doc expired in place');
+            storage._now = now;
+            t.same(await storage.paths({pathPrefix: '/exp'}), [], 'paths(): doc was deleted after expiring');
+
+            await setExpiringDoc();
+            storage._now = now;
+            t.same((await storage.documents({pathPrefix: '/exp'})).length, 1, 'documents(): doc was there');
+            storage._now = now + 8 * DAY;
+            t.same((await storage.documents({pathPrefix: '/exp'})).length, 0, 'documents(): doc expired in place');
+            storage._now = now;
+            t.same((await storage.documents({pathPrefix: '/exp'})).length, 0, 'documents(): doc was deleted after expiring');
         }
 
         // TODO for ephemeral doc tests:
@@ -873,78 +887,82 @@ for (let scenario of scenarios) {
         // test includeHistory / isHead
         // test limit
 
+        await storage.close();
         t.end();
     });
 
-
-    t.test(scenario.description + ': basic one-author store', (t: any) => {
+    t.test(scenario.description + ': basic one-author store', async (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
-        t.equal(storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
-        t.equal(storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
+        t.equal(await storage.getContent('/path1'), undefined, 'nonexistant paths are undefined');
+        t.equal(await storage.getContent('/path2'), undefined, 'nonexistant paths are undefined');
 
         // set a decoy path to make sure the later tests return the correct path
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now }), WriteResult.Accepted, 'set decoy path');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/decoy', content:'zzz', timestamp: now }), WriteResult.Accepted, 'set decoy path');
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now }), WriteResult.Accepted, 'set new path');
-        t.equal(storage.getContent('/path1'), 'val1.0');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now }), WriteResult.Accepted, 'set new path');
+        t.equal(await storage.getContent('/path1'), 'val1.0');
 
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.2', timestamp: now + 2 }), WriteResult.Accepted, 'overwrite path with newer time');
-        t.equal(storage.getContent('/path1'), 'val1.2');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.2', timestamp: now + 2 }), WriteResult.Accepted, 'overwrite path with newer time');
+        t.equal(await storage.getContent('/path1'), 'val1.2');
 
         // write with an old timestamp - this timestamp should be overridden to the existing timestamp + 1.
         // note that on ingest() the newer timestamp wins, but on set() we adjust the newly created timestamp
         // so it's always greater than the existing ones.
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1', timestamp: now - 99 }), WriteResult.Ignored, 'do not supercede timestamp when providing one manually');
-        t.same(storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1' }), WriteResult.Accepted, 'automatically supercede previous timestamp');
-        t.equal(storage.getContent('/path1'), 'val1.1', 'superceded newer existing content');
-        t.equal(storage.getDocument('/path1')?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1', timestamp: now - 99 }), WriteResult.Ignored, 'do not supercede timestamp when providing one manually');
+        t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.1' }), WriteResult.Accepted, 'automatically supercede previous timestamp');
+        t.equal(await storage.getContent('/path1'), 'val1.1', 'superceded newer existing content');
+        t.equal((await storage.getDocument('/path1'))?.timestamp, now + 3, 'timestamp was superceded by 1 microsecond');
 
         // should be alphabetical
-        t.same(storage.paths(), ['/decoy', '/path1'], 'paths() are correct');
+        t.same(await storage.paths(), ['/decoy', '/path1'], 'paths() are correct');
 
         // order of contents should match order of paths
-        t.same(storage.contents(), ['zzz', 'val1.1'], 'contents() are correct');
+        t.same(await storage.contents(), ['zzz', 'val1.1'], 'contents() are correct');
 
-        t.same(storage.authors(), [author1], 'author');
+        t.same(await storage.authors(), [author1], 'author');
 
         // returned document should have matching contentHash and content
-        let doc = storage.getDocument('/path1');
+        let doc = await storage.getDocument('/path1');
         if (doc === undefined) { t.ok(false, 'this doc should not be undefined'); }
         else {
             t.notEqual(doc.content, null, 'content should not be null');
             t.equal(doc.contentHash, sha256base32(doc.content), 'doc.contentHash matches doc.content after roundtrip');
         }
 
+        await storage.close();
         t.end();
     });
 
-    t.test(scenario.description + ': path queries', (t: any) => {
+
+    t.test(scenario.description + ': path queries', async (t: any) => {
         // TODO: test this with multiple docs per path
         let storage = scenario.makeStorage(WORKSPACE);
         let paths = '/zzz /aaa /dir /q /qq /qqq /dir/a /dir/b /dir/c'.split(' ');
         let ii = 0;
         for (let path of paths) {
-            t.same(storage.set(keypair1, {format: FORMAT, path: path, content: 'true', timestamp: now + ii}), WriteResult.Accepted, 'set path: ' + path);
+            t.same(await storage.set(keypair1, {format: FORMAT, path: path, content: 'true', timestamp: now + ii}), WriteResult.Accepted, 'set path: ' + path);
             ii += 1;
         }
         let sortedPaths = [...paths];
         sortedPaths.sort();
-        let pathsFromStorage = storage.paths();
+        let pathsFromStorage = await storage.paths();
         t.same(paths.length, pathsFromStorage.length, 'same number of paths');
         t.same(sortedPaths, pathsFromStorage, 'paths are sorted');
 
-        t.same(storage.paths({ path: '/q' }), ['/q'], 'query for specific path');
-        t.same(storage.documents({ path: '/q' }).map(doc => doc.path), ['/q'], 'query for specific path (documents)');
-        t.same(storage.paths({ path: '/nope' }), [], 'query for missing path');
-        t.same(storage.documents({ path: '/nope' }), [], 'query for missing path (documents)');
+        t.same(await storage.paths({ path: '/q' }), ['/q'], 'query for specific path');
+        t.same((await storage.documents({ path: '/q' })).map(doc => doc.path), ['/q'], 'query for specific path (documents)');
+        t.same(await storage.paths({ path: '/nope' }), [], 'query for missing path');
+        t.same(await storage.documents({ path: '/nope' }), [], 'query for missing path (documents)');
 
-        t.same(storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
-        t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
-        t.same(storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
+        t.same(await storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
+        t.same(await storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
+        t.same(await storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
+        await storage.close();
         t.end();
     });
 
+    /*
     t.test(scenario.description + ': contentIsEmpty queries', (t: any) => {
         let storage = scenario.makeStorage(WORKSPACE);
 
