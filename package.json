@@ -72,6 +72,7 @@
     "bencode": "^2.0.1",
     "better-sqlite3": "^7.0.1",
     "chloride": "^2.2.14",
+    "concurrency-friends": "^0.2.0",
     "fast-equals": "^2.0.0",
     "isomorphic-fetch": "^2.2.1",
     "lodash.debounce": "^4.0.8",
