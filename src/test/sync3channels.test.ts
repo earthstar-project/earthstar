@@ -139,19 +139,30 @@ for (let scenario of scenarios) {
 
         let base = { workspace: WORKSPACE };
 
-        let inputDocs: Record<string, Document> = {
+        let docs: Record<string, Document> = {
             d0: makeDoc({...base, keypair: keypair1, timestamp: now,   path: '/a', content: 'a1'}),
             d1: makeDoc({...base, keypair: keypair2, timestamp: now+1, path: '/a', content: 'a2'}),
             d2: makeDoc({...base, keypair: keypair1, timestamp: now+1, path: '/b', content: 'b1'}),
             d3: makeDoc({...base, keypair: keypair2, timestamp: now,   path: '/b', content: 'b2'}),
             d4: makeDoc({...base, keypair: keypair1, timestamp: now,   path: '/c', content: 'c1'}),
+            d4b: makeDoc({...base, keypair: keypair1, timestamp: now+1, path: '/c', content: 'c2'}),
         };
-        for (let doc of Object.values(inputDocs)) {
+        for (let doc of [docs.d0, docs.d1, docs.d2,          docs.d4]) {
             await storage1.ingestDocument(doc, '');
+        }
+        for (let doc of [                  docs.d2, docs.d3, docs.d4b]) {
+            await storage2.ingestDocument(doc, '');
         }
 
         let syncResults = await incrementalSync(storage1, storage2);
         console.log(`syncResults: ${JSON.stringify(syncResults)}`);
 
+        t.same(syncResults, { numPushed: 2, numPulled: 2 }, 'syncResults is correct');
+
+        t.same(await storage1.getContent('/c'), 'c2', 'newer doc went to storage1');
+        t.same(await storage2.getContent('/c'), 'c2', 'newer doc stayed on storage2');
+
+        t.same(await storage1.contents({ history: 'all' }), 'a1 a2 b1 b2 c2'.split(' '), 'storage1 has expected docs');
+        t.same(await storage2.contents({ history: 'all' }), 'a1 a2 b1 b2 c2'.split(' '), 'storage2 has expected docs');
     });
 }
