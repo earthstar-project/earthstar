@@ -11,6 +11,7 @@ doctoc --title '**Contents**' docs/rules-of-earthstar.md
 doctoc --title '**Contents**' docs/specification.md
 doctoc --title '**Contents**' docs/syncing.md
 doctoc --title '**Contents**' docs/timestamps.md
+doctoc --title '**Contents**' docs/tutorial.md
 doctoc --title '**Contents**' docs/urls.md
 doctoc --title '**Contents**' docs/vocabulary.md
 

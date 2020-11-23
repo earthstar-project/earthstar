@@ -671,23 +671,25 @@ Documents may be regular or ephemeral.  Ephemeral documents have an expiration d
 
 Libraries MUST check for and delete all expired documents at least once an hour (while they are running).  Deleted documents MUST be physically deleted, not just marked as ignored.
 
-Libraries MUST filter out recently expired documents from queries and lookups.  Libraries MAY or MAY NOT physically delete them as they are queried; they may choose to wait until the next scheduled hourly deletion time.
+Libraries MUST filter out recently expired documents from queries and lookups and not return them.  Libraries MAY or MAY NOT physically delete them as they are queried; they may choose to wait until the next scheduled hourly deletion time.
 
 The `deleteAfter` field holds the timestamp after which a document is to be deleted.  It is a timestamp with the same format and range as the regular `timestamp` field.
 
 Regular, non-ephemeral documents have `deleteAfter: null`.  The field is still required and may not be omitted.
 
-Unlike the `timestamp` field, the `deleteAfter` field is expected to be in the future compared to the current wall-clock time.  Once the `deleteAfter` time is in the past, the document becomes invalid.
+Unlike the `timestamp` field, the `deleteAfter` field is expected to be in the future compared to the current wall-clock time.  Once the `deleteAfter` time is in the past, the document becomes invalid and peers MUST ignore it during a sync.
 
 The `deleteAfter` time MUST BE strictly greater than the document's `timestamp`.
 
 The document path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral.
 
+Ephemeral documents MAY be edited to change their expiration date.  This works best if the expiration date is lenghtened into the future.  If it's shortened so it expires sooner, the document may sync in unpredictable ways (see below for another example of this).  If it's set to expire in the past, the document won't even sync off of the current peer because other peers will reject it.
+
 > **Why ephemeral documents need a `!` in their path**
 >
 > Regular and ephemeral documents with the same path could interact in surprising ways.  To avoid this, we enforce that they can never collide on the same path.
 >
-> (An ephemeral document could propagate halfway across a network of peers, overwriting a regular document with the same path, and then expire and get deleted everywhere.  Then the regular document would regrow to fill the empty space.
+> (An ephemeral document could propagate halfway across a network of peers, overwriting a regular document with the same path, and then expire and get deleted wherever it has spread.  Then the regular document would regrow to fill the empty space.
 >
 > But if the ephemeral document traveled across the entire network and exterminated the regular document, and THEN expired, there would be nothing left.
 >

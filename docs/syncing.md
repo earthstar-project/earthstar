@@ -10,7 +10,7 @@
 - [Efficient sync (not implemented yet)](#efficient-sync-not-implemented-yet)
   - [Pull Protocol](#pull-protocol)
   - [Push protocol](#push-protocol)
-  - [Optimizations](#optimizations)
+  - [Notes and optimization ideas](#notes-and-optimization-ideas)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
