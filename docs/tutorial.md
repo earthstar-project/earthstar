@@ -1,6 +1,41 @@
 # Tutorial: Making an Earthstar app
 
-Let's make a Todo list app!
+Let's make a Todo list app!  It will use the same data format as [the one in Earthstar Foyer](https://earthstar-foyer.netlify.app/), so you can view your data there too.
+
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Contents**
+
+- [Review: Earthstar in 30 seconds](#review-earthstar-in-30-seconds)
+- [Plan the shape of your app's data](#plan-the-shape-of-your-apps-data)
+  - [How data works in Earthstar](#how-data-works-in-earthstar)
+  - [Choose a unique name for your app](#choose-a-unique-name-for-your-app)
+  - [Divide your data into small pieces](#divide-your-data-into-small-pieces)
+  - [Plan for chaos](#plan-for-chaos)
+  - [Plan for efficient querying](#plan-for-efficient-querying)
+  - [Avoid sequential id numbers](#avoid-sequential-id-numbers)
+  - [Decide who can edit documents](#decide-who-can-edit-documents)
+  - [Storing binary data](#storing-binary-data)
+  - [Size limits](#size-limits)
+  - [Saving space](#saving-space)
+    - [1. Re-use old paths](#1-re-use-old-paths)
+    - [2. Use ephemeral messages](#2-use-ephemeral-messages)
+  - [Our final plan for data storage](#our-final-plan-for-data-storage)
+- [Build your app](#build-your-app)
+  - [Make new project and install Earthstar](#make-new-project-and-install-earthstar)
+  - [Instantiate some Earthstar stuff](#instantiate-some-earthstar-stuff)
+  - [Write a todo](#write-a-todo)
+  - [Get list of todo ids](#get-list-of-todo-ids)
+  - [Look up a todo by id](#look-up-a-todo-by-id)
+  - [Watch for changes to the data](#watch-for-changes-to-the-data)
+  - [Finally, close the storage when you're done](#finally-close-the-storage-when-youre-done)
+  - [Put all that code into a Layer](#put-all-that-code-into-a-layer)
+  - [Sync with a pub server](#sync-with-a-pub-server)
+- [Making web apps](#making-web-apps)
+  - [React](#react)
+  - [Vue](#vue)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 # Review: Earthstar in 30 seconds
 
@@ -237,7 +272,7 @@ let workspace = "+toboop.bjoq249gfjqog9j";
 // make the earthstar Storage class which holds the data for one workspace.
 // you can use the in-memory storage...
 let storage = new StorageMemory([ValidatorEs4], workspace);
-// or keep it in an sqlite file.
+// or keep it in an sqlite file if you want it to persist
 // let storage = new StorageSqlite({
 //     mode: 'create-or-open',
 //     workspace: workspace,
@@ -353,6 +388,46 @@ let lookupTodo = (id: string): Todo | undefined => {
 }
 ```
 
+## Watch for changes to the data
+
+Get notified if new data arrives from a sync.
+
+```ts
+// subscribe to write events
+let unsub = storage.onWrite((evt: WriteEvent) => {
+    if (evt.isLocal) {
+        // the write was caused by the local user.
+        // maybe we don't need to do anything.
+    } else {
+        // the write came from the outside world, from a sync.
+        // do something with the new document,
+        // maybe re-render the screen?
+        let whatever = evt.document
+    }
+});
+
+// later, you can unsubscribe from these events
+unsub();
+```
+
+## Finally, close the storage when you're done
+
+When you're done using a `storage`, for example because the user is switching to a different workspace or quitting your app, you should `close` it.
+
+```ts
+storage.close();
+```
+
+Once it's closed it can't be used anymore, and it can't be opened again except by creating a new instance.
+
+## Put all that code into a Layer
+
+A set of code for handling a data format, such as Todos, is called a "Layer" in Earthstar.  Typically this is a single class that's treated like a React store, but there are no specific rules.
+
+Here's the full Todo Layer from the Foyer app:
+
+https://github.com/earthstar-project/earthstar-foyer/blob/master/src/layers/todoLayer.ts
+
 ## Sync with a pub server
 
 Pub servers are Earthstar peers, typically running in the cloud, whose only job is to store data.  This is useful when you can't make a direct connection to your friend because you're behind NATs and firewalls.  Eventually Earthstar will try to solve the direct p2p connection problem, but it's hard, so we're using pubs for now.
@@ -395,15 +470,30 @@ syncOnce();
 
 # Making web apps
 
+The usual structure of an Earthstar web app is:
+
+* The backend is a simple static HTTP server.  It does no computation or storage of data.
+* The frontend is a single-page application
+* The frontend stores Earthstar data in localStorage or in memory
+* The frontend syncs the data with pub(s) over HTTP
+* The frontend provides a UI for adding workspaces, changing pubs, etc.
+* Sometimes the frontend contains multiple "apps" and you can switch between them from the same UI
+* The user's keys never leave the browser
+* Ideally the page is a [Progressive Web App](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) that can be used offline, then sync'd later when the user comes back online.
+
+You could also store the data in a more traditional backend and query it from the frontend.  This would be like a hybrid pub and app server.  We don't have an example of this style yet.  Make sure to keep the user's keys in the browser, have them sign documents there, and then upload the signed documents to the server.  Don't upload the user's keys to the server.
+
 ## React
 
 If you want to build on [earthstar-foyer](https://github.com/earthstar-project/earthstar-foyer), look in the `/src/apps/` folder and start by copying one of the existing apps.
 
 Then add your new app to the dropdown menu in `/src/app.tsx`.
 
+Foyer provides UI for logging in, adding workspaces, etc.  Your app will appear beneath that UI.
+
 ---
 
-If you want to use [react-earthstar](https://github.com/earthstar-project/react-earthstar/) which provides React hooks, most of the hooks are ready.  The UI for adding workspaces etc (the "Earthbar") is not finished but probably works; you may have to read the code and examples to get it working.
+If you want to use [react-earthstar](https://github.com/earthstar-project/react-earthstar/) which provides React hooks, most of the hooks are ready.  The UI for adding workspaces etc (the "Earthbar") is not quite finished but probably works; you may have to read the code and examples to get it working.
 
 ## Vue
 
