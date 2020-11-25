@@ -6,8 +6,11 @@ Let's make a Todo list app!  It will use the same data format as [the one in Ear
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Contents**
 
+- [Read the tutorial code](#read-the-tutorial-code)
+- [Run the tutorial code](#run-the-tutorial-code)
+- [Also try the command-line tool](#also-try-the-command-line-tool)
 - [Review: Earthstar in 30 seconds](#review-earthstar-in-30-seconds)
-- [Plan the shape of your app's data](#plan-the-shape-of-your-apps-data)
+- [In detail: how to plan your data storage in Earthstar](#in-detail-how-to-plan-your-data-storage-in-earthstar)
   - [How data works in Earthstar](#how-data-works-in-earthstar)
   - [Choose a unique name for your app](#choose-a-unique-name-for-your-app)
   - [Divide your data into small pieces](#divide-your-data-into-small-pieces)
@@ -21,21 +24,51 @@ Let's make a Todo list app!  It will use the same data format as [the one in Ear
     - [1. Re-use old paths](#1-re-use-old-paths)
     - [2. Use ephemeral messages](#2-use-ephemeral-messages)
   - [Our final plan for data storage](#our-final-plan-for-data-storage)
-- [Build your app](#build-your-app)
-  - [Make new project and install Earthstar](#make-new-project-and-install-earthstar)
-  - [Instantiate some Earthstar stuff](#instantiate-some-earthstar-stuff)
-  - [Write a todo](#write-a-todo)
-  - [Get list of todo ids](#get-list-of-todo-ids)
-  - [Look up a todo by id](#look-up-a-todo-by-id)
-  - [Watch for changes to the data](#watch-for-changes-to-the-data)
-  - [Finally, close the storage when you're done](#finally-close-the-storage-when-youre-done)
-  - [Put all that code into a Layer](#put-all-that-code-into-a-layer)
-  - [Sync with a pub server](#sync-with-a-pub-server)
-- [Making web apps](#making-web-apps)
+  - [Put all that Todo code into a Layer](#put-all-that-todo-code-into-a-layer)
+- [Making apps](#making-apps)
+  - [Kinds of apps](#kinds-of-apps)
+  - [Web apps](#web-apps)
   - [React](#react)
   - [Vue](#vue)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+# Read the tutorial code
+
+Start by reading
+**[tutorial.js](tutorial.js)** -- most of the tutorial is in the comments there.
+
+The rest of *this* document is extra details.
+
+# Run the tutorial code
+
+```sh
+# set up a little node project and install earthstar.
+mkdir toboop
+cd toboop
+npm init --yes
+
+# install earthstar as a dependency.
+# this takes a minute; it has to compile SQLite for you.
+npm install --save earthstar
+
+# get tutorial.js, or just copy-paste it from github.
+curl https://raw.githubusercontent.com/earthstar-project/earthstar/master/docs/tutorial.js > tutorial.js
+
+# run it.
+node tutorial.js
+```
+
+# Also try the command-line tool
+
+[earthstar-cli](https://github.com/earthstar-project/earthstar-cli) is a little command line utility for working with Earthstar databases -- adding documents, syncing, etc.
+
+```sh
+npm install --global earthstar-cli
+
+earthstar --help
+# or read the README on github to learn more
+```
 
 # Review: Earthstar in 30 seconds
 
@@ -53,7 +86,7 @@ A "workspace" is like a shared folder; it's the way we divide up the world into 
 
 There is not a huge global space of data and users.  There are lots of small workspaces which are separate and independent.
 
-# Plan the shape of your app's data
+# In detail: how to plan your data storage in Earthstar
 
 We'll evolve our plan as we work through these steps:
 
@@ -232,195 +265,7 @@ Read more in the [specification: ephemeral documents](https://github.com/earthst
 /toboop/1606164670376000:7777777/isDone.json  // content: true or false
 ```
 
-# Build your app
-
-There are currently 4 ways to approach this, from easy to hard:
-1. A node command-line app using the core `earthstar` package directly
-2. A React app that uses the hooks from [react-earthstar](https://github.com/earthstar-project/react-earthstar/)
-3. A React app that builds on top of [earthstar-foyer](https://github.com/earthstar-project/earthstar-foyer)
-4. A frontend-based web app of any kind, using the core `earthstar` package directly
-
-`react-earthstar` and `earthstar-foyer` have helpful UIs already built for adding and removing workspaces, logging in as a user, setting pubs, etc.
-
-I'm going to start with 1, the node app, because it's the simplest.
-
-## Make new project and install Earthstar
-
-```sh
-mkdir toboop
-cd toboop
-npm init
-npm install --save typescript earthstar
-npx tsc init
-```
-
-## Instantiate some Earthstar stuff
-
-```ts
-import {
-    AuthorKeypair,
-    OnePubOneWorkspaceSyncer,
-    StorageMemory,
-    ValidatorEs4,
-    generateAuthorKeypair,
-    isErr,
-} from 'earthstar';
-
-// make up a workspace name
-let workspace = "+toboop.bjoq249gfjqog9j";
-
-// make the earthstar Storage class which holds the data for one workspace.
-// you can use the in-memory storage...
-let storage = new StorageMemory([ValidatorEs4], workspace);
-// or keep it in an sqlite file if you want it to persist
-// let storage = new StorageSqlite({
-//     mode: 'create-or-open',
-//     workspace: workspace,
-//     validators: VALIDATORS,
-//     filename: 'toboop.sqlite'
-// }),
-
-// generate a new user identity.
-// only do this once, then paste the results here and re-use it.
-//let keypair = generateAuthorKeypair('aaaa');
-//console.log(keypair);
-let keypair: AuthorKeypair = {
-    address: "@aaaa.bo6u3bozzjg4njjolt7eevdyws7dknjiuzjsmyg3winte6fbaktca",
-    secret: "b2wmruovqhl4w6pbetozzvoh7zi4i66pdwwlsbfrmktk642w56ogq"
-};
-```
-
-## Write a todo
-
-```ts
-type Todo = {
-    id: string,
-    text: string,
-    isDone: boolean,
-};
-
-let todoTextPath = (id: string): string =>
-    `/toboop/${id}/text.txt`;
-
-let todoIsDonePath = (id: string): string =>
-    `/toboop/${id}/isDone.json`;
-
-// utility: generate a random integer, inclusive of endpoints
-let randInt = (lo: number, hi: number) =>
-    Math.floor(Math.random() * ((hi+1) - lo) + lo);
-
-// make an id like "1606164670376000:7898789"
-let generateTodoId = (): string =>
-    `${Date.now() * 1000}:${randInt(1000000, 9999999)}`;
-
-let makeNewTodo = (text: string): Todo => {
-    return {
-        id: generateTodoId(),
-        text: text,
-        isDone: false,
-    }
-}
-
-let saveTodo = (storage: IStorage, keypair: AuthorKeypair, todo: Todo) => {
-    // write our two Earthstar documents.
-
-    // to save a document to Earthstar, we have to supply
-    // a document format -- "es.4" is the latest format at the moment
-    let write1 = storage.set(keypair, {
-        format: 'es.4',
-        path: todoTextPath(todo.id),
-        content: todo.text,
-    });
-    let write2 = storage.set(keypair, {
-        format: 'es.4',
-        path: todoIsDonePath(todo.id),
-        content: '' + todo.isDone,
-    });
-    if (isErr(write1) || isErr(write2)) {
-        console.warn('write failed', write1, write2);
-    }
-}
-```
-
-## Get list of todo ids
-
-```ts
-let listTodoIds = (storage: IStorage): string[] => {
-    // return an array of all the todo ids.
-
-    // query for the paths starting with /toboop/
-    // and filter to only keep the text ones, not isDone.
-    // (this will be in sorted order by path.)
-    let labelPaths = storage.paths({ pathPrefix: '/toboop/' })
-        .filter(path => path.endsWith('text.txt');
-
-    // extract the todo id from the path
-    let ids = labelPaths.map(path => path.split('/')[2]);
-    return ids;
-};
-```
-
-## Look up a todo by id
-
-```ts
-let lookupTodo = (id: string): Todo | undefined => {
-    // look up documents, or get undefined if they're missing
-    let textDoc: string | undefined = storage.getContent(todoTextPath(id));
-    let isDoneDoc: string | undefined = storage.getContent(todoIsDonePath(id));
-
-    // if the text is missing, act like the entire todo doesn't exist
-    if (textDoc === undefined) { return undefined; }
-
-    // isDone defaults to false if the document is missing.
-    let isDone: boolean = false;
-    if (isDoneDoc !=== undefined) {
-        // this is a ".json" document but it should only
-        // ever hold "true" or "false", so we don't need
-        // to actually JSON.parse it
-        isDone = isDoneDoc.content === 'true';
-    }
-
-    return {
-        id: id,
-        text: textDoc.content,
-        isDone: isDone,
-    }
-}
-```
-
-## Watch for changes to the data
-
-Get notified if new data arrives from a sync.
-
-```ts
-// subscribe to write events
-let unsub = storage.onWrite((evt: WriteEvent) => {
-    if (evt.isLocal) {
-        // the write was caused by the local user.
-        // maybe we don't need to do anything.
-    } else {
-        // the write came from the outside world, from a sync.
-        // do something with the new document,
-        // maybe re-render the screen?
-        let whatever = evt.document
-    }
-});
-
-// later, you can unsubscribe from these events
-unsub();
-```
-
-## Finally, close the storage when you're done
-
-When you're done using a `storage`, for example because the user is switching to a different workspace or quitting your app, you should `close` it.
-
-```ts
-storage.close();
-```
-
-Once it's closed it can't be used anymore, and it can't be opened again except by creating a new instance.
-
-## Put all that code into a Layer
+## Put all that Todo code into a Layer
 
 A set of code for handling a data format, such as Todos, is called a "Layer" in Earthstar.  Typically this is a single class that's treated like a React store, but there are no specific rules.
 
@@ -428,60 +273,36 @@ Here's the full Todo Layer from the Foyer app:
 
 https://github.com/earthstar-project/earthstar-foyer/blob/master/src/layers/todoLayer.ts
 
-## Sync with a pub server
+# Making apps
 
-Pub servers are Earthstar peers, typically running in the cloud, whose only job is to store data.  This is useful when you can't make a direct connection to your friend because you're behind NATs and firewalls.  Eventually Earthstar will try to solve the direct p2p connection problem, but it's hard, so we're using pubs for now.
+## Kinds of apps
 
-Pubs talk over a HTTP REST API and also render a human-readable webpage for exploring the data.
+Here's 4 ways to make apps, from easy to hard:
 
-For testing, you can run your own pub on your computer with the [earthstar-pub](https://github.com/earthstar-project/earthstar-pub) package:
+1. A node command-line app, using the main `earthstar` package directly
+2. A React app that uses the hooks from [react-earthstar](https://github.com/earthstar-project/react-earthstar/)
+3. A React app that builds on top of [earthstar-foyer](https://github.com/earthstar-project/earthstar-foyer)
+4. A frontend-based web app of any kind, using the main `earthstar` package directly
+5. Native mobile or desktop apps
 
-```sh
-npm install --global earthstar-pub
+This tutorial uses #1, the node command-line app, because it's the simplest.
 
-# run a pub at http://localhost:3333
-# check the --help for more options.
-earthstar-pub --port 3333
-```
+`react-earthstar` and `earthstar-foyer` have helpful UIs already built for adding and removing workspaces, logging in as a user, setting pubs, etc.
 
-There's also a [demo pub running on Glitch](https://earthstar-demo-pub-v5-a.glitch.me/), and you can fork it and run your own by following the instructions in the above link.
-
-To view the documents on a pub, add `/workspace/+myworkspace.abcdefg` to the URL:
-
-<a href="https://earthstar-demo-pub-v5-a.glitch.me/workspace/+lobbydev.a1">https://earthstar-demo-pub-v5-a.glitch.me/workspace/+lobbydev.a1</a>
-
-```ts
-// choose a pub.
-let pub = "https://earthstar-demo-pub-v5-a.glitch.me";
-
-// make a Syncer that will sync it to the pub.
-// you could have several of these to sync with several pubs at once.
-let syncer = new OnePubOneWorkspaceSyncer(storage, pub);
-
-let syncOnce = async () => {
-    console.log('syncing once...');
-    let stats = await syncer.syncOnce()
-    console.log('done syncing');
-    console.log(stats);
-};
-
-syncOnce();
-```
-
-# Making web apps
+## Web apps
 
 The usual structure of an Earthstar web app is:
 
 * The backend is a simple static HTTP server.  It does no computation or storage of data.
 * The frontend is a single-page application
 * The frontend stores Earthstar data in localStorage or in memory
-* The frontend syncs the data with pub(s) over HTTP
-* The frontend provides a UI for adding workspaces, changing pubs, etc.
+* The frontend syncs the data with pub server(s) over HTTP
+* The frontend provides a UI for adding workspaces, changing pubs, making new user identities, etc.
 * Sometimes the frontend contains multiple "apps" and you can switch between them from the same UI
 * The user's keys never leave the browser
 * Ideally the page is a [Progressive Web App](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps) that can be used offline, then sync'd later when the user comes back online.
 
-You could also store the data in a more traditional backend and query it from the frontend.  This would be like a hybrid pub and app server.  We don't have an example of this style yet.  Make sure to keep the user's keys in the browser, have them sign documents there, and then upload the signed documents to the server.  Don't upload the user's keys to the server.
+You could also store the data in a more traditional backend and query it from the frontend.  This would be like a hybrid pub and app server.  We don't have an example of this style yet.  Make sure to keep the user's keys in the browser, have them sign documents there, and then upload the signed documents to the server.  The server should never have the user's keys.
 
 ## React
 
@@ -489,7 +310,7 @@ If you want to build on [earthstar-foyer](https://github.com/earthstar-project/e
 
 Then add your new app to the dropdown menu in `/src/app.tsx`.
 
-Foyer provides UI for logging in, adding workspaces, etc.  Your app will appear beneath that UI.
+Foyer provides UI tabs for logging in, adding workspaces, etc.  Your app will appear beneath that UI.
 
 ---
 
