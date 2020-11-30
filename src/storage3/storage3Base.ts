@@ -35,6 +35,21 @@ export abstract class Storage3Base implements IStorage3 {
     _discardInterval: any | null = null;
 
     constructor(validators: IValidator[], workspace: WorkspaceAddress) {
+
+        // when subclassing this class, you will need to call
+        //    super(validators, workspace)
+        // as the first line in your own constructor.
+        //
+        // if you don't know the workspace yet, you can give it a fake one
+        // and then set this.workspace later in the constructor.
+        // if you do that, make sure to validate the workspace yourself
+        // (copy the section "check if the workspace is valid to at least one validator"
+        // into your constructor).
+        //
+        // if you need to throw an exception from your constructor,
+        // you have to call this.close() first to stop the hourly discard thread,
+        // or node will hang instead of exiting because that timer will still be waiting.
+
         this.workspace = workspace;
         this.sessionId = '' + Math.random();
 
@@ -73,6 +88,7 @@ export abstract class Storage3Base implements IStorage3 {
         }, 500);
 
         // also discard expired documents once an hour
+        // this thread will be stopped in close()
         this._discardInterval = setInterval(() => {
             if (!this.isClosed()) {
                 this.discardExpiredDocuments()
@@ -81,14 +97,6 @@ export abstract class Storage3Base implements IStorage3 {
                 this._discardInterval = null;
             }
         }, 60 * 60 * 1000);
-
-        // stop the discard thread when the storage is closed
-        this.onDidClose.subscribe(() => {
-            if (this._discardInterval !== null) {
-                clearInterval(this._discardInterval);
-                this._discardInterval = null;
-            }
-        });
     }
 
     _assertNotClosed(): void {
@@ -283,10 +291,23 @@ export abstract class Storage3Base implements IStorage3 {
 
     // CLOSE
     isClosed(): boolean { return this._isClosed; }
-    close() {
+
+    abstract _close(opts: { delete: boolean }): void;
+
+    close(opts?: { delete: boolean }) {
+
+        if (this._isClosed) { return; }
         this.onWillClose.send(undefined);
+
         this._isClosed = true;
+        // stop the hourly discard thread
+        if (this._discardInterval !== null) {
+            clearInterval(this._discardInterval);
+            this._discardInterval = null;
+        }
+
+        this._close(opts || { delete: false });
+
         this.onDidClose.send(undefined);
     }
-    abstract closeAndForgetWorkspace(): void;
 }

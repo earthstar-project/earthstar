@@ -172,9 +172,8 @@ export class Storage3Memory extends Storage3Base {
         this._filterDocs((doc) => !documentIsExpired(doc, now));
     }
 
-    closeAndForgetWorkspace(): void {
-        this._assertNotClosed();
-        this.close();
+    _close(opts: { delete: boolean }): void { 
+        // we don't really need to do this, but maybe it will help garbage collection
         this._docs = {};
         this._config = {};
     }

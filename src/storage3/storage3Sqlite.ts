@@ -88,47 +88,80 @@ export class Storage3Sqlite extends Storage3Base {
         // check if file exists
         if (opts.mode === 'create') {
             if (opts.filename !== ':memory:' && fs.existsSync(opts.filename)) {
+                this.close();
                 throw new EarthstarError(`Tried to create an sqlite file but it already exists: ${opts.filename}`);
             }
         } else if (opts.mode === 'open') {
             // this should also fail if you try to open :memory:
             if (!fs.existsSync(opts.filename)) {
+                this.close();
                 throw new EarthstarError(`Tried to open an sqlite file but it doesn't exist: ${opts.filename}`);
             }
         } else if (opts.mode === 'create-or-open') {
             // file can exist or not.
+        } else {
+            // unknown mode
+            this.close();
+            throw new EarthstarError(`sqlite unrecognized opts.mode: ${(opts as any).mode}`);
         }
 
         // open the file and create tables if needed
         this.db = sqlite(this._filename);
         this._ensureTables();
 
+        let validateWorkspace = (workspace: WorkspaceAddress): void => {
+            // check if the workspace is valid to at least one validator
+            let validators = Object.values(this._validatorMap);
+            let workspaceErrs = validators.map(val => val._checkWorkspaceIsValid(workspace)).filter(err => err !== true);
+            if (workspaceErrs.length === validators.length) {
+                // every validator had an error
+                // let's throw... the first one I guess
+                this.close();
+                throw workspaceErrs[0];
+            }
+        }
+
         // check workspace
         if (opts.mode === 'create') {
             // workspace is provided; set it into the file which we know didn't exist until just now
+            if (opts.workspace === null) {
+                this.close();
+                throw new EarthstarError('sqlite with opts.mode="create" must have a workspace provided, not null');
+            }
             this.workspace = opts.workspace;
-            this.setConfig('workspace', opts.workspace);
+            validateWorkspace(this.workspace);
+            this.setConfig('workspace', this.workspace);
 
         } else if (opts.mode === 'open') {
             // load existing workspace from file, which we know already existed...
             let existingWorkspace = this.getConfig('workspace');
             if (existingWorkspace === undefined) {
+                this.close();
                 throw new EarthstarError(`can't open sqlite file with opts.mode="open" because the file doesn't have a workspace saved in its config table. ${opts.filename}`);
             }
             // if it was also provided in opts, assert that it matches the file
             if (opts.workspace !== null && opts.workspace !== this.getConfig('workspace')) {
+                this.close();
                 throw new EarthstarError(`sqlite with opts.mode="open" wanted workspace ${opts.workspace} but found ${existingWorkspace} in the file ${opts.filename}`);
             }
             this.workspace = existingWorkspace;
+            validateWorkspace(this.workspace);
 
         } else if (opts.mode === 'create-or-open') {
             // workspace must be provided
+            if (opts.workspace === null) {
+                this.close();
+                throw new EarthstarError('sqlite with opts.mode="create-or-open" must have a workspace provided, not null');
+            }
             this.workspace = opts.workspace;
+            validateWorkspace(this.workspace);
+
             // existing workspace can be undefined (file may not have existed yet)
             let existingWorkspace = this.getConfig('workspace');
 
             // if there is an existing workspace, it has to match the one given in opts
             if (existingWorkspace !== undefined && opts.workspace !== existingWorkspace) {
+                this.close();
                 throw new EarthstarError(`sqlite file had existing workspace ${existingWorkspace} but opts wanted it to be ${opts.workspace} in file ${opts.filename}`);
             }
 
@@ -136,15 +169,6 @@ export class Storage3Sqlite extends Storage3Base {
             if (existingWorkspace === undefined) {
                 this.setConfig('workspace', opts.workspace);
             }
-        }
-
-        // check if the workspace is valid to at least one validator
-        let validators = Object.values(this._validatorMap);
-        let workspaceErrs = validators.map(val => val._checkWorkspaceIsValid(this.workspace)).filter(err => err !== true);
-        if (workspaceErrs.length === validators.length) {
-            // every validator had an error
-            // let's throw... the first one I guess
-            throw workspaceErrs[0];
         }
 
         // check and set schemaVersion
@@ -155,6 +179,7 @@ export class Storage3Sqlite extends Storage3Base {
             schemaVersion = '1';
             this.setConfig('schemaVersion', schemaVersion);
         } else if (schemaVersion !== '1') {
+            this.close();
             throw new ValidationError(`sqlite file ${this._filename} has unknown schema version ${schemaVersion}`);
         }
     }
@@ -530,19 +555,10 @@ export class Storage3Sqlite extends Storage3Base {
         `).run({ now });
     }
 
-    close(): void {
-        logDebug('sqlite\.close()');
-        this.onWillClose.send(undefined);
-        this._isClosed = true;
+    _close(opts: { delete: boolean }): void {
+        logDebug(`sqlite\._close() with delete = ${opts.delete}`);
         this.db.close();
-        this.onDidClose.send(undefined);
-    }
-
-    closeAndForgetWorkspace(): void {
-        logDebug('sqlite\.closeAndForgetWorkspace()');
-        this._assertNotClosed();
-        this.close();
-        if (this._filename !== ':memory:') {
+        if (opts.delete === true && this._filename !== ':memory:') {
             // delete the sqlite file
             if (fs.existsSync(this._filename)) {
                 fs.unlinkSync(this._filename);

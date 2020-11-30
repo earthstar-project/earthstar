@@ -137,13 +137,13 @@ export class Storage3ToAsync implements IStorage3Async {
     isClosed(): boolean {
         return this._storage.isClosed();
     }
-    async close(): Promise<void> {
+    async _close(opts: { delete: boolean }): Promise<void> {
         await this._sleep();
-        return this._storage.close();
+        return this._storage._close(opts);
     }
-    async closeAndForgetWorkspace(): Promise<void> {
+    async close(opts?: { delete: boolean }): Promise<void> {
         await this._sleep();
-        return this._storage.closeAndForgetWorkspace();
+        return this._storage.close(opts);
     }
 }
 

@@ -83,8 +83,8 @@ export interface IStorage3 {
 
     // CLOSE
     isClosed(): boolean;
-    close(): void;  // override if needed; remember to fire onWillClose and onDidClose
-    closeAndForgetWorkspace(): void;  // override
+    _close(opts: { delete: boolean }): void;  // override if needed to do specific closing stuff for your subclass
+    close(opts?: { delete: boolean }): void;
 }
 
 export interface IStorage3Async {
@@ -122,6 +122,6 @@ export interface IStorage3Async {
 
     // CLOSE
     isClosed(): boolean;
-    close(): Promise<void>;  // override if needed; remember to fire onWillClose and onDidClose
-    closeAndForgetWorkspace(): Promise<void>;  // override
+    _close(opts: { delete: boolean}): Promise<void>;  // override if needed to do specific closing stuff for your subclass
+    close(opts?: { delete: boolean }): Promise<void>;
 }
