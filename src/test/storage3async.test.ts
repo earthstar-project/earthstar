@@ -80,38 +80,49 @@ interface Scenario {
     description: string,
 }
 let scenarios : Scenario[] = [
+    //{
+    //    makeStorage: (workspace : string) : IStorage3 => {
+    //        let storage = new Storage3Memory(VALIDATORS, workspace);
+    //        storage._now = now;
+    //        return storage;
+    //    },
+    //    description: "Storage3Memory",
+    //},
+    //{
+    //    makeStorage: (workspace : string) : IStorage3Async => {
+    //        let storage = new Storage3ToAsync(new Storage3Memory(VALIDATORS, workspace), 10);
+    //        storage._now = now;
+    //        return storage;
+    //    },
+    //    description: "Async'd Storage3Memory",
+    //},
     {
         makeStorage: (workspace : string) : IStorage3 => {
-            let storage = new Storage3Memory(VALIDATORS, workspace);
-            storage._now = now;
-            return storage;
-        },
-        description: "Storage3Memory",
-    },
-    {
-        makeStorage: (workspace : string) : IStorage3Async => {
-            let storage = new Storage3ToAsync(new Storage3Memory(VALIDATORS, workspace), 10);
-            storage._now = now;
-            return storage;
-        },
-        description: "Async'd Storage3Memory",
-    },
-    {
-        makeStorage: (workspace : string) : IStorage3 => {
-            let storage = new Storage3Sqlite(VALIDATORS, workspace, ':memory:');
+            let storage = new Storage3Sqlite({
+                mode: 'create',
+                workspace: workspace,
+                validators: VALIDATORS,
+                filename: ':memory:',
+            });
             storage._now = now;
             return storage;
         },
         description: "Storage3Sqlite",
     },
-    {
-        makeStorage: (workspace : string) : IStorage3Async => {
-            let storage = new Storage3ToAsync(new Storage3Sqlite(VALIDATORS, workspace, ':memory:'), 10);
-            storage._now = now;
-            return storage;
-        },
-        description: "Async'd Storage3Sqlite",
-    },
+    //{
+    //    makeStorage: (workspace : string) : IStorage3Async => {
+    //        let storage = new Storage3Sqlite({
+    //            mode: 'create',
+    //            workspace: workspace,
+    //            validators: VALIDATORS,
+    //            filename: ':memory:',
+    //        });
+    //        let asyncStorage = new Storage3ToAsync(storage, 10);
+    //        asyncStorage._now = now;
+    //        return asyncStorage;
+    //    },
+    //    description: "Async'd Storage3Sqlite",
+    //},
 ];
 
 type MakeDocOpts = {

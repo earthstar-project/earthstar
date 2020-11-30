@@ -7,6 +7,7 @@ import {
 import {
     AuthorAddress,
     Document,
+    EarthstarError,
     IValidator,
     ValidationError,
     WorkspaceAddress,
@@ -25,21 +26,128 @@ import { logDebug } from '../util/log';
 
 //================================================================================
 
+/**
+ * Options for creating a StorageSqlite instance.
+ * They can be opened in 3 modes:
+ * 
+ * ```
+ * mode: create
+ * filename: required
+ * workspace: must be provided
+ * file exists: must not
+ * 
+ * mode: open
+ * workspace: optional, if provided it will be asserted against the existing file
+ * filename: required
+ * file exists: yes, must
+ *
+ * mode: create-or-open  (ensure it exists, create if necessary)
+ * workspace: must be provided
+ * filename: required
+ * file exists: yes or no
+ * ```
+ */
+interface Storage3SqliteOptsCreate {
+    mode: 'create'
+    workspace: WorkspaceAddress,
+    validators: IValidator[],  // must provide at least one
+    filename: string,  // must not exist
+}
+interface Storage3SqliteOptsOpen {
+    mode: 'open'
+    workspace: WorkspaceAddress | null,
+    validators: IValidator[],  // must provide at least one
+    filename: string,  // must exist
+}
+interface Storage3SqliteOptsCreateOrOpen {
+    mode: 'create-or-open'
+    workspace: WorkspaceAddress,
+    validators: IValidator[],  // must provide at least one
+    filename: string,  // may or may not exist
+}
+export type Storage3SqliteOpts =
+    Storage3SqliteOptsCreate
+    | Storage3SqliteOptsOpen
+    | Storage3SqliteOptsCreateOrOpen;
+
 export class Storage3Sqlite extends Storage3Base {
 
-    _fn: string;
+    _filename: string;
     db: SqliteDatabase = null as any as SqliteDatabase;
 
-    constructor(validators: IValidator[], workspace: WorkspaceAddress, fn: string) {
-        super(validators, workspace);
+    constructor(opts: Storage3SqliteOpts) {
+        // to call super we have to provide a workspace
+        // but we might not know it yet
+        // so provide a temporary value for now
+        super(opts.validators, '+temp.workspace');
 
-        logDebug(`sqlite.constructor(workspace: ${workspace})`);
+        logDebug(`sqlite.constructor(workspace: ${opts.workspace})`);
 
-        this._fn = fn;
-        this.db = sqlite(this._fn);
+        this._filename = opts.filename;
 
+        // check if file exists
+        if (opts.mode === 'create') {
+            if (opts.filename !== ':memory:' && fs.existsSync(opts.filename)) {
+                throw new EarthstarError(`Tried to create an sqlite file but it already exists: ${opts.filename}`);
+            }
+        } else if (opts.mode === 'open') {
+            // this should also fail if you try to open :memory:
+            if (!fs.existsSync(opts.filename)) {
+                throw new EarthstarError(`Tried to open an sqlite file but it doesn't exist: ${opts.filename}`);
+            }
+        } else if (opts.mode === 'create-or-open') {
+            // file can exist or not.
+        }
+
+        // open the file and create tables if needed
+        this.db = sqlite(this._filename);
         this._ensureTables();
 
+        // check workspace
+        if (opts.mode === 'create') {
+            // workspace is provided; set it into the file which we know didn't exist until just now
+            this.workspace = opts.workspace;
+            this.setConfig('workspace', opts.workspace);
+
+        } else if (opts.mode === 'open') {
+            // load existing workspace from file, which we know already existed...
+            let existingWorkspace = this.getConfig('workspace');
+            if (existingWorkspace === undefined) {
+                throw new EarthstarError(`can't open sqlite file with opts.mode="open" because the file doesn't have a workspace saved in its config table. ${opts.filename}`);
+            }
+            // if it was also provided in opts, assert that it matches the file
+            if (opts.workspace !== null && opts.workspace !== this.getConfig('workspace')) {
+                throw new EarthstarError(`sqlite with opts.mode="open" wanted workspace ${opts.workspace} but found ${existingWorkspace} in the file ${opts.filename}`);
+            }
+            this.workspace = existingWorkspace;
+
+        } else if (opts.mode === 'create-or-open') {
+            // workspace must be provided
+            this.workspace = opts.workspace;
+            // existing workspace can be undefined (file may not have existed yet)
+            let existingWorkspace = this.getConfig('workspace');
+
+            // if there is an existing workspace, it has to match the one given in opts
+            if (existingWorkspace !== undefined && opts.workspace !== existingWorkspace) {
+                throw new EarthstarError(`sqlite file had existing workspace ${existingWorkspace} but opts wanted it to be ${opts.workspace} in file ${opts.filename}`);
+            }
+
+            // set workspace if it's not set yet
+            if (existingWorkspace === undefined) {
+                this.setConfig('workspace', opts.workspace);
+            }
+        }
+
+        // check if the workspace is valid to at least one validator
+        let validators = Object.values(this._validatorMap);
+        let workspaceErrs = validators.map(val => val._checkWorkspaceIsValid(this.workspace)).filter(err => err !== true);
+        if (workspaceErrs.length === validators.length) {
+            // every validator had an error
+            // let's throw... the first one I guess
+            throw workspaceErrs[0];
+        }
+
+        // check and set schemaVersion
         let schemaVersion = this.getConfig('schemaVersion');
         logDebug(`sqlite\.constructor    schemaVersion: ${schemaVersion}`);
         /* istanbul ignore else */
@@ -47,32 +155,8 @@ export class Storage3Sqlite extends Storage3Base {
             schemaVersion = '1';
             this.setConfig('schemaVersion', schemaVersion);
         } else if (schemaVersion !== '1') {
-            throw new ValidationError(`sqlite file ${this._fn} has unknown schema version ${schemaVersion}`);
+            throw new ValidationError(`sqlite file ${this._filename} has unknown schema version ${schemaVersion}`);
         }
-
-        // TODO: check if workspace matches existing data in the file
-        // TODO: creation modes:
-        //   mode: create
-        //   workspace: required
-        //   file must not exist yet
-        //
-        //   mode: open
-        //   workspace: optional
-        //   file must exist
-        //
-        //   mode: create-or-open  (ensure it exists, create if necessary)
-        //   workspace: required
-        //   file may or may not exist
-
-        // remove expired documents.
-        // wait a moment before doing this, in case the user
-        // wants to change this._now just after instantiation.
-        setTimeout(() => {
-            let now = this._now || (Date.now() * 1000);
-            if (!this.isClosed()) {
-                this.discardExpiredDocuments();
-            }
-        }, 100);
     }
 
     _ensureTables() {
@@ -458,10 +542,10 @@ export class Storage3Sqlite extends Storage3Base {
         logDebug('sqlite\.closeAndForgetWorkspace()');
         this._assertNotClosed();
         this.close();
-        if (this._fn !== ':memory:') {
+        if (this._filename !== ':memory:') {
             // delete the sqlite file
-            if (fs.existsSync(this._fn)) {
-                fs.unlinkSync(this._fn);
+            if (fs.existsSync(this._filename)) {
+                fs.unlinkSync(this._filename);
             }
         }
     }

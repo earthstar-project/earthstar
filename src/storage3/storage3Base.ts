@@ -31,7 +31,8 @@ export abstract class Storage3Base implements IStorage3 {
     onDidClose: Emitter<undefined>;
 
     _isClosed: boolean = false;
-    _validatorMap : {[format: string] : IValidator};
+    _validatorMap: {[format: string]: IValidator};
+    _discardInterval: any | null = null;
 
     constructor(validators: IValidator[], workspace: WorkspaceAddress) {
         this.workspace = workspace;
@@ -58,6 +59,36 @@ export abstract class Storage3Base implements IStorage3 {
             throw workspaceErrs[0];
         }
         // ok, at least one validator accepted the workspace address
+
+        //----------------------------------------
+        // remove expired documents
+
+        // remove them at startup.
+        // wait a little while before doing this
+        // in case the user wants to change this._now just after instantiation.
+        setTimeout(() => {
+            if (!this.isClosed()) {
+                this.discardExpiredDocuments();
+            }
+        }, 500);
+
+        // also discard expired documents once an hour
+        this._discardInterval = setInterval(() => {
+            if (!this.isClosed()) {
+                this.discardExpiredDocuments()
+            } else {
+                clearInterval(this._discardInterval);
+                this._discardInterval = null;
+            }
+        }, 60 * 60 * 1000);
+
+        // stop the discard thread when the storage is closed
+        this.onDidClose.subscribe(() => {
+            if (this._discardInterval !== null) {
+                clearInterval(this._discardInterval);
+                this._discardInterval = null;
+            }
+        });
     }
 
     _assertNotClosed(): void {
