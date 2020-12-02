@@ -6,7 +6,7 @@ import {
 import {
     Emitter
 } from '../util/emitter';
-import { IStorage3 } from '../storage/storageTypes';
+import { IStorage } from '../storage/storageTypes';
 import { sleep } from '../util/helpers';
 
 // sync states
@@ -33,10 +33,10 @@ let ensureTrailingSlash = (url : string) : string =>
 
 let logSyncer = (...args : any[]) => console.log('💚 syncer | ', ...args);
 export class Syncer1 {
-    storage : IStorage3;
+    storage : IStorage;
     onChange : Emitter<SyncState>;
     state : SyncState;
-    constructor(store : IStorage3) {
+    constructor(store : IStorage) {
         this.storage = store;
         this.onChange = new Emitter<SyncState>();
         this.state = {
@@ -122,7 +122,7 @@ let urlPostDocuments = urlGetDocuments;
 
 let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
 
-export let syncLocalAndHttp = async (storage : IStorage3, domain : string) => {
+export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
     logSyncAlg('existing database workspace:', storage.workspace);
     let resultStats : any = {
         pull: null,

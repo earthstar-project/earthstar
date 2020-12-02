@@ -1,12 +1,12 @@
 import debounce = require('lodash.debounce');
 import { IValidator, WorkspaceAddress } from '../util/types';
-import { WriteEvent3 } from './storageTypes';
-import { Query3ForForget } from './query';
-import { Storage3Memory } from './storageMemory';
+import { WriteEvent } from './storageTypes';
+import { QueryForForget } from './query';
+import { StorageMemory } from './storageMemory';
 
 //================================================================================
 
-export class Storage3LocalStorage extends Storage3Memory {
+export class StorageLocalStorage extends StorageMemory {
     /**
      * Stores a workspace in browser localStorage.
      * 
@@ -63,7 +63,7 @@ export class Storage3LocalStorage extends Storage3Memory {
         this._debouncedSaveQuick = debounce(saveToLocalStorage, 50, { trailing: true });
         this._debouncedSaveSlow = debounce(saveToLocalStorage, 333, { trailing: true });
 
-        this.onWrite.subscribe((e: WriteEvent3) => {
+        this.onWrite.subscribe((e: WriteEvent) => {
             if (e.isLocal) { this._debouncedSaveQuick(); }
             else { this._debouncedSaveSlow(); }
         });
@@ -96,7 +96,7 @@ export class Storage3LocalStorage extends Storage3Memory {
     // set() and ingest() are already covered by the onWrite listener
     // we added in the constructor.
 
-    forgetDocuments(q: Query3ForForget): void {
+    forgetDocuments(q: QueryForForget): void {
         super.forgetDocuments(q);
         this._debouncedSaveQuick();
     }

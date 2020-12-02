@@ -23,17 +23,17 @@ import {
 import { ValidatorEs4 } from '../validator/es4';
 
 import {
-    IStorage3,
-    IStorage3Async,
-    WriteEvent3,
+    IStorage,
+    IStorageAsync,
+    WriteEvent,
 } from '../storage/storageTypes';
 import {
-    Query3,
-    Query3ForForget,
+    Query,
+    QueryForForget,
     sortPathAscAuthorAsc,
 } from '../storage/query';
 import {
-    Storage3Memory
+    StorageMemory
 } from '../storage/storageMemory';
 import {
     localPush,
@@ -42,8 +42,8 @@ import {
     localSyncAsync,
 } from '../sync/syncLocal';
 import { uniq, sorted, sleep } from '../util/helpers';
-import { Storage3Sqlite } from '../storage/storageSqlite';
-import { Storage3ToAsync } from '../storage/storageToAsync';
+import { StorageSqlite } from '../storage/storageSqlite';
+import { StorageToAsync } from '../storage/storageToAsync';
 
 //================================================================================
 // prepare for test scenarios
@@ -77,29 +77,29 @@ let DAY = HOUR * 24;
 let SNOWMAN = '☃';  // \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 
 interface Scenario {
-    makeStorage: (workspace : string) => IStorage3Async | IStorage3,
+    makeStorage: (workspace : string) => IStorageAsync | IStorage,
     description: string,
 }
 let scenarios : Scenario[] = [
     {
-        makeStorage: (workspace : string) : IStorage3 => {
-            let storage = new Storage3Memory(VALIDATORS, workspace);
+        makeStorage: (workspace : string) : IStorage => {
+            let storage = new StorageMemory(VALIDATORS, workspace);
             storage._now = now;
             return storage;
         },
-        description: "Storage3Memory",
+        description: "StorageMemory",
     },
     {
-        makeStorage: (workspace : string) : IStorage3Async => {
-            let storage = new Storage3ToAsync(new Storage3Memory(VALIDATORS, workspace), 10);
+        makeStorage: (workspace : string) : IStorageAsync => {
+            let storage = new StorageToAsync(new StorageMemory(VALIDATORS, workspace), 10);
             storage._now = now;
             return storage;
         },
-        description: "Async'd Storage3Memory",
+        description: "Async'd StorageMemory",
     },
     {
-        makeStorage: (workspace : string) : IStorage3 => {
-            let storage = new Storage3Sqlite({
+        makeStorage: (workspace : string) : IStorage => {
+            let storage = new StorageSqlite({
                 mode: 'create',
                 workspace: workspace,
                 validators: VALIDATORS,
@@ -108,21 +108,21 @@ let scenarios : Scenario[] = [
             storage._now = now;
             return storage;
         },
-        description: "Storage3Sqlite",
+        description: "StorageSqlite",
     },
     {
-        makeStorage: (workspace : string) : IStorage3Async => {
-            let storage = new Storage3Sqlite({
+        makeStorage: (workspace : string) : IStorageAsync => {
+            let storage = new StorageSqlite({
                 mode: 'create',
                 workspace: workspace,
                 validators: VALIDATORS,
                 filename: ':memory:',
             });
-            let asyncStorage = new Storage3ToAsync(storage, 10);
+            let asyncStorage = new StorageToAsync(storage, 10);
             asyncStorage._now = now;
             return asyncStorage;
         },
-        description: "Async'd Storage3Sqlite",
+        description: "Async'd StorageSqlite",
     },
 ];
 
@@ -160,22 +160,22 @@ let makeDoc = (opts: MakeDocOpts): Document => {
 //================================================================================
 // constructor tests
 
-t.test(`Storage3Memory: constructor success`, (t: any) => {
-    let storage = new Storage3Memory(VALIDATORS, WORKSPACE);
+t.test(`StorageMemory: constructor success`, (t: any) => {
+    let storage = new StorageMemory(VALIDATORS, WORKSPACE);
     t.same(storage.workspace, WORKSPACE, 'it is working');
     storage.close();
     t.end();
 });
 
-t.test(`Storage3Memory: constructor errors`, (t: any) => {
-    t.throws(() => new Storage3Memory([], WORKSPACE), 'throws when no validators are provided');
-    t.throws(() => new Storage3Memory(VALIDATORS, 'bad-workspace-address'), 'throws when workspace address is invalid');
+t.test(`StorageMemory: constructor errors`, (t: any) => {
+    t.throws(() => new StorageMemory([], WORKSPACE), 'throws when no validators are provided');
+    t.throws(() => new StorageMemory(VALIDATORS, 'bad-workspace-address'), 'throws when workspace address is invalid');
     t.end();
 });
 
-t.test(`Async'd Storage3Memory: constructor`, (t: any) => {
-    t.throws(() => new Storage3ToAsync(new Storage3Memory([], WORKSPACE)), 'throws when no validators are provided');
-    t.throws(() => new Storage3ToAsync(new Storage3Memory(VALIDATORS, 'bad-workspace-address')), 'throws when workspace address is invalid');
+t.test(`Async'd StorageMemory: constructor`, (t: any) => {
+    t.throws(() => new StorageToAsync(new StorageMemory([], WORKSPACE)), 'throws when no validators are provided');
+    t.throws(() => new StorageToAsync(new StorageMemory(VALIDATORS, 'bad-workspace-address')), 'throws when workspace address is invalid');
     t.end();
 });
 
@@ -191,7 +191,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
 
     // create with :memory:
     t.doesNotThrow(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -200,7 +200,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'create mode works when workspace is provided, :memory:');
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create',
             workspace: null as any,
             validators: VALIDATORS,
@@ -209,7 +209,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'create mode throws when workspace is null, :memory:');
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create',
             workspace: 'bad-workspace-address',
             validators: VALIDATORS,
@@ -218,7 +218,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'create mode throws when workspace address is invalid, :memory:');
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create',
             workspace: 'bad-workspace-address',
             validators: [],
@@ -232,7 +232,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     clearFn(fn);
     t.doesNotThrow(
         () => {
-            let storage = new Storage3Sqlite({
+            let storage = new StorageSqlite({
                 mode: 'create',
                 workspace: WORKSPACE,
                 validators: VALIDATORS,
@@ -252,7 +252,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     clearFn(fn);
     t.doesNotThrow(
         () => {
-            let storage = new Storage3Sqlite({
+            let storage = new StorageSqlite({
                 mode: 'create',
                 workspace: WORKSPACE,
                 validators: VALIDATORS,
@@ -272,7 +272,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     fn = 'testtesttest1b.db';
     touchFn(fn);
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -284,7 +284,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
 
     // open and :memory:
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'open',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -293,7 +293,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'open mode throws with :memory: and a workspace');
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'open',
             workspace: null,
             validators: VALIDATORS,
@@ -304,7 +304,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
 
     // open missing filename
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'open',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -315,7 +315,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
 
     // create-or-open :memory:
     t.doesNotThrow(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create-or-open',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -324,7 +324,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'create-or-open mode works when workspace is provided');
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create-or-open',
             workspace: null as any,
             validators: VALIDATORS,
@@ -337,7 +337,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     fn = 'testtesttest3.db';
     clearFn(fn);
     t.doesNotThrow(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create-or-open',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -347,7 +347,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     }, 'create-or-open mode works when creating a real file');
     t.ok(fs.existsSync(fn), 'create-or-open mode created a file');
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create-or-open',
             workspace: 'xxx',
             validators: VALIDATORS,
@@ -356,7 +356,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'create-or-open mode fails when opening existing file with mismatched workspace');
     t.doesNotThrow(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create-or-open',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -370,7 +370,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     fn = 'testtesttest4.db';
     clearFn(fn);
     t.doesNotThrow(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'create',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -380,7 +380,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     }, 'creating a real file');
     t.ok(fs.existsSync(fn), 'file was created');
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'open',
             workspace: 'xxx',
             validators: VALIDATORS,
@@ -389,7 +389,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'open throws when workspace does not match');
     t.doesNotThrow(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'open',
             workspace: WORKSPACE,
             validators: VALIDATORS,
@@ -399,7 +399,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     }, 'open works when workspace matches');
     t.ok(fs.existsSync(fn), 'file still exists');
     t.doesNotThrow(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'open',
             workspace: null,
             validators: VALIDATORS,
@@ -412,7 +412,7 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
 
     // unrecognized mode
     t.throws(() => {
-        let storage = new Storage3Sqlite({
+        let storage = new StorageSqlite({
             mode: 'xxx' as any,
             workspace: null,
             validators: VALIDATORS,
@@ -639,7 +639,7 @@ for (let scenario of scenarios) {
         await storage2.forgetDocuments({ history: 'all' });
         t.same(await storage2.contents({ history: 'all' }), [], 'forget everything, no query options');
 
-        await storage.forgetDocuments({ history: 'all', limit: 0 } as any as Query3ForForget);
+        await storage.forgetDocuments({ history: 'all', limit: 0 } as any as QueryForForget);
         t.same(await storage.contents({ history: 'all' }), ['', '1', '22', '333', '', '55555'], 'forget with { limit: 0 } forgets nothing');
 
         await storage.forgetDocuments({ contentLength: 3, history: 'all' });
@@ -695,7 +695,7 @@ for (let scenario of scenarios) {
         }
 
         type TestCase = {
-            query: Query3,
+            query: Query,
             contents: string[],
             note?: string,
         }
@@ -792,7 +792,7 @@ for (let scenario of scenarios) {
 
         let i = inputDocs;
         type TestCase = {
-            query: Query3,
+            query: Query,
             matches: Document[],
             pathMatches?: Document[], // if path query gives a different result than doc query
             note?: string,
@@ -1579,7 +1579,7 @@ for (let scenario of scenarios) {
         let storage = scenario.makeStorage(WORKSPACE);
 
         let numCalled = 0;
-        let unsub = storage.onWrite.subscribe((e: WriteEvent3) => { numCalled += 1 });
+        let unsub = storage.onWrite.subscribe((e: WriteEvent) => { numCalled += 1 });
 
         t.same(await storage.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1.0', timestamp: now}), WriteResult.Accepted, 'set new path');
         t.ok(isErr(await storage.set(keypair1, {format: 'xxx', path: '/path1', content: 'val1.1', timestamp: now})), 'invalid set that will be ignored');
@@ -1602,7 +1602,7 @@ for (let scenario of scenarios) {
         let storage3 = scenario.makeStorage(WORKSPACE);
         let storage4 = scenario.makeStorage(WORKSPACE);
 
-        let events: WriteEvent3[] = [];
+        let events: WriteEvent[] = [];
         let unsub = storage.onWrite.subscribe((e) => { events.push(e) });
 
         // set new path

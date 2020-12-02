@@ -14,12 +14,12 @@ import {
 } from '../util/types';
 
 import {
-    Query3,
-    Query3ForForget,
+    Query,
+    QueryForForget,
     cleanUpQuery,
 } from './query';
 import {
-    Storage3Base,
+    StorageBase,
 } from './storageBase';
 
 import { logDebug } from '../util/log';
@@ -47,35 +47,35 @@ import { logDebug } from '../util/log';
  * file exists: yes or no
  * ```
  */
-interface Storage3SqliteOptsCreate {
+interface StorageSqliteOptsCreate {
     mode: 'create'
     workspace: WorkspaceAddress,
     validators: IValidator[],  // must provide at least one
     filename: string,  // must not exist
 }
-interface Storage3SqliteOptsOpen {
+interface StorageSqliteOptsOpen {
     mode: 'open'
     workspace: WorkspaceAddress | null,
     validators: IValidator[],  // must provide at least one
     filename: string,  // must exist
 }
-interface Storage3SqliteOptsCreateOrOpen {
+interface StorageSqliteOptsCreateOrOpen {
     mode: 'create-or-open'
     workspace: WorkspaceAddress,
     validators: IValidator[],  // must provide at least one
     filename: string,  // may or may not exist
 }
-export type Storage3SqliteOpts =
-    Storage3SqliteOptsCreate
-    | Storage3SqliteOptsOpen
-    | Storage3SqliteOptsCreateOrOpen;
+export type StorageSqliteOpts =
+    StorageSqliteOptsCreate
+    | StorageSqliteOptsOpen
+    | StorageSqliteOptsCreateOrOpen;
 
-export class Storage3Sqlite extends Storage3Base {
+export class StorageSqlite extends StorageBase {
 
     _filename: string;
     db: SqliteDatabase = null as any as SqliteDatabase;
 
-    constructor(opts: Storage3SqliteOpts) {
+    constructor(opts: StorageSqliteOpts) {
         // to call super we have to provide a workspace
         // but we might not know it yet
         // so provide a temporary value for now
@@ -260,7 +260,7 @@ export class Storage3Sqlite extends Storage3Base {
         `).run();
     }
 
-    _makeDocQuerySql(query: Query3, now: number, mode: 'documents' | 'delete'):
+    _makeDocQuerySql(query: Query, now: number, mode: 'documents' | 'delete'):
         { sql: string, params: Record<string, any> }
         {
         /**
@@ -439,7 +439,7 @@ export class Storage3Sqlite extends Storage3Base {
         return { sql, params };
     }
 
-    documents(q?: Query3): Document[] {
+    documents(q?: Query): Document[] {
         this._assertNotClosed();
         let query = cleanUpQuery(q || {});
         if (query.limit === 0 || query.limitBytes === 0) { return []; }
@@ -525,11 +525,11 @@ export class Storage3Sqlite extends Storage3Base {
         `).run(doc);
     }
 
-    forgetDocuments(q: Query3ForForget): void {
+    forgetDocuments(q: QueryForForget): void {
         logDebug(`sqlite\.forgetDocuments(${JSON.stringify(q)})`);
         this._assertNotClosed();
         let query = cleanUpQuery(q);
-        if ((query as Query3).limit === 0 || (query as Query3).limitBytes === 0) { return; }
+        if ((query as Query).limit === 0 || (query as Query).limitBytes === 0) { return; }
         let now = this._now || (Date.now() * 1000);
 
         logDebug('sqlite\.forgetDocuments(query)');

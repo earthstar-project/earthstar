@@ -10,7 +10,7 @@ import {
     generateAuthorKeypair
 } from '../crypto/crypto';
 import {
-    Storage3Memory,
+    StorageMemory,
 } from '../storage/storageMemory';
 import {
     ValidatorEs4,
@@ -19,7 +19,7 @@ import {
     SyncState,
     Syncer1,
 } from '../sync/syncer1';
-import { IStorage3 } from '../storage/storageTypes';
+import { IStorage } from '../storage/storageTypes';
 
 //================================================================================
 // prepare for test scenarios
@@ -39,8 +39,8 @@ let author2: AuthorAddress = keypair2.address;
 let author3: AuthorAddress = keypair3.address;
 let now = 1500000000000000;
 
-let makeStorage = (workspace : string) : IStorage3 =>
-    new Storage3Memory(VALIDATORS, workspace);
+let makeStorage = (workspace : string) : IStorage =>
+    new StorageMemory(VALIDATORS, workspace);
 
 //================================================================================
 t.test('Syncer basics and callback subscriptions', (t: any) => {

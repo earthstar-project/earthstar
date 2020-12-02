@@ -9,37 +9,37 @@ import {
 } from '../util/types';
 import { sleep } from '../util/helpers';
 import {
-    Query3,
-    Query3ForForget,
-    Query3NoLimitBytes,
+    Query,
+    QueryForForget,
+    QueryNoLimitBytes,
 } from './query';
 import {
-    IStorage3,
-    IStorage3Async,
-    WriteEvent3,
+    IStorage,
+    IStorageAsync,
+    WriteEvent,
 } from './storageTypes';
 import { Emitter } from '../util/emitter';
 
 /**
- * Disguises a synchronous IStorage3 instance as an IStorage3Async.
+ * Disguises a synchronous IStorage instance as an IStorageAsync.
  * Makes all the methods of the original storage return promises,
  * except for `isClosed()` which remains synchronous.
  * 
  * `fakeSleepTime` is an optional delay in ms that's added into each call,
  * for testing purposes.
  */
-export class Storage3ToAsync implements IStorage3Async {
+export class StorageToAsync implements IStorageAsync {
     readonly workspace : WorkspaceAddress;
     readonly sessionId: string;  // gets a new random value every time the program runs
 
-    onWrite: Emitter<WriteEvent3>;  // fired synchronously just after each document write
+    onWrite: Emitter<WriteEvent>;  // fired synchronously just after each document write
     onWillClose: Emitter<undefined>;  // fired synchronously at the beginning of close()
     onDidClose: Emitter<undefined>;  // fired synchronously at the end of close()
 
-    _storage: IStorage3;
+    _storage: IStorage;
     _fakeSleepTime: number;
 
-    constructor(storage: IStorage3, fakeSleepTime: number = 0) {
+    constructor(storage: IStorage, fakeSleepTime: number = 0) {
         this._storage = storage;
         this._fakeSleepTime = fakeSleepTime;
 
@@ -84,15 +84,15 @@ export class Storage3ToAsync implements IStorage3Async {
     }
 
     // GET DATA OUT
-    async documents(query?: Query3): Promise<Document[]> {
+    async documents(query?: Query): Promise<Document[]> {
         await this._sleep();
         return this._storage.documents(query);
     }
-    async contents(query?: Query3): Promise<string[]> {
+    async contents(query?: Query): Promise<string[]> {
         await this._sleep();
         return this._storage.contents(query);
     }
-    async paths(query?: Query3NoLimitBytes): Promise<string[]> {
+    async paths(query?: QueryNoLimitBytes): Promise<string[]> {
         await this._sleep();
         return this._storage.paths(query);
     }
@@ -124,7 +124,7 @@ export class Storage3ToAsync implements IStorage3Async {
     }
 
     // REMOVE DATA
-    async forgetDocuments(query: Query3ForForget): Promise<void> {
+    async forgetDocuments(query: QueryForForget): Promise<void> {
         await this._sleep();
         return this._storage.forgetDocuments(query);
     }

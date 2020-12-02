@@ -1,24 +1,16 @@
 import {
     AuthorKeypair,
-    Document,
     FormatName,
-    IStorageOldd,
     IValidator,
-    SyncOptsOldd,
-    WriteResult,
     isErr,
-    notErr,
-    WriteEvent,
-    ValidationError,
 } from '../util/types';
 import {
     generateAuthorKeypair,
-    sha256base32,
 } from '../crypto/crypto';
 import { ValidatorEs4 } from '../validator/es4';
-import { Storage3Memory } from '../storage/storageMemory';
-import { Storage3Sqlite } from '../storage/storageSqlite';
-import { IStorage3 } from '../storage/storageTypes';
+import { StorageMemory } from '../storage/storageMemory';
+import { StorageSqlite } from '../storage/storageSqlite';
+import { IStorage } from '../storage/storageTypes';
 import { localSync } from '../sync/syncLocal';
 
 //================================================================================
@@ -54,16 +46,16 @@ let HOUR = MIN * 60;
 let DAY = HOUR * 24;
 
 interface Scenario {
-    makeStorage: (workspace : string) => IStorage3,
+    makeStorage: (workspace : string) => IStorage,
     description: string,
 }
 let scenarios : Scenario[] = [
     {
-        makeStorage: (workspace : string) : IStorage3 => new Storage3Memory(VALIDATORS, workspace),
+        makeStorage: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
         description: 'Store3Memory',
     },
     {
-        makeStorage: (workspace : string) : IStorage3 => new Storage3Sqlite({
+        makeStorage: (workspace : string) : IStorage => new StorageSqlite({
             mode: 'create',
             workspace: workspace,
             validators: VALIDATORS,

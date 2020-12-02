@@ -20,7 +20,7 @@ import {
 import { ValidatorEs4 } from '../validator/es4';
 
 import {
-    Query3,
+    Query,
     cleanUpQuery,
     documentIsExpired,
     queryMatchesDoc,
@@ -137,8 +137,8 @@ t.test('sortPathAscAuthorAsc and sortLatestFirst', (t: any) => {
 
 t.test('cleanUpQuery', (t: any) => {
     type TestCase = {
-        query: Query3,
-        result: Query3 | 'same',
+        query: Query,
+        result: Query | 'same',
         note?: string,
     }
     let testCases: TestCase[] = [
@@ -148,8 +148,8 @@ t.test('cleanUpQuery', (t: any) => {
         },
         {
             query: { history: '???' } as any,
-            result: { limit: 0 },
-            note: 'invalid query turns to { limit: 0 }',
+            result: { path: 'invalid-query', limit: 0 },
+            note: 'invalid query turns to empty query',
         }
     ];
 
@@ -164,7 +164,7 @@ t.test('cleanUpQuery', (t: any) => {
 
 t.test('validateQuery', (t: any) => {
     type TestCase = {
-        query: Query3,
+        query: Query,
         valid: boolean,
         note?: string,
     }
@@ -254,7 +254,7 @@ t.test('queryMatchesDoc', (t: any) => {
 
     let i = inputDocs;
     type TestCase = {
-        query: Query3,
+        query: Query,
         matches: Document[],
         note?: string,
     }

@@ -13,20 +13,20 @@ import {
     isErr
 } from '../util/types';
 import {
-    IStorage3,
-    WriteEvent3,
+    IStorage,
+    WriteEvent,
 } from './storageTypes';
-import { Query3, Query3ForForget, Query3NoLimitBytes } from './query';
+import { Query, QueryForForget, QueryNoLimitBytes } from './query';
 import { Emitter } from '../util/emitter';
 import { uniq, sorted } from '../util/helpers';
 import { sha256base32 } from '../crypto/crypto';
 import { cleanUpQuery } from './query';
 
-export abstract class Storage3Base implements IStorage3 {
+export abstract class StorageBase implements IStorage {
     workspace : WorkspaceAddress;
     readonly sessionId: string;
     _now: number | null = null;
-    onWrite: Emitter<WriteEvent3>;
+    onWrite: Emitter<WriteEvent>;
     onWillClose: Emitter<undefined>;
     onDidClose: Emitter<undefined>;
 
@@ -53,7 +53,7 @@ export abstract class Storage3Base implements IStorage3 {
         this.workspace = workspace;
         this.sessionId = '' + Math.random();
 
-        this.onWrite = new Emitter<WriteEvent3>();
+        this.onWrite = new Emitter<WriteEvent>();
         this.onWillClose = new Emitter<undefined>();
         this.onDidClose = new Emitter<undefined>();
 
@@ -115,8 +115,8 @@ export abstract class Storage3Base implements IStorage3 {
     // close and remove all
 
     // GET DATA OUT
-    abstract documents(query?: Query3): Document[];
-    contents(query?: Query3): string[] {
+    abstract documents(query?: Query): Document[];
+    contents(query?: Query): string[] {
         this._assertNotClosed();
         return this.documents(query).map(doc => doc.content);
     }
@@ -125,7 +125,7 @@ export abstract class Storage3Base implements IStorage3 {
         this._assertNotClosed();
         return sorted(uniq(this.documents({ history: 'all' }).map(doc => doc.author)));
     }
-    paths(q?: Query3NoLimitBytes): string[] {
+    paths(q?: QueryNoLimitBytes): string[] {
         this._assertNotClosed();
         let query = cleanUpQuery(q || {});
 
@@ -286,7 +286,7 @@ export abstract class Storage3Base implements IStorage3 {
         return result;
     }
 
-    abstract forgetDocuments(query: Query3ForForget): void;
+    abstract forgetDocuments(query: QueryForForget): void;
     abstract discardExpiredDocuments(): void;
 
     // CLOSE

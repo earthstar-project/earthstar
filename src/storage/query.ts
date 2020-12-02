@@ -13,77 +13,139 @@ open questions
     * or doing a full query also using author, timestamp, etc, then getting unique paths?
 
     isHead: rename to includeAll?  we rarely want to exclude heads
-
 */
+
+
 
 export type HistoryMode =
     'latest'  // get the overall latest per path (the heads), then apply filters just to those
   | 'all';    // return every individually matching history doc
 
-export interface Query3 {
-    // an empty query matches all (latest) documents.
-    // each filter in the query further reduces the number of results.
-    // the exception is that history = 'latest' by default;
-    // set it to 'all' to include old history documents also.
+/**
+ * Query objects describe how to query a Storage instance for documents.
+ * 
+ * An empty query object returns all latest documents.
+ * Each of the following properties adds an additional filter,
+ * narrowing down the results further.
+ * The exception is that history = 'latest' by default;
+ * set it to 'all' to include old history documents also.
+ */
+export interface Query {
+    //=== filters that affect all documents equally within the same path
 
-    // filters that affect all documents equally within the same path
+    /** Path exactly equals... */
     path?: string,
+
+    /** Path begins with... */
     pathPrefix?: string,
 
-    // filters that differently affect documents within the same path
+    //=== filters that differently affect documents within the same path
+
+    /** Timestamp exactly equals... */
     timestamp?: number,
+
+    /** Timestamp is greater than... */
     timestamp_gt?: number,
+
+    /** Timestamp is less than than... */
     timestamp_lt?: number,
 
+    /**
+     * Document author.
+     * 
+     * With history:'latest' this only returns documents for which
+     * this author is the latest author.
+     * 
+     * With history:'all' this returns all documents by this author,
+     * even if those documents are not the latest ones anymore.
+     */
     author?: AuthorAddress,
 
     contentLength?: number,  // in bytes as utf-8.  TODO: how to treat sparse docs with null content?
     contentLength_gt?: number,
     contentLength_lt?: number,
 
-    // other settings
+    //=== other settings
 
-    history?: HistoryMode,  // default: latest
+    /**
+     * If history === 'latest', return the most recent doc at each path.
+     * 
+     * If history === 'all', return every doc at each path (with each
+     * other author's latest version)
+     * 
+     * Default: latest
+     */
+    history?: HistoryMode,
 
+    /**
+     * Only return the first N documents.
+     * There's no offset; use continueAfter instead.
+     */
     limit?: number,
-    limitBytes?: number,  // sum of content bytes <= limitBytes (stop as soon as possible)
 
-    // start with the next matching item after this one:
+    /**
+     * Accumulate documents until the sum of their content length <= limitByts.
+     * 
+     * Content length is measured in UTF-8 bytes, not unicode characters.
+     * 
+     * If some docs have length zero, stop as soon as possible (don't include them).
+     */
+    limitBytes?: number,
+
+    /**
+     * Begin with the next matching document after this one:
+     */
     continueAfter?: {
         path: string,
         author: string,
     },
 };
 
-interface Query3HistoryAll extends Query3 {
+// A query where history is required to be "all"
+interface QueryHistoryAll extends Query {
     history: 'all',
 }
-export type Query3ForForget = Omit<Query3HistoryAll, 'limit' | 'limitBytes'>;
-export type Query3NoLimitBytes = Omit<Query3, 'limitBytes'>;
 
-export let validateQuery = (query: Query3): ValidationError | true => {
+// A query without limit or limitBytes
+export type QueryForForget = Omit<QueryHistoryAll, 'limit' | 'limitBytes'>;
+
+// A query without limitBytes
+export type QueryNoLimitBytes = Omit<Query, 'limitBytes'>;
+
+/**
+ * Check if a query object matches the expected schema for query objects.
+ * 
+ * Return true on success; return (not throw) a ValidationError on failure.
+ */
+export let validateQuery = (query: Query): ValidationError | true => {
     if (query.limit !== undefined && query.limit < 0) { return new ValidationError('limit must be >= 0'); }
     if (query.limitBytes !== undefined && query.limitBytes < 0) { return new ValidationError('limitBytes must be >= 0'); }
     if (query.contentLength !== undefined && query.contentLength < 0) { return new ValidationError('contentLength must be >= 0'); }
     if (query.history !== undefined && query.history !== 'all' && query.history !== 'latest') {
         return new ValidationError('unknown history mode: ' + query.history);
     }
+    // TODO: check for extra properties?
+    // TODO: check for data types
     return true;
 }
 
-export let cleanUpQuery = (query: Query3): Query3 => {
+/**
+ * Validate and canonicalize a query; set its defaults; etc.
+ * If the input query is invalid, return a new query that will never match anything,
+ * since paths have to start with a '/':
+ * 
+ * ` { path: 'invalid-query', limit: 0 } `
+ */
+export let cleanUpQuery = (query: Query): Query => {
     let isValid = validateQuery(query);
     if (isErr(isValid)) {
         // if query is invalid, instead return a special query that will never match anything
         console.warn(isValid);
-        return { limit: 0 };
+        return { path: 'invalid-query', limit: 0 };
     }
-
     // set defaults
-    let q: Query3 = {
+    let q: Query = {
         history: 'latest',
-        // sort: 'path',
-
         ...query
     };
     return q;
@@ -92,9 +154,15 @@ export let cleanUpQuery = (query: Query3): Query3 => {
 export let stringLengthInBytes = (s: string): number =>
     Buffer.byteLength(s, 'utf-8');
 
-export let queryMatchesDoc = (query: Query3, doc: Document): boolean => {
-    // only checks individual document properties,
-    // not limit, historyMode, sort, etc
+/**
+ * Check if a document matches a query.
+ * 
+ * Only checks individual documents one at a time, so
+ * it ignores historyMode, limit, limitBytes.
+ * 
+ * It does check continueAfter.
+ */
+export let queryMatchesDoc = (query: Query, doc: Document): boolean => {
 
     if (query.path       !== undefined && !(query.path === doc.path)) { return false; }
     if (query.pathPrefix !== undefined && !(doc.path.startsWith(query.pathPrefix))) { return false; }
@@ -118,6 +186,7 @@ export let queryMatchesDoc = (query: Query3, doc: Document): boolean => {
     return true;
 }
 
+/** Is a document expired?  (Ephemeral, and past its deletion date) */
 export let documentIsExpired = (doc: Document, now: number): boolean => {
     return (doc.deleteAfter !== null) && (doc.deleteAfter < now);
 }

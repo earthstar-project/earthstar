@@ -195,104 +195,7 @@ export type DocToSet = {
 };
 
 //================================================================================
-
-/**
- * Query objects describe how to query a Storage instance for documents.
- * 
- * An empty query object returns all documents.
- * Each of the following properties adds an additional filter,
- * narrowing down the results further.
- */
-export interface QueryOptsOldd {
-    /** Match one specific path only. */
-    path?: string,
-
-    /** Paths starting with this string. */
-    pathPrefix?: string,
-
-    /** lowPath <= p */
-    lowPath?: string,
-    /** p < highPath */
-    highPath?: string,
-
-    /**
-     * Only return the first N documents.
-     * This counts the total number of docs returned, counting historical and most-recent versions.
-     * There's no offset; use lowPath as a cursor instead
-     */
-    limit?: number,
-
-    /** Include old versions of this doc from different authors?  Default `false`. */
-    includeHistory?: boolean,
-
-    /**
-     * If including history, find paths where the author ever wrote, and return all history for those paths by anyone.
-     *
-     * If not including history, find paths where the author ever wrote, and return the latest doc (maybe not by the author).
-     */
-    participatingAuthor?: AuthorAddress,
-
-    //// If including history, find paths with the given last-author, and return all history for those paths
-    //// If not including history, find paths with the given last-author, and return just the last doc
-    //lastAuthor?: AuthorAddress,
-
-    /**
-     * If including history, find any individual revision by this author (heads and non-heads).
-     *
-     * If not including history, it's any individual revision by this author which is also a head.
-     */
-    versionsByAuthor?: AuthorAddress,
-
-    /**
-     * If true, only match documents with content === "" (e.g. deleted documents)
-     *
-     * If false, only match documents with content.length >= 1
-     * 
-     * If omitted, match all documents.
-     */
-    contentIsEmpty?: boolean,
-
-    // timestamp before and after // TODO
-
-    // sort order: TODO
-    // For now the default sort is path ASC, then timestamp DESC (newest first within same path)
-
-    /**
-     * The time at which the query is considered to take place.
-     * This is useful for testing ephemeral document expiration.
-     * Normally this should be omitted.  It defaults to the current time.
-     */
-    now?: number,
-}
-
-//================================================================================
 // SYNCING
-
-/** Options for the IStorage.sync() method */
-export interface SyncOptsOldd {
-    direction?: 'push' | 'pull' | 'both',  // default both
-
-    // Sync existing documents?  Defaults to true.
-    // The only reason to turn this off is if you're setting live: true
-    // and you only want the live stream of new documents, not existing ones.
-    existing?: boolean,
-
-    // Continue sync forever as a stream of newly changed documents?
-    // Defaults to false.
-    // (This is not implemented yet)
-    // TODO: how to stop a live sync?
-    live?: boolean,
-
-    // If both existing==false and live==false, no documents will get synced at all.
-
-    // TODO: add sync filters.
-    // These limit the documents we send/receive during a sync.
-    // If you supply an array, it will send/receive docs that match ANY of the queries (logical OR).
-    // On the other hand setting multiple filters within one query acts like a logical AND.
-    // This is deliberate - it allows you to construct more complex queries by combining the two techniques.
-    //   incomingSyncFilters: QueryOpts | QueryOpts[],  // only accept matching docs
-    //   outgoingSyncFilters: QueryOpts | QueryOpts[],  // only send matching docs
-}
 
 /** Stats about what happened in a sync. */
 export interface SyncResults {
@@ -370,166 +273,146 @@ export interface IValidatorES4 extends IValidator {
 
 //================================================================================
 
-/**
- * The event your callback gets when you subscribe to IStorage.onWrite.subscribe(callback).
- */
-export type WriteEvent = {
-    kind: 'DOCUMENT_WRITE',
-    /**
-     * A write is "local" if it comes from IStorage.set(),
-     * otherwise it's "remote" (it came from a sync).
-     */
-    isLocal: boolean,
-    /**
-     * A write is "latest" if it's the one that will come back from a getDocument(path) call.
-     * e.g. it's the history document for that path with the highest timestamp.
-     * If it's not "latest", it's a history document.
-     */
-    isLatest: boolean,
-    /** The new version of the document that was written. */
-    document: Document,
-}
-
-/**
- * A IStorage instance holds the documents of a single workspace
- * in some kind of local storage (memory, a database, etc).
- *
- * To construct an IStorage, you need to supply
- *   * a workspace address
- *   * a list of Validator classes, for the document formats you want to support
- *   * various other options such as database filenames, specific to that kind of Storage
- *
- * Immutability:
- *   Document objects should be treated as immutable and never mutated.
- *   This applies to
- *   * objects you pass into IStorage (to ingestDocument)
- *   * objects you get from IStorage (from getDocument, etc).
- *   The IStorage instance may call Object.freeze() on document objects in both
- *   of the above cases, to enforce this.
- */
-export interface IStorageOldd {
-
-    /** The workspace address held in this Storage object. */
-    workspace: WorkspaceAddress;
-
-    /**
-     * onWrite is called whenever any data changes:
-     *   * after every set()
-     *   * after every ingestDocument()
-     *   * after each document obtained during a sync (because that happens via ingestDocument())
-     * Subscribe with onWrite.subscribe(...cb...);
-     * 
-     * Your callback will be given a WriteEvent.
-     */
-    onWrite: Emitter<WriteEvent>;
-    /**
-     * onChange is deprecated.  It's called in the same situations as onWrite but it's missing the WriteEvent information.
-     * @deprecated
-     */
-    onChange: Emitter<undefined>;
-
-    // QUERYING
-    /**
-     * Return the documents that match the query.
-     * Default sort is path ASC, then timestamp DESC (newest first within same path)
-     *  but query objects will eventually include sort options.
-     */
-    documents(query?: QueryOptsOldd): Document[];
-    /** Same as documents(), but only return the distinct paths of the matching documents (duplicates removed). */
-    paths(query?: QueryOptsOldd): string[];
-    /** Same as documents(), but only return the content properties of the matching documents. */
-    contents(query?: QueryOptsOldd): string[];
-
-    /** List of authors that have ever written in this workspace. */
-    authors(now?: number): AuthorAddress[];
-
-    // INDIVIDUAL DOCUMENT LOOKUP
-    /**
-     * Get one document by path.
-     * Only returns the most recent document at this path.
-     * To get older docs at this path (from other authors), do a query.
-     */
-    getDocument(path: string, now?: number): Document | undefined;
-    /** Same as getDocument(path).content -- just returns the content of the most recent document */
-    getContent(path: string, now?: number): string | undefined;
-
-    // WRITING
-    /**
-     * Write or overwrite a document.
-     * 
-     * You will need an author's private key which is part of the keypair object.
-     * 
-     * Provide a DocToSet which is is similar but smaller than a regular document:
-     * ``` 
-     * {
-     *   format: which document format to use
-     *   path
-     *   content
-     *   timestamp: optional.  If absent or zero, it will be set to the current time
-     *   - no workspace -- this Storage object knows what workspace it is
-     *   - no author -- it's provided in the keypair argument
-     *   - no signature -- it will be signed for you
-     * }
-     * ```
-     * Timestamps should only be set manually for testing purposes.  Normally they should be
-     * omitted so they default to the current time.
-     * If the timestamp is omitted or zero, it will be actually set to
-     *  `max(current time, highest existing timestamp in this path)`
-     * so that this set() operation will be the winning, latest document in the path.
-     * If the timestamp is supplied, it will not be bumped ahead in this way.
-     *
-     * `now` should usually be omitted; it's used for testing and defaults to `Date.now()*1000`.
-     * If affects the default timestamp chosen for the document, and is used when deciding if
-     * ephemeral documents are expired or not.
-     */
-    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): WriteResult | ValidationError;
-
-    /**
-     * Save a document from an external source to this Storage instance.
-     * The document must be already signed.
-     * This is used when obtaining documents from the outside world, e.g. syncing.
-     * The document will be validated before being stored.
-     *
-     * @param now Should usually be omitted; it's used for testing and defaults to Date.now()*1000
-     * @param isLocal Is used internally to track if this came from a set() operation or not.
-     *   Set it true if the document was written because of a local user action;
-     *   set it false if it was obtained from the outside world.
-     */
-    ingestDocument(doc: Document, now?: number, isLocal?: boolean): WriteResult | ValidationError;
-
-    /** Internal helper method to do a one-way pull sync. */
-    _syncFrom(otherStore: IStorageOldd, existing: boolean, live: boolean): number;
-
-    // TODO: add now? param to _syncFrom and sync
-
-    /**
-     * Two-way sync to another local Storage instance running in the same process.
-     * This is not network-aware.  Network sync is handled by the Syncer class.
-     */
-    sync(otherStore: IStorageOldd, opts?: SyncOptsOldd): SyncResults;
-
-    // TODO: Delete data locally.  This deletion will not propagate.
-    // forget(query : QueryOpts) : void;  // same query options as paths()
-
-    /**
-     * Close this storage.
-     * 
-     * All Storage functions called after this will throw a StorageIsClosedError
-     * except for close(), deleteAndClose(), and isClosed().
-     * 
-     * You can call close() multiple times.
-     * Once closed, a Storage instance cannot be opened again.
-     * 
-     * TODO: what happens when a long-running process like a sync is happening, and the Storage is closed?
-     */
-    close() : void;
-    /** Find out if the storage is closed. */
-    isClosed() : boolean;
-
-    /**
-     * Close the storage and delete the data locally.
-     * This deletion will not propagate to other peers and pubs.
-     * This can be called even if the storage is already closed.
-     */
-    deleteAndClose(): void;
-}
+// // /**
+// //  * A IStorage instance holds the documents of a single workspace
+// //  * in some kind of local storage (memory, a database, etc).
+// //  *
+// //  * To construct an IStorage, you need to supply
+// //  *   * a workspace address
+// //  *   * a list of Validator classes, for the document formats you want to support
+// //  *   * various other options such as database filenames, specific to that kind of Storage
+// //  *
+// //  * Immutability:
+// //  *   Document objects should be treated as immutable and never mutated.
+// //  *   This applies to
+// //  *   * objects you pass into IStorage (to ingestDocument)
+// //  *   * objects you get from IStorage (from getDocument, etc).
+// //  *   The IStorage instance may call Object.freeze() on document objects in both
+// //  *   of the above cases, to enforce this.
+// //  */
+// // export interface IStorageOldd {
+// // 
+// //     /** The workspace address held in this Storage object. */
+// //     workspace: WorkspaceAddress;
+// // 
+// //     /**
+// //      * onWrite is called whenever any data changes:
+// //      *   * after every set()
+// //      *   * after every ingestDocument()
+// //      *   * after each document obtained during a sync (because that happens via ingestDocument())
+// //      * Subscribe with onWrite.subscribe(...cb...);
+// //      * 
+// //      * Your callback will be given a WriteEvent.
+// //      */
+// //     onWrite: Emitter<any>;
+// //     /**
+// //      * onChange is deprecated.  It's called in the same situations as onWrite but it's missing the WriteEvent information.
+// //      * @deprecated
+// //      */
+// //     onChange: Emitter<undefined>;
+// // 
+// //     // QUERYING
+// //     /**
+// //      * Return the documents that match the query.
+// //      * Default sort is path ASC, then timestamp DESC (newest first within same path)
+// //      *  but query objects will eventually include sort options.
+// //      */
+// //     documents(query?: QueryOptsOldd): Document[];
+// //     /** Same as documents(), but only return the distinct paths of the matching documents (duplicates removed). */
+// //     paths(query?: QueryOptsOldd): string[];
+// //     /** Same as documents(), but only return the content properties of the matching documents. */
+// //     contents(query?: QueryOptsOldd): string[];
+// // 
+// //     /** List of authors that have ever written in this workspace. */
+// //     authors(now?: number): AuthorAddress[];
+// // 
+// //     // INDIVIDUAL DOCUMENT LOOKUP
+// //     /**
+// //      * Get one document by path.
+// //      * Only returns the most recent document at this path.
+// //      * To get older docs at this path (from other authors), do a query.
+// //      */
+// //     getDocument(path: string, now?: number): Document | undefined;
+// //     /** Same as getDocument(path).content -- just returns the content of the most recent document */
+// //     getContent(path: string, now?: number): string | undefined;
+// // 
+// //     // WRITING
+// //     /**
+// //      * Write or overwrite a document.
+// //      * 
+// //      * You will need an author's private key which is part of the keypair object.
+// //      * 
+// //      * Provide a DocToSet which is is similar but smaller than a regular document:
+// //      * ``` 
+// //      * {
+// //      *   format: which document format to use
+// //      *   path
+// //      *   content
+// //      *   timestamp: optional.  If absent or zero, it will be set to the current time
+// //      *   - no workspace -- this Storage object knows what workspace it is
+// //      *   - no author -- it's provided in the keypair argument
+// //      *   - no signature -- it will be signed for you
+// //      * }
+// //      * ```
+// //      * Timestamps should only be set manually for testing purposes.  Normally they should be
+// //      * omitted so they default to the current time.
+// //      * If the timestamp is omitted or zero, it will be actually set to
+// //      *  `max(current time, highest existing timestamp in this path)`
+// //      * so that this set() operation will be the winning, latest document in the path.
+// //      * If the timestamp is supplied, it will not be bumped ahead in this way.
+// //      *
+// //      * `now` should usually be omitted; it's used for testing and defaults to `Date.now()*1000`.
+// //      * If affects the default timestamp chosen for the document, and is used when deciding if
+// //      * ephemeral documents are expired or not.
+// //      */
+// //     set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): WriteResult | ValidationError;
+// // 
+// //     /**
+// //      * Save a document from an external source to this Storage instance.
+// //      * The document must be already signed.
+// //      * This is used when obtaining documents from the outside world, e.g. syncing.
+// //      * The document will be validated before being stored.
+// //      *
+// //      * @param now Should usually be omitted; it's used for testing and defaults to Date.now()*1000
+// //      * @param isLocal Is used internally to track if this came from a set() operation or not.
+// //      *   Set it true if the document was written because of a local user action;
+// //      *   set it false if it was obtained from the outside world.
+// //      */
+// //     ingestDocument(doc: Document, now?: number, isLocal?: boolean): WriteResult | ValidationError;
+// // 
+// //     /** Internal helper method to do a one-way pull sync. */
+// //     _syncFrom(otherStore: IStorageOldd, existing: boolean, live: boolean): number;
+// // 
+// //     // TODO: add now? param to _syncFrom and sync
+// // 
+// //     /**
+// //      * Two-way sync to another local Storage instance running in the same process.
+// //      * This is not network-aware.  Network sync is handled by the Syncer class.
+// //      */
+// //     sync(otherStore: IStorageOldd, opts?: SyncOptsOldd): SyncResults;
+// // 
+// //     // TODO: Delete data locally.  This deletion will not propagate.
+// //     // forget(query : QueryOpts) : void;  // same query options as paths()
+// // 
+// //     /**
+// //      * Close this storage.
+// //      * 
+// //      * All Storage functions called after this will throw a StorageIsClosedError
+// //      * except for close(), deleteAndClose(), and isClosed().
+// //      * 
+// //      * You can call close() multiple times.
+// //      * Once closed, a Storage instance cannot be opened again.
+// //      * 
+// //      * TODO: what happens when a long-running process like a sync is happening, and the Storage is closed?
+// //      */
+// //     close() : void;
+// //     /** Find out if the storage is closed. */
+// //     isClosed() : boolean;
+// // 
+// //     /**
+// //      * Close the storage and delete the data locally.
+// //      * This deletion will not propagate to other peers and pubs.
+// //      * This can be called even if the storage is already closed.
+// //      */
+// //     deleteAndClose(): void;
+// // }

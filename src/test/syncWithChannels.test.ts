@@ -19,16 +19,16 @@ import {
 import { ValidatorEs4 } from '../validator/es4';
 
 import {
-    IStorage3,
-    IStorage3Async,
+    IStorage,
+    IStorageAsync,
 } from '../storage/storageTypes';
 import {
-    Query3,
-    Query3ForForget,
+    Query,
+    QueryForForget,
     sortPathAscAuthorAsc,
 } from '../storage/query';
 import {
-    Storage3Memory
+    StorageMemory
 } from '../storage/storageMemory';
 import {
     localPush,
@@ -38,7 +38,7 @@ import {
     Fingerprint,
     incrementalSync,
 } from '../sync/syncWithChannels';
-import { Storage3ToAsync } from '../storage/storageToAsync';
+import { StorageToAsync } from '../storage/storageToAsync';
 
 //================================================================================
 // prepare for test scenarios
@@ -72,25 +72,25 @@ let DAY = HOUR * 24;
 let SNOWMAN = '☃';  // \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 
 interface Scenario {
-    makeStorage: (workspace : string) => IStorage3 | IStorage3Async,
+    makeStorage: (workspace : string) => IStorage | IStorageAsync,
     description: string,
 }
 let scenarios : Scenario[] = [
     //{
-    //    makeStorage: (workspace : string) : IStorage3 => {
-    //        let storage = new Storage3Memory(VALIDATORS, workspace);
+    //    makeStorage: (workspace : string) : IStorage => {
+    //        let storage = new StorageMemory(VALIDATORS, workspace);
     //        storage._now = now;
     //        return storage;
     //    },
-    //    description: "Storage3Memory",
+    //    description: "StorageMemory",
     //},
     {
-        makeStorage: (workspace : string) : IStorage3Async => {
-            let storage = new Storage3ToAsync(new Storage3Memory(VALIDATORS, workspace), 50);
+        makeStorage: (workspace : string) : IStorageAsync => {
+            let storage = new StorageToAsync(new StorageMemory(VALIDATORS, workspace), 50);
             storage._now = now;
             return storage;
         },
-        description: "Async'd Storage3Memory",
+        description: "Async'd StorageMemory",
     },
 ];
 

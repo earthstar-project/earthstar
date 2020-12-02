@@ -12,7 +12,7 @@ import {
 import {
     Emitter
 } from '../util/emitter';
-import { IStorage3 } from '../storage/storageTypes';
+import { IStorage } from '../storage/storageTypes';
 import { sleep } from '../util/helpers';
 
 //================================================================================
@@ -81,13 +81,13 @@ export class OnePubOneWorkspaceSyncer {
     // Streams won't run at the same time as bulk syncing, but this is handled internally
     // for you and you don't need to worry about it.  They'll resume when the bulk sync is over.
 
-    storage: IStorage3;
+    storage: IStorage;
     domain: string;
     pullStream: null | EventSource;
     unsubFromStorage: null | Thunk;
     state: SyncerState;
     onStateChange: Emitter<SyncerState>;
-    constructor(storage: IStorage3, domain: string) {
+    constructor(storage: IStorage, domain: string) {
         this.storage = storage;
         this.domain = ensureTrailingSlash(domain);
         this.pullStream = null;

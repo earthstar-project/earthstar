@@ -5,8 +5,8 @@ import {
     WorkspaceAddress,
 } from '../util/types';
 import {
-    Query3,
-    Query3ForForget,
+    Query,
+    QueryForForget,
     cleanUpQuery,
     documentIsExpired,
     queryMatchesDoc,
@@ -14,12 +14,12 @@ import {
     sortPathAscAuthorAsc,
 } from './query';
 import {
-    Storage3Base,
+    StorageBase,
 } from './storageBase';
 
 //================================================================================
 
-export class Storage3Memory extends Storage3Base {
+export class StorageMemory extends StorageBase {
     _docs: Record<string, Record<string, Document>> = {};  // { path: { author: document }}
     _config: Record<string, string> = {};
 
@@ -40,7 +40,7 @@ export class Storage3Memory extends Storage3Base {
         this._config = {};
     }
 
-    documents(q?: Query3): Document[] {
+    documents(q?: Query): Document[] {
         this._assertNotClosed();
         let query = cleanUpQuery(q || {});
 
@@ -156,7 +156,7 @@ export class Storage3Memory extends Storage3Base {
         }
     }
 
-    forgetDocuments(q: Query3ForForget): void {
+    forgetDocuments(q: QueryForForget): void {
         this._assertNotClosed();
         let query = cleanUpQuery(q);
         if (query.limit === 0 || query.limitBytes === 0) { return; }

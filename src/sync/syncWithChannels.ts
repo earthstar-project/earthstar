@@ -11,15 +11,15 @@ import {
     SyncResults,
 } from '../util/types';
 import {
-    Query3,
+    Query,
 } from '../storage/query';
 import {
-    IStorage3Async,
-    IStorage3,
+    IStorageAsync,
+    IStorage,
 } from '../storage/storageTypes';
 
-import { Storage3ToAsync } from '../storage/storageToAsync';
-import { Storage3Memory } from '../storage/storageMemory';
+import { StorageToAsync } from '../storage/storageToAsync';
+import { StorageMemory } from '../storage/storageMemory';
 import { ValidatorEs4 } from '../validator/es4';
 
 let logSyncMain     = (msg: string) => console.log(chalk.whiteBright(msg));
@@ -220,7 +220,7 @@ let chanForEach = async <T>(name: string, inChan: Chan<T | null>, fn: (t: T) => 
  * all the way through the documents.  The caller, by setting a limit in the query,
  * decides the batch size of the queries.
  */
-let localQueryToChan = async (name: string, storage: IStorage3Async | IStorage3, query: Query3, outChan: Chan<Document | null>): Promise<void> => {
+let localQueryToChan = async (name: string, storage: IStorageAsync | IStorage, query: Query, outChan: Chan<Document | null>): Promise<void> => {
     logSyncThread(`${name} localQueryToChan: starting`);
     let docs: Document[] = [];
     while (true) {
@@ -288,7 +288,7 @@ let fingerprintNewestFirst = ([path, author, timestamp, signature]: Fingerprint)
 }
 
 // given a fingerprint, look up the matching doc
-let lookUpFingerprint = async (storage: IStorage3Async | IStorage3, f: Fingerprint): Promise<Document | undefined> => {
+let lookUpFingerprint = async (storage: IStorageAsync | IStorage, f: Fingerprint): Promise<Document | undefined> => {
     let [path, author, timestamp, signature] = f;
     let docs = await storage.documents({ path, author, history: 'all', limit: 1 });
     if (docs.length === 0) { return undefined; }
@@ -354,7 +354,7 @@ let sortFingerprintsToPushAndPull = async (name: string, inChan: Chan<[Fingerpri
  * Do a complete sync, then return stats about how many documents were sent in each direction.
  */
 // TODO: how to cancel this when it's in-progress?
-export let incrementalSync = async (storage1: IStorage3Async | IStorage3, storage2: IStorage3Async | IStorage3): Promise<SyncResults> => {
+export let incrementalSync = async (storage1: IStorageAsync | IStorage, storage2: IStorageAsync | IStorage): Promise<SyncResults> => {
     logSyncMain(`== incrementalSync: starting.  workspace = ${storage1.workspace}`);
 
     /*

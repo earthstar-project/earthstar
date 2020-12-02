@@ -7,7 +7,7 @@ import {
     WorkspaceAddress,
     WriteResult,
 } from '../util/types';
-import { Query3, Query3ForForget, Query3NoLimitBytes } from './query';
+import { Query, QueryForForget, QueryNoLimitBytes } from './query';
 import { Emitter } from '../util/emitter';
 
 //================================================================================
@@ -15,7 +15,7 @@ import { Emitter } from '../util/emitter';
 /**
  * The event your callback gets when you subscribe to IStorage.onWrite.subscribe(callback).
  */
-export type WriteEvent3 = {
+export type WriteEvent = {
     kind: 'DOCUMENT_WRITE',
     /** The new version of the document that was written. */
     document: Document,
@@ -28,7 +28,7 @@ export type WriteEvent3 = {
 }
 
 /**
- * An IStorage3 instance holds the documents of a single workspace
+ * An IStorage instance holds the documents of a single workspace
  * in some kind of local storage (memory, a database, etc).
  *
  * To construct an IStorage, you need to supply
@@ -39,7 +39,7 @@ export type WriteEvent3 = {
  * Any document objects touched by the IStorage (both inputs and outputs)
  * are immutable and will be frozen with Object.freeze().
  * 
- * There is a base class (Storage3Base) that should be subclassed
+ * There is a base class (StorageBase) that should be subclassed
  * for each storage backend (memory, localStorage, etc).
  * Methods marked "override" are the core functionality
  * and must be implemented by the subclasses.
@@ -47,13 +47,13 @@ export type WriteEvent3 = {
  * using the core functions, but can be overridden if a storage backend has
  * a more efficient way of doing it.
  */
-export interface IStorage3 {
+export interface IStorage {
     readonly workspace : WorkspaceAddress;
     readonly sessionId: string;  // gets a new random value every time the program runs
     _now: number | null;  // used for testing time behavior.  is used instead of Date.now().  normally null.
 
     // EVENTS
-    onWrite: Emitter<WriteEvent3>;  // fired synchronously just after each document write
+    onWrite: Emitter<WriteEvent>;  // fired synchronously just after each document write
     onWillClose: Emitter<undefined>;  // fired synchronously at the beginning of close()
     onDidClose: Emitter<undefined>;  // fired synchronously at the end of close()
 
@@ -64,9 +64,9 @@ export interface IStorage3 {
     deleteAllConfig(): void;  // override
 
     // GET DATA OUT
-    documents(query?: Query3): Document[];  // override
-    contents(query?: Query3): string[];
-    paths(query?: Query3NoLimitBytes): string[];
+    documents(query?: Query): Document[];  // override
+    contents(query?: Query): string[];
+    paths(query?: QueryNoLimitBytes): string[];
     authors(): AuthorAddress[];
     getDocument(path: string): Document | undefined;
     getContent(path: string): string | undefined;
@@ -77,7 +77,7 @@ export interface IStorage3 {
     set(keypair: AuthorKeypair, docToSet: DocToSet): WriteResult | ValidationError;
 
     // REMOVE DATA
-    forgetDocuments(query: Query3ForForget): void;  // override
+    forgetDocuments(query: QueryForForget): void;  // override
     discardExpiredDocuments(): void;  // override
 
     // CLOSE
@@ -86,13 +86,13 @@ export interface IStorage3 {
     close(opts?: { delete: boolean }): void;
 }
 
-export interface IStorage3Async {
+export interface IStorageAsync {
     readonly workspace : WorkspaceAddress;
     readonly sessionId: string;  // gets a new random value every time the program runs
     _now: number | null;  // used for testing time behavior.  is used instead of Date.now().  normally null.
 
     // EVENTS
-    onWrite: Emitter<WriteEvent3>;  // fired synchronously just after each document write
+    onWrite: Emitter<WriteEvent>;  // fired synchronously just after each document write
     onWillClose: Emitter<undefined>;  // fired synchronously at the beginning of close()
     onDidClose: Emitter<undefined>;  // fired synchronously at the end of close()
 
@@ -103,9 +103,9 @@ export interface IStorage3Async {
     deleteAllConfig(): Promise<void>;  // override
 
     // GET DATA OUT
-    documents(query?: Query3): Promise<Document[]>;  // override
-    contents(query?: Query3): Promise<string[]>;
-    paths(query?: Query3NoLimitBytes): Promise<string[]>;
+    documents(query?: Query): Promise<Document[]>;  // override
+    contents(query?: Query): Promise<string[]>;
+    paths(query?: QueryNoLimitBytes): Promise<string[]>;
     authors(): Promise<AuthorAddress[]>;
     getDocument(path: string): Promise<Document | undefined>;
     getContent(path: string): Promise<string | undefined>;
@@ -116,7 +116,7 @@ export interface IStorage3Async {
     set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<WriteResult | ValidationError>;
 
     // REMOVE DATA
-    forgetDocuments(query: Query3ForForget): Promise<void>;  // override
+    forgetDocuments(query: QueryForForget): Promise<void>;  // override
     discardExpiredDocuments(): Promise<void>;  // override
 
     // CLOSE
