@@ -4,7 +4,7 @@ import {
     isErr,
 } from './index';  // this import would normally be from 'earthstar';
 import { StorageMemory } from './storage/storageMemory';
-import { localSync } from './sync/syncLocal';
+import { syncLocal } from './sync/syncLocal';
 
 // Create a database for a particular workspace, '+gardening.xxxxxxxx'
 // We've chosen to use the latest 'es.4' feed format so we supply the matching validator.
@@ -84,7 +84,7 @@ storage.paths({ pathPrefix: '/wiki/', limit: 100,  })
 
 // You can sync to another Storage that has the same workspace address
 let storage2 = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');
-localSync(storage, storage2);
+syncLocal(storage, storage2);
 // Now storage and storage2 are identical.
 
 // Get notified when anything changes.

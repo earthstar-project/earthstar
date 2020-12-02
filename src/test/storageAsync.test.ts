@@ -36,10 +36,10 @@ import {
     StorageMemory
 } from '../storage/storageMemory';
 import {
-    localPush,
-    localPushAsync,
-    localSync,
-    localSyncAsync,
+    pushLocal,
+    pushLocalAsync,
+    syncLocal,
+    syncLocalAsync,
 } from '../sync/syncLocal';
 import { uniq, sorted, sleep } from '../util/helpers';
 import { StorageSqlite } from '../storage/storageSqlite';
@@ -1440,7 +1440,7 @@ for (let scenario of scenarios) {
         t.same(await storage1.set(keypair2, {format: FORMAT, path: '/path1', content: 'two', timestamp: now + 1}), WriteResult.Accepted, 'author2 set path1');
 
         // sync
-        let syncResults = await localSyncAsync(storage1, storage2);
+        let syncResults = await syncLocalAsync(storage1, storage2);
         t.same(syncResults, { numPushed: 4, numPulled: 0 }, 'pushed 4 docs (includes history docs).  pulled 0.');
 
         // check results
@@ -1455,7 +1455,7 @@ for (let scenario of scenarios) {
         t.same(await storage2.contents({ history: 'all'    }), ['aaa', 'zzz', 'one', 'two'], 'contents with history are as expected');
 
         // sync again.  nothing should happen.
-        let syncResults2 = await localSyncAsync(storage1, storage2);
+        let syncResults2 = await syncLocalAsync(storage1, storage2);
         t.same(syncResults2, { numPushed: 0, numPulled: 0 }, 'nothing happens if syncing again');
 
         await storage1.close();
@@ -1484,7 +1484,7 @@ for (let scenario of scenarios) {
         t.same(await storage2.set(keypair2, {format: FORMAT, path: '/authorConflict', content: 'author2storage3', timestamp: now + 1}), WriteResult.Accepted);  // winner  (pull 2)
 
         // sync
-        let syncResults = await localSyncAsync(storage1, storage2);
+        let syncResults = await syncLocalAsync(storage1, storage2);
         t.same(syncResults, { numPushed: 6, numPulled: 2 }, 'pushed 6 docs, pulled 2 (including history)');
 
         t.equal((await storage1.paths()).length, 6, '6 paths');
@@ -1515,8 +1515,8 @@ for (let scenario of scenarios) {
         t.same(await storageA2.set(keypair1, {format: FORMAT, path: '/a2', content: 'a2'}), WriteResult.Accepted);
         t.same(await storageB.set(keypair1, {format: FORMAT, path: '/b', content: 'b'}), WriteResult.Accepted);
 
-        t.same(await localSyncAsync(storageA1, storageB),  { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
-        t.same(await localSyncAsync(storageA1, storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
+        t.same(await syncLocalAsync(storageA1, storageB),  { numPulled: 0, numPushed: 0}, 'sync across different workspaces should do nothing');
+        t.same(await syncLocalAsync(storageA1, storageA2), { numPulled: 1, numPushed: 1}, 'sync across matching workspaces should do something');
 
         await storageA1.close();
         await storageA2.close();
@@ -1533,18 +1533,18 @@ for (let scenario of scenarios) {
         t.same(await storage.set(keypair1, {format: FORMAT, path: '/foo', content: 'bar'}), WriteResult.Accepted);
 
         // sync with empty stores
-        t.same(await localSyncAsync( storageEmpty1, storageEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
-        t.same(await localPushAsync( storageEmpty1, storageEmpty2), 0, 'push with empty stores');
-        t.same(await localPushAsync( storageEmpty1, storage      ), 0, 'push from empty to full store');
+        t.same(await syncLocalAsync( storageEmpty1, storageEmpty2), { numPushed: 0, numPulled: 0 }, 'sync with empty stores');
+        t.same(await pushLocalAsync( storageEmpty1, storageEmpty2), 0, 'push with empty stores');
+        t.same(await pushLocalAsync( storageEmpty1, storage      ), 0, 'push from empty to full store');
 
         // sync with self
-        t.same(await localSyncAsync(storage, storage), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
+        t.same(await syncLocalAsync(storage, storage), { numPushed: 0, numPulled: 0 }, 'sync with self should do nothing');
 
         // successful sync
-        t.same(await localSyncAsync(storage, storageEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
-        t.same(await localSyncAsync(storageEmpty2, storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
+        t.same(await syncLocalAsync(storage, storageEmpty1), { numPushed: 1, numPulled: 0 }, 'successful sync (push)');
+        t.same(await syncLocalAsync(storageEmpty2, storage), { numPushed: 0, numPulled: 1 }, 'successful sync (pull)');
 
-        t.same(await localPushAsync(storage, storageEmpty3), 1, 'successful push');
+        t.same(await pushLocalAsync(storage, storageEmpty3), 1, 'successful push');
 
         await storageEmpty1.close();
         await storageEmpty2.close();
@@ -1626,13 +1626,13 @@ for (let scenario of scenarios) {
 
         // old write from same author, synced and ignored
         t.same(await storage2.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1-9', timestamp: now - 9}), WriteResult.Accepted, '=== old write from keypair1, synced');
-        await localPushAsync(storage2, storage);
+        await pushLocalAsync(storage2, storage);
         t.same(events.length, 3, 'no event happens because nothing happened in the sync');
         t.same(await storage.getContent('/path1'), 'val2+3', 'content is unchanged');
 
         // new write from same author, synced and used
         t.same(await storage3.set(keypair1, {format: FORMAT, path: '/path1', content: 'val1+9', timestamp: now + 9}), WriteResult.Accepted, '=== new write from same author, synced');
-        await localPushAsync(storage3, storage);
+        await pushLocalAsync(storage3, storage);
         t.same(events.length, 4, 'sync caused an event');
         t.same(await storage.getContent('/path1'), 'val1+9', 'content changed after a sync');
         t.same(events[events.length-1].document.content, 'val1+9', 'event has corrent content');
@@ -1643,7 +1643,7 @@ for (let scenario of scenarios) {
         // a write from keypair2 which is synced but not a head
         // (it's a new latest doc for keypair2, but not a new latest doc overall for this path)
         t.same(await storage4.set(keypair2, {format: FORMAT, path: '/path1', content: 'val2+5', timestamp: now + 5}), WriteResult.Accepted, '=== a write into history, synced');
-        let numSynced = await localPushAsync(storage4, storage);
+        let numSynced = await pushLocalAsync(storage4, storage);
         t.same(numSynced, 1, 'it was synced');
         t.same(await storage.getContent('/path1'), 'val1+9', '(latest) content did not change');
         t.same(events.length, 5, 'an event happens');

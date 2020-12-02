@@ -11,7 +11,7 @@ import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/storageMemory';
 import { StorageSqlite } from '../storage/storageSqlite';
 import { IStorage } from '../storage/storageTypes';
-import { localSync } from '../sync/syncLocal';
+import { syncLocal } from '../sync/syncLocal';
 
 //================================================================================
 // prepare for test scenarios
@@ -155,12 +155,12 @@ let main = () => {
 
             let storageSyncToMe = scenario.makeStorage(WORKSPACE);
             runner.runOnce(`sync ${n} docs to empty storage (each)`, {actualIters: n}, () => {
-                localSync(storageAdd, storageSyncToMe);
+                syncLocal(storageAdd, storageSyncToMe);
             });
             gc();
 
             runner.runOnce(`sync ${n} docs to full storage (each)`, {actualIters: n}, () => {
-                localSync(storageAdd, storageSyncToMe);
+                syncLocal(storageAdd, storageSyncToMe);
             });
 
             runner.note('');

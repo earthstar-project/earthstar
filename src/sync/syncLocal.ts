@@ -16,7 +16,7 @@ import {
  * 
  * Returns the number of docs successfully pushed (e.g. WriteResult.Accepted)
  */
-export let localPush = (storageA: IStorage, storageB: IStorage): number => {
+export let pushLocal = (storageA: IStorage, storageB: IStorage): number => {
     // return number of docs successfully pushed
 
     // don't sync with yourself
@@ -32,7 +32,7 @@ export let localPush = (storageA: IStorage, storageB: IStorage): number => {
     }
     return numSuccess;
 }
-export let localPushAsync = async (storageA: IStorage | IStorageAsync, storageB: IStorage | IStorageAsync): Promise<number> => {
+export let pushLocalAsync = async (storageA: IStorage | IStorageAsync, storageB: IStorage | IStorageAsync): Promise<number> => {
     // return number of docs successfully pushed
 
     // don't sync with yourself
@@ -59,15 +59,15 @@ export let localPushAsync = async (storageA: IStorage | IStorageAsync, storageB:
  *
  * Returns the number of docs successfully pushed (e.g. WriteResult.Accepted)
  */
-export let localSync = (storageA: IStorage, storageB: IStorage): SyncResults => {
+export let syncLocal = (storageA: IStorage, storageB: IStorage): SyncResults => {
     return {
-        numPushed: localPush(storageA, storageB),
-        numPulled: localPush(storageB, storageA),
+        numPushed: pushLocal(storageA, storageB),
+        numPulled: pushLocal(storageB, storageA),
     }
 }
-export let localSyncAsync = async (storageA: IStorage | IStorageAsync, storageB: IStorage | IStorageAsync): Promise<SyncResults> => {
+export let syncLocalAsync = async (storageA: IStorage | IStorageAsync, storageB: IStorage | IStorageAsync): Promise<SyncResults> => {
     return {
-        numPushed: await localPushAsync(storageA, storageB),
-        numPulled: await localPushAsync(storageB, storageA),
+        numPushed: await pushLocalAsync(storageA, storageB),
+        numPulled: await pushLocalAsync(storageB, storageA),
     }
 }

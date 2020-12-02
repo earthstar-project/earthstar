@@ -31,8 +31,8 @@ import {
     StorageMemory
 } from '../storage/storageMemory';
 import {
-    localPush,
-    localSync,
+    pushLocal,
+    syncLocal,
 } from '../sync/syncLocal';
 import {
     Fingerprint,
