@@ -182,7 +182,7 @@ t.test(`Async'd StorageMemory: constructor`, (t: any) => {
 //================================================================================
 // sqlite specific constructor tests
 
-t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
+t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
     let fn: string;
     let clearFn = (fn: string) => {
         if (fs.existsSync(fn)) { fs.unlinkSync(fn); }

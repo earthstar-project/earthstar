@@ -557,9 +557,14 @@ export class StorageSqlite extends StorageBase {
 
     _close(opts: { delete: boolean }): void {
         logDebug(`sqlite\._close() with delete = ${opts.delete}`);
-        this.db.close();
+        // close the database.
+        // this might still be null if the constructor fails and calls close()
+        // before ever making a database, for example if the given file path is missing
+        if (this.db) {
+            this.db.close();
+        }
+        // delete the sqlite file
         if (opts.delete === true && this._filename !== ':memory:') {
-            // delete the sqlite file
             if (fs.existsSync(this._filename)) {
                 fs.unlinkSync(this._filename);
             }
