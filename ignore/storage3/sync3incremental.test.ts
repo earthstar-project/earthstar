@@ -13,29 +13,29 @@ import {
     WriteResult,
     isErr,
     notErr,
-} from '../util/types';
+} from '../../src/util/types';
 import {
     generateAuthorKeypair,
     sha256base32,
-} from '../crypto/crypto';
-import { ValidatorEs4 } from '../validator/es4';
+} from '../../src/crypto/crypto';
+import { ValidatorEs4 } from '../../src/validator/es4';
 
 import {
     IStorage3,
     WriteEvent3,
-} from '../storage3/types3';
+} from '../../src/storage3/types3';
 import {
     Query3,
     Query3ForForget,
     sortPathAscAuthorAsc,
-} from '../storage3/query3';
+} from '../../src/storage3/query3';
 import {
     Storage3Memory
-} from '../storage3/storage3Memory';
+} from '../../src/storage3/storage3Memory';
 import {
     localPush,
     localSync,
-} from '../storage3/sync3local';
+} from '../../src/storage3/sync3local';
 import {
     Fingerprint,
     docToFingerprintIterator,
@@ -44,10 +44,10 @@ import {
     zipperToAction,
     lookupFingerprint,
     PushBuffer,
-} from '../storage3/sync3incremental';
-import { uniq, sorted } from '../util/helpers';
-import { Storage3Sqlite } from '../storage3/storage3Sqlite';
-import { logTest } from '../util/log';
+} from './sync3incremental';
+import { uniq, sorted } from '../../src/util/helpers';
+import { Storage3Sqlite } from '../../src/storage3/storage3Sqlite';
+import { logTest } from '../../src/util/log';
 
 //================================================================================
 // prepare for test scenarios

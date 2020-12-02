@@ -421,12 +421,6 @@ t.only(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         storage.close();
     }, 'constructor throws with unrecognized mode');
 
-
-
-
-
-    // TODO: copy over more sqlite3 init tests from storage.test.ts
-
     t.end();
 });
 

@@ -6,18 +6,18 @@ import {
     Path,
     WriteResult,
     isErr,
-} from '../util/types';
+} from '../../src/util/types';
 import {
     IStorage3,
-} from './types3';
+} from '../../src/storage3/types3';
 import {
     Query3,
-} from './query3';
-import { Storage3Memory } from './storage3Memory';
-import { ValidatorEs4 } from '../validator/es4';
-import { logDebug } from '../util/log';
-import { sleep } from '../util/helpers';
-import { Storage3Base } from './storage3Base';
+} from '../../src/storage3/query3';
+import { Storage3Memory } from '../../src/storage3/storage3Memory';
+import { ValidatorEs4 } from '../../src/validator/es4';
+import { logDebug } from '../../src/util/log';
+import { sleep } from '../../src/util/helpers';
+import { Storage3Base } from '../../src/storage3/storage3Base';
 
 //================================================================================
 

@@ -6,14 +6,14 @@ import {
     NetworkError,
     Path,
     WriteResult,
-} from '../util/types';
+} from '../../src/util/types';
 import {
     IStorage3,
-} from './types3';
+} from '../../src/storage3/types3';
 import {
     Query3,
-} from './query3';
-import { logDebug } from '../util/log';
+} from '../../src/storage3/query3';
+import { logDebug } from '../../src/util/log';
 
 //================================================================================
 
