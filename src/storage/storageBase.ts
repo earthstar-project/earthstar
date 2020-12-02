@@ -15,12 +15,12 @@ import {
 import {
     IStorage3,
     WriteEvent3,
-} from './types3';
-import { Query3, Query3ForForget, Query3NoLimitBytes } from './query3';
+} from './storageTypes';
+import { Query3, Query3ForForget, Query3NoLimitBytes } from './query';
 import { Emitter } from '../util/emitter';
 import { uniq, sorted } from '../util/helpers';
 import { sha256base32 } from '../crypto/crypto';
-import { cleanUpQuery } from '../storage3/query3';
+import { cleanUpQuery } from './query';
 
 export abstract class Storage3Base implements IStorage3 {
     workspace : WorkspaceAddress;

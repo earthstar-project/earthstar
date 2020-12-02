@@ -12,14 +12,14 @@ import {
 } from '../util/types';
 import {
     Query3,
-} from './query3';
+} from '../storage/query';
 import {
     IStorage3Async,
     IStorage3,
-} from './types3';
+} from '../storage/storageTypes';
 
-import { Storage3ToAsync } from './storage3toasync';
-import { Storage3Memory } from './storage3Memory';
+import { Storage3ToAsync } from '../storage/storageToAsync';
+import { Storage3Memory } from '../storage/storageMemory';
 import { ValidatorEs4 } from '../validator/es4';
 
 let logSyncMain     = (msg: string) => console.log(chalk.whiteBright(msg));

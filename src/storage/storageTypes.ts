@@ -5,10 +5,9 @@ import {
     Document,
     ValidationError,
     WorkspaceAddress,
-    WriteEvent,
     WriteResult,
 } from '../util/types';
-import { Query3, Query3ForForget, Query3NoLimitBytes } from './query3';
+import { Query3, Query3ForForget, Query3NoLimitBytes } from './query';
 import { Emitter } from '../util/emitter';
 
 //================================================================================

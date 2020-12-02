@@ -9,11 +9,8 @@ export let range = (n : number) : number[] =>
 export let stringMult = (str : string, n : number) : string =>
     range(n).map(x => str).join('')
 
-export let sleep = async (ms : number) : Promise<void> => {
-    return new Promise((resolve, reject) => {
-        setTimeout(resolve, ms);
-    });
-}
+export let sleep = async (ms : number) : Promise<void> =>
+    new Promise((resolve, reject) => setTimeout(resolve, ms) );
 
 export let uniq = (items: string[]) : string[] => {
     let map : Record<string, boolean> = {};

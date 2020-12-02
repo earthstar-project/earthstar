@@ -16,10 +16,10 @@ import {
     sha256base32,
 } from '../crypto/crypto';
 import { ValidatorEs4 } from '../validator/es4';
-import { Storage3Memory } from '../storage3/storage3Memory';
-import { Storage3Sqlite } from '../storage3/storage3Sqlite';
-import { IStorage3 } from '../storage3/types3';
-import { localSync } from '../storage3/sync3local';
+import { Storage3Memory } from '../storage/storageMemory';
+import { Storage3Sqlite } from '../storage/storageSqlite';
+import { IStorage3 } from '../storage/storageTypes';
+import { localSync } from '../sync/syncLocal';
 
 //================================================================================
 // prepare for test scenarios

@@ -5,14 +5,12 @@ import {
     ValidationError,
     isErr,
 } from '../util/types';
-import { AsyncResource } from 'async_hooks';
+import { sleep } from '../util/helpers';
 
 
 let logMain = (...args : any[]) => console.log('--MAIN: ', ...args);
 let logCaller = (...args : any[]) => console.log('------CALLER: ', ...args);
 let logEvaluator = (...args : any[]) => console.log('----------EVALUATOR: ', ...args);
-let sleep = async (ms : number) : Promise<void> =>
-    new Promise((resolve, reject) => setTimeout(resolve, ms));
 
 //================================================================================
 // TYPES

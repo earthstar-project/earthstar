@@ -4,7 +4,7 @@ import {
 } from '../util/types';
 import {
     IStorage3, IStorage3Async,
-} from './types3';
+} from '../storage/storageTypes';
 
 /**
  * Push all documents from storageA to storageB.

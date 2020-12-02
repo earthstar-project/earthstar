@@ -11,15 +11,15 @@ import {
 } from '../crypto/crypto';
 import {
     Storage3Memory,
-} from '../storage3/storage3Memory';
+} from '../storage/storageMemory';
 import {
     ValidatorEs4,
 } from '../validator/es4';
 import {
     SyncState,
     Syncer1,
-} from '../syncer1';
-import { IStorage3 } from '../storage3/types3';
+} from '../sync/syncer1';
+import { IStorage3 } from '../storage/storageTypes';
 
 //================================================================================
 // prepare for test scenarios

@@ -1,7 +1,7 @@
 import * as mb from 'multibase';
 import crypto = require('crypto');
 //import base32 = require('base32.js');
-import { digits } from '../util/characters';
+import { digits } from '../src/util/characters';
 
 let log = console.log;
 

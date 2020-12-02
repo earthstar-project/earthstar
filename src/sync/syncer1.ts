@@ -2,17 +2,12 @@ import fetch from 'isomorphic-fetch';
 import {
     WorkspaceAddress,
     WriteResult,
-} from './util/types';
+} from '../util/types';
 import {
     Emitter
-} from './util/emitter';
-import { IStorage3 } from './storage3/types3';
-
-let sleep = async (ms : number) : Promise<void> => {
-    return new Promise((resolve, reject) => {
-        setTimeout(resolve, ms);
-    });
-}
+} from '../util/emitter';
+import { IStorage3 } from '../storage/storageTypes';
+import { sleep } from '../util/helpers';
 
 // sync states
 //  idle      sync has not been attempted since page load

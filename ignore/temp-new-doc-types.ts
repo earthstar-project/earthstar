@@ -5,7 +5,7 @@ import {
     Path,
     EncodedSig,
     WorkspaceAddress,
-} from '../util/types';
+} from '../src/util/types';
 import {
     authorAddressChars,
     alphaLower,
@@ -15,13 +15,13 @@ import {
     pathChars,
     printableAscii,
     workspaceAddressChars,
-} from '../util/characters';
+} from '../src/util/characters';
 import {
     CheckerSchema,
     checkInt,
     checkObj,
     checkString,
-} from '../util/checkers';
+} from '../src/util/checkers';
 let log = console.log;
 
 // ================================================================================

@@ -1,5 +1,5 @@
-import { WorkspaceAddress, AuthorKeypair } from '../util/types';
-import { IStorage3 } from '../storage3/types3';
+import { WorkspaceAddress, AuthorKeypair } from '../src/util/types';
+import { IStorage3 } from '../src/storage/storageTypes';
 
 // an experiment, deciding which is better:
 

@@ -8,11 +8,12 @@ import {
     WorkspaceAddress,
     WriteResult,
     isErr,
-} from './util/types';
+} from '../util/types';
 import {
     Emitter
-} from './util/emitter';
-import { IStorage3 } from './storage3/types3';
+} from '../util/emitter';
+import { IStorage3 } from '../storage/storageTypes';
+import { sleep } from '../util/helpers';
 
 //================================================================================
 // HELPERS
@@ -23,9 +24,6 @@ let logPullStream = (...args : any[]) => console.log('  🌲  one pub:     PULL 
 let logPushStream = (...args : any[]) => console.log('  🌲  one pub:     PUSH STREAM | ', ...args);
 let logBulkPush = (...args : any[])   => console.log('  🌲  one pub:     BULK PUSH | ', ...args);
 let logBulkPull = (...args : any[])   => console.log('  🌲  one pub:     BULK PULL | ', ...args);
-
-let sleep = async (ms : number) : Promise<void> =>
-    new Promise((resolve, reject) => setTimeout(resolve, ms) );
 
 let ensureTrailingSlash = (url : string) : string =>
     // input is a URL with no path, like https://mypub.com or https://mypub.com/

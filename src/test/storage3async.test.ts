@@ -26,24 +26,24 @@ import {
     IStorage3,
     IStorage3Async,
     WriteEvent3,
-} from '../storage3/types3';
+} from '../storage/storageTypes';
 import {
     Query3,
     Query3ForForget,
     sortPathAscAuthorAsc,
-} from '../storage3/query3';
+} from '../storage/query';
 import {
     Storage3Memory
-} from '../storage3/storage3Memory';
+} from '../storage/storageMemory';
 import {
     localPush,
     localPushAsync,
     localSync,
     localSyncAsync,
-} from '../storage3/sync3local';
+} from '../sync/syncLocal';
 import { uniq, sorted, sleep } from '../util/helpers';
-import { Storage3Sqlite } from '../storage3/storage3Sqlite';
-import { Storage3ToAsync } from '../storage3/storage3toasync';
+import { Storage3Sqlite } from '../storage/storageSqlite';
+import { Storage3ToAsync } from '../storage/storageToAsync';
 
 //================================================================================
 // prepare for test scenarios

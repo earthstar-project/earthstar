@@ -1,8 +1,8 @@
 import debounce = require('lodash.debounce');
 import { IValidator, WorkspaceAddress } from '../util/types';
-import { WriteEvent3 } from './types3';
-import { Query3ForForget } from './query3';
-import { Storage3Memory } from './storage3Memory';
+import { WriteEvent3 } from './storageTypes';
+import { Query3ForForget } from './query';
+import { Storage3Memory } from './storageMemory';
 
 //================================================================================
 

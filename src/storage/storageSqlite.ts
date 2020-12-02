@@ -17,10 +17,10 @@ import {
     Query3,
     Query3ForForget,
     cleanUpQuery,
-} from './query3';
+} from './query';
 import {
     Storage3Base,
-} from './storage3Base';
+} from './storageBase';
 
 import { logDebug } from '../util/log';
 

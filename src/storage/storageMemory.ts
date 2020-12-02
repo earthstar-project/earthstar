@@ -12,10 +12,10 @@ import {
     queryMatchesDoc,
     sortLatestFirst,
     sortPathAscAuthorAsc,
-} from './query3';
+} from './query';
 import {
     Storage3Base,
-} from './storage3Base';
+} from './storageBase';
 
 //================================================================================
 

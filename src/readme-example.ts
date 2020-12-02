@@ -3,8 +3,8 @@ import {
     generateAuthorKeypair,
     isErr,
 } from './index';  // this import would normally be from 'earthstar';
-import { Storage3Memory } from './storage3/storage3Memory';
-import { localSync } from './storage3/sync3local';
+import { Storage3Memory } from './storage/storageMemory';
+import { localSync } from './sync/syncLocal';
 
 // Create a database for a particular workspace, '+gardening.xxxxxxxx'
 // We've chosen to use the latest 'es.4' feed format so we supply the matching validator.

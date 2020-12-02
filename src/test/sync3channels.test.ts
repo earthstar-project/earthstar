@@ -21,24 +21,24 @@ import { ValidatorEs4 } from '../validator/es4';
 import {
     IStorage3,
     IStorage3Async,
-} from '../storage3/types3';
+} from '../storage/storageTypes';
 import {
     Query3,
     Query3ForForget,
     sortPathAscAuthorAsc,
-} from '../storage3/query3';
+} from '../storage/query';
 import {
     Storage3Memory
-} from '../storage3/storage3Memory';
+} from '../storage/storageMemory';
 import {
     localPush,
     localSync,
-} from '../storage3/sync3local';
+} from '../sync/syncLocal';
 import {
     Fingerprint,
     incrementalSync,
-} from '../storage3/sync3channels';
-import { Storage3ToAsync } from '../storage3/storage3toasync';
+} from '../sync/syncWithChannels';
+import { Storage3ToAsync } from '../storage/storageToAsync';
 
 //================================================================================
 // prepare for test scenarios

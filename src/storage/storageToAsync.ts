@@ -12,12 +12,12 @@ import {
     Query3,
     Query3ForForget,
     Query3NoLimitBytes,
-} from './query3';
+} from './query';
 import {
     IStorage3,
     IStorage3Async,
     WriteEvent3,
-} from './types3';
+} from './storageTypes';
 import { Emitter } from '../util/emitter';
 
 /**

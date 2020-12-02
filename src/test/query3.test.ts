@@ -27,7 +27,7 @@ import {
     sortLatestFirst,
     sortPathAscAuthorAsc,
     validateQuery,
-} from '../storage3/query3';
+} from '../storage/query';
 
 //================================================================================
 // prepare for test scenarios
