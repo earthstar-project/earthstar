@@ -2,7 +2,6 @@ import fetch from 'isomorphic-fetch';
 import {
     ConnectionRefusedError,
     Document,
-    IStorage,
     NetworkError,
     NotFoundError,
     Thunk,
@@ -13,7 +12,7 @@ import {
 import {
     Emitter
 } from './util/emitter';
-
+import { IStorage3 } from './storage3/types3';
 
 //================================================================================
 // HELPERS
@@ -84,13 +83,13 @@ export class OnePubOneWorkspaceSyncer {
     // Streams won't run at the same time as bulk syncing, but this is handled internally
     // for you and you don't need to worry about it.  They'll resume when the bulk sync is over.
 
-    storage: IStorage;
+    storage: IStorage3;
     domain: string;
     pullStream: null | EventSource;
     unsubFromStorage: null | Thunk;
     state: SyncerState;
     onStateChange: Emitter<SyncerState>;
-    constructor(storage: IStorage, domain: string) {
+    constructor(storage: IStorage3, domain: string) {
         this.storage = storage;
         this.domain = ensureTrailingSlash(domain);
         this.pullStream = null;
@@ -188,7 +187,7 @@ export class OnePubOneWorkspaceSyncer {
             if (e.data === 'KEEPALIVE') { return; }
             try {
                 let doc: Document = JSON.parse(e.data);
-                let result = this.storage.ingestDocument(doc)
+                let result = this.storage.ingestDocument(doc, "TODO: session id")
                 if (isErr(result)) {
                     logPullStream('    write failed: ', result.name, result.message);
                 } else {
@@ -224,7 +223,7 @@ export class OnePubOneWorkspaceSyncer {
         try {
             resp = await fetch(url, {
                 method: 'post',
-                body:    JSON.stringify(this.storage.documents({ includeHistory: true })),
+                body:    JSON.stringify(this.storage.documents({ history: 'all' })),
                 headers: { 'Content-Type': 'application/json' },
             });
         } catch (e) {
@@ -267,7 +266,7 @@ export class OnePubOneWorkspaceSyncer {
 
         await sleep(150);
 
-        stats = await this._pushDocs(url, this.storage.documents({ includeHistory: true }));
+        stats = await this._pushDocs(url, this.storage.documents({ history: 'all' }));
 
         this.state.isBulkPushing = false;
         this.state.lastCompletedBulkPush = Date.now() * 1000;
@@ -338,7 +337,7 @@ export class OnePubOneWorkspaceSyncer {
         let docs = await resp.json();
         stats.numTotal = docs.length;
         for (let doc of docs) {
-            if (this.storage.ingestDocument(doc) === WriteResult.Accepted) { stats.numIngested += 1; }
+            if (this.storage.ingestDocument(doc, "TODO: session id") === WriteResult.Accepted) { stats.numIngested += 1; }
             else { stats.numIgnored += 1; }
         }
         logBulkPull(JSON.stringify(stats, null, 2));

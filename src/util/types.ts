@@ -203,7 +203,7 @@ export type DocToSet = {
  * Each of the following properties adds an additional filter,
  * narrowing down the results further.
  */
-export interface QueryOpts {
+export interface QueryOptsOldd {
     /** Match one specific path only. */
     path?: string,
 
@@ -269,7 +269,7 @@ export interface QueryOpts {
 // SYNCING
 
 /** Options for the IStorage.sync() method */
-export interface SyncOpts {
+export interface SyncOptsOldd {
     direction?: 'push' | 'pull' | 'both',  // default both
 
     // Sync existing documents?  Defaults to true.
@@ -407,7 +407,7 @@ export type WriteEvent = {
  *   The IStorage instance may call Object.freeze() on document objects in both
  *   of the above cases, to enforce this.
  */
-export interface IStorage {
+export interface IStorageOldd {
 
     /** The workspace address held in this Storage object. */
     workspace: WorkspaceAddress;
@@ -434,11 +434,11 @@ export interface IStorage {
      * Default sort is path ASC, then timestamp DESC (newest first within same path)
      *  but query objects will eventually include sort options.
      */
-    documents(query?: QueryOpts): Document[];
+    documents(query?: QueryOptsOldd): Document[];
     /** Same as documents(), but only return the distinct paths of the matching documents (duplicates removed). */
-    paths(query?: QueryOpts): string[];
+    paths(query?: QueryOptsOldd): string[];
     /** Same as documents(), but only return the content properties of the matching documents. */
-    contents(query?: QueryOpts): string[];
+    contents(query?: QueryOptsOldd): string[];
 
     /** List of authors that have ever written in this workspace. */
     authors(now?: number): AuthorAddress[];
@@ -498,7 +498,7 @@ export interface IStorage {
     ingestDocument(doc: Document, now?: number, isLocal?: boolean): WriteResult | ValidationError;
 
     /** Internal helper method to do a one-way pull sync. */
-    _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;
+    _syncFrom(otherStore: IStorageOldd, existing: boolean, live: boolean): number;
 
     // TODO: add now? param to _syncFrom and sync
 
@@ -506,7 +506,7 @@ export interface IStorage {
      * Two-way sync to another local Storage instance running in the same process.
      * This is not network-aware.  Network sync is handled by the Syncer class.
      */
-    sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
+    sync(otherStore: IStorageOldd, opts?: SyncOptsOldd): SyncResults;
 
     // TODO: Delete data locally.  This deletion will not propagate.
     // forget(query : QueryOpts) : void;  // same query options as paths()
@@ -532,31 +532,4 @@ export interface IStorage {
      * This can be called even if the storage is already closed.
      */
     deleteAndClose(): void;
-}
-
-export interface IStorageAsync {
-    workspace: WorkspaceAddress;
-    onWrite: Emitter<WriteEvent>;
-    onChange: Emitter<undefined>;
-
-    // QUERYING
-    documents(query?: QueryOpts): Promise<Document[]>;
-    paths(query?: QueryOpts): Promise<string[]>;
-    contents(query?: QueryOpts): Promise<string[]>;
-    authors(now?: number): Promise<AuthorAddress[]>;
-
-    // INDIVIDUAL DOCUMENT LOOKUP
-    getDocument(path: string, now?: number): Promise<Document | undefined>;
-    getContent(path: string, now?: number): Promise<string | undefined>;
-
-    // WRITING
-    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): Promise<WriteResult | ValidationError>;
-    ingestDocument(doc: Document, now?: number, isLocal?: boolean): Promise<WriteResult | ValidationError>;
-
-    // SYNC
-    //_syncFrom(otherStore: IStorageAsync, existing: boolean, live: boolean): Promise<number>;
-    //sync(otherStore: IStorageAsync, opts?: SyncOpts): Promise<SyncResults>;
-
-    close() : Promise<void>;
-    isClosed() : boolean;
 }

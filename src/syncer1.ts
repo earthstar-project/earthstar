@@ -1,12 +1,12 @@
 import fetch from 'isomorphic-fetch';
 import {
-    IStorage,
     WorkspaceAddress,
     WriteResult,
 } from './util/types';
 import {
     Emitter
 } from './util/emitter';
+import { IStorage3 } from './storage3/types3';
 
 let sleep = async (ms : number) : Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -37,11 +37,11 @@ let ensureTrailingSlash = (url : string) : string =>
     url.endsWith('/') ? url : url + '/';
 
 let logSyncer = (...args : any[]) => console.log('💚 syncer | ', ...args);
-export class Syncer {
-    storage : IStorage;
+export class Syncer1 {
+    storage : IStorage3;
     onChange : Emitter<SyncState>;
     state : SyncState;
-    constructor(store : IStorage) {
+    constructor(store : IStorage3) {
         this.storage = store;
         this.onChange = new Emitter<SyncState>();
         this.state = {
@@ -127,7 +127,7 @@ let urlPostDocuments = urlGetDocuments;
 
 let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
 
-export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
+export let syncLocalAndHttp = async (storage : IStorage3, domain : string) => {
     logSyncAlg('existing database workspace:', storage.workspace);
     let resultStats : any = {
         pull: null,
@@ -158,7 +158,7 @@ export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
         let docs = await resp.json();
         resultStats.pull.numTotal = docs.length;
         for (let doc of docs) {
-            if (storage.ingestDocument(doc) === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
+            if (storage.ingestDocument(doc, 'TODO: session id') === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
             else { resultStats.pull.numIgnored += 1; }
         }
         logSyncAlg(JSON.stringify(resultStats.pull, null, 2));
@@ -170,7 +170,7 @@ export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
     try {
         resp2 = await fetch(urlPostDocuments(domain, storage.workspace), {
             method: 'post',
-            body:    JSON.stringify(storage.documents({ includeHistory: true })),
+            body:    JSON.stringify(storage.documents({ history: 'all' })),
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (e) {

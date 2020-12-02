@@ -3,7 +3,6 @@ import {
     AuthorAddress,
     AuthorKeypair,
     FormatName,
-    IStorage,
     IValidator,
     isErr,
 } from '../util/types';
@@ -11,15 +10,16 @@ import {
     generateAuthorKeypair
 } from '../crypto/crypto';
 import {
-    StorageMemory,
-} from '../storage/memory';
+    Storage3Memory,
+} from '../storage3/storage3Memory';
 import {
     ValidatorEs4,
 } from '../validator/es4';
 import {
     SyncState,
-    Syncer,
-} from '../sync';
+    Syncer1,
+} from '../syncer1';
+import { IStorage3 } from '../storage3/types3';
 
 //================================================================================
 // prepare for test scenarios
@@ -39,13 +39,13 @@ let author2: AuthorAddress = keypair2.address;
 let author3: AuthorAddress = keypair3.address;
 let now = 1500000000000000;
 
-let makeStorage = (workspace : string) : IStorage =>
-    new StorageMemory(VALIDATORS, workspace);
+let makeStorage = (workspace : string) : IStorage3 =>
+    new Storage3Memory(VALIDATORS, workspace);
 
 //================================================================================
 t.test('Syncer basics and callback subscriptions', (t: any) => {
     let storage = makeStorage(WORKSPACE);
-    let syncer = new Syncer(storage);
+    let syncer = new Syncer1(storage);
 
     let numCalls = 0;
     let lastCallbackVal : SyncState | null = null;
@@ -85,12 +85,13 @@ t.test('Syncer basics and callback subscriptions', (t: any) => {
     syncer.addPub('https://example.com');
     t.equal(numCalls, 2, 'callback should not have been called after unsubscribing');
 
+    storage.close();
     t.end();
 });
 
 t.test('Syncer sync when empty', async (t: any) => {
     let storage = makeStorage(WORKSPACE);
-    let syncer = new Syncer(storage);
+    let syncer = new Syncer1(storage);
 
     let numCalls = 0;
     let lastCallbackVal : SyncState | null = null;
@@ -106,5 +107,6 @@ t.test('Syncer sync when empty', async (t: any) => {
 
     unsub();
 
+    storage.close();
     t.end();
 });

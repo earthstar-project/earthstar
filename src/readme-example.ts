@@ -1,13 +1,14 @@
 import {
-    StorageMemory,
     ValidatorEs4,
     generateAuthorKeypair,
     isErr,
 } from './index';  // this import would normally be from 'earthstar';
+import { Storage3Memory } from './storage3/storage3Memory';
+import { localSync } from './storage3/sync3local';
 
 // Create a database for a particular workspace, '+gardening.xxxxxxxx'
 // We've chosen to use the latest 'es.4' feed format so we supply the matching validator.
-let storage = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');
+let storage = new Storage3Memory([ValidatorEs4], '+gardening.xxxxxxxx');
 
 // Users are called "authors".
 // Let's make up some authors for testing.
@@ -39,7 +40,7 @@ storage.getContent('wiki/Strawberry'); // --> 'Yum'
 // Within a path we keep the most-recent document from each author,
 // in case we need to do better conflict resolution later.
 // To see the old versions, use a query:
-storage.contents({ path: '/wiki/Strawberry', includeHistory: true });
+storage.contents({ path: '/wiki/Strawberry', history: 'all' });
 // --> ['Yum', 'Tasty!!']  // newest first
 
 // Get the entire document to see all the metadata as well as the content.
@@ -78,13 +79,12 @@ storage.set(keypair1, {
 });
 
 // You can do leveldb style queries.
-storage.paths()
-storage.paths({ lowPath: '/abc', limit: 100 })
-storage.paths({ pathPrefix: '/wiki/' })
+storage.paths()  // match all
+storage.paths({ pathPrefix: '/wiki/', limit: 100,  })
 
 // You can sync to another Storage that has the same workspace address
-let storage2 = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');
-storage.sync(storage2);
+let storage2 = new Storage3Memory([ValidatorEs4], '+gardening.xxxxxxxx');
+localSync(storage, storage2);
 // Now storage and storage2 are identical.
 
 // Get notified when anything changes.
@@ -92,3 +92,7 @@ let unsub = storage.onWrite.subscribe((e) => console.log('something changed'));
 
 // Later, you can turn off your subscription.
 unsub();
+
+// finally, remember to close your Storages.
+storage.close()
+storage2.close();

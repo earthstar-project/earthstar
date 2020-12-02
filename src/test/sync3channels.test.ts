@@ -11,7 +11,6 @@ import {
     WorkspaceAddress,
     WriteResult,
     isErr,
-    IStorageAsync,
 } from '../util/types';
 import {
     generateAuthorKeypair,
@@ -164,5 +163,8 @@ for (let scenario of scenarios) {
 
         t.same(await storage1.contents({ history: 'all' }), 'a1 a2 b1 b2 c2'.split(' '), 'storage1 has expected docs');
         t.same(await storage2.contents({ history: 'all' }), 'a1 a2 b1 b2 c2'.split(' '), 'storage2 has expected docs');
+
+        await storage1.close();
+        await storage2.close();
     });
 }

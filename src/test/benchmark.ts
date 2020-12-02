@@ -2,9 +2,9 @@ import {
     AuthorKeypair,
     Document,
     FormatName,
-    IStorage,
+    IStorageOldd,
     IValidator,
-    SyncOpts,
+    SyncOptsOldd,
     WriteResult,
     isErr,
     notErr,
@@ -16,9 +16,10 @@ import {
     sha256base32,
 } from '../crypto/crypto';
 import { ValidatorEs4 } from '../validator/es4';
-import { StorageMemory } from '../storage/memory';
-import { StorageSqlite } from '../storage/sqlite';
-import { isMainThread } from 'worker_threads';
+import { Storage3Memory } from '../storage3/storage3Memory';
+import { Storage3Sqlite } from '../storage3/storage3Sqlite';
+import { IStorage3 } from '../storage3/types3';
+import { localSync } from '../storage3/sync3local';
 
 //================================================================================
 // prepare for test scenarios
@@ -53,22 +54,22 @@ let HOUR = MIN * 60;
 let DAY = HOUR * 24;
 
 interface Scenario {
-    makeStorage: (workspace : string) => IStorage,
+    makeStorage: (workspace : string) => IStorage3,
     description: string,
 }
 let scenarios : Scenario[] = [
     {
-        makeStorage: (workspace : string) : IStorage => new StorageMemory(VALIDATORS, workspace),
-        description: 'StoreMemory',
+        makeStorage: (workspace : string) : IStorage3 => new Storage3Memory(VALIDATORS, workspace),
+        description: 'Store3Memory',
     },
     {
-        makeStorage: (workspace : string) : IStorage => new StorageSqlite({
+        makeStorage: (workspace : string) : IStorage3 => new Storage3Sqlite({
             mode: 'create',
             workspace: workspace,
             validators: VALIDATORS,
             filename: ':memory:'
         }),
-        description: "StoreSqlite(':memory:')",
+        description: "Store3Sqlite(':memory:')",
     },
 ];
 
@@ -148,7 +149,7 @@ let main = () => {
         let storageAdd = scenario.makeStorage(WORKSPACE);
         gc();
 
-        for (let n of [100, 101, 102, 103, 1000, 1001, 10000]) {
+        for (let n of [100, 101, 102, 103, 1000, 1001, ]) {//10000]) {
             runner.runOnce(`add ${n} docs (each)`, {actualIters: n}, () => {
                 for (let ii = 0; ii < n; ii++) {
                     storageAdd.set(keypair1, {
@@ -162,12 +163,12 @@ let main = () => {
 
             let storageSyncToMe = scenario.makeStorage(WORKSPACE);
             runner.runOnce(`sync ${n} docs to empty storage (each)`, {actualIters: n}, () => {
-                storageAdd.sync(storageSyncToMe);
+                localSync(storageAdd, storageSyncToMe);
             });
             gc();
 
             runner.runOnce(`sync ${n} docs to full storage (each)`, {actualIters: n}, () => {
-                storageAdd.sync(storageSyncToMe);
+                localSync(storageAdd, storageSyncToMe);
             });
 
             runner.note('');
@@ -249,13 +250,13 @@ let main = () => {
         gc();
         runner.note('');
 
-        runner.runMany(`docs: versionsByAuthor matching 1/${keypairs.length} out of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
-            storage10k.documents({ versionsByAuthor: author1 });
+        runner.runMany(`docs: author matching 1/${keypairs.length} out of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.documents({ author: author1 });
         });
         gc();
 
-        runner.runMany(`docs: versionsByAuthor matching 10 docs out of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
-            storage10k.documents({ versionsByAuthor: author4 });
+        runner.runMany(`docs: author matching 10 docs out of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.documents({ author: author4 });
         });
         gc();
 
