@@ -5,15 +5,13 @@ import {
 } from './cryptoTypes';
 import {
     decodeSig,
-    encodeHash,
     encodeSig,
 } from './encoding';
 import {
-    EncodedHash,
     EncodedSig,
 } from '../util/types';
 
-const _generateKeypairDerBuffers = () : KeypairBuffers => {
+const _generateKeypairDerBuffers = (): KeypairBuffers => {
     // Typescript has outdated definitions, doesn't know about ed25519
     // so fight it with "as any"
     let pair = crypto.generateKeyPairSync(
@@ -36,15 +34,15 @@ const _generateKeypairDerBuffers = () : KeypairBuffers => {
     };
 };
 
-let _shortenDer = (k: KeypairBuffers) : KeypairBuffers => ({
+let _shortenDer = (k: KeypairBuffers): KeypairBuffers => ({
     pubkey: k.pubkey.slice(-32),
     secret: k.secret.slice(-32),
 });
 let _derPrefixPublic = Buffer.from('MCowBQYDK2VwAyEA', 'base64');
 let _derPrefixSecret = Buffer.from('MC4CAQAwBQYDK2VwBCIEIA==', 'base64');
-let _lengthenDerPublic = (b : Buffer) : Buffer => 
+let _lengthenDerPublic = (b: Buffer): Buffer =>
     Buffer.concat([_derPrefixPublic, b]);
-let _lengthenDerSecret = (b : Buffer) : Buffer => 
+let _lengthenDerSecret = (b: Buffer): Buffer =>
     Buffer.concat([_derPrefixSecret, b]);
 
 /**
@@ -52,14 +50,14 @@ let _lengthenDerSecret = (b : Buffer) : Buffer =>
  * Requires a recent version of Node, perhaps 12+?
  * Does not work in the browser.
  */
-export const CryptoNode : ILowLevelCrypto = class {
-    static sha256(input: string | Buffer) : Buffer {
+export const CryptoNode: ILowLevelCrypto = class {
+    static sha256(input: string | Buffer): Buffer {
         return crypto.createHash('sha256').update(input).digest();
     }
-    static generateKeypairBuffers() : KeypairBuffers {
+    static generateKeypairBuffers(): KeypairBuffers {
         return _shortenDer(_generateKeypairDerBuffers());
     };
-    static sign(keypair : KeypairBuffers, msg : string | Buffer) : EncodedSig {
+    static sign(keypair: KeypairBuffers, msg: string | Buffer): EncodedSig {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         // prettier-ignore
         return encodeSig(crypto.sign(
@@ -72,7 +70,7 @@ export const CryptoNode : ILowLevelCrypto = class {
             }
         ));
     }
-    static verify(publicKey : Buffer, sig : EncodedSig, msg : string | Buffer) : boolean {
+    static verify(publicKey: Buffer, sig: EncodedSig, msg: string | Buffer): boolean {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         try {
             // prettier-ignore

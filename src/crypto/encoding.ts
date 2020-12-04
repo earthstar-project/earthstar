@@ -9,7 +9,6 @@ import {
     WorkspaceAddress,
     WorkspaceName,
     isErr,
-    EarthstarError,
 } from '../util/types';
 import {
     KeypairBuffers,
@@ -21,11 +20,11 @@ import {
 //================================================================================
 // TODO: this really should happen in the validator?
 
-let assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress =>
+let assembleWorkspaceAddress = (name: WorkspaceName, encodedPubkey: EncodedKey): WorkspaceAddress =>
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
     `+${name}.${encodedPubkey}`;
 
-let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress =>
+let assembleAuthorAddress = (shortname: AuthorShortname, encodedPubkey: EncodedKey): AuthorAddress =>
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
     `@${shortname}.${encodedPubkey}`;
 
@@ -45,13 +44,13 @@ let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : Encode
  * 
  * The decoding must be strict (it doesn't allow a 1 in place of an i, etc).
  */
-export let encodeBufferToBase32 = (buf : Buffer) : Base32String =>
+export let encodeBufferToBase32 = (buf: Buffer): Base32String =>
     multibase.encode('base32', buf).toString();
 
 /**
  * Decode base32 data to a Buffer.  Throw a ValidationError if the string is bad.
  */
-export let decodeBase32ToBuffer = (str : Base32String) : Buffer => {
+export let decodeBase32ToBuffer = (str: Base32String): Buffer => {
     if (!str.startsWith('b')) { throw new ValidationError("can't decode base32 buffer - it should start with a 'b'. " + str); }
     // this can also throw an Error('invalid base32 character')
     return multibase.decode(str);
@@ -67,20 +66,20 @@ export let decodeSecret = decodeBase32ToBuffer;
 export let decodeSig = decodeBase32ToBuffer;
 
 /** Combine a shortname with a raw KeypairBuffers to make an AuthorKeypair */
-export let encodeAuthorKeypair = (shortname : AuthorShortname, pair : KeypairBuffers) : AuthorKeypair => ({
+export let encodeAuthorKeypair = (shortname: AuthorShortname, pair: KeypairBuffers): AuthorKeypair => ({
     address: assembleAuthorAddress(shortname, encodePubkey(pair.pubkey)),
     secret: encodeSecret(pair.secret),
 });
 
 /** Convert an AuthorKeypair back into a raw KeypairBuffers for use in crypto operations. */
-export let decodeAuthorKeypair = (pair : AuthorKeypair) : KeypairBuffers | ValidationError => {
+export let decodeAuthorKeypair = (pair: AuthorKeypair): KeypairBuffers | ValidationError => {
     let authorParsed = ValidatorEs4.parseAuthorAddress(pair.address);
     if (isErr(authorParsed)) { return authorParsed; }
     try {
         return {
             pubkey: decodePubkey(authorParsed.pubkey),
             secret: decodeSecret(pair.secret),
-        }
+        };
     } catch (err) {
         return new ValidationError('crash while decoding author keypair: ' + err.message);
     }

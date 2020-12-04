@@ -31,19 +31,18 @@ import {
 //================================================================================
 // TODO: this really should happen in the validator?
 
-let assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress =>
+let assembleWorkspaceAddress = (name: WorkspaceName, encodedPubkey: EncodedKey): WorkspaceAddress =>
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
     `+${name}.${encodedPubkey}`;
 
-let assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress =>
+let assembleAuthorAddress = (shortname: AuthorShortname, encodedPubkey: EncodedKey): AuthorAddress =>
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
     `@${shortname}.${encodedPubkey}`;
 
 //================================================================================
 
-
 /** Do a sha256 hash, then return the output buffer encoded as base32. */
-export let sha256base32 = (input : string | Buffer) : EncodedHash =>
+export let sha256base32 = (input: string | Buffer): EncodedHash =>
     encodeHash(LowLevelCrypto.sha256(input));
 
 /**
@@ -54,10 +53,10 @@ export let sha256base32 = (input : string | Buffer) : EncodedHash =>
  * 
  * @param shortname A 4-character nickname to make the address easier to remember and identify.
  */
-export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | ValidationError => {
+export let generateAuthorKeypair = (shortname: string): AuthorKeypair | ValidationError => {
     // This returns a ValidationError if the shortname doesn't follow the rules.
 
-    let bufferPair : KeypairBuffers = LowLevelCrypto.generateKeypairBuffers();
+    let bufferPair: KeypairBuffers = LowLevelCrypto.generateKeypairBuffers();
     let keypair = {
         address: assembleAuthorAddress(shortname, encodePubkey(bufferPair.pubkey)),
         secret: encodeSecret(bufferPair.secret),
@@ -69,7 +68,7 @@ export let generateAuthorKeypair = (shortname : string) : AuthorKeypair | Valida
 }
 
 /** Sign a message using an Earthstar keypair.  Return a signature encoded in base32. */
-export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig | ValidationError => {
+export let sign = (keypair: AuthorKeypair, msg: string | Buffer): EncodedSig | ValidationError => {
     let keypairBuffers = decodeAuthorKeypair(keypair);
     if (isErr(keypairBuffers)) { return keypairBuffers; }
     try {
@@ -89,7 +88,7 @@ export let sign = (keypair : AuthorKeypair, msg : string | Buffer) : EncodedSig 
  * 
  * If an unexpected exception happens, it is re-thrown.
  */
-export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : string | Buffer) : boolean => {
+export let verify = (authorAddress: AuthorAddress, sig: EncodedSig, msg: string | Buffer): boolean => {
     try {
         let authorParsed = ValidatorEs4.parseAuthorAddress(authorAddress);
         if (isErr(authorParsed)) { return false; }
@@ -99,13 +98,16 @@ export let verify = (authorAddress : AuthorAddress, sig : EncodedSig, msg : stri
     }
 }
 
-export let checkAuthorKeypairIsValid = (keypair : AuthorKeypair) : true | ValidationError => {
-    // Returns...
-    // true on success (format is correct, and secret matches pubkey)
-    // a ValidationError if the secret does not match the pubkey.
-    // a ValidationError if the author address or secret are not validly formatted strings.
-    // a ValidationError if anything else goes wrong
-    //
+/**
+ * Check if an author keypair is valid, e.g. does the secret match the pubkey.
+ * 
+ * Returns...
+ * - true on success (format is correct, and secret matches pubkey)
+ * - a ValidationError if the secret does not match the pubkey.
+ * - a ValidationError if the author address or secret are not validly formatted strings.
+ * - a ValidationError if anything else goes wrong
+ */
+export let checkAuthorKeypairIsValid = (keypair: AuthorKeypair): true | ValidationError => {
     // We check if the secret matches the pubkey by signing something and then validating the signature.
     // However, key generation is deterministic, so it would be more direct to just do this:
     //
@@ -131,5 +133,5 @@ export let checkAuthorKeypairIsValid = (keypair : AuthorKeypair) : true | Valida
     } catch (err) {
         return new ValidationError('unexpected error: ' + err.message);
     }
-}
+};
 

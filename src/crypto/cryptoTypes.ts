@@ -1,6 +1,5 @@
 import {
     EncodedSig,
-    EncodedHash,
 } from '../util/types';
 
 export interface KeypairBuffers {

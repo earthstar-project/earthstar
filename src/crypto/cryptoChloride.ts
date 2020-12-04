@@ -6,11 +6,9 @@ import {
 } from './cryptoTypes';
 import {
     decodeSig,
-    encodeHash,
     encodeSig,
 } from './encoding';
 import {
-    EncodedHash,
     EncodedSig,
 } from '../util/types';
 
@@ -18,12 +16,12 @@ import {
  * A verison of the ILowLevelCrypto interface backed by Chloride.
  * Works in the browser.
  */
-export const CryptoChloride : ILowLevelCrypto = class {
-    static sha256(input: string | Buffer) : Buffer {
+export const CryptoChloride: ILowLevelCrypto = class {
+    static sha256(input: string | Buffer): Buffer {
         // TODO: use sodium sha256 instead of node crypto?
         return crypto.createHash('sha256').update(input).digest();
     }
-    static generateKeypairBuffers(seed?: Buffer) : KeypairBuffers {
+    static generateKeypairBuffers(seed?: Buffer): KeypairBuffers {
         // If provided, the seed is used as the secret key.
         // If omitted, a random secret key is generated.
         if (!seed) {
@@ -38,7 +36,7 @@ export const CryptoChloride : ILowLevelCrypto = class {
             secret: (keys.privateKey || keys.secretKey).slice(0, 32),
         };
     };
-    static sign(keypair : KeypairBuffers, msg : string | Buffer) : EncodedSig {
+    static sign(keypair: KeypairBuffers, msg: string | Buffer): EncodedSig {
         // Return the signature encoded from binary into base32
         let secretBuf = Buffer.concat([keypair.secret, keypair.pubkey]);
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
@@ -47,7 +45,7 @@ export const CryptoChloride : ILowLevelCrypto = class {
             sodium.crypto_sign_detached(msg, secretBuf)
         );
     }
-    static verify(publicKey : Buffer, sig : EncodedSig, msg : string | Buffer) : boolean {
+    static verify(publicKey: Buffer, sig: EncodedSig, msg: string | Buffer): boolean {
         try {
             if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
             return sodium.crypto_sign_verify_detached(
@@ -60,17 +58,3 @@ export const CryptoChloride : ILowLevelCrypto = class {
         }
     }
 };
-
-
-//=====================================
-
-/*
-let log = console.log;
-let keys1 = encodePair(CryptoChloride.generateKeypairBuffers());
-log(keys1);
-
-let msg = 'hello';
-let sig = CryptoChloride.sign(keys1, msg);
-log('sig:', sig);
-log('verify good sig:', CryptoChloride.verify(keys1.public, sig, msg));
-*/

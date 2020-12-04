@@ -7,15 +7,10 @@ import {
 
 /*
 open questions
-
     when doing paths(query), is it...
     * doing a cheap query only on the paths column, using path and pathPrefix?
     * or doing a full query also using author, timestamp, etc, then getting unique paths?
-
-    isHead: rename to includeAll?  we rarely want to exclude heads
 */
-
-
 
 export type HistoryMode =
     'latest'  // get the overall latest per path (the heads), then apply filters just to those
