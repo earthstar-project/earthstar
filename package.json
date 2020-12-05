@@ -36,7 +36,7 @@
     "test-validator": "tap -Rspecy --jobs=1 build/test/validator.es4.test.js",
     "test-coverage": "npm test -- --coverage-report=lcov",
     "typedoc": "typedoc --out typedoc/ --theme minimal --name Earthstar --includeVersion --readme none src",
-    "bench": "node --expose-gc build/test/benchmark.js | tee benchmark.txt",
+    "bench": "mkdir benchmark-results && node --expose-gc build/test/benchmark.js | tee benchmark-results/benchmark.txt",
     "build-and-test": "npm run build && npm run test",
     "prepublishOnly": "npm run clean && npm run build && npm test"
   },

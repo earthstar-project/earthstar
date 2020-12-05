@@ -1,0 +1,181 @@
+2020-12-05T18:50:41.279Z
+StoreMemory
+    add 100 docs (each)
+    sync 100 docs to empty storage (each)
+    sync 100 docs to full storage (each)
+    
+    add 101 docs (each)
+    sync 101 docs to empty storage (each)
+    sync 101 docs to full storage (each)
+    
+    add 102 docs (each)
+    sync 102 docs to empty storage (each)
+    sync 102 docs to full storage (each)
+    
+    add 103 docs (each)
+    sync 103 docs to empty storage (each)
+    sync 103 docs to full storage (each)
+    
+    add 1000 docs (each)
+    sync 1000 docs to empty storage (each)
+    sync 1000 docs to full storage (each)
+    
+    add 1001 docs (each)
+    sync 1001 docs to empty storage (each)
+    sync 1001 docs to full storage (each)
+    
+    add 10000 docs (each)
+    sync 10000 docs to empty storage (each)
+    sync 10000 docs to full storage (each)
+    
+    getDocument from 1000 paths x 2 authors
+    
+    docs(path) with 1000 paths x 2 authors
+    paths(path) with 1000 paths x 2 authors
+    contents(path) with 1000 paths x 2 authors
+    
+    docs(all) with 1000 paths x 2 authors
+    paths(all) with 1000 paths x 2 authors
+    contents(all) with 1000 paths x 2 authors
+    
+    docs: pathPrefix get 10% of 1000 paths x 2 authors
+    docs: pathPrefix get 1% of 1000 paths x 2 authors
+    
+    docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
+    docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
+StoreSqlite(':memory:')
+    add 100 docs (each)
+    sync 100 docs to empty storage (each)
+    sync 100 docs to full storage (each)
+    
+    add 101 docs (each)
+    sync 101 docs to empty storage (each)
+    sync 101 docs to full storage (each)
+    
+    add 102 docs (each)
+    sync 102 docs to empty storage (each)
+    sync 102 docs to full storage (each)
+    
+    add 103 docs (each)
+    sync 103 docs to empty storage (each)
+    sync 103 docs to full storage (each)
+    
+    add 1000 docs (each)
+    sync 1000 docs to empty storage (each)
+    sync 1000 docs to full storage (each)
+    
+    add 1001 docs (each)
+    sync 1001 docs to empty storage (each)
+    sync 1001 docs to full storage (each)
+    
+    add 10000 docs (each)
+    sync 10000 docs to empty storage (each)
+    sync 10000 docs to full storage (each)
+    
+    getDocument from 1000 paths x 2 authors
+    
+    docs(path) with 1000 paths x 2 authors
+    paths(path) with 1000 paths x 2 authors
+    contents(path) with 1000 paths x 2 authors
+    
+    docs(all) with 1000 paths x 2 authors
+    paths(all) with 1000 paths x 2 authors
+    contents(all) with 1000 paths x 2 authors
+    
+    docs: pathPrefix get 10% of 1000 paths x 2 authors
+    docs: pathPrefix get 1% of 1000 paths x 2 authors
+    
+    docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
+    docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
+
+
+StoreMemory
+        1515 ops / sec: add 100 docs (each)
+        3333 ops / sec: sync 100 docs to empty storage (each)
+        2174 ops / sec: sync 100 docs to full storage (each)
+             
+        2061 ops / sec: add 101 docs (each)
+        3607 ops / sec: sync 101 docs to empty storage (each)
+        2295 ops / sec: sync 101 docs to full storage (each)
+             
+        2318 ops / sec: add 102 docs (each)
+        4080 ops / sec: sync 102 docs to empty storage (each)
+        2550 ops / sec: sync 102 docs to full storage (each)
+             
+        2191 ops / sec: add 103 docs (each)
+        5722 ops / sec: sync 103 docs to empty storage (each)
+        2512 ops / sec: sync 103 docs to full storage (each)
+             
+        2604 ops / sec: add 1000 docs (each)
+        5291 ops / sec: sync 1000 docs to empty storage (each)
+        3106 ops / sec: sync 1000 docs to full storage (each)
+             
+        3229 ops / sec: add 1001 docs (each)
+        5592 ops / sec: sync 1001 docs to empty storage (each)
+        3304 ops / sec: sync 1001 docs to full storage (each)
+             
+        3381 ops / sec: add 10000 docs (each)
+        6002 ops / sec: sync 10000 docs to empty storage (each)
+        3487 ops / sec: sync 10000 docs to full storage (each)
+             
+     1815762 ops / sec: getDocument from 1000 paths x 2 authors
+             
+     1770539 ops / sec: docs(path) with 1000 paths x 2 authors
+     9557533 ops / sec: paths(path) with 1000 paths x 2 authors
+     1868481 ops / sec: contents(path) with 1000 paths x 2 authors
+             
+        1002 ops / sec: docs(all) with 1000 paths x 2 authors
+         804 ops / sec: paths(all) with 1000 paths x 2 authors
+         812 ops / sec: contents(all) with 1000 paths x 2 authors
+             
+        4612 ops / sec: docs: pathPrefix get 10% of 1000 paths x 2 authors
+        5957 ops / sec: docs: pathPrefix get 1% of 1000 paths x 2 authors
+             
+         886 ops / sec: docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
+        1047 ops / sec: docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
+
+StoreSqlite(':memory:')
+        1754 ops / sec: add 100 docs (each)
+        2703 ops / sec: sync 100 docs to empty storage (each)
+        2439 ops / sec: sync 100 docs to full storage (each)
+             
+        1629 ops / sec: add 101 docs (each)
+        2730 ops / sec: sync 101 docs to empty storage (each)
+        2349 ops / sec: sync 101 docs to full storage (each)
+             
+        1569 ops / sec: add 102 docs (each)
+        2550 ops / sec: sync 102 docs to empty storage (each)
+        2267 ops / sec: sync 102 docs to full storage (each)
+             
+        1561 ops / sec: add 103 docs (each)
+        2341 ops / sec: sync 103 docs to empty storage (each)
+        2341 ops / sec: sync 103 docs to full storage (each)
+             
+        1488 ops / sec: add 1000 docs (each)
+        2347 ops / sec: sync 1000 docs to empty storage (each)
+        2342 ops / sec: sync 1000 docs to full storage (each)
+             
+        1233 ops / sec: add 1001 docs (each)
+        2453 ops / sec: sync 1001 docs to empty storage (each)
+        2430 ops / sec: sync 1001 docs to full storage (each)
+             
+         611 ops / sec: add 10000 docs (each)
+        1068 ops / sec: sync 10000 docs to empty storage (each)
+        2272 ops / sec: sync 10000 docs to full storage (each)
+             
+        6237 ops / sec: getDocument from 1000 paths x 2 authors
+             
+        5678 ops / sec: docs(path) with 1000 paths x 2 authors
+        6139 ops / sec: paths(path) with 1000 paths x 2 authors
+        5641 ops / sec: contents(path) with 1000 paths x 2 authors
+             
+         175 ops / sec: docs(all) with 1000 paths x 2 authors
+         154 ops / sec: paths(all) with 1000 paths x 2 authors
+         153 ops / sec: contents(all) with 1000 paths x 2 authors
+             
+        1246 ops / sec: docs: pathPrefix get 10% of 1000 paths x 2 authors
+        3117 ops / sec: docs: pathPrefix get 1% of 1000 paths x 2 authors
+             
+         162 ops / sec: docs: versionsByAuthor matching 1/2 out of 1000 paths x 2 authors
+        1035 ops / sec: docs: versionsByAuthor matching 10 docs out of 1000 paths x 2 authors
+
