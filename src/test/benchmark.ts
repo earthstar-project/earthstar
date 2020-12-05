@@ -226,7 +226,21 @@ let main = () => {
         });
         gc();
         runner.runMany(`contents(all) with ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
-            storage10k.paths();
+            storage10k.contents();
+        });
+        gc();
+        runner.note('');
+
+        runner.runMany(`docs(limit 10) with ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.documents({ limit: 10 });
+        });
+        gc();
+        runner.runMany(`paths(limit 10) with ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.paths({ limit: 10 });
+        });
+        gc();
+        runner.runMany(`contents(limit 10) with ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.contents({ limit: 10 });
         });
         gc();
         runner.note('');
@@ -235,7 +249,10 @@ let main = () => {
             storage10k.documents({ pathPrefix: `/test/${randInt(0, 9)}` });
         });
         gc();
-
+        runner.runMany(`docs: pathPrefix get 10% of ${nKeys} paths x ${keypairs.length} authors, limit 10`, {minDuration: 1234}, () => {
+            storage10k.documents({ pathPrefix: `/test/${randInt(0, 9)}`, limit: 10 });
+        });
+        gc();
         runner.runMany(`docs: pathPrefix get 1% of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
             storage10k.documents({ pathPrefix: `/test/${randInt(10, 99)}` });
         });
