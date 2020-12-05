@@ -59,15 +59,16 @@ export class StorageMemory extends StorageBase {
             pathsToConsider = Object.keys(this._docs);
         }
 
-        // prepare for the pathPrefix optimization in the loop below
-        // which assumes the pathsToConsidera are sorted
-        if (query.pathPrefix !== undefined) {
+        // prepare for the optimizations in the loop below
+        // which assume the pathsToConsider are sorted
+        if (query.pathPrefix !== undefined || query.limit !== undefined) {
             pathsToConsider.sort();
         }
 
         for (let path of pathsToConsider) {
 
             // optimization when pathPrefix is set
+            // this assumes that pathsToConsider is sorted already
             if (query.pathPrefix !== undefined) {
                 if (!path.startsWith(query.pathPrefix)) {
                     if (path < query.pathPrefix) {
@@ -104,13 +105,11 @@ export class StorageMemory extends StorageBase {
             docsThisPath
                 .forEach(doc => results.push(doc));
 
-            // TODO: optimize this:
-            // if sort == 'path' and there's a limit,
-            // we could sort pathsToConsider, then if
-            // if we finish one path's documents and either of the
-            // limits are exceeded, we can bail out of this loop
-            // early.  We still have to do the sorting and careful
-            // limit checks below, though.
+            // optimization: stop when limit is reached
+            // this assumes that pathsToConsider is sorted already
+            if (query.limit !== undefined && results.length >= query.limit) {
+                break;
+            }
         }
 
         // sort overall results by path, then author within a path
