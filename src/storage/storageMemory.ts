@@ -49,21 +49,16 @@ export class StorageMemory extends StorageBase {
         let now = this._now || (Date.now() * 1000);
         let results: Document[] = [];
 
-        let pathsToConsider = Object.keys(this._docs);
-
-        /*
-        // TODO: enable these optimizations
         // which paths should we consider?
         let pathsToConsider: string[];
         if (query.path !== undefined) {
             // optimize when a specific path is requested
-            if (this._docs[query.path] === undefined) { return []; }
             pathsToConsider = [query.path];
+            if (this._docs[query.path] === undefined) { return []; }
         } else {
             // TODO: consider optimizing this more by filtering by pathPrefix here.  benchmark it
             pathsToConsider = Object.keys(this._docs);
         }
-        */
 
         for (let path of pathsToConsider) {
             // within one path...
