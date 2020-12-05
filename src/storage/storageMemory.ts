@@ -56,11 +56,30 @@ export class StorageMemory extends StorageBase {
             pathsToConsider = [query.path];
             if (this._docs[query.path] === undefined) { return []; }
         } else {
-            // TODO: consider optimizing this more by filtering by pathPrefix here.  benchmark it
             pathsToConsider = Object.keys(this._docs);
         }
 
+        // prepare for the pathPrefix optimization in the loop below
+        // which assumes the pathsToConsidera are sorted
+        if (query.pathPrefix !== undefined) {
+            pathsToConsider.sort();
+        }
+
         for (let path of pathsToConsider) {
+
+            // optimization when pathPrefix is set
+            if (query.pathPrefix !== undefined) {
+                if (!path.startsWith(query.pathPrefix)) {
+                    if (path < query.pathPrefix) {
+                        // skip ahead until we reach paths starting with pathPrefix
+                        continue; 
+                    } else {
+                        // now we've gone past the pathPrefix, so we can stop
+                        break;
+                    }
+                }
+            }
+
             // within one path...
             let pathSlots = this._docs[path];
             let docsThisPath = Object.values(pathSlots);
