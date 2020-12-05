@@ -141,7 +141,7 @@ let main = () => {
         let storageAdd = scenario.makeStorage(WORKSPACE);
         gc();
 
-        for (let n of [100, 101, 102, 103, 1000, 1001, ]) {//10000]) {
+        for (let n of [100, 101, 102, 103, 1000, 1001, 10000]) {
             runner.runOnce(`add ${n} docs (each)`, {actualIters: n}, () => {
                 for (let ii = 0; ii < n; ii++) {
                     storageAdd.set(keypair1, {
