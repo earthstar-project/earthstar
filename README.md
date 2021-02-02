@@ -19,6 +19,8 @@ Docs for app developers:
 * [Overview for developers](docs/overview.md) -- A quick comparison between Earthstar, CouchDB, and SSB
 * [Rules of Earthstar](docs/rules-of-earthstar.md) -- The scope of the project, and details of the technical invariants of the distributed system.
 * [Tutorial](docs/tutorial.md) -- Make a Todo list app, step by step
+* [Invite code format](https://github.com/earthstar-project/earthstar/wiki/Invite-code-format)
+* [Standard paths and data formats used by apps](https://github.com/earthstar-project/earthstar/wiki/Standard-paths-and-data-formats-used-by-apps) for their Earthstar documents, so apps can interoperate
 
 Docs for core Earthstar developers:
 * [Earthstar Specification](docs/specification.md) -- All you need to know to write an Earthstar implementation from scratch
