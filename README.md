@@ -32,9 +32,12 @@ Docs for core Earthstar developers:
 Related repos:
 * [earthstar-cli](https://github.com/earthstar-project/earthstar-cli) -- Command line utility
 * [earthstar-pub](https://github.com/earthstar-project/earthstar-pub) -- Server to help you sync
+* [react-earthstar](https://github.com/earthstar-project/react-earthstar) -- Make Earthstar apps with React 
 * [earthstar-graphql](https://github.com/earthstar-project/earthstar-graphql) -- A GraphQL layer for handling Earthstar data
 
 Demo apps:
+* [Twodays Crossing](https://github.com/earthstar-project/twodays-crossing) -- Ephemeral Roleplay chatroom [Try it here](https://twodays-crossing.netlify.app)
+* [earthstar-status[(https://github.com/earthstar-project/earthstar-status) -- Online presence messages app [Try it here](https://earthstar-status.netlify.app)
 * [earthstar-lobby](https://github.com/sgwilym/earthstar-lobby/) -- A guestbook.  [Try it here](https://earthstar-lobby.vercel.app/)
 * [earthstar-wiki](https://github.com/earthstar-project/earthstar-wiki) -- An example app built with Earthstar (deprecated)
 * [earthstar-os](https://github.com/earthstar-project/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser (deprecated)
