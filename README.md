@@ -57,6 +57,8 @@ Demo apps:
 - [Use cases](#use-cases)
 - [What doesn't it do?](#what-doesnt-it-do)
 - [Example](#example)
+- [Extras](#extras)
+  - [Deleting your data](#deleting-your-data)
 - [Details and notes](#details-and-notes)
   - [Signatures](#signatures)
   - [Sync over duplex streams:](#sync-over-duplex-streams)
