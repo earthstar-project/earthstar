@@ -1,6 +1,7 @@
 export * from './crypto/crypto';
 export * from './crypto/cryptoTypes';
 export * from './crypto/encoding';
+export * from './extras';
 export * from './layers/about';
 export * from './layers/wiki';
 export * from './storage/memory';
