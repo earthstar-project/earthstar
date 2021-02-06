@@ -1,6 +1,6 @@
 {
   "name": "earthstar",
-  "version": "5.7.5",
+  "version": "5.7.6",
   "description": "A distributed, syncable key-value store",
   "main": "build/index.js",
   "types": "build/index.d.ts",
