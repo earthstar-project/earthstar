@@ -22,7 +22,6 @@ import {
 import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/memory';
 import { StorageSqlite } from '../storage/sqlite';
-import { logTest } from '../util/log';
 
 //================================================================================
 // prepare for test scenarios
@@ -558,6 +557,16 @@ for (let scenario of scenarios) {
         t.same(storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
         t.same(storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
+
+        t.same(storage.paths({ pathSuffix: 'banana' }), [], 'pathSuffix with no matches');
+        t.same(storage.paths({ pathSuffix: 'q' }), ['/q', '/qq', '/qqq'], 'pathSuffix');
+        t.same(storage.paths({ pathSuffix: 'q', limit: 2 }), ['/q', '/qq'], 'pathSuffix with limit');
+        t.same(storage.paths({ pathSuffix: 'qq' }), ['/qq', '/qqq'], 'pathSuffix');
+
+        t.same(storage.paths({ pathPrefix: '/', pathSuffix: 'qq' }), ['/qq', '/qqq'], 'pathPrefix and pathSuffix');
+        t.same(storage.paths({ pathPrefix: '/qq', pathSuffix: 'qq' }), ['/qq', '/qqq'], 'pathPrefix and pathSuffix that overlap');
+        t.same(storage.paths({ pathPrefix: '/di', pathSuffix: '/a' }), ['/dir/a'], 'pathPrefix and pathSuffix that do not overlap');
+
         t.end();
     });
 

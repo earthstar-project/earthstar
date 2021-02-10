@@ -198,6 +198,14 @@ export interface QueryOpts {
     /** Paths starting with this string. */
     pathPrefix?: string,
 
+    /** Paths ending with this string.
+     * Note that pathPrefix and pathSuffix can overlap: for example
+     * { pathPrefix: "/abc", pathSuffix: "bcd" } will match "/abcd"
+     * as well as "/abc/xxxxxxx/bcd".
+     * PathSuffix queries
+    */
+    pathSuffix?: string,
+
     /** lowPath <= p */
     lowPath?: string,
     /** p < highPath */
