@@ -202,8 +202,7 @@ export interface QueryOpts {
      * Note that pathPrefix and pathSuffix can overlap: for example
      * { pathPrefix: "/abc", pathSuffix: "bcd" } will match "/abcd"
      * as well as "/abc/xxxxxxx/bcd".
-     * PathSuffix queries
-    */
+     */
     pathSuffix?: string,
 
     /** lowPath <= p */
