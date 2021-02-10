@@ -156,6 +156,7 @@ export class StorageMemory implements IStorage {
             if (query.lowPath !== undefined && path < query.lowPath) { continue; }
             if (query.highPath !== undefined && path >= query.highPath) { continue; }
             if (query.pathPrefix !== undefined && !path.startsWith(query.pathPrefix)) { continue; }
+            if (query.pathSuffix !== undefined && !path.endsWith(query.pathSuffix)) { continue; }
             // get all history docs for this path
             let authorToDoc = this._docs[path] || {};
             let pathDocs = Object.values(authorToDoc);

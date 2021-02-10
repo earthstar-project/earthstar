@@ -693,6 +693,9 @@ class StorageMemory {
             if (query.pathPrefix !== undefined && !path.startsWith(query.pathPrefix)) {
                 continue;
             }
+            if (query.pathSuffix !== undefined && !path.endsWith(query.pathSuffix)) {
+                continue;
+            }
             // get all history docs for this path
             let authorToDoc = this._docs[path] || {};
             let pathDocs = Object.values(authorToDoc);

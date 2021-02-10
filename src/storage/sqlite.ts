@@ -181,6 +181,7 @@ export class StorageSqlite implements IStorage {
             );
         `).run();
         // TODO: which if thes indexes do we really need?
+        this.db.prepare(`CREATE INDEX IF NOT EXISTS idx0 ON docs(path);`).run();
         this.db.prepare(`CREATE INDEX IF NOT EXISTS idx1 ON docs(path, author);`).run();
         this.db.prepare(`CREATE INDEX IF NOT EXISTS idx2 ON docs(path, timestamp);`).run();
         this.db.prepare(`CREATE INDEX IF NOT EXISTS idx3 ON docs(timestamp);`).run();
@@ -245,11 +246,25 @@ export class StorageSqlite implements IStorage {
             filters.push('path < :highPath');
             filterParams.highPath = query.highPath;
         }
+        // if we have pathPrefix AND pathSuffix we would want to optimize them
+        // into a single filter, path LIKE (:prefix || '%' || :suffix).
+        // BUT we can't do that because we are allowing the prefix and suffix
+        // to potentially overlap,
+        // leaving no room in the middle for the wildcard to match anything.
+        // So this has to be left as two separate filter clauses.
         if (query.pathPrefix !== undefined) {
             filters.push("path LIKE (:prefix || '%') ESCAPE '\\'");
             // escape existing % and _ in the prefix
             // so they don't count as wildcards for LIKE
             filterParams.prefix = query.pathPrefix
+                .split('_').join('\\_')
+                .split('%').join('\\%');
+        }
+        if (query.pathSuffix !== undefined) {
+            filters.push("path LIKE ('%' || :suffix) ESCAPE '\\'");
+            // escape existing % and _ in the prefix
+            // so they don't count as wildcards for LIKE
+            filterParams.suffix = query.pathSuffix
                 .split('_').join('\\_')
                 .split('%').join('\\%');
         }
