@@ -287,6 +287,26 @@ t.test('queryMatchesDoc', (t: any) => {
             query: { pathPrefix: 'no such prefix' },
             matches: [],
         },
+        // PATH SUFFIX
+        {
+            query: { pathSuffix: '/x' },
+            matches: [i.d2, i.d5],
+        },
+        {
+            query: { pathSuffix: 'no such suffix' },
+            matches: [],
+        },
+        // PATH PREFIX AND SUFFIX TOGETHER
+        {
+            query: { pathPrefix: '/a', pathSuffix: 'a' },
+            matches: [i.d0, i.d1],
+            note: 'overlapping prefix and suffix',
+        },
+        {
+            query: { pathPrefix: '/c', pathSuffix: 'x' },
+            matches: [i.d5],
+            note: 'non-overlapping prefix and suffix',
+        },
         // TIMESTAMP
         {
             query: { timestamp: 0 },

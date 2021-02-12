@@ -341,15 +341,30 @@ export class StorageSqlite extends StorageBase {
         }
 
         // parts of the query that are the same for all docs in a path can go in WHERE.
+
         if (query.path !== undefined) {
             wheres.push('path = :path');
             params.path = query.path;
         }
+        // If we have pathPrefix AND pathSuffix we would want to optimize them
+        // into a single filter, path LIKE (:prefix || '%' || :suffix).
+        // BUT we can't do that because we are allowing the prefix and suffix
+        // to potentially overlap,
+        // leaving no room in the middle for the wildcard to match anything.
+        // So this has to be left as two separate filter clauses.
         if (query.pathPrefix !== undefined) {
             // Escape existing % and _ in the prefix so they don't count as wildcards for LIKE.
             // TODO: test this
             wheres.push("path LIKE (:prefix || '%') ESCAPE '\\'");
             params.prefix = query.pathPrefix
+                .split('_').join('\\_')
+                .split('%').join('\\%');
+        }
+        if (query.pathSuffix !== undefined) {
+            // Escape existing % and _ in the prefix so they don't count as wildcards for LIKE.
+            // TODO: test this
+            wheres.push("path LIKE ('%' || :suffix) ESCAPE '\\'");
+            params.suffix = query.pathSuffix
                 .split('_').join('\\_')
                 .split('%').join('\\%');
         }

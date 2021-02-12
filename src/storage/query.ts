@@ -24,6 +24,10 @@ export type HistoryMode =
  * narrowing down the results further.
  * The exception is that history = 'latest' by default;
  * set it to 'all' to include old history documents also.
+ * 
+ * HISTORY MODES
+ * - `latest`: get latest docs, THEN filter those.
+ * - `all`: get all docs, THEN filter those.
  */
 export interface Query {
     //=== filters that affect all documents equally within the same path
@@ -33,6 +37,13 @@ export interface Query {
 
     /** Path begins with... */
     pathPrefix?: string,
+
+    /** Path ends with this string.
+     * Note that pathPrefix and pathSuffix can overlap: for example
+     * { pathPrefix: "/abc", pathSuffix: "bcd" } will match "/abcd"
+     * as well as "/abc/xxxxxxx/bcd".
+     */
+    pathSuffix?: string,
 
     //=== filters that differently affect documents within the same path
 
@@ -63,10 +74,12 @@ export interface Query {
     //=== other settings
 
     /**
-     * If history === 'latest', return the most recent doc at each path.
+     * If history === 'latest', return the most recent doc at each path,
+     * then apply other filters to that set.
      * 
      * If history === 'all', return every doc at each path (with each
-     * other author's latest version)
+     * other author's latest version), then apply other filters
+     * to that set.
      * 
      * Default: latest
      */
@@ -161,6 +174,7 @@ export let queryMatchesDoc = (query: Query, doc: Document): boolean => {
 
     if (query.path       !== undefined && !(query.path === doc.path)) { return false; }
     if (query.pathPrefix !== undefined && !(doc.path.startsWith(query.pathPrefix))) { return false; }
+    if (query.pathSuffix !== undefined && !(doc.path.endsWith(query.pathSuffix))) { return false; }
 
     if (query.timestamp    !== undefined && !(doc.timestamp === query.timestamp   )) { return false; }
     if (query.timestamp_gt !== undefined && !(doc.timestamp >   query.timestamp_gt)) { return false; }
