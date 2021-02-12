@@ -19,6 +19,8 @@ Docs for app developers:
 * [Overview for developers](docs/overview.md) -- A quick comparison between Earthstar, CouchDB, and SSB
 * [Rules of Earthstar](docs/rules-of-earthstar.md) -- The scope of the project, and details of the technical invariants of the distributed system.
 * [Tutorial](docs/tutorial.md) -- Make a Todo list app, step by step
+* [Invite code format](https://github.com/earthstar-project/earthstar/wiki/Invite-code-format)
+* [Standard paths and data formats used by apps](https://github.com/earthstar-project/earthstar/wiki/Standard-paths-and-data-formats-used-by-apps) for their Earthstar documents, so apps can interoperate
 
 Docs for core Earthstar developers:
 * [Earthstar Specification](docs/specification.md) -- All you need to know to write an Earthstar implementation from scratch
@@ -30,9 +32,12 @@ Docs for core Earthstar developers:
 Related repos:
 * [earthstar-cli](https://github.com/earthstar-project/earthstar-cli) -- Command line utility
 * [earthstar-pub](https://github.com/earthstar-project/earthstar-pub) -- Server to help you sync
+* [react-earthstar](https://github.com/earthstar-project/react-earthstar) -- Make Earthstar apps with React 
 * [earthstar-graphql](https://github.com/earthstar-project/earthstar-graphql) -- A GraphQL layer for handling Earthstar data
 
 Demo apps:
+* [Twodays Crossing](https://github.com/earthstar-project/twodays-crossing) -- Ephemeral Roleplay chatroom [Try it here](https://twodays-crossing.netlify.app)
+* [earthstar-status[(https://github.com/earthstar-project/earthstar-status) -- Online presence messages app [Try it here](https://earthstar-status.netlify.app)
 * [earthstar-lobby](https://github.com/sgwilym/earthstar-lobby/) -- A guestbook.  [Try it here](https://earthstar-lobby.vercel.app/)
 * [earthstar-wiki](https://github.com/earthstar-project/earthstar-wiki) -- An example app built with Earthstar (deprecated)
 * [earthstar-os](https://github.com/earthstar-project/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser (deprecated)
@@ -52,6 +57,8 @@ Demo apps:
 - [Use cases](#use-cases)
 - [What doesn't it do?](#what-doesnt-it-do)
 - [Example](#example)
+- [Extras](#extras)
+  - [Deleting your data](#deleting-your-data)
 - [Details and notes](#details-and-notes)
   - [Signatures](#signatures)
   - [Sync over duplex streams:](#sync-over-duplex-streams)
@@ -406,6 +413,42 @@ let unsub = storage.onChange.subscribe(() => console.log('something changed'));
 // Later, you can turn off your subscription.
 unsub();
 ```
+
+## Extras
+
+### Deleting your data
+
+There's a special function to delete all of your own data from a workspace.
+
+It has limitations; I wish we could do better but this is the best that's possible given the current design of Earthstar.
+
+```ts
+import { deleteMyDocuments } from 'earthstar'
+
+let { numDeleted, numErrors } = deleteMyDocuments(storage, authorKeypair);
+// numErrors is how many documents failed to be deleted.  It should be zero.
+```
+
+This overwrites all the documents you created with empty strings, which is the usual way to "delete" things from Earthstar.  These deletions will propagate across the network, erasing your content from everyone in the workspace the next time they sync.
+
+If you do this, make sure you give Earthstar a chance to sync with pubs and get your empty versions out there, before you turn off your computer or log out of the workspace.
+
+What's deleted:
+* The content of documents that you wrote
+* The hashes of your original content
+
+Some metadata is left behind forever:
+* The paths of those documents
+* Their original timestamps plus 1 microsecond, so the empty version wins
+* Your author address
+
+App authors should consider the privacy implications of the way their paths are constructed, since the paths of documents can't be removed.  For example, use random IDs in paths instead of descriptive titles.
+
+Recall that if multiple people have written to the same path, Earthstar keeps one document from each of those people.  There are two scenarios to consider there:
+* If you were one of the older writers to that path, your document will be emptied and the newer document from someone else will be unaffected.
+* If you were the most recent writer, your document will be emptied and, since this is the most recent one, apps will now treat the whole paths as if it was gone.  The older docs by other people are still accessible but in most apps it will look like the path is empty.
+
+Your *ephemeral* documents (which have expiration dates) will also be emptied of content.  Their expiration date will not be changed.  When that date arrives, they will be completely and physically deleted.  (It would be nice to make them expire sooner but that might prevent the empty version from propagating across the entire network; generally expiration dates can be extended but not shortened.)
 
 ----
 

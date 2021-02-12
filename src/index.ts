@@ -4,6 +4,7 @@
 export * from './crypto/crypto';
 export * from './crypto/cryptoTypes';
 export * from './crypto/encoding';
+export * from './extras';
 export * from './storage/query';
 export * from './storage/storageBase';
 export * from './storage/storageLocalStorage';

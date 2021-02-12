@@ -30,6 +30,7 @@
     "test-crypto": "tap -Rspecy --jobs=1 build/test/crypto.test.js",
     "test-detRandom": "tap -Rspecy --jobs=1 build/test/detRandom.test.js",
     "test-emitter": "tap -Rspecy --jobs=1 build/test/emitter.test.js",
+    "test-extras": "tap -Rspecy --jobs=1 build/test/extras.test.js",
     "test-query": "tap -Rspecy --jobs=1 build/test/query.test.js",
     "test-storageAsync": "tap -Rspecy --jobs=1 build/test/storageAsync.test.js",
     "test-syncWithChannels": "tap -Rspecy --jobs=1 build/test/syncWithChannels.test.js",

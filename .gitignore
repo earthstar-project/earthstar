@@ -7,3 +7,4 @@ build/
 coverage/
 browserify-test-bundle/
 typedoc/
+.vscode
