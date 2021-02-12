@@ -259,6 +259,30 @@ let main = () => {
         gc();
         runner.note('');
 
+        runner.runMany(`docs: pathSuffix get 10% of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.documents({ pathSuffix: `${randInt(0, 9)}` });
+        });
+        gc();
+        runner.runMany(`docs: pathSuffix get 10% of ${nKeys} paths x ${keypairs.length} authors, limit 10`, {minDuration: 1234}, () => {
+            storage10k.documents({ pathSuffix: `${randInt(0, 9)}`, limit: 10 });
+        });
+        gc();
+        runner.runMany(`docs: pathSuffix get 1% of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.documents({ pathSuffix: `${randInt(10, 99)}` });
+        });
+        gc();
+        runner.note('');
+
+        runner.runMany(`docs: pathPrefix 10% AND pathSuffix 10% combined, equals 1% of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
+            storage10k.documents({ pathPrefix: `/test/${randInt(0, 9)}`, pathSuffix: `${randInt(0, 9)}` });
+        });
+        gc();
+        runner.runMany(`docs: pathPrefix 10% AND pathSuffix 10% combined, equals 1% of ${nKeys} paths x ${keypairs.length} authors, limit 2`, {minDuration: 1234}, () => {
+            storage10k.documents({ pathPrefix: `/test/${randInt(0, 9)}`, pathSuffix: `${randInt(0, 9)}`, limit: 2 });
+        });
+        gc();
+        runner.note('');
+
         runner.runMany(`docs: author matching 1/${keypairs.length} out of ${nKeys} paths x ${keypairs.length} authors`, {minDuration: 1234}, () => {
             storage10k.documents({ author: author1 });
         });

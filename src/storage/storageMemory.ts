@@ -59,16 +59,20 @@ export class StorageMemory extends StorageBase {
             pathsToConsider = Object.keys(this._docs);
         }
 
-        // prepare for the optimizations in the loop below
-        // which assume the pathsToConsider are sorted
+        // Sort the pathsToConsider
+        // to prepare for the optimizations in the loop below
+        // which assume it's sorted.
         if (query.pathPrefix !== undefined || query.limit !== undefined) {
             pathsToConsider.sort();
         }
 
         for (let path of pathsToConsider) {
 
-            // optimization when pathPrefix is set
-            // this assumes that pathsToConsider is sorted already
+            // Optimization when pathPrefix is set:
+            // skip ahead until we reach paths starting with pathPrefix,
+            // work through those,
+            // then break when we pass the end of those.
+            // This assumes that pathsToConsider is sorted already.
             if (query.pathPrefix !== undefined) {
                 if (!path.startsWith(query.pathPrefix)) {
                     if (path < query.pathPrefix) {
