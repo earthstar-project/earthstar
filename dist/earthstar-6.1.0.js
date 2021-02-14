@@ -398,16 +398,19 @@ let queryMatchesDoc = (query, doc) => {
     if (query.path !== undefined && !(query.path === doc.path)) {
         return false;
     }
-    if (query.pathPrefix !== undefined && !(doc.path.startsWith(query.pathPrefix))) {
+    if (query.pathStartsWith !== undefined && !(doc.path.startsWith(query.pathStartsWith))) {
+        return false;
+    }
+    if (query.pathEndsWith !== undefined && !(doc.path.endsWith(query.pathEndsWith))) {
         return false;
     }
     if (query.timestamp !== undefined && !(doc.timestamp === query.timestamp)) {
         return false;
     }
-    if (query.timestamp_gt !== undefined && !(doc.timestamp > query.timestamp_gt)) {
+    if (query.timestampGt !== undefined && !(doc.timestamp > query.timestampGt)) {
         return false;
     }
-    if (query.timestamp_lt !== undefined && !(doc.timestamp < query.timestamp_lt)) {
+    if (query.timestampLt !== undefined && !(doc.timestamp < query.timestampLt)) {
         return false;
     }
     if (query.author !== undefined && !(doc.author === query.author)) {
@@ -416,10 +419,10 @@ let queryMatchesDoc = (query, doc) => {
     if (query.contentLength !== undefined && !(exports.stringLengthInBytes(doc.content) === query.contentLength)) {
         return false;
     }
-    if (query.contentLength_gt !== undefined && !(exports.stringLengthInBytes(doc.content) > query.contentLength_gt)) {
+    if (query.contentLengthGt !== undefined && !(exports.stringLengthInBytes(doc.content) > query.contentLengthGt)) {
         return false;
     }
-    if (query.contentLength_lt !== undefined && !(exports.stringLengthInBytes(doc.content) < query.contentLength_lt)) {
+    if (query.contentLengthLt !== undefined && !(exports.stringLengthInBytes(doc.content) < query.contentLengthLt)) {
         return false;
     }
     if (query.continueAfter !== undefined) {
@@ -852,22 +855,26 @@ class StorageMemory extends storageBase_1.StorageBase {
         else {
             pathsToConsider = Object.keys(this._docs);
         }
-        // prepare for the optimizations in the loop below
-        // which assume the pathsToConsider are sorted
-        if (query.pathPrefix !== undefined || query.limit !== undefined) {
+        // Sort the pathsToConsider
+        // to prepare for the optimizations in the loop below
+        // which assume it's sorted.
+        if (query.pathStartsWith !== undefined || query.limit !== undefined) {
             pathsToConsider.sort();
         }
         for (let path of pathsToConsider) {
-            // optimization when pathPrefix is set
-            // this assumes that pathsToConsider is sorted already
-            if (query.pathPrefix !== undefined) {
-                if (!path.startsWith(query.pathPrefix)) {
-                    if (path < query.pathPrefix) {
-                        // skip ahead until we reach paths starting with pathPrefix
+            // Optimization when pathStartsWith is set:
+            // skip ahead until we reach paths starting with pathStartsWith,
+            // work through those,
+            // then break when we pass the end of those.
+            // This assumes that pathsToConsider is sorted already.
+            if (query.pathStartsWith !== undefined) {
+                if (!path.startsWith(query.pathStartsWith)) {
+                    if (path < query.pathStartsWith) {
+                        // skip ahead until we reach paths starting with pathStartsWith
                         continue;
                     }
                     else {
-                        // now we've gone past the pathPrefix, so we can stop
+                        // now we've gone past the pathStartsWith, so we can stop
                         break;
                     }
                 }
