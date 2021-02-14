@@ -398,9 +398,9 @@ storage.set(keypair1, {
 });
 
 // You can do leveldb style queries.
+// See the /src/storage/queries.ts for details on queries.
 storage.paths()
-storage.paths({ lowPath: '/abc', limit: 100 })
-storage.paths({ pathPrefix: '/wiki/' })
+storage.paths({ pathStartsWith: '/wiki/', limit: 10 })
 
 // You can sync to another Storage that has the same workspace address
 let storage2 = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');

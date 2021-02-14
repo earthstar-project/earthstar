@@ -651,10 +651,10 @@ for (let scenario of scenarios) {
         await storage.forgetDocuments({ path: 'none-such', history: 'all' });
         t.same(await storage.contents({ history: 'all' }), ['', '1', '22', '55555'], 'forgot nothing (no path matched)');
 
-        await storage.forgetDocuments({ pathPrefix: '/a', history: 'all' });
+        await storage.forgetDocuments({ pathStartsWith: '/a', history: 'all' });
         t.same(await storage.contents({ history: 'all' }), ['55555'], 'forgot by path prefix');
 
-        await storage.forgetDocuments({ pathPrefix: '/', history: 'all' });
+        await storage.forgetDocuments({ pathStartsWith: '/', history: 'all' });
         t.same(await storage.contents({ history: 'all' }), [], 'forgot everything');
 
         let errMsg = 'should throw with no history mode set in query';
@@ -723,9 +723,9 @@ for (let scenario of scenarios) {
             { query: { history: 'latest', continueAfter: { path: '/f', author: ''      }}, contents: [] },
 
             // filter by something else too
-            { query: { history: 'all', timestamp_gt: now, continueAfter: { path: '/a', author: '' }}     , contents: 'a2 b1'.split(' ') },
-            { query: { history: 'all', timestamp_gt: now, continueAfter: { path: '/a', author: author2 }}, contents: 'b1'.split(' ') },
-            { query: { history: 'all', timestamp_gt: now, continueAfter: { path: '/b', author: author1 }}, contents: [] },
+            { query: { history: 'all', timestampGt: now, continueAfter: { path: '/a', author: '' }}     , contents: 'a2 b1'.split(' ') },
+            { query: { history: 'all', timestampGt: now, continueAfter: { path: '/a', author: author2 }}, contents: 'b1'.split(' ') },
+            { query: { history: 'all', timestampGt: now, continueAfter: { path: '/b', author: author1 }}, contents: [] },
         ];
 
         for (let { query, contents, note } of testCases) {
@@ -825,11 +825,11 @@ for (let scenario of scenarios) {
             },
             // PATH PREFIX
             {
-                query: { pathPrefix: '/aa' },
+                query: { pathStartsWith: '/aa' },
                 matches: [i.d1, i.d2],
             },
             {
-                query: { pathPrefix: 'no such prefix' },
+                query: { pathStartsWith: 'no such prefix' },
                 matches: [],
             },
             // TIMESTAMP
@@ -850,35 +850,35 @@ for (let scenario of scenarios) {
                 matches: [i.d3],
             },
             {
-                query: { timestamp_gt: 777 },
+                query: { timestampGt: 777 },
                 matches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
             {
-                query: { timestamp_gt: 0 },
+                query: { timestampGt: 0 },
                 matches: [i.d0, i.d1, i.d2, i.d4, i.d5],
             },
             {
-                query: { timestamp_gt: now },
+                query: { timestampGt: now },
                 matches: [i.d4],
             },
             {
-                query: { timestamp_lt: 0 },
+                query: { timestampLt: 0 },
                 matches: [],
             },
             {
-                query: { timestamp_lt: 777 },
+                query: { timestampLt: 777 },
                 matches: [],
             },
             {
-                query: { timestamp_lt: now + 1 },
+                query: { timestampLt: now + 1 },
                 matches: [i.d0, i.d1, i.d2, i.d5],
             },
             {
-                query: { timestamp_gt: 1, timestamp_lt: now + 1 },
+                query: { timestampGt: 1, timestampLt: now + 1 },
                 matches: [i.d0, i.d1, i.d2, i.d5],
             },
             {
-                query: { timestamp_lt: 1, timestamp_gt: now + 1 },
+                query: { timestampLt: 1, timestampGt: now + 1 },
                 matches: [],
             },
             // AUTHOR
@@ -908,15 +908,15 @@ for (let scenario of scenarios) {
                 matches: [i.d2],
             },
             {
-                query: { contentLength_gt: 0 },
+                query: { contentLengthGt: 0 },
                 matches: [i.d1, i.d2, i.d5],
             },
             {
-                query: { contentLength_gt: 0, history: 'all' },
+                query: { contentLengthGt: 0, history: 'all' },
                 matches: [i.d1, i.d2, i.d3, i.d5],
             },
             {
-                query: { contentLength_lt: 2 },
+                query: { contentLengthLt: 2 },
                 matches: [i.d0, i.d1, i.d4],
             },
             // HISTORY MODE
@@ -1150,19 +1150,19 @@ for (let scenario of scenarios) {
 
             await setExpiringDoc();
             storage._now = now;
-            t.same(await storage.paths({pathPrefix: '/exp'}), ['/expire-in-place!'], 'paths(): doc was there');
+            t.same(await storage.paths({pathStartsWith: '/exp'}), ['/expire-in-place!'], 'paths(): doc was there');
             storage._now = now + 8 * DAY;
-            t.same(await storage.paths({pathPrefix: '/exp'}), [], 'paths(): doc expired in place');
+            t.same(await storage.paths({pathStartsWith: '/exp'}), [], 'paths(): doc expired in place');
             storage._now = now;
-            t.same(await storage.paths({pathPrefix: '/exp'}), [], 'paths(): doc was deleted after expiring');
+            t.same(await storage.paths({pathStartsWith: '/exp'}), [], 'paths(): doc was deleted after expiring');
 
             await setExpiringDoc();
             storage._now = now;
-            t.same((await storage.documents({pathPrefix: '/exp'})).length, 1, 'documents(): doc was there');
+            t.same((await storage.documents({pathStartsWith: '/exp'})).length, 1, 'documents(): doc was there');
             storage._now = now + 8 * DAY;
-            t.same((await storage.documents({pathPrefix: '/exp'})).length, 0, 'documents(): doc expired in place');
+            t.same((await storage.documents({pathStartsWith: '/exp'})).length, 0, 'documents(): doc expired in place');
             storage._now = now;
-            t.same((await storage.documents({pathPrefix: '/exp'})).length, 0, 'documents(): doc was deleted after expiring');
+            t.same((await storage.documents({pathStartsWith: '/exp'})).length, 0, 'documents(): doc was deleted after expiring');
         }
 
         // TODO for ephemeral doc tests:
@@ -1240,18 +1240,18 @@ for (let scenario of scenarios) {
         t.same(await storage.paths({ path: '/nope' }), [], 'query for missing path');
         t.same(await storage.documents({ path: '/nope' }), [], 'query for missing path (documents)');
 
-        t.same(await storage.paths({ pathPrefix: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
-        t.same(await storage.paths({ pathPrefix: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathPrefix');
-        t.same(await storage.paths({ pathPrefix: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathPrefix with limit');
+        t.same(await storage.paths({ pathStartsWith: '/dir' }), ['/dir', '/dir/a', '/dir/b', '/dir/c'], 'pathStartsWith');
+        t.same(await storage.paths({ pathStartsWith: '/dir/' }), ['/dir/a', '/dir/b', '/dir/c'], 'pathStartsWith');
+        t.same(await storage.paths({ pathStartsWith: '/dir/', limit: 2 }), ['/dir/a', '/dir/b'], 'pathStartsWith with limit');
 
-        t.same(await storage.paths({ pathSuffix: 'banana' }), [], 'pathSuffix with no matches');
-        t.same(await storage.paths({ pathSuffix: 'q' }), ['/q', '/qq', '/qqq'], 'pathSuffix');
-        t.same(await storage.paths({ pathSuffix: 'q', limit: 2 }), ['/q', '/qq'], 'pathSuffix with limit');
-        t.same(await storage.paths({ pathSuffix: 'qq' }), ['/qq', '/qqq'], 'pathSuffix');
+        t.same(await storage.paths({ pathEndsWith: 'banana' }), [], 'pathEndsWith with no matches');
+        t.same(await storage.paths({ pathEndsWith: 'q' }), ['/q', '/qq', '/qqq'], 'pathEndsWith');
+        t.same(await storage.paths({ pathEndsWith: 'q', limit: 2 }), ['/q', '/qq'], 'pathEndsWith with limit');
+        t.same(await storage.paths({ pathEndsWith: 'qq' }), ['/qq', '/qqq'], 'pathEndsWith');
 
-        t.same(await storage.paths({ pathPrefix: '/', pathSuffix: 'qq' }), ['/qq', '/qqq'], 'pathPrefix and pathSuffix');
-        t.same(await storage.paths({ pathPrefix: '/qq', pathSuffix: 'qq' }), ['/qq', '/qqq'], 'pathPrefix and pathSuffix that overlap');
-        t.same(await storage.paths({ pathPrefix: '/di', pathSuffix: '/a' }), ['/dir/a'], 'pathPrefix and pathSuffix that do not overlap');
+        t.same(await storage.paths({ pathStartsWith: '/', pathEndsWith: 'qq' }), ['/qq', '/qqq'], 'pathStartsWith and pathEndsWith');
+        t.same(await storage.paths({ pathStartsWith: '/qq', pathEndsWith: 'qq' }), ['/qq', '/qqq'], 'pathStartsWith and pathEndsWith that overlap');
+        t.same(await storage.paths({ pathStartsWith: '/di', pathEndsWith: '/a' }), ['/dir/a'], 'pathStartsWith and pathEndsWith that do not overlap');
 
         await storage.close();
         t.end();
@@ -1273,9 +1273,9 @@ for (let scenario of scenarios) {
         t.same((await storage.paths()).length, 3, 'paths() length = 3')
         t.same((await storage.contents()).length, 3, 'contents() length = 3')
 
-        t.same((await storage.documents({ contentLength_gt: 0 })).length, 1, 'documents(contentLength_gt: 0) length = 1')
-        t.same((await storage.paths(    { contentLength_gt: 0 })).length, 1, 'paths(contentLength_gt: 0) length = 1')
-        t.same((await storage.contents( { contentLength_gt: 0 })).length, 1, 'contents(contentLength_gt: 0) length = 1')
+        t.same((await storage.documents({ contentLengthGt: 0 })).length, 1, 'documents(contentLengthGt: 0) length = 1')
+        t.same((await storage.paths(    { contentLengthGt: 0 })).length, 1, 'paths(contentLengthGt: 0) length = 1')
+        t.same((await storage.contents( { contentLengthGt: 0 })).length, 1, 'contents(contentLengthGt: 0) length = 1')
 
         t.same((await storage.documents({ contentLength: 0 })).length, 2, 'documents(contentLength: 0) length = 2')
         t.same((await storage.paths(    { contentLength: 0 })).length, 2, 'paths(contentLength: 0) length = 2')
@@ -1295,22 +1295,22 @@ for (let scenario of scenarios) {
 
         // the head in /full has no content (we changed it, above)
         t.same((await storage.documents({ history: 'latest', path: '/full'                      })).length, 1, 'documents({ isHead: true, path: /full,                   }) length = 1')
-        t.same((await storage.documents({ history: 'latest', path: '/full', contentLength_gt: 0 })).length, 0, 'documents({ isHead: true, path: /full, contentLength_gt: 0 }) length = 0')
+        t.same((await storage.documents({ history: 'latest', path: '/full', contentLengthGt: 0 })).length, 0, 'documents({ isHead: true, path: /full, contentLengthGt: 0 }) length = 0')
         t.same((await storage.documents({ history: 'latest', path: '/full', contentLength: 0    })).length, 1, 'documents({ isHead: true, path: /full, contentLength: 0    }) length = 1')
 
         // in /full there's two docs: one has content '' and one has 'full'
         t.same((await storage.documents({ history: 'all',    path: '/full'                      })).length, 2, 'documents({               path: /full,                   }) length = 2')
-        t.same((await storage.documents({ history: 'all',    path: '/full', contentLength_gt: 0 })).length, 1, 'documents({               path: /full, contentLength_gt: 0 }) length = 1')
+        t.same((await storage.documents({ history: 'all',    path: '/full', contentLengthGt: 0 })).length, 1, 'documents({               path: /full, contentLengthGt: 0 }) length = 1')
         t.same((await storage.documents({ history: 'all',    path: '/full', contentLength: 0    })).length, 1, 'documents({               path: /full, contentLength: 0    }) length = 1')
 
         // the head in /empty has content 'e'
         t.same((await storage.documents({ history: 'latest', path: '/empty'                      })).length, 1, 'documents({ isHead: true, path: /empty,                   }) length = 1')
-        t.same((await storage.documents({ history: 'latest', path: '/empty', contentLength_gt: 0 })).length, 1, 'documents({ isHead: true, path: /empty, contentLength_gt: 0 }) length = 1')
+        t.same((await storage.documents({ history: 'latest', path: '/empty', contentLengthGt: 0 })).length, 1, 'documents({ isHead: true, path: /empty, contentLengthGt: 0 }) length = 1')
         t.same((await storage.documents({ history: 'latest', path: '/empty', contentLength: 0    })).length, 0, 'documents({ isHead: true, path: /empty, contentLength: 0    }) length = 0')
 
         // in /empty there's two docs: one has content '' and one has 'full'
         t.same((await storage.documents({ history: 'all',    path: '/empty'                      })).length, 2, 'documents({               path: /empty,                   }) length = 2')
-        t.same((await storage.documents({ history: 'all',    path: '/empty', contentLength_gt: 0 })).length, 1, 'documents({               path: /empty, contentLength_gt: 0 }) length = 1')
+        t.same((await storage.documents({ history: 'all',    path: '/empty', contentLengthGt: 0 })).length, 1, 'documents({               path: /empty, contentLengthGt: 0 }) length = 1')
         t.same((await storage.documents({ history: 'all',    path: '/empty', contentLength: 0    })).length, 1, 'documents({               path: /empty, contentLength: 0    }) length = 1')
 
         await storage.close();

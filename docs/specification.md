@@ -886,64 +886,101 @@ For exporting and importing data:
 
 Libraries SHOULD support a standard variety of queries against a database of Earthstar messages.  A query is specified by a single object with optional fields for each kind of query operation.
 
-The recommended query object format, expressed in Typescript, is:
+The recommended query object format, expressed in Typescript, is (see [query.ts](https://github.com/earthstar-project/earthstar/blob/main/src/storage/query.ts) for the latest version of this):
 
 ```ts
-// Query objects describe how to query a Storage instance for documents.
-export interface QueryOpts {
-    // An empty query object returns all documents.
+/**
+ * Query objects describe how to query a Storage instance for documents.
+ * 
+ * An empty query object returns all latest documents.
+ * Each of the following properties adds an additional filter,
+ * narrowing down the results further.
+ * The exception is that history = 'latest' by default;
+ * set it to 'all' to include old history documents also.
+ * 
+ * HISTORY MODES
+ * - `latest`: get latest docs, THEN filter those.
+ * - `all`: get all docs, THEN filter those.
+ */
+export interface Query {
+    //=== filters that affect all documents equally within the same path
 
-    // Each of the following adds an additional filter,
-    // narrowing down the results further.
+    /** Path exactly equals... */
+    path?: string,
 
-    // Limit to documents from a certain workspace.
-    // This may not be needed if you're querying a storage
-    // instance that only holds one workspace.
-    workspace?: string,
+    /** Path begins with... */
+    pathStartsWith?: string,
 
-    path?: string,  // One specific path only.
+    /** Path ends with this string.
+     * Note that pathStartsWith and pathEndsWith can overlap: for example
+     * { pathStartsWith: "/abc", pathEndsWith: "bcd" } will match "/abcd"
+     * as well as "/abc/xxxxxxx/bcd".
+     */
+    pathEndsWith?: string,
 
-    pathPrefix?: string,  // Paths starting with prefix.
+    //=== filters that differently affect documents within the same path
 
-    lowPath?: string,  // lowPath <= p 
-    highPath?: string,  // p < highPath
+    /** Timestamp exactly equals... */
+    timestamp?: number,
 
-    // Only return the first N documents.
-    // This counts the total number of docs returned,
-    // counting historical and most-recent versions.
-    // There's no offset; use lowPath as a cursor instead.
+    /** Timestamp is greater than... */
+    timestampGt?: number,
+
+    /** Timestamp is less than than... */
+    timestampLt?: number,
+
+    /**
+     * Document author.
+     * 
+     * With history:'latest' this only returns documents for which
+     * this author is the latest author.
+     * 
+     * With history:'all' this returns all documents by this author,
+     * even if those documents are not the latest ones anymore.
+     */
+    author?: AuthorAddress,
+
+    contentLength?: number,  // in bytes as utf-8.  TODO: how to treat sparse docs with null content?
+    contentLengthGt?: number,
+    contentLengthLt?: number,
+
+    //=== other settings
+
+    /**
+     * If history === 'latest', return the most recent doc at each path,
+     * then apply other filters to that set.
+     * 
+     * If history === 'all', return every doc at each path (with each
+     * other author's latest version), then apply other filters
+     * to that set.
+     * 
+     * Default: latest
+     */
+    history?: HistoryMode,
+
+    /**
+     * Only return the first N documents.
+     * There's no offset; use continueAfter instead.
+     */
     limit?: number,
 
-    // Include old versions of this doc from different authors?
-    includeHistory?: boolean, // default false
+    /**
+     * Accumulate documents until the sum of their content length <= limitByts.
+     * 
+     * Content length is measured in UTF-8 bytes, not unicode characters.
+     * 
+     * If some docs have length zero, stop as soon as possible (don't include them).
+     */
+    limitBytes?: number,
 
-    // If including history, find paths where the author ever wrote, and return all history for those paths by anyone
-    // If not including history, find paths where the author ever wrote, and return the latest doc (maybe not by the author)
-    participatingAuthor?: AuthorAddress,
-
-    //// If including history, find paths with the given last-author, and return all history for those paths
-    //// If not including history, find paths with the given last-author, and return just the last doc
-    //lastAuthor?: AuthorAddress,
-
-    // If including history, it's any revision by this author (heads and non-heads)
-    // If not including history, it's any revision by this author which is a head
-    versionsByAuthor?: AuthorAddress,
-
-    // If true, only match documents with content === "" (e.g. deleted documents)
-    // If false, only match documents with content.length >= 1
-    // If omitted, match all documents.
-    contentIsEmpty?: boolean,
-
-    // timestamp before and after // TODO
-
-    // sort order: TODO
-    // For now the default sort is path ASC, then timestamp DESC (newest first within same path)
-
-    // The time at which the query is considered to take place.
-    // This is useful for testing ephemeral document expiration.
-    // Normally this should be omitted.  It defaults to the current time.
-    now?: number,
-}
+    /**
+     * Begin with the next matching document after this one:
+     */
+    continueAfter?: {
+        path: string,
+        author: string,
+    },
+};
 ```
 
 A library MAY support merging multiple queries.  See the Sync Queries section for more details about how this works.
@@ -1005,26 +1042,26 @@ Example:
 // ask for all the About documents, and the recent Wiki documents
 let incomingQueries = [
     {
-        pathPrefix: '/about/',
-        includeHistory: true,
+        pathStartsWith: '/about/',
+        history: 'all',
     },
     {
-        pathPrefix: '/wiki/',
-        includeHistory: true,
-        timestampAfter: 15028732938984
+        pathStartsWith: '/wiki/',
+        history: 'all',
+        tiemstampGt: 15028732938984
     },
 ];
 
 // only share documents I wrote myself
 let outgoingQueries = [
     {
-        versionsByAuthor: '@suzy.bjzee56v2hd6mv5r5ar3xqg3x3oyugf7fejpxnvgquxcubov4rntq',
-        includeHistory: true
+        author: '@suzy.bjzee56v2hd6mv5r5ar3xqg3x3oyugf7fejpxnvgquxcubov4rntq',
+        history: 'all',
     },
 ];
 ```
 
-(Note: `timestampAfter` is shown for illustration purposes; that query field is not implemented yet)
+(Sync queries are is not implemented yet as of Jan 2021.)
 
 ## Resolving Conflicts
 

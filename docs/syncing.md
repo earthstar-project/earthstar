@@ -57,7 +57,7 @@ Each peer has 2 of these:
 * **Incoming sync query** -- which documents does the peer want to get?
 * **Outgoing sync query** -- which documents is the peer willing to share?
 
-For example, an incoming sync query of `{pathPrefix: "/wiki/"}` means you only want to get wiki-related documents.
+For example, an incoming sync query of `{pathStartsWith: "/wiki/"}` means you only want to get wiki-related documents.
 
 You could also use an incoming sync query to only get recent documents from the last week.
 

@@ -80,7 +80,7 @@ storage.set(keypair1, {
 
 // You can do leveldb style queries.
 storage.paths()  // match all
-storage.paths({ pathPrefix: '/wiki/', limit: 100,  })
+storage.paths({ pathStartsWith: '/wiki/', limit: 100,  })
 
 // You can sync to another Storage that has the same workspace address
 let storage2 = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');

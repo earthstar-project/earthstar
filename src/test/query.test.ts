@@ -280,30 +280,30 @@ t.test('queryMatchesDoc', (t: any) => {
         },
         // PATH PREFIX
         {
-            query: { pathPrefix: '/aa' },
+            query: { pathStartsWith: '/aa' },
             matches: [i.d1, i.d2],
         },
         {
-            query: { pathPrefix: 'no such prefix' },
+            query: { pathStartsWith: 'no such prefix' },
             matches: [],
         },
         // PATH SUFFIX
         {
-            query: { pathSuffix: '/x' },
+            query: { pathEndsWith: '/x' },
             matches: [i.d2, i.d5],
         },
         {
-            query: { pathSuffix: 'no such suffix' },
+            query: { pathEndsWith: 'no such suffix' },
             matches: [],
         },
         // PATH PREFIX AND SUFFIX TOGETHER
         {
-            query: { pathPrefix: '/a', pathSuffix: 'a' },
+            query: { pathStartsWith: '/a', pathEndsWith: 'a' },
             matches: [i.d0, i.d1],
             note: 'overlapping prefix and suffix',
         },
         {
-            query: { pathPrefix: '/c', pathSuffix: 'x' },
+            query: { pathStartsWith: '/c', pathEndsWith: 'x' },
             matches: [i.d5],
             note: 'non-overlapping prefix and suffix',
         },
@@ -321,27 +321,27 @@ t.test('queryMatchesDoc', (t: any) => {
             matches: [i.d3],
         },
         {
-            query: { timestamp_gt: 777 },
+            query: { timestampGt: 777 },
             matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
         },
         {
-            query: { timestamp_gt: 0 },
+            query: { timestampGt: 0 },
             matches: [i.d0, i.d1, i.d2, i.d3, i.d4, i.d5],
         },
         {
-            query: { timestamp_gt: now },
+            query: { timestampGt: now },
             matches: [i.d3, i.d4],
         },
         {
-            query: { timestamp_lt: 0 },
+            query: { timestampLt: 0 },
             matches: [],
         },
         {
-            query: { timestamp_lt: 777 },
+            query: { timestampLt: 777 },
             matches: [],
         },
         {
-            query: { timestamp_lt: now + 1 },
+            query: { timestampLt: now + 1 },
             matches: [i.d0, i.d1, i.d2, i.d5],
         },
         // AUTHOR
@@ -363,11 +363,11 @@ t.test('queryMatchesDoc', (t: any) => {
             matches: [i.d2],
         },
         {
-            query: { contentLength_gt: 0 },
+            query: { contentLengthGt: 0 },
             matches: [i.d1, i.d2, i.d3, i.d5],
         },
         {
-            query: { contentLength_lt: 2 },
+            query: { contentLengthLt: 2 },
             matches: [i.d0, i.d1, i.d4],
         },
         // CONTINUE AFTER

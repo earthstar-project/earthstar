@@ -8,7 +8,7 @@ import {
 /*
 open questions
     when doing paths(query), is it...
-    * doing a cheap query only on the paths column, using path and pathPrefix?
+    * doing a cheap query only on the paths column, using path and pathStartsWith?
     * or doing a full query also using author, timestamp, etc, then getting unique paths?
 */
 
@@ -36,14 +36,14 @@ export interface Query {
     path?: string,
 
     /** Path begins with... */
-    pathPrefix?: string,
+    pathStartsWith?: string,
 
     /** Path ends with this string.
-     * Note that pathPrefix and pathSuffix can overlap: for example
-     * { pathPrefix: "/abc", pathSuffix: "bcd" } will match "/abcd"
+     * Note that pathStartsWith and pathEndsWith can overlap: for example
+     * { pathStartsWith: "/abc", pathEndsWith: "bcd" } will match "/abcd"
      * as well as "/abc/xxxxxxx/bcd".
      */
-    pathSuffix?: string,
+    pathEndsWith?: string,
 
     //=== filters that differently affect documents within the same path
 
@@ -51,10 +51,10 @@ export interface Query {
     timestamp?: number,
 
     /** Timestamp is greater than... */
-    timestamp_gt?: number,
+    timestampGt?: number,
 
     /** Timestamp is less than than... */
-    timestamp_lt?: number,
+    timestampLt?: number,
 
     /**
      * Document author.
@@ -68,8 +68,8 @@ export interface Query {
     author?: AuthorAddress,
 
     contentLength?: number,  // in bytes as utf-8.  TODO: how to treat sparse docs with null content?
-    contentLength_gt?: number,
-    contentLength_lt?: number,
+    contentLengthGt?: number,
+    contentLengthLt?: number,
 
     //=== other settings
 
@@ -173,18 +173,18 @@ export let stringLengthInBytes = (s: string): number =>
 export let queryMatchesDoc = (query: Query, doc: Document): boolean => {
 
     if (query.path       !== undefined && !(query.path === doc.path)) { return false; }
-    if (query.pathPrefix !== undefined && !(doc.path.startsWith(query.pathPrefix))) { return false; }
-    if (query.pathSuffix !== undefined && !(doc.path.endsWith(query.pathSuffix))) { return false; }
+    if (query.pathStartsWith !== undefined && !(doc.path.startsWith(query.pathStartsWith))) { return false; }
+    if (query.pathEndsWith !== undefined && !(doc.path.endsWith(query.pathEndsWith))) { return false; }
 
     if (query.timestamp    !== undefined && !(doc.timestamp === query.timestamp   )) { return false; }
-    if (query.timestamp_gt !== undefined && !(doc.timestamp >   query.timestamp_gt)) { return false; }
-    if (query.timestamp_lt !== undefined && !(doc.timestamp <   query.timestamp_lt)) { return false; }
+    if (query.timestampGt !== undefined && !(doc.timestamp >   query.timestampGt)) { return false; }
+    if (query.timestampLt !== undefined && !(doc.timestamp <   query.timestampLt)) { return false; }
 
     if (query.author !== undefined && !(doc.author === query.author)) { return false; }
 
     if (query.contentLength    !== undefined && !(stringLengthInBytes(doc.content) === query.contentLength   )) { return false; }
-    if (query.contentLength_gt !== undefined && !(stringLengthInBytes(doc.content) >   query.contentLength_gt)) { return false; }
-    if (query.contentLength_lt !== undefined && !(stringLengthInBytes(doc.content) <   query.contentLength_lt)) { return false; }
+    if (query.contentLengthGt !== undefined && !(stringLengthInBytes(doc.content) >   query.contentLengthGt)) { return false; }
+    if (query.contentLengthLt !== undefined && !(stringLengthInBytes(doc.content) <   query.contentLengthLt)) { return false; }
 
     if (query.continueAfter !== undefined) {
         let { path, author } = query.continueAfter;

@@ -44,7 +44,7 @@ examples, using `xxxxx` to stand in for long base58 strings
 
 ```
 earthstar://gardening.xxxxx
-earthstar://gardening.xxxxx?pathPrefix=/wiki/&limit=5
+earthstar://gardening.xxxxx?pathStartsWith=/wiki/&limit=5
 earthstar://gardening.xxxxx/wiki/Flowers
 earthstar://gardening.xxxxx/@suzy.xxxxx
 

@@ -241,39 +241,101 @@ You can retrieve documents in several ways:
 2. Getting the document at one specific path
 3. Querying
 
-To query, you supply a query object:
-```
-export interface QueryOpts {
-    // An empty query object returns all documents.
-    // Each of the following adds an additional filter,
-    // narrowing down the results further.
+To query, you supply a [query object](https://github.com/earthstar-project/earthstar/blob/main/src/storage/query.ts):
 
-    path?: string,  // one specific path only.
+```ts
+/**
+ * Query objects describe how to query a Storage instance for documents.
+ * 
+ * An empty query object returns all latest documents.
+ * Each of the following properties adds an additional filter,
+ * narrowing down the results further.
+ * The exception is that history = 'latest' by default;
+ * set it to 'all' to include old history documents also.
+ * 
+ * HISTORY MODES
+ * - `latest`: get latest docs, THEN filter those.
+ * - `all`: get all docs, THEN filter those.
+ */
+export interface Query {
+    //=== filters that affect all documents equally within the same path
 
-    lowPath?: string,  // lowPath <= p 
-    highPath?: string,  // p < highPath
+    /** Path exactly equals... */
+    path?: string,
 
-    pathPrefix?: string,  // paths starting with prefix.
+    /** Path begins with... */
+    pathStartsWith?: string,
 
-    // limit applies to the total number of docs returned, counting heads and non-heads
-    // there's no offset; use lowPath as a cursor instead
+    /** Path ends with this string.
+     * Note that pathStartsWith and pathEndsWith can overlap: for example
+     * { pathStartsWith: "/abc", pathEndsWith: "bcd" } will match "/abcd"
+     * as well as "/abc/xxxxxxx/bcd".
+     */
+    pathEndsWith?: string,
+
+    //=== filters that differently affect documents within the same path
+
+    /** Timestamp exactly equals... */
+    timestamp?: number,
+
+    /** Timestamp is greater than... */
+    timestampGt?: number,
+
+    /** Timestamp is less than than... */
+    timestampLt?: number,
+
+    /**
+     * Document author.
+     * 
+     * With history:'latest' this only returns documents for which
+     * this author is the latest author.
+     * 
+     * With history:'all' this returns all documents by this author,
+     * even if those documents are not the latest ones anymore.
+     */
+    author?: AuthorAddress,
+
+    contentLength?: number,  // in bytes as utf-8.  TODO: how to treat sparse docs with null content?
+    contentLengthGt?: number,
+    contentLengthLt?: number,
+
+    //=== other settings
+
+    /**
+     * If history === 'latest', return the most recent doc at each path,
+     * then apply other filters to that set.
+     * 
+     * If history === 'all', return every doc at each path (with each
+     * other author's latest version), then apply other filters
+     * to that set.
+     * 
+     * Default: latest
+     */
+    history?: HistoryMode,
+
+    /**
+     * Only return the first N documents.
+     * There's no offset; use continueAfter instead.
+     */
     limit?: number,
 
-    // include old versions of this doc from different authors?
-    includeHistory?: boolean, // default false
+    /**
+     * Accumulate documents until the sum of their content length <= limitByts.
+     * 
+     * Content length is measured in UTF-8 bytes, not unicode characters.
+     * 
+     * If some docs have length zero, stop as soon as possible (don't include them).
+     */
+    limitBytes?: number,
 
-    // if including history, find paths where the author ever wrote, and return all history for those paths by anyone
-    // if not including history, find paths where the author ever wrote, and return the latest doc (maybe not by the author)
-    participatingAuthor?: AuthorAddress,
-
-    // if including history, it's any revision by this author (heads and non-heads)
-    // if not including history, it's any revision by this author which is a head
-    versionsByAuthor?: AuthorAddress,
-
-    // timestamp before and after // TODO
-
-    // sort order: TODO
-}
+    /**
+     * Begin with the next matching document after this one:
+     */
+    continueAfter?: {
+        path: string,
+        author: string,
+    },
+};
 ```
 
 # Pub servers

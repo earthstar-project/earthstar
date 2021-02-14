@@ -107,9 +107,9 @@ for (let scenario of scenarios) {
 
         // check that writes worked as expected
         t.same(storage.paths(), ['/path1', '/path2', '/path3!', '/path4'], 'paths() are correct');
-        t.same(storage.paths({ contentLength_gt: 0 }), ['/path1', '/path2', '/path3!', '/path4'], 'four paths have non-empty content');
+        t.same(storage.paths({ contentLengthGt: 0 }), ['/path1', '/path2', '/path3!', '/path4'], 'four paths have non-empty content');
         t.same(storage.authors(), [keypair1.address, keypair2.address], 'authors() are correct');
-        t.same(storage.documents({ history: 'all', contentLength_gt: 0 }).length, 6, '6 doc versions exist and all are full of content');
+        t.same(storage.documents({ history: 'all', contentLengthGt: 0 }).length, 6, '6 doc versions exist and all are full of content');
 
         // do the deletion
         let { numDeleted, numErrors } = deleteMyDocuments(storage, keypair1);
@@ -122,9 +122,9 @@ for (let scenario of scenarios) {
         t.same(storage.getContent('/path4'), '', 'your newer doc deletion has left behind an empty string which wins over author2\'s older doc');
 
         t.same(storage.paths(), ['/path1', '/path2', '/path3!', '/path4'], 'after deleteMyDocuments, paths() are unchanged because the empty docs still exist');
-        t.same(storage.paths({ contentLength_gt: 0 }), ['/path1'], 'only one path has non-empty content.  (one is shadowed by your now-empty newer doc)');
+        t.same(storage.paths({ contentLengthGt: 0 }), ['/path1'], 'only one path has non-empty content.  (one is shadowed by your now-empty newer doc)');
         t.same(storage.authors(), [keypair1.address, keypair2.address], 'authors() are unchanged');
-        t.same(storage.documents({ history: 'all', contentLength_gt: 0 }).length, 2, '2 doc versions has content');
+        t.same(storage.documents({ history: 'all', contentLengthGt: 0 }).length, 2, '2 doc versions has content');
         t.same(storage.documents({ history: 'all', contentLength: 0}).length, 4, '4 doc versions are empty');
 
         for (let doc of storage.documents({ history: 'all', author: keypair1.address })) {

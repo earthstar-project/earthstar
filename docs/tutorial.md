@@ -171,7 +171,7 @@ The kind of path we're using works well because we can get all the documents rel
 ```js
 // queries are written as JSON style objects
 
-{ pathPrefix: "/toboop/0001/" }
+{ pathStartsWith: "/toboop/0001/" }
 ```
 
 ## Avoid sequential id numbers

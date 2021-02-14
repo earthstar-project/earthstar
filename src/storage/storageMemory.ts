@@ -62,24 +62,24 @@ export class StorageMemory extends StorageBase {
         // Sort the pathsToConsider
         // to prepare for the optimizations in the loop below
         // which assume it's sorted.
-        if (query.pathPrefix !== undefined || query.limit !== undefined) {
+        if (query.pathStartsWith !== undefined || query.limit !== undefined) {
             pathsToConsider.sort();
         }
 
         for (let path of pathsToConsider) {
 
-            // Optimization when pathPrefix is set:
-            // skip ahead until we reach paths starting with pathPrefix,
+            // Optimization when pathStartsWith is set:
+            // skip ahead until we reach paths starting with pathStartsWith,
             // work through those,
             // then break when we pass the end of those.
             // This assumes that pathsToConsider is sorted already.
-            if (query.pathPrefix !== undefined) {
-                if (!path.startsWith(query.pathPrefix)) {
-                    if (path < query.pathPrefix) {
-                        // skip ahead until we reach paths starting with pathPrefix
+            if (query.pathStartsWith !== undefined) {
+                if (!path.startsWith(query.pathStartsWith)) {
+                    if (path < query.pathStartsWith) {
+                        // skip ahead until we reach paths starting with pathStartsWith
                         continue; 
                     } else {
-                        // now we've gone past the pathPrefix, so we can stop
+                        // now we've gone past the pathStartsWith, so we can stop
                         break;
                     }
                 }

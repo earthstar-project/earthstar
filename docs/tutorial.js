@@ -5,6 +5,7 @@ let {
     ValidatorEs4,
     generateAuthorKeypair,
     isErr,
+    sleep,
 } = require('earthstar');
 
 /*
@@ -147,7 +148,7 @@ let listTodoIds = (storage) => {
     // Let's filter them to only keep the text.txt docs.
     // Note that storage queries always return results sorted alphabetically by path,
     // so we don't have to sort it ourself.
-    let query = { pathPrefix: '/toboop/' };
+    let query = { pathStartsWith: '/toboop/' };
     let labelPaths = storage.paths(query)
         .filter(path => path.endsWith('text.txt'));
 
@@ -354,18 +355,26 @@ let syncer = new OnePubOneWorkspaceSyncer(storage, pub);
 // You can "sync once" and then stop, or do a live sync that continues
 // forever, streaming new changes as they happen.
 // In this demo we'll just sync once.
+let stillSyncing = false;
 let syncOnce = async (pub) => {
-    console.log(`syncing once to ${pub}...`);
-    console.log('this might print a bunch of debug information...');
+    let stillSyncing = true;
+    try {
+        console.log(`syncing once to ${pub}...`);
+        console.log('this might print a bunch of debug information...');
 
-    let stats = await syncer.syncOnce()
+        let stats = await syncer.syncOnce()
+        stillSyncing = false;
 
-    console.log('done syncing');
-    console.log(`visit ${pub}/workspace/${workspace} to see your docs on the pub.`);
-    console.log(stats);  // show the number of docs that were synced
+        console.log('done syncing');
+        console.log(`visit ${pub}/workspace/${workspace} to see your docs on the pub.`);
+        console.log(stats);  // show the number of docs that were synced
+    } catch (err) {
+        console.error(err);
+    }
 };
-// uncomment this to actually do the sync:
-//syncOnce(pub);
+// uncomment these two lines to actually do the sync:
+//stillSyncing = true;
+//syncOnce();
 
 /*
 If you're not familiar with await/async, just know
@@ -402,10 +411,26 @@ todos change in the storage (because of incoming data from a sync).
 // CLOSING
 
 /*
-When you're done with a Storage instance you should close it.
+When you're done with a Storage instance you must close it or your
+program will hang forever.
 This turns off subscriptions, closes files on disk, stops ongoing syncs, etc.
-This is only necessary in a long-running program that wants to avoid memory leaks.
-For our command-line program we can just let it exit without running close().
-
-    storage.close();
 */
+
+// here's a function to wait until the syncing is done, then close it
+let waitUntilSyncingIsDone = async() => {
+    while (true) {
+        console.log('                ...waiting for sync to finish');
+        await sleep(240);
+        if (stillSyncing === false) {
+            console.log('                ...syncing is done; closing the storage and ending the program');
+            storage.close();
+            return;
+        }
+    }
+}
+if (stillSyncing) {
+    waitUntilSyncingIsDone();
+} else {
+    // or we never tried to sync in the first place, let's just close it and be done
+    storage.close();
+}

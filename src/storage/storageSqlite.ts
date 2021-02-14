@@ -346,25 +346,25 @@ export class StorageSqlite extends StorageBase {
             wheres.push('path = :path');
             params.path = query.path;
         }
-        // If we have pathPrefix AND pathSuffix we would want to optimize them
-        // into a single filter, path LIKE (:prefix || '%' || :suffix).
+        // If we have pathStartsWith AND pathEndsWith we would want to optimize them
+        // into a single filter, path LIKE (:startsWith || '%' || :endsWith).
         // BUT we can't do that because we are allowing the prefix and suffix
         // to potentially overlap,
         // leaving no room in the middle for the wildcard to match anything.
         // So this has to be left as two separate filter clauses.
-        if (query.pathPrefix !== undefined) {
+        if (query.pathStartsWith !== undefined) {
             // Escape existing % and _ in the prefix so they don't count as wildcards for LIKE.
             // TODO: test this
-            wheres.push("path LIKE (:prefix || '%') ESCAPE '\\'");
-            params.prefix = query.pathPrefix
+            wheres.push("path LIKE (:startsWith || '%') ESCAPE '\\'");
+            params.startsWith = query.pathStartsWith
                 .split('_').join('\\_')
                 .split('%').join('\\%');
         }
-        if (query.pathSuffix !== undefined) {
-            // Escape existing % and _ in the prefix so they don't count as wildcards for LIKE.
+        if (query.pathEndsWith !== undefined) {
+            // Escape existing % and _ in the suffix so they don't count as wildcards for LIKE.
             // TODO: test this
-            wheres.push("path LIKE ('%' || :suffix) ESCAPE '\\'");
-            params.suffix = query.pathSuffix
+            wheres.push("path LIKE ('%' || :endsWith) ESCAPE '\\'");
+            params.endsWith = query.pathEndsWith
                 .split('_').join('\\_')
                 .split('%').join('\\%');
         }
@@ -375,13 +375,13 @@ export class StorageSqlite extends StorageBase {
             havings.push('timestamp = :timestamp');
             params.timestamp = query.timestamp;
         }
-        if (query.timestamp_gt !== undefined) {
-            havings.push('timestamp > :timestamp_gt');
-            params.timestamp_gt = query.timestamp_gt;
+        if (query.timestampGt !== undefined) {
+            havings.push('timestamp > :timestampGt');
+            params.timestampGt = query.timestampGt;
         }
-        if (query.timestamp_lt !== undefined) {
-            havings.push('timestamp < :timestamp_lt');
-            params.timestamp_lt = query.timestamp_lt;
+        if (query.timestampLt !== undefined) {
+            havings.push('timestamp < :timestampLt');
+            params.timestampLt = query.timestampLt;
         }
         if (query.author !== undefined) {
             havings.push('author = :author');
@@ -397,13 +397,13 @@ export class StorageSqlite extends StorageBase {
             havings.push('length(CAST(content AS BLOB)) = :contentLength');
             params.contentLength = query.contentLength;
         }
-        if (query.contentLength_gt !== undefined) {
-            havings.push('length(CAST(content AS BLOB)) > :contentLength_gt');
-            params.contentLength_gt = query.contentLength_gt;
+        if (query.contentLengthGt !== undefined) {
+            havings.push('length(CAST(content AS BLOB)) > :contentLengthGt');
+            params.contentLengthGt = query.contentLengthGt;
         }
-        if (query.contentLength_lt !== undefined) {
-            havings.push('length(CAST(content AS BLOB)) < :contentLength_lt');
-            params.contentLength_lt = query.contentLength_lt;
+        if (query.contentLengthLt !== undefined) {
+            havings.push('length(CAST(content AS BLOB)) < :contentLengthLt');
+            params.contentLengthLt = query.contentLengthLt;
         }
 
         if (query.continueAfter !== undefined) {
