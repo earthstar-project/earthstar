@@ -375,7 +375,7 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: true, path: '/a/b/c/d/e/f/g/h' },
         { valid: true, path: '/about/~@suzy.abc/name' },
         { valid: true, path: '/wiki/shared/Garden%20Gnome' },
-        { valid: true, path: '/\'()-._~!*$&+,:=@%', note: 'all allowed punctuation characters' },
+        { valid: true, path: '/\'()-._~!$&+,:=@%', note: 'all allowed punctuation characters' },
 
         // ephemeral documents and '!'
         { valid: true, path: '/foo', deleteAfter: null, note: 'proper regular path with no !' },
@@ -418,10 +418,10 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: false, path: '/pipe|' },
         { valid: false, path: '/open-curly-bracket{' },
         { valid: false, path: '/close-curly-bracket}' },
-
         { valid: false, path: '/question-mark?' },
         { valid: false, path: '/pound#' },
         { valid: false, path: '/semicolon;' },
+        { valid: false, path: '/asterisk*' },
 
         { valid: false, path: '/newline\n' },
         { valid: false, path: '/tab\t' },

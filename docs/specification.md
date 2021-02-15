@@ -27,6 +27,7 @@ Document version: 2020-08-09.1
 - [Paths and Write Permissions](#paths-and-write-permissions)
   - [Paths](#paths)
   - [Path Characters With Special Meaning](#path-characters-with-special-meaning)
+  - [Disallowed Path Characters](#disallowed-path-characters)
   - [Write Permissions](#write-permissions)
   - [Path and Filename Conventions](#path-and-filename-conventions)
 - [Documents and Their Fields](#documents-and-their-fields)
@@ -367,7 +368,7 @@ Similar to a key in leveldb or a path in a filesystem, each document is stored a
 Rules:
 
 ```
-PATH_PUNCTUATION = "/'()-._~!*$&+,:=@%"  // double quote is not included
+PATH_PUNCTUATION = "/'()-._~!$&+,:=@%"  // double quote is not included
 PATH_CHARACTER = ALPHA_LOWER + ALPHA_UPPER + DIGIT + PATH_PUNCTUATION
 
 PATH_SEGMENT = "/" PATH_CHARACTER+
@@ -434,10 +435,26 @@ Invalid: starts with "/@"
 ## Path Characters With Special Meaning
 
 * `/` - starts paths; separates path segments
-* `~` - defines author write permissions
 * `!` - used if and only if the document is ephemeral
+* `~` - defines author write permissions
 * `%` - for percent-encoding other characters
-* `*` - allowed, but it might someday be used in path queries, so consider avoiding it
+* `+@.` - used in workspace and author addresses but allowed elsewhere too
+
+## Disallowed Path Characters
+
+See the source code `src/util/characters.ts` for longer notes about this.
+
+* space           - not allowed in URLs
+* `<>"[\]^{|}`    - not allowed in URLs
+* backtick        - not allowed in URLs
+* `?`             - to avoid confusion with URL query parameters
+* `#`             - to avoid confusion with URL anchors
+* `;`             - no reason
+* `*`             - no reason; maybe useful for querying in the future
+* non-ASCII chars - to avoid trouble with Unicode normalization
+* ASCII whitespace (tab, etc)
+* ASCII control characters (bell, etc)
+
 
 ## Write Permissions
 
