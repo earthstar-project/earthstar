@@ -40,24 +40,27 @@ export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
 // without percent-encoding them or interfering with the rest of the URL.
 //
 // Allowed      Earthstar Meaning
+//    a-zA-Z0-9    no meaning
+//    '()-_$&,:=   no meaning
+//    *            no meaning, but some apps might use for querying paths, so
+//                   consider avoiding '*' in your paths
 //    /            path separator
-//    !            ephemeral docs must have '!'
-//    ~            path ownership (write permissions)
+//    !            ephemeral docs must contain at least one '!'
+//    ~            denotes path ownership (write permissions)
 //    +@.          used by workspace and author names but allowed elsewhere too
 //    %            used for percent-encoding
-//    '()-_*$&,:=  no meaning
-//    a-zA-Z0-9    no meaning
 //
 // Disallowed       Reason
 //    space            not allowed in URLs
-//    <>"[\]^`{|}      not allowed in URLs
+//    <>"[\]^`{|}      not allowed in URLs (though some browsers allow some of them)
 //    ?                to avoid confusion with URL query parameters
 //    #                to avoid confusion with URL anchors
-//    ;                no reason
+//    ;                to have one URL-legal char that's not a valid Earthstar path char
 //    non-ASCII chars  to avoid trouble with Unicode normalization
 //    ASCII whitespace
 //    ASCII control characters
 //
+// (Regular URL character rules are in RFC3986, RFC1738, and https://url.spec.whatwg.org/#url-code-points )
 //
 // To use other characters in a path, percent-encode them using encodeURI.
 // For example
