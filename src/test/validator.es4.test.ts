@@ -406,16 +406,32 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: false, path: '/double//slash/in/middle' },
         { valid: false, path: '//double/slash/at/start' },
         { valid: false, path: '/double/slash/at/end//' },
-        { valid: false, path: '/backslash\\' },
+
+        { valid: false, path: '/open-bracket<' },
+        { valid: false, path: '/close-bracket>' },
         { valid: false, path: '/double-quote"' },
+        { valid: false, path: '/open-square-bracket[' },
+        { valid: false, path: '/backslash\\' },
+        { valid: false, path: '/close-square-bracket]' },
+        { valid: false, path: '/caret^' },
+        { valid: false, path: '/backtick`' },
+        { valid: false, path: '/pipe|' },
+        { valid: false, path: '/open-curly-bracket{' },
+        { valid: false, path: '/close-curly-bracket}' },
+
         { valid: false, path: '/question-mark?' },
-        { valid: false, path: '/bracket<' },
-        { valid: false, path: '/new\nline' },
+        { valid: false, path: '/pound#' },
+        { valid: false, path: '/semicolon;' },
+
+        { valid: false, path: '/newline\n' },
+        { valid: false, path: '/tab\t' },
         { valid: false, path: '/@starts/with/at/sign' },
         { valid: false, path: '/' + snowmanJsString, note: 'snowman 1' },
         { valid: false, path: '/' + snowmanJs2, note: 'snowman 2' },
         { valid: false, path: '/' + snowmanU, note: 'snowman 3' },
 
+        { valid: false, path: '/food/🍆/nutrition' },
+        { valid: true, path: encodeURI('/food/🍆/nutrition') },
     ];
     for (let v of vectors) {
         let testMethod = v.valid ? t.true : t.false;
