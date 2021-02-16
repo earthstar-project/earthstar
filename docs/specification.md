@@ -442,19 +442,20 @@ Invalid: starts with "/@"
 
 ## Disallowed Path Characters
 
-See the source code `src/util/characters.ts` for longer notes about this.
+The list of ALLOWED characters up above is canonical and exhaustive.  This list of disallowed characters is provided only for convenience and is non-normative if it accidentally conflicts with the allowed list.
+
+See the source code `src/util/characters.ts` for longer notes.
 
 * space           - not allowed in URLs
 * `<>"[\]^{|}`    - not allowed in URLs
 * backtick        - not allowed in URLs
 * `?`             - to avoid confusion with URL query parameters
 * `#`             - to avoid confusion with URL anchors
-* `;`             - no reason
+* `;`             - no reason; maybe useful for separating several paths?
 * `*`             - no reason; maybe useful for querying in the future
-* non-ASCII chars - to avoid trouble with Unicode normalization
+* non-ASCII chars - to avoid trouble with Unicode normalization and phishing
 * ASCII whitespace (tab, etc)
 * ASCII control characters (bell, etc)
-
 
 ## Write Permissions
 
