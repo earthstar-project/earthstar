@@ -42,9 +42,7 @@ export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
 // Allowed      Earthstar Meaning
 //    a-zA-Z0-9    no meaning
 //    '()-_$&,:=   no meaning
-//    *            no meaning, but some apps might use for querying paths, so
-//                   consider avoiding '*' in your paths
-//    /            path separator
+//    /            starts paths; path segment separator
 //    !            ephemeral docs must contain at least one '!'
 //    ~            denotes path ownership (write permissions)
 //    +@.          used by workspace and author names but allowed elsewhere too
@@ -55,7 +53,8 @@ export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
 //    <>"[\]^`{|}      not allowed in URLs (though some browsers allow some of them)
 //    ?                to avoid confusion with URL query parameters
 //    #                to avoid confusion with URL anchors
-//    ;                to have one URL-legal char that's not a valid Earthstar path char
+//    ;                no reason
+//    *                no reason; maybe useful for querying in the future
 //    non-ASCII chars  to avoid trouble with Unicode normalization
 //    ASCII whitespace
 //    ASCII control characters
@@ -70,7 +69,7 @@ export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
 //      for display to users again, run decodeURI(earthstarPath)
 //
 
-export const pathPunctuation = "/'()-._~!*$&+,:=@%";  // note double quotes are not included
+export const pathPunctuation = "/'()-._~!$&+,:=@%";  // note double quotes are not included
 export const pathChars = alphaLower + alphaUpper + digits + pathPunctuation;
 
 
