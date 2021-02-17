@@ -145,6 +145,22 @@ t.test('cleanUpQuery', (t: any) => {
         {
             query: {},
             result: { history: 'latest' },
+            note: 'history mode is set to default if omitted'
+        },
+        {
+            query: { history: 'all' },
+            result: { history: 'all' },
+            note: 'history mode is respected if provided'
+        },
+        {
+            query: { path: undefined },
+            result: { history: 'latest' },
+            note: 'undefined options go away if they have no defaults',
+        },
+        {
+            query: { path: '/hello', history: undefined },
+            result: { path: '/hello', history: 'latest' },
+            note: 'undefined options are not able to shadow default values',
         },
         {
             query: { history: '???' } as any,

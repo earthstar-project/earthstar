@@ -4,6 +4,9 @@ import {
     isErr,
     ValidationError
 } from '../util/types';
+import {
+    objWithoutUndefined
+} from '../util/helpers';
 
 /*
 open questions
@@ -28,6 +31,10 @@ export type HistoryMode =
  * HISTORY MODES
  * - `latest`: get latest docs, THEN filter those.
  * - `all`: get all docs, THEN filter those.
+ * 
+ * A property set to undefined is equivalent to not setting
+ * that property at all, because cleanUpQuery(q) removes those
+ * properties.
  */
 export interface Query {
     //=== filters that affect all documents equally within the same path
@@ -153,8 +160,13 @@ export let cleanUpQuery = (query: Query): Query => {
     }
     // set defaults
     let q: Query = {
+        // this is the only default we have so far
         history: 'latest',
-        ...query
+        
+        // remove undefined properties from the original query --
+        // both as a general clean-up, and to prevent them
+        // from shadowing our defaults (above).
+        ...objWithoutUndefined(query),
     };
     return q;
 }
