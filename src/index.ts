@@ -1,6 +1,3 @@
-
-
-
 export * from './crypto/crypto';
 export * from './crypto/cryptoTypes';
 export * from './crypto/encoding';
@@ -20,5 +17,6 @@ export * from './util/characters';
 export * from './util/detRandom';
 export * from './util/emitter';
 export * from './util/helpers';
+export { setLogLevels } from './util/log'
 export * from './util/types';
 export * from './validator/es4';
