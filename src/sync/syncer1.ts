@@ -6,7 +6,7 @@ import {
 import {
     Emitter
 } from '../util/emitter';
-import { IStorage } from '../storage/storageTypes';
+import { IStorage, IStorageAsync } from '../storage/storageTypes';
 import { sleep } from '../util/helpers';
 
 // sync states
@@ -33,10 +33,10 @@ let ensureTrailingSlash = (url : string) : string =>
 
 let logSyncer = (...args : any[]) => console.log('💚 syncer | ', ...args);
 export class Syncer1 {
-    storage : IStorage;
+    storage : IStorage | IStorageAsync;
     onChange : Emitter<SyncState>;
     state : SyncState;
-    constructor(store : IStorage) {
+    constructor(store : IStorage | IStorageAsync) {
         this.storage = store;
         this.onChange = new Emitter<SyncState>();
         this.state = {
@@ -122,7 +122,7 @@ let urlPostDocuments = urlGetDocuments;
 
 let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
 
-export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
+export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain : string) => {
     logSyncAlg('existing database workspace:', storage.workspace);
     let resultStats : any = {
         pull: null,
@@ -153,7 +153,8 @@ export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
         let docs = await resp.json();
         resultStats.pull.numTotal = docs.length;
         for (let doc of docs) {
-            if (storage.ingestDocument(doc, 'TODO: session id') === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
+            const ingestResult = await storage.ingestDocument(doc, 'TODO: session id');
+            if (ingestResult === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
             else { resultStats.pull.numIgnored += 1; }
         }
         logSyncAlg(JSON.stringify(resultStats.pull, null, 2));
@@ -163,9 +164,10 @@ export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
     logSyncAlg('pushing to ' + domain);
     let resp2 : any;
     try {
+        const docs = await storage.documents({history: 'all'});
         resp2 = await fetch(urlPostDocuments(domain, storage.workspace), {
             method: 'post',
-            body:    JSON.stringify(storage.documents({ history: 'all' })),
+            body:    JSON.stringify(docs),
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (e) {
