@@ -19,7 +19,6 @@ import {
 import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/storageMemory';
 import { StorageSqlite } from '../storage/storageSqlite';
-import { logTest } from '../util/log';
 
 import { deleteMyDocuments } from '../extras';
 

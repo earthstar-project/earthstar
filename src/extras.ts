@@ -7,6 +7,9 @@ import {
 import {
     IStorage,
 } from './storage/storageTypes';
+import Logger from './util/log'
+
+const storageLogger = new Logger('storage');
 
 // Delete all your documents in a given workspace
 // by overwriting them with empty strings.
@@ -20,7 +23,7 @@ export let deleteMyDocuments = (storage: IStorage, keypair: AuthorKeypair) => {
         author: keypair.address,
         history: 'all',
     });
-    console.log(`deleting ${myDocs.length} docs authored by ${keypair.address}...`);
+    storageLogger.log(`deleting ${myDocs.length} docs authored by ${keypair.address}...`);
     let numErrors = 0;
     for (let doc of myDocs) {
         let emptyDoc: DocToSet = {
@@ -34,16 +37,16 @@ export let deleteMyDocuments = (storage: IStorage, keypair: AuthorKeypair) => {
         }
         let result = storage.set(keypair, emptyDoc);
         if (isErr(result)) {
-            console.log(`deleting ${doc.path}... error`);
+            storageLogger.error(`deleting ${doc.path}... error`);
             numErrors += 1;
         } else if (result === WriteResult.Ignored) {
-            console.log(`deleting ${doc.path}... ignored`);
+            storageLogger.log(`deleting ${doc.path}... ignored`);
             numErrors += 1;
         } else {
-            console.log(`deleting ${doc.path}... success`);
+            storageLogger.log(`deleting ${doc.path}... success`);
         }
     }
-    console.log(`done.  ${myDocs.length - numErrors} deleted; ${numErrors} had errors.`);
+    storageLogger.log(`done.  ${myDocs.length - numErrors} deleted; ${numErrors} had errors.`);
     return {
         numDeleted: myDocs.length,
         numErrors,

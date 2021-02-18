@@ -21,11 +21,14 @@ import {
 import { StorageToAsync } from '../storage/storageToAsync';
 import { StorageMemory } from '../storage/storageMemory';
 import { ValidatorEs4 } from '../validator/es4';
+import Logger from '../util/log';
 
-let logSyncMain     = (msg: string) => console.log(chalk.whiteBright(msg));
-let logSyncThread   = (msg: string) => console.log(chalk.white(      msg));
-let logSyncProgress = (msg: string) => console.log(chalk.gray(       msg));
-let logSyncCallback = (msg: string) => console.log(chalk.magenta(    msg));
+const syncLogger = new Logger('sync')
+
+let logSyncMain     = (msg: string) => syncLogger.log(chalk.whiteBright(msg));
+let logSyncThread   = (msg: string) => syncLogger.log(chalk.white(      msg));
+let logSyncProgress = (msg: string) => syncLogger.log(chalk.gray(       msg));
+let logSyncCallback = (msg: string) => syncLogger.log(chalk.magenta(    msg));
 
 //================================================================================
 // TYPES
