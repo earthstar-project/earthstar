@@ -8,6 +8,7 @@ import {
 } from '../util/emitter';
 import { IStorage } from '../storage/storageTypes';
 import { sleep } from '../util/helpers';
+import Logger from '../util/log'
 
 // sync states
 //  idle      sync has not been attempted since page load
@@ -31,7 +32,9 @@ let ensureTrailingSlash = (url : string) : string =>
     // input is a URL with no path, like https://mypub.com or https://mypub.com/
     url.endsWith('/') ? url : url + '/';
 
-let logSyncer = (...args : any[]) => console.log('💚 syncer | ', ...args);
+const syncLogger = new Logger('sync')
+
+let logSyncer = (...args : any[]) => syncLogger.log('💚 syncer | ', ...args);
 export class Syncer1 {
     storage : IStorage;
     onChange : Emitter<SyncState>;
@@ -120,7 +123,7 @@ let urlGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
     `${domain}earthstar-api/v1/${workspace}/documents`;
 let urlPostDocuments = urlGetDocuments;
 
-let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
+let logSyncAlg = (...args : any[]) => syncLogger.log('  🌲  sync algorithm | ', ...args);
 
 export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
     logSyncAlg('existing database workspace:', storage.workspace);

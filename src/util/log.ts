@@ -9,9 +9,19 @@ enum LogLevel {
 
 type LogLevelSettings = Record<LogSource, LogLevel>
 
+function initLogLevel(defaultLevel: number): number {
+  if (process?.env?.EARTHSTAR_LOG_LEVEL) {
+    const parsed = parseInt(process.env.EARTHSTAR_LOG_LEVEL);
+    
+    return parsed === NaN ? defaultLevel : parsed;
+  }
+  
+  return defaultLevel;
+}
+
 const logLevelSettings : LogLevelSettings = {
-  sync: 0,
-  storage: 0
+  sync: initLogLevel(0),
+  storage: initLogLevel(0)
 }
 
 export function setLogLevels(logLevels: Partial<LogLevelSettings>): void {
@@ -25,7 +35,7 @@ export default class Logger {
     this._source = source;
   }
   
-  debug(...args:  any[]) {
+  debug(...args:  any[]) {    
     if (logLevelSettings[this._source] >= LogLevel.Debug) {
       console.debug(args)
     }
