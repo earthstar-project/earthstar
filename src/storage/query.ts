@@ -136,6 +136,8 @@ export let validateQuery = (query: Query): ValidationError | true => {
     if (query.limit !== undefined && query.limit < 0) { return new ValidationError('limit must be >= 0'); }
     if (query.limitBytes !== undefined && query.limitBytes < 0) { return new ValidationError('limitBytes must be >= 0'); }
     if (query.contentLength !== undefined && query.contentLength < 0) { return new ValidationError('contentLength must be >= 0'); }
+    // note that contentLengthGt is allowed to be negative e.g. -1, so that you can make it match all content lengths if you're
+    //  overriding another query...
     if (query.history !== undefined && query.history !== 'all' && query.history !== 'latest') {
         return new ValidationError('unknown history mode: ' + query.history);
     }
