@@ -17,6 +17,6 @@ export * from './util/characters';
 export * from './util/detRandom';
 export * from './util/emitter';
 export * from './util/helpers';
-export { setLogLevels } from './util/log'
+export * from './util/log'
 export * from './util/types';
 export * from './validator/es4';
