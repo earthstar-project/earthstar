@@ -96,6 +96,8 @@ export class OnePubOneWorkspaceSyncer {
         this.onStateChange = new Emitter<SyncerState>();
     }
     _bump() {
+        // This must be called whenever the state changes.
+        // It notifies our subscribers of changes to the syncer state.
         this.onStateChange.send(this.state);
     }
 
@@ -164,7 +166,7 @@ export class OnePubOneWorkspaceSyncer {
         this.state.isPushStreaming = false;
         this._bump();
     }
-    async startPullStream() {
+    startPullStream() {
         if (this.state.closed) { return; }
 
         let url = urlStream(this.domain, this.storage.workspace);
@@ -219,7 +221,6 @@ export class OnePubOneWorkspaceSyncer {
         let stats = { ...initialStats };
         let resp : any;
         try {
-            const docs = await this.storage.documents({history: 'all'})
             resp = await fetch(url, {
                 method: 'post',
                 body:    JSON.stringify(docs),
@@ -265,13 +266,15 @@ export class OnePubOneWorkspaceSyncer {
 
         await sleep(150);
 
+        // get docs...
         const storageDocs = await this.storage.documents({history: 'all'})
-
+        // ...and push them
         stats = await this._pushDocs(url, storageDocs);
     
         this.state.isBulkPushing = false;
         this.state.lastCompletedBulkPush = Date.now() * 1000;
         this._bump();
+
         if (stats.error) {
             logBulkPush(stats.error.name + ': ' + stats.error.message);
         } else {
