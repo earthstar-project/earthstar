@@ -28,6 +28,7 @@ import { Emitter } from '../util/emitter';
  * `fakeSleepTime` is an optional delay in ms that's added into each call,
  * for testing purposes.
  */
+ 
 export class StorageToAsync implements IStorageAsync {
     readonly workspace : WorkspaceAddress;
     readonly sessionId: string;  // gets a new random value every time the program runs

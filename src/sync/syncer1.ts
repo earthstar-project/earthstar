@@ -6,7 +6,7 @@ import {
 import {
     Emitter
 } from '../util/emitter';
-import { IStorage } from '../storage/storageTypes';
+import { IStorage, IStorageAsync } from '../storage/storageTypes';
 import { sleep } from '../util/helpers';
 import Logger from '../util/log'
 
@@ -39,10 +39,10 @@ let ensureTrailingSlash = (url : string) : string =>
 // Manage pubs and syncing state.
 // Defer to the SyncLocalAndHttp class for the nitty-gritty details.
 export class Syncer1 {
-    storage : IStorage;
+    storage : IStorage | IStorageAsync;
     onChange : Emitter<SyncState>;
     state : SyncState;
-    constructor(store : IStorage) {
+    constructor(store : IStorage | IStorageAsync) {
         this.storage = store;
         this.onChange = new Emitter<SyncState>();
         this.state = {
@@ -128,8 +128,7 @@ let urlToGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
     `${domain}earthstar-api/v1/${workspace}/documents`;
 let urlToPostDocuments = urlToGetDocuments;
 
-// This is the actual HTTP syncing algorithm
-export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
+export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain : string) => {
     syncerHttpLogger.log('existing database workspace:', storage.workspace);
     let resultStats : any = {
         pull: null,
@@ -160,7 +159,8 @@ export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
         let docs = await resp.json();
         resultStats.pull.numTotal = docs.length;
         for (let doc of docs) {
-            if (storage.ingestDocument(doc, 'TODO: session id') === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
+            const ingestResult = await storage.ingestDocument(doc, 'TODO: session id');
+            if (ingestResult === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
             else { resultStats.pull.numIgnored += 1; }
         }
         syncerHttpLogger.log(JSON.stringify(resultStats.pull, null, 2));
@@ -170,9 +170,10 @@ export let syncLocalAndHttp = async (storage : IStorage, domain : string) => {
     syncerHttpLogger.log('pushing to ' + domain);
     let resp2 : any;
     try {
+        const docs = await storage.documents({history: 'all'});
         resp2 = await fetch(urlToPostDocuments(domain, storage.workspace), {
             method: 'post',
-            body:    JSON.stringify(storage.documents({ history: 'all' })),
+            body:    JSON.stringify(docs),
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (e) {

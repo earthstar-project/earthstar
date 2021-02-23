@@ -341,6 +341,7 @@ tslib_1.__exportStar(require("./validator/es4"), exports);
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sortPathAscAuthorAsc = exports.sortLatestFirst = exports.documentIsExpired = exports.queryMatchesDoc = exports.stringLengthInBytes = exports.cleanUpQuery = exports.validateQuery = void 0;
 const types_1 = require("../util/types");
+const helpers_1 = require("../util/helpers");
 ;
 /**
  * Check if a query object matches the expected schema for query objects.
@@ -380,7 +381,9 @@ let cleanUpQuery = (query) => {
         return { path: 'invalid-query', limit: 0 };
     }
     // set defaults
-    let q = Object.assign({ history: 'latest' }, query);
+    let q = Object.assign({ 
+        // this is the only default we have so far
+        history: 'latest' }, helpers_1.objWithoutUndefined(query));
     return q;
 };
 exports.cleanUpQuery = cleanUpQuery;
@@ -481,7 +484,7 @@ let sortPathAscAuthorAsc = (a, b) => {
 exports.sortPathAscAuthorAsc = sortPathAscAuthorAsc;
 
 }).call(this,require("buffer").Buffer)
-},{"../util/types":21,"buffer":72}],8:[function(require,module,exports){
+},{"../util/helpers":20,"../util/types":21,"buffer":72}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.StorageBase = void 0;
@@ -2248,24 +2251,26 @@ exports.workspaceAddressChars = exports.workspaceNameChars + exports.b32chars + 
 // without percent-encoding them or interfering with the rest of the URL.
 //
 // Allowed      Earthstar Meaning
-//    /            path separator
-//    !            ephemeral docs must have '!'
-//    ~            path ownership (write permissions)
+//    a-zA-Z0-9    no meaning
+//    '()-_$&,:=   no meaning
+//    /            starts paths; path segment separator
+//    !            ephemeral docs must contain at least one '!'
+//    ~            denotes path ownership (write permissions)
 //    +@.          used by workspace and author names but allowed elsewhere too
 //    %            used for percent-encoding
-//    '()-_*$&,:=  no meaning
-//    a-zA-Z0-9    no meaning
 //
 // Disallowed       Reason
 //    space            not allowed in URLs
-//    <>"[\]^`{|}      not allowed in URLs
+//    <>"[\]^`{|}      not allowed in URLs (though some browsers allow some of them)
 //    ?                to avoid confusion with URL query parameters
 //    #                to avoid confusion with URL anchors
 //    ;                no reason
+//    *                no reason; maybe useful for querying in the future
 //    non-ASCII chars  to avoid trouble with Unicode normalization
 //    ASCII whitespace
 //    ASCII control characters
 //
+// (Regular URL character rules are in RFC3986, RFC1738, and https://url.spec.whatwg.org/#url-code-points )
 //
 // To use other characters in a path, percent-encode them using encodeURI.
 // For example
@@ -2274,7 +2279,7 @@ exports.workspaceAddressChars = exports.workspaceNameChars + exports.b32chars + 
 //      store it as earthstarPath
 //      for display to users again, run decodeURI(earthstarPath)
 //
-exports.pathPunctuation = "/'()-._~!*$&+,:=@%"; // note double quotes are not included
+exports.pathPunctuation = "/'()-._~!$&+,:=@%"; // note double quotes are not included
 exports.pathChars = exports.alphaLower + exports.alphaUpper + exports.digits + exports.pathPunctuation;
 
 }).call(this,require("buffer").Buffer)
@@ -2436,20 +2441,33 @@ exports.subscribeToManyEmitters = subscribeToManyEmitters;
 },{"./types":21,"tslib":250}],20:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sorted = exports.uniq = exports.sleep = exports.stringMult = exports.range = exports.isPlainObject = void 0;
+exports.objWithoutUndefined = exports.sorted = exports.uniq = exports.sleep = exports.stringMult = exports.range = exports.isPlainObject = void 0;
 const tslib_1 = require("tslib");
-let isPlainObject = (obj) => Object.prototype.toString.call(obj) === '[object Object]';
+let isPlainObject = (obj) => 
+// Check if the input is a plain object type { ... }
+// Exclude arrays, undefined, etc.
+// For now class instances count as plain objects (is this a bug?)
+Object.prototype.toString.call(obj) === '[object Object]';
 exports.isPlainObject = isPlainObject;
 let range = (n) => 
-// [0, 1, ... n-1]
+// Make an array of n consecutive integers starting with zero.
+//   range(n) --> [0, 1, ... n-1]
 [...Array(n).keys()];
 exports.range = range;
-// stringMult('a!', 3) === 'a!a!a!'
-let stringMult = (str, n) => exports.range(n).map(x => str).join('');
+let stringMult = (str, n) => 
+// Repeat a string a given number of times.
+//   stringMult('a!', 3) --> 'a!a!a!'
+exports.range(n).map(x => str).join('');
 exports.stringMult = stringMult;
-let sleep = (ms) => tslib_1.__awaiter(void 0, void 0, void 0, function* () { return new Promise((resolve, reject) => setTimeout(resolve, ms)); });
+let sleep = (ms) => tslib_1.__awaiter(void 0, void 0, void 0, function* () { 
+// Return a promise that resolves after a given number of millisceconds
+return new Promise((resolve, reject) => setTimeout(resolve, ms)); });
 exports.sleep = sleep;
 let uniq = (items) => {
+    // Given an array of strings,
+    // return a new array of unique strings
+    // (in the same order as the first occurrance of
+    // each string).
     let map = {};
     for (let item of items) {
         map[item] = true;
@@ -2458,10 +2476,27 @@ let uniq = (items) => {
 };
 exports.uniq = uniq;
 let sorted = (items) => {
+    // Sort an array, mutating it in place,
+    // and return it.
     items.sort();
     return items;
 };
 exports.sorted = sorted;
+let objWithoutUndefined = (obj) => {
+    // Given an object, return a copy of the object
+    // which omits any undefined keys.
+    // Does not mutate the original object.
+    // Example:
+    //   objWithoutUndefined({ a:1, b: undefined }) --> { a:1 }
+    let obj2 = {};
+    for (let [key, val] of Object.entries(obj)) {
+        if (val !== undefined) {
+            obj2[key] = val;
+        }
+    }
+    return obj2;
+};
+exports.objWithoutUndefined = objWithoutUndefined;
 
 },{"tslib":250}],21:[function(require,module,exports){
 "use strict";

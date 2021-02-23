@@ -19,7 +19,8 @@ import {
     SyncState,
     Syncer1,
 } from '../sync/syncer1';
-import { IStorage } from '../storage/storageTypes';
+import { IStorage, IStorageAsync } from '../storage/storageTypes';
+import { StorageToAsync } from '../storage/storageToAsync';
 
 //================================================================================
 // prepare for test scenarios
@@ -39,14 +40,14 @@ let author2: AuthorAddress = keypair2.address;
 let author3: AuthorAddress = keypair3.address;
 let now = 1500000000000000;
 
-let makeStorage = (workspace : string) : IStorage =>
-    new StorageMemory(VALIDATORS, workspace);
+let makeStorage = (workspace : string) : IStorageAsync =>
+    new StorageToAsync(new StorageMemory(VALIDATORS, workspace), 0);
 
 //================================================================================
 t.test('Syncer basics and callback subscriptions', (t: any) => {
     let storage = makeStorage(WORKSPACE);
     let syncer = new Syncer1(storage);
-
+    
     let numCalls = 0;
     let lastCallbackVal : SyncState | null = null;
     let unsub = syncer.onChange.subscribe(st => {
