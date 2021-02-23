@@ -19,7 +19,7 @@ import Logger from '../util/log';
 //================================================================================
 // HELPERS
 
-const syncLogger = new Logger('sync')
+const syncLogger = new Logger('syncer2')
 
 let logSyncer = (...args : any[])     => syncLogger.debug('💚 syncer | ', ...args);
 let logSync = (...args : any[])       => syncLogger.debug('  🌲  one pub: SYNC | ', ...args);
@@ -180,7 +180,7 @@ export class OnePubOneWorkspaceSyncer {
         this.pullStream = new EventSource(url);
         this.pullStream.onerror = (e) => {
             logPullStream('connection failed');
-            console.error(e);
+            syncLogger.error(e);
         }
         this.pullStream.onmessage = (e) => {
             // TODO: if (this.state.closed) { return; }
@@ -196,7 +196,7 @@ export class OnePubOneWorkspaceSyncer {
                 }
             } catch (e) {
                 logPullStream('error, probably bad json');
-                console.error(e);
+                syncLogger.error(e);
             }
         };
         this.state.isPullStreaming = true;

@@ -23,6 +23,7 @@ import {
 } from './storageBase';
 
 import Logger from '../util/log';
+const storageLogger = new Logger('storage')
 
 //================================================================================
 
@@ -48,8 +49,6 @@ import Logger from '../util/log';
  * ```
  */
 
-const storageLogger = new Logger('storage')
- 
 interface StorageSqliteOptsCreate {
     mode: 'create'
     workspace: WorkspaceAddress,
