@@ -14,16 +14,19 @@ import {
 } from '../util/emitter';
 import { IStorage, IStorageAsync } from '../storage/storageTypes';
 import { sleep } from '../util/helpers';
+import Logger from '../util/log';
 
 //================================================================================
 // HELPERS
 
-let logSyncer = (...args : any[])     => console.log('💚 syncer | ', ...args);
-let logSync = (...args : any[])       => console.log('  🌲  one pub: SYNC | ', ...args);
-let logPullStream = (...args : any[]) => console.log('  🌲  one pub:     PULL STREAM | ', ...args);
-let logPushStream = (...args : any[]) => console.log('  🌲  one pub:     PUSH STREAM | ', ...args);
-let logBulkPush = (...args : any[])   => console.log('  🌲  one pub:     BULK PUSH | ', ...args);
-let logBulkPull = (...args : any[])   => console.log('  🌲  one pub:     BULK PULL | ', ...args);
+const syncLogger = new Logger('syncer2')
+
+let logSyncer = (...args : any[])     => syncLogger.debug('💚 syncer | ', ...args);
+let logSync = (...args : any[])       => syncLogger.debug('  🌲  one pub: SYNC | ', ...args);
+let logPullStream = (...args : any[]) => syncLogger.debug('  🌲  one pub:     PULL STREAM | ', ...args);
+let logPushStream = (...args : any[]) => syncLogger.debug('  🌲  one pub:     PUSH STREAM | ', ...args);
+let logBulkPush = (...args : any[])   => syncLogger.debug('  🌲  one pub:     BULK PUSH | ', ...args);
+let logBulkPull = (...args : any[])   => syncLogger.debug('  🌲  one pub:     BULK PULL | ', ...args);
 
 let ensureTrailingSlash = (url : string) : string =>
     // input is a URL with no path, like https://mypub.com or https://mypub.com/
@@ -179,7 +182,7 @@ export class OnePubOneWorkspaceSyncer {
         this.pullStream = new EventSource(url);
         this.pullStream.onerror = (e) => {
             logPullStream('connection failed');
-            console.error(e);
+            syncLogger.error(e);
         }
         this.pullStream.onmessage = async (e) => {
             // TODO: if (this.state.closed) { return; }
@@ -195,7 +198,7 @@ export class OnePubOneWorkspaceSyncer {
                 }
             } catch (e) {
                 logPullStream('error, probably bad json');
-                console.error(e);
+                syncLogger.error(e);
             }
         };
         this.state.isPullStreaming = true;

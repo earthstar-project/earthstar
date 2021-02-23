@@ -8,6 +8,10 @@ import {
 } from '../util/emitter';
 import { IStorage, IStorageAsync } from '../storage/storageTypes';
 import { sleep } from '../util/helpers';
+import Logger from '../util/log'
+
+const syncer1Logger = new Logger('syncer1 💚')
+const syncerHttpLogger = new Logger('sync http alg 🌲')
 
 // sync states
 //  idle      sync has not been attempted since page load
@@ -31,7 +35,9 @@ let ensureTrailingSlash = (url : string) : string =>
     // input is a URL with no path, like https://mypub.com or https://mypub.com/
     url.endsWith('/') ? url : url + '/';
 
-let logSyncer = (...args : any[]) => console.log('💚 syncer | ', ...args);
+
+// Manage pubs and syncing state.
+// Defer to the SyncLocalAndHttp class for the nitty-gritty details.
 export class Syncer1 {
     storage : IStorage | IStorageAsync;
     onChange : Emitter<SyncState>;
@@ -68,7 +74,7 @@ export class Syncer1 {
         this.onChange.send(this.state);
     }
     async sync() {
-        logSyncer('starting');
+        syncer1Logger.log('starting');
         this.state.syncState = 'syncing';
         this.onChange.send(this.state);
         let numSuccessfulPubs = 0;
@@ -77,7 +83,7 @@ export class Syncer1 {
         let syncPromises : {prom: Promise<any>, pub: any}[] = [];
         // start each pub syncing
         for (let pub of this.state.pubs) {
-            logSyncer('starting pub:', pub.domain);
+            syncer1Logger.log('starting pub:', pub.domain);
             pub.syncState = 'syncing';
             this.onChange.send(this.state);
 
@@ -89,8 +95,8 @@ export class Syncer1 {
         // when each one finishes (not necessarily in the same order), report its results
         for (let {prom, pub} of syncPromises) {
             let resultStats = await prom;
-            logSyncer('finished pub');
-            logSyncer(JSON.stringify(resultStats, null, 2));
+            syncer1Logger.log('finished pub');
+            syncer1Logger.log(JSON.stringify(resultStats, null, 2));
             if (resultStats.pull === null && resultStats.push === null) {
                 pub.syncState = 'failure';
                 numFailedPubs += 1;
@@ -105,7 +111,7 @@ export class Syncer1 {
         // wait a moment so the user can keep track of what's happening
         await sleep(150);
 
-        logSyncer('finished all pubs');
+        syncer1Logger.log('finished all pubs');
         this.state.lastSync = Date.now();
         if (numSuccessfulPubs > 0) { this.state.syncState = 'success'; }
         else if (numFailedPubs > 0) { this.state.syncState = 'failure'; }
@@ -114,16 +120,16 @@ export class Syncer1 {
     }
 }
 
-let urlGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
+//================================================================================
+
+let urlToGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
     // domain should already end in a slash.
     // output is like https://mypub.com/earthstar-api/v1/+gardening.xxxxxxxx/documents
     `${domain}earthstar-api/v1/${workspace}/documents`;
-let urlPostDocuments = urlGetDocuments;
-
-let logSyncAlg = (...args : any[]) => console.log('  🌲  sync algorithm | ', ...args);
+let urlToPostDocuments = urlToGetDocuments;
 
 export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain : string) => {
-    logSyncAlg('existing database workspace:', storage.workspace);
+    syncerHttpLogger.log('existing database workspace:', storage.workspace);
     let resultStats : any = {
         pull: null,
         push: null,
@@ -133,13 +139,13 @@ export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain 
     // pull from server
     // this can 404 the first time, because the server only creates workspaces
     // when we push them
-    logSyncAlg('pulling from ' + domain);
+    syncerHttpLogger.log('pulling from ' + domain);
     let resp : any;
     try {
-        resp = await fetch(urlGetDocuments(domain, storage.workspace));
+        resp = await fetch(urlToGetDocuments(domain, storage.workspace));
     } catch (e) {
-        console.error('ERROR: could not connect to server');
-        console.error(e.toString());
+        syncerHttpLogger.error('ERROR: could not connect to server');
+        syncerHttpLogger.error(e.toString());
         return resultStats;
     }
     resultStats.pull = {
@@ -148,7 +154,7 @@ export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain 
         numTotal: 0,
     };
     if (resp.status === 404) {
-        logSyncAlg('    server 404: server does not know about this workspace yet');
+        syncerHttpLogger.warn('    server 404: server does not know about this workspace yet');
     } else {
         let docs = await resp.json();
         resultStats.pull.numTotal = docs.length;
@@ -157,31 +163,31 @@ export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain 
             if (ingestResult === WriteResult.Accepted) { resultStats.pull.numIngested += 1; }
             else { resultStats.pull.numIgnored += 1; }
         }
-        logSyncAlg(JSON.stringify(resultStats.pull, null, 2));
+        syncerHttpLogger.log(JSON.stringify(resultStats.pull, null, 2));
     }
 
     // push to server
-    logSyncAlg('pushing to ' + domain);
+    syncerHttpLogger.log('pushing to ' + domain);
     let resp2 : any;
     try {
         const docs = await storage.documents({history: 'all'});
-        resp2 = await fetch(urlPostDocuments(domain, storage.workspace), {
+        resp2 = await fetch(urlToPostDocuments(domain, storage.workspace), {
             method: 'post',
             body:    JSON.stringify(docs),
             headers: { 'Content-Type': 'application/json' },
         });
     } catch (e) {
-        console.error('ERROR: could not connect to server');
-        console.error(e.toString());
+        syncerHttpLogger.error('ERROR: could not connect to server');
+        syncerHttpLogger.error(e.toString());
         return resultStats;
     }
     if (resp2.status === 404) {
-        logSyncAlg('    server 404: server is not accepting new workspaces');
+        syncerHttpLogger.warn('    server 404: server is not accepting new workspaces');
     } else if (resp2.status === 403) {
-        logSyncAlg('    server 403: server is in readonly mode');
+        syncerHttpLogger.warn('    server 403: server is in readonly mode');
     } else {
         resultStats.pushStats = await resp2.json();
-        logSyncAlg(JSON.stringify(resultStats.pushStats, null, 2));
+        syncerHttpLogger.log(JSON.stringify(resultStats.pushStats, null, 2));
     }
 
     return resultStats;

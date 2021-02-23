@@ -14,12 +14,9 @@ import {
 } from '../storage/storageTypes';
 import {
     generateAuthorKeypair,
-    sha256base32,
 } from '../crypto/crypto';
 import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/storageMemory';
-import { StorageSqlite } from '../storage/storageSqlite';
-import { logTest } from '../util/log';
 
 import { deleteMyDocuments } from '../extras';
 

@@ -18,14 +18,14 @@ import {
     IStorage,
 } from '../storage/storageTypes';
 
-import { StorageToAsync } from '../storage/storageToAsync';
-import { StorageMemory } from '../storage/storageMemory';
-import { ValidatorEs4 } from '../validator/es4';
+import Logger from '../util/log';
 
-let logSyncMain     = (msg: string) => console.log(chalk.whiteBright(msg));
-let logSyncThread   = (msg: string) => console.log(chalk.white(      msg));
-let logSyncProgress = (msg: string) => console.log(chalk.gray(       msg));
-let logSyncCallback = (msg: string) => console.log(chalk.magenta(    msg));
+const syncLogger = new Logger('syncWithChannels')
+
+let logSyncMain     = (msg: string) => syncLogger.log(chalk.whiteBright(msg));
+let logSyncThread   = (msg: string) => syncLogger.log(chalk.white(      msg));
+let logSyncProgress = (msg: string) => syncLogger.log(chalk.gray(       msg));
+let logSyncCallback = (msg: string) => syncLogger.log(chalk.magenta(    msg));
 
 //================================================================================
 // TYPES
@@ -496,7 +496,7 @@ export let incrementalSync = async (storage1: IStorageAsync | IStorage, storage2
     // make sure all channels were closed, to check for bugs
     for (let chan of chans) {
         if (!chan.isClosed) {
-            console.warn('== incrementalSync WARNING: a channel was not closed');
+            syncLogger.warn('== incrementalSync WARNING: a channel was not closed');
             chan.close();
         }
     }
