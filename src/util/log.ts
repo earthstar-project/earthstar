@@ -81,21 +81,21 @@ export default class Logger {
   debug(...args:  any[]) {    
     let allowedLevel = currentLogLevelSettings[this._source] ?? currentLogLevelSettings['_other'];
     if (allowedLevel >= LogLevel.Debug) {
-      console.error(`[${this._source} debug]`, ...args)
+      console.debug(`[${this._source} debug]`, ...args)
     }
   }
   
   log(...args:  any[]) {
     let allowedLevel = currentLogLevelSettings[this._source] ?? currentLogLevelSettings['_other'];
     if (allowedLevel >= LogLevel.Log) {
-      console.error(`[${this._source} log]`, ...args)
+      console.log(`[${this._source} log]`, ...args)
     }
   }
   
   warn(...args:  any[]) {
     let allowedLevel = currentLogLevelSettings[this._source] ?? currentLogLevelSettings['_other'];
     if (allowedLevel >= LogLevel.Warn) {
-      console.error(`[${this._source} warn]`, ...args)
+      console.warn(`[${this._source} warn]`, ...args)
     }
   }
   
