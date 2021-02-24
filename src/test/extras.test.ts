@@ -66,6 +66,8 @@ let scenarios : Scenario[] = [
     //},
 ];
 
+// TODO: we need to test the async version of deleteMyDocuments too
+
 //================================================================================
 // run the standard store tests on each scenario
 

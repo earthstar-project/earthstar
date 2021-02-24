@@ -53,7 +53,7 @@ export let deleteMyDocuments = (storage: IStorage, keypair: AuthorKeypair) => {
     };
 }
 
-export let deleteMyDocumentsAsync = async (storage: IStorageAsync, keypair: AuthorKeypair) => {
+export let deleteMyDocumentsAsync = async (storage: IStorage | IStorageAsync, keypair: AuthorKeypair) => {
     let myDocs = await storage.documents({
         // include your old versions which are no longer the
         // most recent version
