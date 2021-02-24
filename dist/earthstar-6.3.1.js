@@ -260,7 +260,7 @@ exports.decodeAuthorKeypair = decodeAuthorKeypair;
 },{"../util/types":22,"../validator/es4":23,"multibase":194}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteMyDocuments = void 0;
+exports.deleteMyDocumentsAsync = exports.deleteMyDocuments = void 0;
 const tslib_1 = require("tslib");
 const types_1 = require("./util/types");
 const log_1 = tslib_1.__importDefault(require("./util/log"));
@@ -309,6 +309,45 @@ let deleteMyDocuments = (storage, keypair) => {
     };
 };
 exports.deleteMyDocuments = deleteMyDocuments;
+let deleteMyDocumentsAsync = (storage, keypair) => tslib_1.__awaiter(void 0, void 0, void 0, function* () {
+    let myDocs = yield storage.documents({
+        // include your old versions which are no longer the
+        // most recent version
+        author: keypair.address,
+        history: 'all',
+    });
+    storageLogger.log(`deleting ${myDocs.length} docs authored by ${keypair.address}...`);
+    let numErrors = 0;
+    for (let doc of myDocs) {
+        let emptyDoc = {
+            format: doc.format,
+            path: doc.path,
+            content: '',
+            timestamp: doc.timestamp + 1,
+        };
+        if (doc.deleteAfter !== null) {
+            emptyDoc.deleteAfter = doc.deleteAfter + 1;
+        }
+        let result = yield storage.set(keypair, emptyDoc);
+        if (types_1.isErr(result)) {
+            storageLogger.error(`deleting ${doc.path}... error`);
+            numErrors += 1;
+        }
+        else if (result === types_1.WriteResult.Ignored) {
+            storageLogger.log(`deleting ${doc.path}... ignored`);
+            numErrors += 1;
+        }
+        else {
+            storageLogger.log(`deleting ${doc.path}... success`);
+        }
+    }
+    storageLogger.log(`done.  ${myDocs.length - numErrors} deleted; ${numErrors} had errors.`);
+    return {
+        numDeleted: myDocs.length,
+        numErrors,
+    };
+});
+exports.deleteMyDocumentsAsync = deleteMyDocumentsAsync;
 
 },{"./util/log":21,"./util/types":22,"tslib":265}],6:[function(require,module,exports){
 "use strict";
@@ -361,6 +400,8 @@ let validateQuery = (query) => {
     if (query.contentLength !== undefined && query.contentLength < 0) {
         return new types_1.ValidationError('contentLength must be >= 0');
     }
+    // note that contentLengthGt is allowed to be negative e.g. -1, so that you can make it match all content lengths if you're
+    //  overriding another query...
     if (query.history !== undefined && query.history !== 'all' && query.history !== 'latest') {
         return new types_1.ValidationError('unknown history mode: ' + query.history);
     }
@@ -1799,7 +1840,6 @@ let urlToGetDocuments = (domain, workspace) =>
 // output is like https://mypub.com/earthstar-api/v1/+gardening.xxxxxxxx/documents
 `${domain}earthstar-api/v1/${workspace}/documents`;
 let urlToPostDocuments = urlToGetDocuments;
-// This is the actual HTTP syncing algorithm
 let syncLocalAndHttp = (storage, domain) => tslib_1.__awaiter(void 0, void 0, void 0, function* () {
     syncerHttpLogger.log('existing database workspace:', storage.workspace);
     let resultStats = {
@@ -1832,7 +1872,8 @@ let syncLocalAndHttp = (storage, domain) => tslib_1.__awaiter(void 0, void 0, vo
         let docs = yield resp.json();
         resultStats.pull.numTotal = docs.length;
         for (let doc of docs) {
-            if (storage.ingestDocument(doc, 'TODO: session id') === types_1.WriteResult.Accepted) {
+            const ingestResult = yield storage.ingestDocument(doc, 'TODO: session id');
+            if (ingestResult === types_1.WriteResult.Accepted) {
                 resultStats.pull.numIngested += 1;
             }
             else {
@@ -1845,9 +1886,10 @@ let syncLocalAndHttp = (storage, domain) => tslib_1.__awaiter(void 0, void 0, vo
     syncerHttpLogger.log('pushing to ' + domain);
     let resp2;
     try {
+        const docs = yield storage.documents({ history: 'all' });
         resp2 = yield isomorphic_fetch_1.default(urlToPostDocuments(domain, storage.workspace), {
             method: 'post',
-            body: JSON.stringify(storage.documents({ history: 'all' })),
+            body: JSON.stringify(docs),
             headers: { 'Content-Type': 'application/json' },
         });
     }
@@ -1924,6 +1966,8 @@ class OnePubOneWorkspaceSyncer {
         this.onStateChange = new emitter_1.Emitter();
     }
     _bump() {
+        // This must be called whenever the state changes.
+        // It notifies our subscribers of changes to the syncer state.
         this.onStateChange.send(this.state);
     }
     close() {
@@ -2007,7 +2051,7 @@ class OnePubOneWorkspaceSyncer {
             logPullStream('connection failed');
             syncLogger.error(e);
         };
-        this.pullStream.onmessage = (e) => {
+        this.pullStream.onmessage = (e) => tslib_1.__awaiter(this, void 0, void 0, function* () {
             // TODO: if (this.state.closed) { return; }
             logPullStream('    message', e.data);
             if (e.data === 'KEEPALIVE') {
@@ -2015,7 +2059,7 @@ class OnePubOneWorkspaceSyncer {
             }
             try {
                 let doc = JSON.parse(e.data);
-                let result = this.storage.ingestDocument(doc, "TODO: session id");
+                let result = yield this.storage.ingestDocument(doc, "TODO: session id");
                 if (types_1.isErr(result)) {
                     logPullStream('    write failed: ', result.name, result.message);
                 }
@@ -2027,7 +2071,7 @@ class OnePubOneWorkspaceSyncer {
                 logPullStream('error, probably bad json');
                 syncLogger.error(e);
             }
-        };
+        });
         this.state.isPullStreaming = true;
         this._bump();
     }
@@ -2055,7 +2099,7 @@ class OnePubOneWorkspaceSyncer {
             try {
                 resp = yield isomorphic_fetch_1.default(url, {
                     method: 'post',
-                    body: JSON.stringify(this.storage.documents({ history: 'all' })),
+                    body: JSON.stringify(docs),
                     headers: { 'Content-Type': 'application/json' },
                 });
             }
@@ -2096,7 +2140,10 @@ class OnePubOneWorkspaceSyncer {
             this.state.isBulkPushing = true;
             this._bump();
             yield helpers_1.sleep(150);
-            stats = yield this._pushDocs(url, this.storage.documents({ history: 'all' }));
+            // get docs...
+            const storageDocs = yield this.storage.documents({ history: 'all' });
+            // ...and push them
+            stats = yield this._pushDocs(url, storageDocs);
             this.state.isBulkPushing = false;
             this.state.lastCompletedBulkPush = Date.now() * 1000;
             this._bump();
@@ -2163,7 +2210,8 @@ class OnePubOneWorkspaceSyncer {
             let docs = yield resp.json();
             stats.numTotal = docs.length;
             for (let doc of docs) {
-                if (this.storage.ingestDocument(doc, "TODO: session id") === types_1.WriteResult.Accepted) {
+                const ingestResult = yield this.storage.ingestDocument(doc, "TODO: session id");
+                if (ingestResult === types_1.WriteResult.Accepted) {
                     stats.numIngested += 1;
                 }
                 else {
@@ -2574,21 +2622,21 @@ class Logger {
         var _a;
         let allowedLevel = (_a = currentLogLevelSettings[this._source]) !== null && _a !== void 0 ? _a : currentLogLevelSettings['_other'];
         if (allowedLevel >= LogLevel.Debug) {
-            console.error(`[${this._source} debug]`, ...args);
+            console.debug(`[${this._source} debug]`, ...args);
         }
     }
     log(...args) {
         var _a;
         let allowedLevel = (_a = currentLogLevelSettings[this._source]) !== null && _a !== void 0 ? _a : currentLogLevelSettings['_other'];
         if (allowedLevel >= LogLevel.Log) {
-            console.error(`[${this._source} log]`, ...args);
+            console.log(`[${this._source} log]`, ...args);
         }
     }
     warn(...args) {
         var _a;
         let allowedLevel = (_a = currentLogLevelSettings[this._source]) !== null && _a !== void 0 ? _a : currentLogLevelSettings['_other'];
         if (allowedLevel >= LogLevel.Warn) {
-            console.error(`[${this._source} warn]`, ...args);
+            console.warn(`[${this._source} warn]`, ...args);
         }
     }
     error(...args) {
