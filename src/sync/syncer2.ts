@@ -90,7 +90,7 @@ export class OnePubOneWorkspaceSyncer {
     unsubFromStorage: null | Thunk;
     state: SyncerState;
     onStateChange: Emitter<SyncerState>;
-    constructor(storage: IStorage, domain: string) {
+    constructor(storage: IStorage | IStorageAsync, domain: string) {
         this.storage = storage;
         this.domain = ensureTrailingSlash(domain);
         this.pullStream = null;
