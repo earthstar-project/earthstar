@@ -22,7 +22,7 @@
 //
 // The environment variable wins over the numbers set by setLogLevels.
 
-type LogSource = 'sync' | 'storage' | string;
+type LogSource = 'sync' | 'syncer2' | 'storage' | string;
 
 enum LogLevel {
   // Level 0, error, is enabled by default
@@ -59,6 +59,7 @@ const envLogLevels: Partial<LogLevelSettings> =
 // set initial defaults to 1 (errors and warnings)
 let currentLogLevelSettings: LogLevelSettings = {
   sync: 1,
+  syncer2: 1,
   storage: 1,
   _other: 1,
 }
