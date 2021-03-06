@@ -23,7 +23,7 @@ let randInt = (lo: number, hi: number) =>
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 
-let VALIDATORS : IValidator[] = [ValidatorEs4];
+let VALIDATORS: [IValidator, ...IValidator[]] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
 let keypair1 = generateAuthorKeypair('test') as AuthorKeypair;

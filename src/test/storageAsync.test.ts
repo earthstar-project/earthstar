@@ -51,7 +51,7 @@ import { StorageToAsync } from '../storage/storageToAsync';
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 
-let VALIDATORS : IValidator[] = [ValidatorEs4];
+let VALIDATORS : [IValidator, ...IValidator[]] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
 // tests assume these are in alphabetical order by author shortname
@@ -168,13 +168,13 @@ t.test(`StorageMemory: constructor success`, (t: any) => {
 });
 
 t.test(`StorageMemory: constructor errors`, (t: any) => {
-    t.throws(() => new StorageMemory([], WORKSPACE), 'throws when no validators are provided');
+    t.throws(() => new StorageMemory([] as any, WORKSPACE), 'throws when no validators are provided');
     t.throws(() => new StorageMemory(VALIDATORS, 'bad-workspace-address'), 'throws when workspace address is invalid');
     t.end();
 });
 
 t.test(`Async'd StorageMemory: constructor`, (t: any) => {
-    t.throws(() => new StorageToAsync(new StorageMemory([], WORKSPACE)), 'throws when no validators are provided');
+    t.throws(() => new StorageToAsync(new StorageMemory([] as any, WORKSPACE)), 'throws when no validators are provided');
     t.throws(() => new StorageToAsync(new StorageMemory(VALIDATORS, 'bad-workspace-address')), 'throws when workspace address is invalid');
     t.end();
 });
@@ -221,7 +221,7 @@ t.test(`StoreSqlite: opts: workspace and filename requirements`, (t: any) => {
         let storage = new StorageSqlite({
             mode: 'create',
             workspace: 'bad-workspace-address',
-            validators: [],
+            validators: [] as any,
             filename: ':memory:'
         });
         storage.close();

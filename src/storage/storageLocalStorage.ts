@@ -40,7 +40,7 @@ export class StorageLocalStorage extends StorageMemory {
     _localStorageKeyDocs: string;
     _debouncedSaveQuick: () => void;
     _debouncedSaveSlow: () => void;
-    constructor(validators: IValidator[], workspace: WorkspaceAddress) {
+    constructor(validators: [IValidator, ...IValidator[]], workspace: WorkspaceAddress) {
         super(validators, workspace);
         logger.log('constructor for workspace ' + workspace);        
 

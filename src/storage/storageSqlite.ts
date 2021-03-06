@@ -53,19 +53,19 @@ const logger = new Logger('storage')
 interface StorageSqliteOptsCreate {
     mode: 'create'
     workspace: WorkspaceAddress,
-    validators: IValidator[],  // must provide at least one
+    validators: [IValidator, ...IValidator[]],  // must provide at least one
     filename: string,  // must not exist
 }
 interface StorageSqliteOptsOpen {
     mode: 'open'
     workspace: WorkspaceAddress | null,
-    validators: IValidator[],  // must provide at least one
+    validators: [IValidator, ...IValidator[]],  // must provide at least one
     filename: string,  // must exist
 }
 interface StorageSqliteOptsCreateOrOpen {
     mode: 'create-or-open'
     workspace: WorkspaceAddress,
-    validators: IValidator[],  // must provide at least one
+    validators: [IValidator, ...IValidator[]],  // must provide at least one
     filename: string,  // may or may not exist
 }
 export type StorageSqliteOpts =

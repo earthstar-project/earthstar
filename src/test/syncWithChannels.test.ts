@@ -46,7 +46,7 @@ import { StorageToAsync } from '../storage/storageToAsync';
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
 let WORKSPACE2 = '+another.xxxxxxxxxxxxxxxxxxxx';
 
-let VALIDATORS : IValidator[] = [ValidatorEs4];
+let VALIDATORS: [IValidator, ...IValidator[]] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
 
 // tests assume these are in alphabetical order by author shortname

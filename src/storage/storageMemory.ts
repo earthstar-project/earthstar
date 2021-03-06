@@ -26,7 +26,7 @@ export class StorageMemory extends StorageBase {
     _docs: Record<string, Record<string, Document>> = {};  // { path: { author: document }}
     _config: Record<string, string> = {};
 
-    constructor(validators: IValidator[], workspace: WorkspaceAddress) {
+    constructor(validators: [IValidator, ...IValidator[]], workspace: WorkspaceAddress) {
         super(validators, workspace);
         logger.log('constructor for workspace ' + workspace);        
     }

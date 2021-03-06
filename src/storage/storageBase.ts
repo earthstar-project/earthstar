@@ -37,7 +37,7 @@ export abstract class StorageBase implements IStorage {
     _validatorMap: {[format: string]: IValidator};
     _discardInterval: any | null = null;
 
-    constructor(validators: IValidator[], workspace: WorkspaceAddress) {
+    constructor(validators: [IValidator, ...IValidator[]], workspace: WorkspaceAddress) {
 
         // when subclassing this class, you will need to call
         //    super(validators, workspace)
@@ -105,7 +105,7 @@ export abstract class StorageBase implements IStorage {
     }
 
     _assertNotClosed(): void {
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+        if (this._isClosed) { throw new StorageIsClosedError(`A StorageBase instance for ${this.workspace} was used after being closed. `); }
     }
 
     abstract setConfig(key: string, content: string): void;
