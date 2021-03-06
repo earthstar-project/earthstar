@@ -27,6 +27,7 @@ import {
     sortLatestFirst,
     sortPathAscAuthorAsc,
     validateQuery,
+    QUERY_THAT_NEVER_MATCHES,
 } from '../storage/query';
 
 //================================================================================
@@ -164,8 +165,8 @@ t.test('cleanUpQuery', (t: any) => {
         },
         {
             query: { history: '???' } as any,
-            result: { path: 'invalid-query', limit: 0 },
-            note: 'invalid query turns to empty query',
+            result: QUERY_THAT_NEVER_MATCHES,
+            note: 'a very invalid query turns into a special query that never matches anything',
         }
     ];
 

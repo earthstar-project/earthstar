@@ -8,6 +8,17 @@ import {
     objWithoutUndefined
 } from '../util/helpers';
 
+//================================================================================
+// When doing cleanUpQuery, if the provided query is invalid,
+// return this special query which will never match any documents:
+
+export let QUERY_THAT_NEVER_MATCHES: Query = {
+    path: 'invalid-query',  // paths normally have to start with '/'
+    limit: 0,
+}
+
+//================================================================================
+
 /*
 open questions
     when doing paths(query), is it...
@@ -157,8 +168,7 @@ export let cleanUpQuery = (query: Query): Query => {
     let isValid = validateQuery(query);
     if (isErr(isValid)) {
         // if query is invalid, instead return a special query that will never match anything
-        console.warn(isValid);
-        return { path: 'invalid-query', limit: 0 };
+        return { ...QUERY_THAT_NEVER_MATCHES };
     }
     // set defaults
     let q: Query = {
