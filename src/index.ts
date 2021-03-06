@@ -1,3 +1,6 @@
+// (These lines intentionally left blank
+// for easy comparison with index.browser.ts)
+
 export * from './crypto/crypto';
 export * from './crypto/cryptoTypes';
 export * from './crypto/encoding';
