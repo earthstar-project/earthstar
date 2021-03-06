@@ -8,7 +8,6 @@ import {
     WorkspaceAddress,
     WriteResult,
     isErr,
-    StorageIsClosedError,
 } from '../util/types';
 import {
     Emitter
@@ -47,7 +46,7 @@ export interface PushOrPullStats {
     numIngested: number,
     numIgnored: number,
     numTotal: number,
-    error: null | ConnectionRefusedError | NotFoundError | NetworkError | StorageIsClosedError,
+    error: null | ConnectionRefusedError | NotFoundError | NetworkError,
 }
 let initialStats: PushOrPullStats = {
     numIngested: 0,
@@ -198,12 +197,10 @@ export class OnePubOneWorkspaceSyncer {
                     logPullStream('    write: ' + result);
                 }
             } catch (e) {
-                logPullStream('error, probably bad json or store was closed but sync pullStream tried to keep going.');
+                logPullStream('error, probably bad json');
                 syncLogger.error(e);
-                this.stopPullStream();
             }
         };
-
         this.state.isPullStreaming = true;
         this._bump();
     }
@@ -272,16 +269,10 @@ export class OnePubOneWorkspaceSyncer {
 
         await sleep(150);
 
-        try {
-            // get docs...
-            const storageDocs = await this.storage.documents({history: 'all'})
-            // ...and push them
-            stats = await this._pushDocs(url, storageDocs);
-        } catch (e) {
-            logBulkPush('error, probably store was closed but sync pushOnce tried to keep going.');
-            syncLogger.error(e);
-            stats.error = e;
-        }
+        // get docs...
+        const storageDocs = await this.storage.documents({history: 'all'})
+        // ...and push them
+        stats = await this._pushDocs(url, storageDocs);
     
         this.state.isBulkPushing = false;
         this.state.lastCompletedBulkPush = Date.now() * 1000;
@@ -352,15 +343,10 @@ export class OnePubOneWorkspaceSyncer {
 
         let docs = await resp.json();
         stats.numTotal = docs.length;
-        try {
-            for (let doc of docs) {
-                const ingestResult = await this.storage.ingestDocument(doc, "TODO: session id");
-                if (ingestResult === WriteResult.Accepted) { stats.numIngested += 1; }
-                else { stats.numIgnored += 1; }
-            }
-        } catch (e) {
-            logBulkPull('error, probably store was closed but sync bulkPull tried to write docs to it.');
-            syncLogger.error(e);
+        for (let doc of docs) {
+            const ingestResult = await this.storage.ingestDocument(doc, "TODO: session id");
+            if (ingestResult === WriteResult.Accepted) { stats.numIngested += 1; }
+            else { stats.numIgnored += 1; }
         }
         logBulkPull(JSON.stringify(stats, null, 2));
         this.state.isBulkPulling = false;
