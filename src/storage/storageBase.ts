@@ -21,6 +21,9 @@ import { Emitter } from '../util/emitter';
 import { uniq, sorted } from '../util/helpers';
 import { sha256base32 } from '../crypto/crypto';
 import { cleanUpQuery } from './query';
+import Logger from '../util/log';
+
+let logger = new Logger('StorageBase');
 
 export abstract class StorageBase implements IStorage {
     workspace : WorkspaceAddress;
@@ -49,6 +52,8 @@ export abstract class StorageBase implements IStorage {
         // if you need to throw an exception from your constructor,
         // you have to call this.close() first to stop the hourly discard thread,
         // or node will hang instead of exiting because that timer will still be waiting.
+
+        logger.log('constructor for workspace ' + workspace);        
 
         this.workspace = workspace;
         this.sessionId = '' + Math.random();
@@ -295,19 +300,32 @@ export abstract class StorageBase implements IStorage {
     abstract _close(opts: { delete: boolean }): void;
 
     close(opts?: { delete: boolean }) {
+        logger.log(`🚫 CLOSE ${this.workspace} 🚫`);
 
-        if (this._isClosed) { return; }
+        if (this._isClosed) {
+            logger.log('🚫 ...already closed; returning.');
+            return;
+        }
+        logger.log('🚫 ...sending onWillClose');
         this.onWillClose.send(undefined);
 
         this._isClosed = true;
+
+        logger.log('🚫 ...stopping ephemeral deletion thread');
         // stop the hourly discard thread
         if (this._discardInterval !== null) {
             clearInterval(this._discardInterval);
             this._discardInterval = null;
         }
 
+        logger.log('🚫 ...calling subclass _close()');
+        if (opts?.delete === true) {
+            logger.log('🚫 ...and will delete.');
+        }
         this._close(opts || { delete: false });
 
+        logger.log('🚫 ...sending onDidClose');
         this.onDidClose.send(undefined);
+        logger.log('🚫 done.');
     }
 }

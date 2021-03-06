@@ -1,3 +1,4 @@
+import Logger from '../util/log';
 import {
     Document,
     IValidator,
@@ -19,12 +20,15 @@ import {
 
 //================================================================================
 
+let logger = new Logger('StorageMemory');
+
 export class StorageMemory extends StorageBase {
     _docs: Record<string, Record<string, Document>> = {};  // { path: { author: document }}
     _config: Record<string, string> = {};
 
     constructor(validators: IValidator[], workspace: WorkspaceAddress) {
         super(validators, workspace);
+        logger.log('constructor for workspace ' + workspace);        
     }
 
     setConfig(key: string, content: string): void {
@@ -191,6 +195,7 @@ export class StorageMemory extends StorageBase {
 
     _close(opts: { delete: boolean }): void { 
         // we don't really need to do this, but maybe it will help garbage collection
+        logger.log(`🛑 _close() - ${this.workspace} - (is mostly a no-nop for StorageMemory)`)
         this._docs = {};
         this._config = {};
     }

@@ -23,9 +23,10 @@ import {
 } from './storageBase';
 
 import Logger from '../util/log';
-const storageLogger = new Logger('storage')
 
 //================================================================================
+
+const logger = new Logger('storage')
 
 /**
  * Options for creating a StorageSqlite instance.
@@ -83,7 +84,7 @@ export class StorageSqlite extends StorageBase {
         // so provide a temporary value for now
         super(opts.validators, '+temp.workspace');
 
-        storageLogger.debug(`sqlite.constructor(workspace: ${opts.workspace})`);
+        logger.log(`constructor for workspace ${opts.workspace}`);
 
         this._filename = opts.filename;
 
@@ -175,7 +176,7 @@ export class StorageSqlite extends StorageBase {
 
         // check and set schemaVersion
         let schemaVersion = this.getConfig('schemaVersion');
-        storageLogger.debug(`sqlite\.constructor    schemaVersion: ${schemaVersion}`);
+        logger.log(`constructor    schemaVersion: ${schemaVersion}`);
         /* istanbul ignore else */
         if (schemaVersion === undefined) {
             schemaVersion = '1';
@@ -232,7 +233,7 @@ export class StorageSqlite extends StorageBase {
     }
 
     setConfig(key: string, content: string): void {
-        storageLogger.debug(`sqlite.setConfig(${JSON.stringify(key)} = ${JSON.stringify(content)})`);
+        logger.debug(`setConfig(${JSON.stringify(key)} = ${JSON.stringify(content)})`);
         this._assertNotClosed();
         this.db.prepare(`
             INSERT OR REPLACE INTO config (key, content) VALUES (:key, :content);
@@ -244,18 +245,18 @@ export class StorageSqlite extends StorageBase {
             SELECT content FROM config WHERE key = :key;
         `).get({ key: key });
         let result = (row === undefined) ? undefined : row.content;
-        storageLogger.debug(`sqlite.getConfig(${JSON.stringify(key)}) = ${JSON.stringify(result)}`);
+        logger.debug(`getConfig(${JSON.stringify(key)}) = ${JSON.stringify(result)}`);
         return result;
     }
     deleteConfig(key: string): void {
-        storageLogger.debug(`sqlite.deleteConfig(${JSON.stringify(key)})`);
+        logger.debug(`deleteConfig(${JSON.stringify(key)})`);
         this._assertNotClosed();
         this.db.prepare(`
             DELETE FROM config WHERE key = :key;
         `).run({ key: key });
     }
     deleteAllConfig(): void {
-        storageLogger.debug(`sqlite.deleteAllConfig()`);
+        logger.debug(`deleteAllConfig()`);
         this._assertNotClosed();
         this.db.prepare(`
             DELETE FROM config;
@@ -462,12 +463,12 @@ export class StorageSqlite extends StorageBase {
         if (query.limit === 0 || query.limitBytes === 0) { return []; }
         let now = this._now || (Date.now() * 1000);
 
-        storageLogger.debug('sqlite\.documents(query)');
-        storageLogger.debug('  query:', query);
+        logger.debug('documents(query)');
+        logger.debug('  query:', query);
 
         let { sql, params } = this._makeDocQuerySql(query, now, 'documents');
-        storageLogger.debug('  sql:', sql);
-        storageLogger.debug('  params:', params);
+        logger.debug('  sql:', sql);
+        logger.debug('  params:', params);
 
         let docs: Document[] = this.db.prepare(sql).all(params);
         if (query.history === 'latest') {
@@ -495,7 +496,7 @@ export class StorageSqlite extends StorageBase {
         }
 
         docs.forEach(doc => Object.freeze(doc));
-        storageLogger.debug(`  result: ${docs.length} docs`);
+        logger.debug(`  result: ${docs.length} docs`);
         return docs;
     }
 
@@ -506,18 +507,18 @@ export class StorageSqlite extends StorageBase {
         if (query.limit === 0) { return []; }
 
         let { sql, params } = this._makeDocQuerySql(query, now, 'paths');
-        storageLogger.debug('sqlite\.pathQuery(query, now)');
-        storageLogger.debug('  query:', query);
-        storageLogger.debug('  sql:', sql);
-        storageLogger.debug('  params:', params);
+        logger.debug('pathQuery(query, now)');
+        logger.debug('  query:', query);
+        logger.debug('  sql:', sql);
+        logger.debug('  params:', params);
         let paths: string[] = this.db.prepare(sql).all(params).map(doc => doc.path);
-        storageLogger.debug(`  result: ${paths.length} paths`);
+        logger.debug(`  result: ${paths.length} paths`);
         return paths;
     }
     */
 
     authors(): AuthorAddress[] {
-        storageLogger.debug('sqlite\.authors()');
+        logger.debug('authors()');
         this._assertNotClosed();
         let now = this._now || (Date.now() * 1000);
         let docs: Document[] = this.db.prepare(`
@@ -531,7 +532,7 @@ export class StorageSqlite extends StorageBase {
 
     _upsertDocument(doc: Document): void {
         // Insert new doc, replacing old doc if there is one
-        storageLogger.debug(`sqlite\.upsertDocument(doc.path: ${JSON.stringify(doc.path)})`);
+        logger.debug(`upsertDocument(doc.path: ${JSON.stringify(doc.path)})`);
         this._assertNotClosed();
         Object.freeze(doc);
         //TODO: convert content from string to Buffer so SQLite will treat it as a BLOB
@@ -543,18 +544,18 @@ export class StorageSqlite extends StorageBase {
     }
 
     forgetDocuments(q: QueryForForget): void {
-        storageLogger.debug(`sqlite\.forgetDocuments(${JSON.stringify(q)})`);
+        logger.debug(`forgetDocuments(${JSON.stringify(q)})`);
         this._assertNotClosed();
         let query = cleanUpQuery(q);
         if ((query as Query).limit === 0 || (query as Query).limitBytes === 0) { return; }
         let now = this._now || (Date.now() * 1000);
 
-        storageLogger.debug('sqlite\.forgetDocuments(query)');
-        storageLogger.debug('  query:', query);
+        logger.debug('forgetDocuments(query)');
+        logger.debug('  query:', query);
 
         let { sql, params } = this._makeDocQuerySql(query, now, 'delete');
-        storageLogger.debug('  sql:', sql);
-        storageLogger.debug('  params:', params);
+        logger.debug('  sql:', sql);
+        logger.debug('  params:', params);
 
         this.db.prepare(sql).run(params);
 
@@ -563,7 +564,7 @@ export class StorageSqlite extends StorageBase {
     }
 
     discardExpiredDocuments(): void {
-        storageLogger.debug('sqlite\.discardExpiredDocuments()');
+        logger.debug('discardExpiredDocuments()');
         this._assertNotClosed();
         let now = this._now || (Date.now() * 1000);
         this.db.prepare(`
@@ -573,18 +574,21 @@ export class StorageSqlite extends StorageBase {
     }
 
     _close(opts: { delete: boolean }): void {
-        storageLogger.debug(`sqlite\._close() with delete = ${opts.delete}`);
+        logger.log(`🛑 _close() with delete = ${opts.delete}`);
         // close the database.
         // this might still be null if the constructor fails and calls close()
         // before ever making a database, for example if the given file path is missing
         if (this.db) {
+            logger.log(`🛑 ...closing the sqlite database`);
             this.db.close();
         }
         // delete the sqlite file
         if (opts.delete === true && this._filename !== ':memory:') {
+            logger.log(`🛑 ...deleting the sqlite file`);
             if (fs.existsSync(this._filename)) {
                 fs.unlinkSync(this._filename);
             }
         }
+        logger.log(`🛑 ...done`);
     }
 }

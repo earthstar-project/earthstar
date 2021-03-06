@@ -3,8 +3,11 @@ import { IValidator, WorkspaceAddress } from '../util/types';
 import { WriteEvent } from './storageTypes';
 import { QueryForForget } from './query';
 import { StorageMemory } from './storageMemory';
+import Logger from '../util/log';
 
 //================================================================================
+
+let logger = new Logger('StorageLocalStorage');
 
 export class StorageLocalStorage extends StorageMemory {
     /**
@@ -39,13 +42,17 @@ export class StorageLocalStorage extends StorageMemory {
     _debouncedSaveSlow: () => void;
     constructor(validators: IValidator[], workspace: WorkspaceAddress) {
         super(validators, workspace);
+        logger.log('constructor for workspace ' + workspace);        
 
         // load _docs from localStorage during initialization
         this._localStorageKeyConfig = `earthstar:config:${workspace}`;
         this._localStorageKeyDocs = `earthstar:documents:${workspace}`;
         let existingData = localStorage.getItem(this._localStorageKeyDocs);
         if (existingData !== null) {
+            logger.debug('loading _docs from localStorage');
             this._docs = JSON.parse(existingData);
+        } else {
+            logger.debug('nothing to load from localStorage');
         }
 
         // Saving the entire list of docs will get triggered on every changed document,
@@ -58,12 +65,14 @@ export class StorageLocalStorage extends StorageMemory {
         // TODO: should we use throttle instead?  The current system means a slow steady
         // trickle of docs can prevent saving from ever happening.
         let saveToLocalStorage = () => {
+            logger.log('...debounced saveToLocalStorage is running');
             localStorage.setItem(this._localStorageKeyDocs, JSON.stringify(this._docs));
         };
         this._debouncedSaveQuick = debounce(saveToLocalStorage, 50, { trailing: true });
         this._debouncedSaveSlow = debounce(saveToLocalStorage, 333, { trailing: true });
 
         this.onWrite.subscribe((e: WriteEvent) => {
+            logger.log('onWrite.  asking for a saveToLocalStorage...');
             if (e.isLocal) { this._debouncedSaveQuick(); }
             else { this._debouncedSaveSlow(); }
         });
@@ -107,10 +116,14 @@ export class StorageLocalStorage extends StorageMemory {
     }
 
     closeAndForgetWorkspace(): void {
+        logger.log(`⛔️ closeAndForgetWorkspace() for ${this.workspace}`);
         this._assertNotClosed();
+        logger.log('⛔️ ...closeAndForgetWorkspace() - calling regular close()');
         this.close();
+        logger.log('⛔️ ...closeAndForgetWorkspace() - deleting localStorage');
         this._docs = {};
         this.deleteAllConfig();
         localStorage.removeItem(this._localStorageKeyDocs);
+        logger.log('⛔️ ...closeAndForgetWorkspace() - done');
     }
 }
