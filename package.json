@@ -18,7 +18,7 @@
     "toc": "./update-table-of-contents.sh",
     "build": "tsc",
     "build-standalone": "mkdir -p dist && browserify --standalone earthstar build/index.browser.js > dist/earthstar.js && terser --compress -- dist/earthstar.js > dist/earthstar.min.js && ls -la dist",
-    "browserify-for-karma": "mkdir -p browserify-test-bundle && browserify build/test/detRandom.test.js > browserify-test-bundle/bundle.js",
+    "browserify-for-karma": "mkdir -p browserify-test-bundle && browserify build/test/extras.test.js > browserify-test-bundle/bundle.js",
     "karma-start": "karma start",
     "test-in-browser": "npm run clean && npm run build && npm run browserify-for-karma && npm run karma-start",
     "watch-test": "onchange --initial --kill --delay 1000 src/*.ts -- npm run build-and-test",
@@ -52,7 +52,7 @@
     "@types/tap": "^14.10.1",
     "@types/tape": "^4.13.0",
     "browserify": "^16.5.2",
-    "karma": "^5.2.3",
+    "karma": "^6.1.1",
     "karma-chrome-launcher": "^3.1.0",
     "karma-tap": "^4.2.0",
     "onchange": "^7.1.0",
@@ -61,7 +61,7 @@
     "tape": "^5.0.1",
     "terser": "^5.5.1",
     "typedoc": "^0.20.25",
-    "typescript": "^4.1.2"
+    "typescript": "~4.1.5"
   },
   "dependencies": {
     "@types/better-sqlite3": "^5.4.1",
