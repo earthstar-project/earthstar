@@ -21,7 +21,6 @@ import Logger from '../util/log';
 
 const syncLogger = new Logger('syncer2')
 
-let logSyncer = (...args : any[])     => syncLogger.debug('💚 syncer | ', ...args);
 let logSync = (...args : any[])       => syncLogger.debug('  🌲  one pub: SYNC | ', ...args);
 let logPullStream = (...args : any[]) => syncLogger.debug('  🌲  one pub:     PULL STREAM | ', ...args);
 let logPushStream = (...args : any[]) => syncLogger.debug('  🌲  one pub:     PUSH STREAM | ', ...args);
@@ -87,32 +86,61 @@ export class OnePubOneWorkspaceSyncer {
     storage: IStorage | IStorageAsync;
     domain: string;
     pullStream: null | EventSource;
-    unsubFromStorage: null | Thunk;
+    unsubFromStorageOnWrite: null | Thunk;
+    unsubFromStorageOnWillClose: null | Thunk;
     state: SyncerState;
+    prevState: SyncerState;
     onStateChange: Emitter<SyncerState>;
     constructor(storage: IStorage | IStorageAsync, domain: string) {
         this.storage = storage;
         this.domain = ensureTrailingSlash(domain);
         this.pullStream = null;
-        this.unsubFromStorage = null;
+        this.unsubFromStorageOnWrite = null;
+        this.unsubFromStorageOnWillClose = this.storage.onWillClose.subscribe(() => {
+            syncLogger.log('🔶 got storage will close event, so closing the syncer now');
+            this.close();
+        });
         this.state = { ...initialSyncerState };
+        this.prevState = { ...this.state };
         this.onStateChange = new Emitter<SyncerState>();
     }
     _bump() {
         // This must be called whenever the state changes.
         // It notifies our subscribers of changes to the syncer state.
-        this.onStateChange.send(this.state);
+
+        // Only send onStateChange if the state has actually changed.
+
+        // This is a very lazy way to do a deep equality check.
+        // It can fail if the order of the keys changes...
+        // however in our code we never make a fresh object for this.state, we
+        // just mutate the existing one, so I think this is safe.
+        // If it fails, it will just let some extra events through where nothing
+        // has actually changed, which is ok.
+        if (JSON.stringify(this.state) !== JSON.stringify(this.prevState)) {
+            this.onStateChange.send(this.state);
+            this.prevState = { ...this.state };
+        }
     }
 
     close() {
         if (!this.state.closed) {
-            logSyncer('close');
+            syncLogger.log('🧡 close() - stopping streams...');
             this.stopPushStream();
             this.stopPullStream();
             this.state.closed = true;
+
+            // unsubscribe from the storage
+            // when the syncer is closed
+            syncLogger.log('🧡 close() - ...unsubscribing from storage events...');
+            this.unsubFromStorageOnWillClose ? this.unsubFromStorageOnWillClose() : null;
+            this.unsubFromStorageOnWrite ? this.unsubFromStorageOnWrite() : null;
+
+            syncLogger.log('🧡 close() - ...bump...');
             this._bump();
+
+            syncLogger.log('🧡 close() - ...done closing.');
         } else {
-            logSyncer('close (was already closed)');
+            syncLogger.log('🧡 close() - was already closed.');
         }
     }
 
@@ -126,7 +154,7 @@ export class OnePubOneWorkspaceSyncer {
             return;
         }
 
-        this.unsubFromStorage = this.storage.onWrite.subscribe(async (e) => {
+        this.unsubFromStorageOnWrite = this.storage.onWrite.subscribe(async (e) => {
             // TODO: if (this.state.closed) { return; }
             if (e.kind === 'DOCUMENT_WRITE') {
                 // If we receive a doc from one pub, we want to sync it up to
@@ -160,8 +188,8 @@ export class OnePubOneWorkspaceSyncer {
         if (this.state.closed) { return; }
 
         logPushStream('stopping push stream');
-        if (this.unsubFromStorage) {
-            this.unsubFromStorage();
+        if (this.unsubFromStorageOnWrite) {
+            this.unsubFromStorageOnWrite();
         } else {
             logPushStream('(already stopped)');
         }
