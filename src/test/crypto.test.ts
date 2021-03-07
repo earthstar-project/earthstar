@@ -57,6 +57,12 @@ t.test('base32 encoding', (t: any) => {
     t.throws(() => decodeBase32ToBuffer('babcxyz\n'), 'decoding base32 throws when encountering invalid base32 character');
     t.throws(() => decodeBase32ToBuffer('BABC'), 'decoding base32 throws when encountering a different multibase encoding');
 
+    // make sure we have a multibase version that fixed this bug:
+    // https://github.com/multiformats/js-multibase/issues/17
+    let raw = Buffer.from('1220120f6af601d46e10b2d2e11ed71c55d25f3042c22501e41d1246e7a1e9d3d8ec', 'hex');
+    let expected = 'bciqbed3k6ya5i3qqwljochwxdrk5exzqilbckapedujenz5b5hj5r3a';
+    t.same(encodeBufferToBase32(raw), expected, 'edge case works');
+
     t.end();
 });
 
