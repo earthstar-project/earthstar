@@ -52,6 +52,7 @@ const envLogLevels: Partial<LogLevelSettings> =
   ? {}
   : {
     sync: envLogLevel,
+    syncer2: envLogLevel,
     storage: envLogLevel,
     _other: envLogLevel,
 };
