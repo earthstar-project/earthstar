@@ -8,7 +8,7 @@
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
-Chatroom: [`#earthstar:matrix.org`](https://matrix.to/#/!oGfoMKqZnBVrJYjebW:matrix.org)
+Join our community on the [Earthstar Discord](https://discord.gg/FuaAnNqUfZ)
 
 ## Links and docs
 
@@ -37,8 +37,8 @@ Related repos:
 
 Demo apps:
 * [Twodays Crossing](https://github.com/earthstar-project/twodays-crossing) -- Ephemeral Roleplay chatroom [Try it here](https://twodays-crossing.netlify.app)
-* [earthstar-status[(https://github.com/earthstar-project/earthstar-status) -- Online presence messages app [Try it here](https://earthstar-status.netlify.app)
-* [earthstar-lobby](https://github.com/sgwilym/earthstar-lobby/) -- A guestbook.  [Try it here](https://earthstar-lobby.vercel.app/)
+* [earthstar-status](https://github.com/earthstar-project/earthstar-status) -- Online presence messages app [Try it here](https://earthstar-status.netlify.app)
+* [earthstar-lobby](https://github.com/sgwilym/earthstar-lobby/) -- Text posts on a timeline.  [Try it here](https://earthstar-lobby.vercel.app/)
 * [earthstar-wiki](https://github.com/earthstar-project/earthstar-wiki) -- An example app built with Earthstar (deprecated)
 * [earthstar-os](https://github.com/earthstar-project/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser (deprecated)
 
