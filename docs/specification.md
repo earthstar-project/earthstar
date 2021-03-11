@@ -85,7 +85,7 @@ Our encodings are always prefixed with an extra `b` character, following the [mu
 
 Libraries MUST be strict when encoding and decoding -- only allow lowercase characters; don't allow a `1` to be treated as an `i`.
 
-> Why?
+> **Why this encoding?**
 >
 > * We want to use encoded data in URL locations, which can't contain upper-case characters, so base64 and base58 won't work.
 > * base32 is shorter than base16 (hex).
@@ -97,6 +97,13 @@ Libraries MUST be strict when encoding and decoding -- only allow lowercase char
 Document contents may only contain utf-8 strings, not arbitrary binary bytes.  Applications wishing to store binary data SHOULD encode it as base64.
 
 The recommended format is [RFC4648](https://tools.ietf.org/html/rfc4648#section-4) base64, regular (not-URLsafe), with padding.  This is the same format used by `atob()` and `btoa()` in Javascript.
+
+> **Why?**
+>
+> * This encoding is built into web browsers and probably implemented by native code, making it faster for large amounts of data and easier to integrate with other web APIs such as canvas, IndexedDb, displaying images, etc.
+> * It's more widely used than base32.
+> * It uses less space than base32, which matters more because this will be used for large files.
+> * We don't have the same character set restrictions for this use case that we do for the base32 use cases (paths, author addresses, etc).
 
 ## Indexed Storage
 
@@ -499,7 +506,7 @@ Multiple apps can put data in the same workspace.  Here are guidelines to help t
 
 The first path segment SHOULD be a description of the data type or the application that will read/write it.  Examples: `/wiki/`, `/chess/`, `/chat/`, `/posts/`, `/earthstagram/`.
 
-> Why?
+> **Why?**
 >
 > Peers can selectively sync only certain documents.  Starting a path with a descriptive name like `/wiki/` makes it easy to sync only wiki documents and ignore the rest.  It also lets apps easily ignore data from other apps.
 
@@ -856,7 +863,7 @@ SIGNATURE;
 bjljalsg2mulkut56anrteaejvrrtnjlrwfvswiqsi2psero22qqw7am34z3u3xcw7nx6mha42isfuzae5xda3armky5clrqrewrhgca
 ```
 
-> **Why use `contentHash` instead of `content` for hashing documents?
+> **Why use `contentHash` instead of `content` for hashing documents?**
 >
 > This lets us drop the actual content (to save space) but still verify the document signature.  This will be useful in the future for "sparse mode".
 
