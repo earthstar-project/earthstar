@@ -2,7 +2,7 @@
 
 Format: `es.4`
 
-Document version: 2021-03-11.1
+Document version: 2021-03-11.2
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -255,11 +255,19 @@ Note that anyone can write to and read from a workspace if they know its full wo
 
 ### Invite-only Workspaces (coming soon)
 
-In the future, Earthstar will support **invite-only** workspaces which have an associated **workspace key** and **workspace secret**.  The key is used as the workspace suffix, and the secret is given out-of-band to authors who should be able to write.
+In the future, Earthstar will support **invite-only** workspaces.
+
+These separate "read permission" from "read and write permission".  This enables use-cases such as
+* Workspaces where a few authors publish content to a wide audience of readers (who otherwise would be able to write to the workspace once they know its address)
+* Pub servers which host workspaces without the ability to write their own docs into the workspace
+
+Invite-only workspaces will have a **workspace key** and **workspace secret**.  The key is used as the workspace suffix, and the secret is given out-of-band to authors who should be able to write.
 
 Only authors who know the workspace key can write to an invite-only workspace.  They will sign their documents with the workspace secret (in a new field, `workspaceSignature`, in addition to the regular author signature).
 
 This will limit who can write, but anyone knowing the workspace address can still read.  To limit readers, authors may choose to encrypt their document content using the workspace key so that anyone with the workspace secret can decrypt it.
+
+TODO: We need a way to tell if a workspace is invite-only or not just by looking at its address.  Perhaps it's invite-only if the suffix looks like a base32 pubkey (53 chars starting with 'b').
 
 ## Author Addresses
 
