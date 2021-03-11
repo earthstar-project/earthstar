@@ -2,7 +2,7 @@
 
 Format: `es.4`
 
-Document version: 2021-03-11.2
+Document version: 2021-03-11.3
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -23,17 +23,19 @@ Document version: 2021-03-11.2
     - [Invite-only Workspaces (coming soon)](#invite-only-workspaces-coming-soon)
   - [Author Addresses](#author-addresses)
   - [FAQ: Author Shortnames](#faq-author-shortnames)
-  - [Author Profiles](#author-profiles)
+  - [Author Display Names and Profile Info](#author-display-names-and-profile-info)
 - [Paths and Write Permissions](#paths-and-write-permissions)
   - [Paths](#paths)
   - [Path Characters With Special Meaning](#path-characters-with-special-meaning)
   - [Disallowed Path Characters](#disallowed-path-characters)
   - [Write Permissions](#write-permissions)
   - [Path and Filename Conventions](#path-and-filename-conventions)
+  - [File Extensions](#file-extensions)
 - [Documents and Their Fields](#documents-and-their-fields)
   - [Document Validity](#document-validity)
   - [Author](#author)
   - [Content](#content)
+    - [Sparse Mode (eventually)](#sparse-mode-eventually)
   - [Content Hash](#content-hash)
   - [Format](#format)
     - [Format Validator Responsibilities](#format-validator-responsibilities)
@@ -50,7 +52,7 @@ Document version: 2021-03-11.2
 - [Syncing](#syncing)
   - [Networking](#networking)
   - [Workspace Secrecy](#workspace-secrecy)
-    - [A flaw](#a-flaw)
+    - [Eavesdropping](#eavesdropping)
   - [Sync Queries](#sync-queries)
   - [Resolving Conflicts](#resolving-conflicts)
 - [Future Directions](#future-directions)
@@ -164,31 +166,37 @@ When a new document arrives and an existing one is already there (from the same 
 The process of validating and potentially saving an incoming document is called **ingesting**, and it MUST happen to newly obtained documents, whether they come from other peers or are made as local writes.  Earthstar libraries MUST use this ingestion process:
 
 ```ts
-// pseudocode
+// Pseudocode
 
 Ingest(newDoc):
-    // check validity -- bad data types, bad signature,
-    // expired ephemeral doc, wrong format string, etc...
+    // Check doc validity -- bad data types, bad signature,
+    // expired ephemeral doc, wrong format string,
+    // timestamp too far in the future, ...
     if !isValid(newDoc):
         return "rejected an invalid doc"
 
-    // check if it's obsolete
+    // Check if it's obsolete
+    // (Do we have a newer doc with same path and same author?)
     let existingDoc = query({author: newDoc.author, path: newDoc.path});
     if existingDoc exists && existingDoc.timestamp >= newDoc.timestamp;
         return "ignored an obsolete doc"
 
-    // overwrite
+    // Overwrite older doc with same path and same author
     if existingDoc exists:
         remove(existingDoc)
     save(newDoc)
     return "accepted a doc"
 ```
 
+Each document has a `format` field which specifies which data [Format](#format) it is.  The `isValid` function in this pseudocode represents a call to the [Format Validator](#format) which is responsible for enforcing the rules of that format.
+
 ## Timestamps and Clock Skew
 
 TODO: discuss timestamps
 
-For now, read notes in the Timestamp section, lower in this document.
+For now, see the [Timestamp](#timestamp) section, lower in this document, for rules about handling clock skew and documents from the future.
+
+Also see the (non-normative) document [How does Earthstar handle timestamps, and can it recover from a device with a very inaccurate clock?](https://github.com/earthstar-project/earthstar/blob/main/docs/timestamps.md)
 
 # Identities, Authors, Workspaces
 
@@ -302,7 +310,7 @@ secret: b4p3qioleiepi5a6iaalf6pm3qhgapkftxnxcszjwa352qr6gempa
 
 Apps MUST treat authors as separate and distinct when their addresses differ, even if only the shortname is different and the pubkeys are the same.
 
-Note that authors also have **display names** stored in their **profile document**.  See the next section.
+Note that authors also have **display names** stored in their **profile documents**.  See the next section.
 
 ## FAQ: Author Shortnames
 
@@ -344,35 +352,36 @@ Note that authors also have **display names** stored in their **profile document
 >
 > Software should also help users avoid impersonation attacks, a common harassment technique which can be quite destructive.  Earthstar attempts to find a reasonable trade-off between these competing needs in the difficult context of a distributed system with no central name authority.
 >
-> Users who anticipate name changes, or dislike the permanence of shortnames, can choose shortnames which are memorable but non-meaningful, like `zzzz` or `9999`.
+> Users who anticipate name changes, or dislike the permanence of shortnames, can choose shortnames which are memorable but non-meaningful, like `zzzz` or `oooo`.
 
 > **Can users create two identities with the same pubkey but different shortnames?**
 >
 > Yes.  They are considered two distinct identities, although you can infer that they belong to the same person.
 
-## Author Profiles
+## Author Display Names and Profile Info
 
-An author can have a **profiles** containing display names, biographic information, etc.  Profile data is stored in a document at a predefined path:
+An author can have a **profile** containing display names, biographic information, etc.  Profile data is stored in a variety of documents under `/about/`:
 
 ```
-profilePath = "/about/~" + authorAddress + "/profile.json"
+displayNamePath = "/about/~" + authorAddress + "/displayName.txt"
 
 Example:
-/about/~@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/profile.json
+/about/~@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/displayName.txt
 ```
 
 Display names stored in profile information can be changed frequently and can contain Unicode.
 
-The content of the profile document is JSON, utf-8, in this schema:
-```ts
-{
-    displayName? : string,  // human-readable name of this author
-    bio? : string,  // a paragraph-length description of the person
-    hue? : number,  // person's theme color.  an integer between 0 and 360.
-}
-```
+The expected paths and format of the profile documents are described in our wiki at [Standard paths and data formats used by apps](https://github.com/earthstar-project/earthstar/wiki/Standard-paths-and-data-formats-used-by-apps#about-author-profile-info).
 
-TODO: length limits on profile name and bio?
+We may add more standard pieces of profile information later, such as following and blocking of other users, a paragraph about yourself, a user icon, etc, but this is not standardized yet.
+
+However, apps SHOULD consider the `/about/` namespace to be a standardizable area and be extra thoughtful about what they write there.
+
+> **Why "about"?**
+>
+> Secure Scuttlebutt uses "about" messages to describe people's profile information, and we've adopted that vocabulary.
+>
+> Also, "about" comes towards the beginning of the alphabet, so if peers sync their documents in alphabetical order by path (which may or may not happen), the `/about/` data will be some of the first data synced.
 
 # Paths and Write Permissions
 
@@ -395,11 +404,11 @@ PATH = PATH_SEGMENT+
 * A path MUST NOT end with a `/`
 * A path MUST NOT begin with `/@`
 * A path MUST NOT contain `//` (because each path segment must have at least one `PATH_CHARACTER`)
-* Paths MAY contain upper and/or or lower case ASCII letters, and are case sensitive.
+* Paths MAY contain upper and/or or lower case ASCII letters plus the punctuation and numbers described above.  Paths are case sensitive.
 * Paths MUST NOT contain any characters except those listed above.  To include other characters such as spaces, double quotes, or non-ASCII characters, apps SHOULD use [URL-style percent-encoding as defined in RFC3986](https://tools.ietf.org/html/rfc3986#section-2.1).  First encode the string as utf-8, then percent-encode the utf-8 bytes.
-* A path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has a non-null `deleteAfter`).
+* A path MUST contain at least one `!` character, anywhere, IF AND ONLY IF the document is ephemeral (has a non-null `deleteAfter`).
 
-In these examples, `...` is used to shorten author addresses for easier reading.
+In the following examples, `...` is used to shorten author addresses for easier reading.
 `...` is not actually related to the Path specification.
 ```
 Example paths
@@ -451,7 +460,7 @@ Invalid: starts with "/@"
 
 * `/` - starts paths; separates path segments
 * `!` - used if and only if the document is ephemeral
-* `~` - defines author write permissions
+* `~` - (tilde) defines author write permissions
 * `%` - for percent-encoding other characters
 * `+@.` - used in workspace and author addresses but allowed elsewhere too
 
@@ -467,7 +476,7 @@ See the source code `src/util/characters.ts` for longer notes.
 * `?`             - to avoid confusion with URL query parameters
 * `#`             - to avoid confusion with URL anchors
 * `;`             - no reason; maybe useful for separating several paths?
-* `*`             - no reason; maybe useful for querying in the future
+* `*`             - maybe useful for querying in the future
 * non-ASCII chars - to avoid trouble with Unicode normalization and phishing
 * ASCII whitespace (tab, etc)
 * ASCII control characters (bell, etc)
@@ -476,37 +485,37 @@ See the source code `src/util/characters.ts` for longer notes.
 
 Paths can encode information about which authors are allowed to write to them.  Documents that break these rules are invalid and will be ignored.
 
-A path is **shared** if it contains no `~` characters.  Any author can write a document to a shared path.
+A path is **shared** if it contains no `~` (tilde) characters.  Any author can write a document to a shared path.
 
-A path is **owned** if it contains at least one `~`.  An author name immediately following a `~` is allowed to write to this path.  Multiple authors can be listed, each preceded by their own `~`.
+A path is **owned** if it contains at least one `~`.  An author address immediately following a `~` is allowed to write to this path.  Multiple authors can be listed, each preceded by their own `~`, anywhere in the path.  The author address must begin with its usual leading `@`.
 
 Example shared paths:
 
 ```
-anyone can write here:
+Anyone can write here:
 /todos/123.json
 
-anyone can write here because there's no "~"
-/wall/@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua
+Anyone can write here because there's no tilde "~"
+/wall/@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/info.txt
 ```
 
 Example owned paths:
 
 ```
-only suzy can write here:
-/about/~@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/profile.json
+Only suzy can write here:
+/about/~@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua/displayName.txt
 
-suzy and matt can write here, and nobody else can:
+Suzy and matt can write here, and nobody else can:
 /chat/~@suzy.bo5sotcncvkr7p4c3lnexxpb4hjqi5tcxcov5b4irbnnz2teoifua~@matt.bwnhvniwd3agqclyxl4lirbf3qpfrzq7lnkzvfelg4afexcodz27a/messages.json
 ```
 
-This path can't be written by anyone.  It's **owned** because it contains a `~`, but an owner is not specified:
+This path can't be written by anyone.  It's **owned** because it contains a tilde `~`, but an owner is not specified:
 
 ```
-/example/~
+/nobody/can/ever/write/this/path/~
 ```
 
-The `tilde + author address` can occur anywhere in the path: beginning, middle or end.
+The `tilde + author address` pattern can occur anywhere in the path: beginning, middle or end.
 
 ## Path and Filename Conventions
 
@@ -518,13 +527,23 @@ The first path segment SHOULD be a description of the data type or the applicati
 >
 > Peers can selectively sync only certain documents.  Starting a path with a descriptive name like `/wiki/` makes it easy to sync only wiki documents and ignore the rest.  It also lets apps easily ignore data from other apps.
 
-The last path segment SHOULD have a file extension to help applications know how to interpret the data.
+Sometimes this will represent a data type that many apps will support; sometimes it will be named after a specific app.
+
+Consider including a version number in the path representing the version of the data format, like `/wiki-v1/` or `/wiki/v1/`.
+
+Consider choosing a unique name for your app's data, like `/magic-todo-list/` instead of an obvious choice like `/todos/`, to avoid accidental collision with other apps you might not even know about.
+
+## File Extensions
+
+The last path segment SHOULD have a file extension to help applications know how to interpret the data.  For example, plain text documents should have paths ending in `.txt` and data encoded as JSON should have paths ending in `.json`.
 
 There is no way to explicitly signal that document content is binary (encoded as base64).  Applications will need to guess based on the file extension.
 
+See the [Content](#content) section for more details on base64 encoding of binary data.
+
 # Documents and Their Fields
 
-An example document shown as JSON, though it can exist in many serialization formats:
+This example document is shown as JSON though it can exist in many serialization formats:
 
 ```json
 {
@@ -539,7 +558,7 @@ An example document shown as JSON, though it can exist in many serialization for
 }
 ```
 
-Document schema:
+Document schema in Typescript:
 
 ```ts
 interface Doc {
@@ -555,11 +574,13 @@ interface Doc {
 }
 ```
 
-All fields are REQUIRED.  Extra fields are FORBIDDEN.
+All fields are REQUIRED.  Some fields may be null; these MUST NOT be omitted.
 
-All string fields MUST BE limited to printable ASCII characters except for `content`, which is utf-8.
+Extra fields are FORBIDDEN.
 
-All number fields MUST BE integers (or null, in some cases), and cannot be NaN.
+All string fields MUST BE limited to printable ASCII characters except for `content`, which is utf-8, or they can be null if specified above.
+
+All number fields MUST BE integers, and cannot be NaN or Infinity, but they can be null if specified above.
 
 The order of fields is unspecified except for hashing and signing purposes (see section below).  For consistency, the recommended canonical order is alphabetical by field name.
 
@@ -585,7 +606,7 @@ To be valid a document MUST pass ALL these rules, which are described in more de
 * No extra fields
 * No missing fields
 * Additional rules about `timestamp` and `deleteAfter` relative to the current wall clock (see below)
-* Author has write permission to path
+* Author has write permission to path based on tilde placement
 * Signature is cryptographically valid
 
 ## Author
@@ -596,21 +617,23 @@ The `author` field holds an author address, formatted according to the rules des
 
 The `content` field contains arbitrary utf-8 encoded data.  If the data is not valid utf-8, the document is still considered valid but the library may return an error when trying to access the document.  (TODO: is this the best way to handle invalid utf-8?)
 
-To store raw binary data in a utf-8 string, apps SHOULD encode it as base64.
+To store raw binary data in a utf-8 string, apps SHOULD encode it as base64.  See the other [Content](#content) section for details.
 
 Apps SHOULD use the path's file extension to guess if a document contains textual data or base64-encoded binary data.
 
-TODO: add an encoding field to the document to make this less ambiguous?
+TODO: we will be adding support for binary data and a way to unambiguously know which data is binary and which is utf8.
 
-> **Why no native support for binary data?**
+> **Why no native support for binary data yet?**
 >
-> Common encodings such as JSON, and protocols built on them such as GraphQL, have to way to represent binary data.
+> Common encodings such as JSON, and protocols built on them such as JSON-RPC and GraphQL, have to way to represent binary data, and we want to support the "least common denominator" standards that are widely used and known.
 
-`content` may be an empty string.  The recommended way to remove data from Earthstar is to overwrite the document with a new one which has `content = ""`.  Documents with empty content MAY be considered to be "deleted" and therefore omitted from some queries so that apps don't see them.
-
-In future versions the `content` will be allowed to be `null`, meaning we don't know what it is.  This allows handling documents without their actual content -- "sparse mode".  This is not allowed in the current version.
+`content` may be an empty string.  In fact, the recommended way to remove data from Earthstar is to overwrite the document with a new one which has `content = ""`.  Documents with empty content MAY be considered to be "deleted" and therefore omitted from some query results so that apps don't see them.
 
 TODO: max length of content?
+
+### Sparse Mode (eventually)
+
+In future versions the `content` will be allowed to be `null`, meaning we don't know what it is.  This allows handling document metadata without their actual content -- "sparse mode" -- and fetching the actual content later or on-demand.  This is not allowed in the current version.
 
 ## Content Hash
 
@@ -624,9 +647,9 @@ Correct: `binary hash digest --> base32 encoded string`
 
 Also be careful not to accidentally change the content string to a different encoding (such as utf-16) before hashing it.
 
-> **Why we record the content hash**
+> **Why we use the content hash**
 >
-> In future versions we will allow the `content` field to be `null`, so we can handle document metadata without the full size of the content -- "sparse mode".  Document signatures are based on the `contentHash`, not the `content` itself.  This allows us to verify signatures on sparse-mode documents.
+> In the future we'll support "sparse mode" in which the `content` field may be `null`, if we only know the metadata for a document.  We want to still be able to verify signatures in this case, and the `contentHash` will be available, so we use the `contentHash` in the signed data instead of the entire content.
 
 ## Format
 
@@ -646,7 +669,7 @@ Earthstar libraries SHOULD separate out code related to each format version, so 
 
 * Hashing documents
 * Signing new documents
-* Checking document validity when ingesting documents.  See the Document Validity section for more on this.
+* Checking document validity when ingesting documents.  See the [Document Validity](#document-validity) section for more info.
 
 Therefore each different format can have different ways of hashing, signing, and validating documents.
 
@@ -654,11 +677,11 @@ TODO: define basic rules that documents of all formats must follow
 
 ## Path
 
-The `path` field is a string following the path formatting rules described earlier in "Paths".
+The `path` field is a string following the rules described in [Paths](#paths).
 
-The document is invalid if the author does not have permission to write to the path, following the rules described earlier in "Write Permissions".
+The document is invalid if the author does not have permission to write to the path, following the rules described in [Write Permissions](#write-permissions).
 
-The path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral (has non-null `deleteAfter`).
+The path MUST contain at least one `!` character, anywhere, IF AND ONLY IF the document is ephemeral (has non-null `deleteAfter`).
 
 ## Timestamp
 
@@ -694,29 +717,45 @@ timestampIsValid = MIN_TIMESTAMP <= timestamp && timestamp <= MAX_TIMESTAMP;
 >
 > The range of valid times is approximately 1970-04-26 to 2255-06-05.
 
-Timestamps MUST NOT be from the future.  A limited tolerance is allowed to account for clock skew between devices.  The recommended value for the future tolerance is 10 minutes, but this can be adjusted depending on the clock accuracy of devices in a deployment scenario.
+Timestamps MUST NOT be from the future from the perspective of the peer accepting them in a sync; but a limited tolerance is allowed to account for clock skew between devices.  The recommended value for the future tolerance threshold is 10 minutes, but this can be adjusted depending on the clock accuracy of devices in a deployment scenario.
 
 Timestamps from the future, beyond the tolerance threshold, are (temporarily) invalid and MUST NOT be accepted in a sync.  They can be accepted later, after they are no longer from the future.
+
+> **Choosing the future tolerance threshold**
+>
+> In some settings such as in-the-field embedded devices, where devices do not have accurate clocks or connectivity to NTP servers, the future tolerance may be greatly increased.  However this enables some possible attacks on the network that can cause instability, so it requires greater trust in the network participants.  In extreme cases we may need to add algorithms for the peers to attempt to converge on a rough understanding of the current time to account for clock skew.
+>
+> In these scenarios, document timestamps should be considered more like version numbers rather than actual meaningful timestamps.
+
+Also see the (non-normative) document [How does Earthstar handle timestamps, and can it recover from a device with a very inaccurate clock?](https://github.com/earthstar-project/earthstar/blob/main/docs/timestamps.md)
 
 ## Ephemeral documents: deleteAfter
 
 Documents may be regular or ephemeral.  Ephemeral documents have an expiration date, after which they MUST be proactively deleted by Earthstar libraries.
 
-Libraries MUST check for and delete all expired documents at least once an hour (while they are running).  Deleted documents MUST be physically deleted, not just marked as ignored.
+> **Why have ephemeral documents?**
+>
+> Deleting a regular document leaves behind a small empty document which takes up space.  Ephemeral documents are completely removed when they expire, so they are a good choice for applications which will write many short-lived documents.
+>
+> They also provide more privacy.  Users can always delete their regular documents, but that deletion must propagate across all the peers.  Ephemeral documents will be deleted from the entire network when they expire even if some peers have lost connectivity or you are not there to request a deletion at that time.
 
-Libraries MUST filter out recently expired documents from queries and lookups and not return them.  Libraries MAY or MAY NOT physically delete them as they are queried; they may choose to wait until the next scheduled hourly deletion time.
+Libraries MUST check for and delete all expired documents at least once an hour (while they are running).  Deleted documents MUST be actually deleted, not just marked as ignored.
+
+Libraries MUST filter out expired documents from queries and lookups and not return them.  Libraries MAY or MAY NOT actually delete them when they are encountered during querying; they may choose to wait until the next scheduled hourly deletion time.
+
+Expired documents MUST not be sent or accepted during a sync.  Both peers in a sync should filter the incoming and outgoing documents to enforce this.  This is the responsibility of the [Format Validator](#format).
 
 The `deleteAfter` field holds the timestamp after which a document is to be deleted.  It is a timestamp with the same format and range as the regular `timestamp` field.
 
 Regular, non-ephemeral documents have `deleteAfter: null`.  The field is still required and may not be omitted.
 
-Unlike the `timestamp` field, the `deleteAfter` field is expected to be in the future compared to the current wall-clock time.  Once the `deleteAfter` time is in the past, the document becomes invalid and peers MUST ignore it during a sync.
+Unlike the `timestamp` field, the `deleteAfter` field is expected to be in the future compared to the current wall-clock time.  Once the `deleteAfter` time is in the past, the document becomes invalid.
 
 The `deleteAfter` time MUST BE strictly greater than the document's `timestamp`.
 
-The document path MUST contain at least one `!` character IF AND ONLY IF the document is ephemeral.
+The document path MUST contain at least one exclamation mark `!` character IF AND ONLY IF the document is ephemeral.  Regular, non-ephemeral documents MUST NOT have any `!` characters in their paths.
 
-Ephemeral documents MAY be edited to change their expiration date.  This works best if the expiration date is lenghtened into the future.  If it's shortened so it expires sooner, the document may sync in unpredictable ways (see below for another example of this).  If it's set to expire in the past, the document won't even sync off of the current peer because other peers will reject it.
+Ephemeral documents MAY be edited by users to change the expiration date.  This works best if the expiration date is increased into the future.  If it's decreased so it expires sooner, the document may sync in unpredictable ways (see below for another example of this).  If it's set to expire in the past, the document won't even sync off of the current peer because other peers will reject it, so the edit won't propagate.  When shortening the expiration date there should be time for the edit to propagate across the entire network of peers before the document expires.
 
 > **Why ephemeral documents need a `!` in their path**
 >
@@ -730,15 +769,19 @@ Ephemeral documents MAY be edited to change their expiration date.  This works b
 
 ## Signature
 
-The ed25519 signature by the author encoded in base32 with a leading `b`.
+The ed25519 signature by the author, encoded in base32 with a leading `b`.
+
+Like the hashes and crypto keys in Earthstar, this is the raw binary signature encoded directly into base32.  Do not encode the binary signature into a hex string and then into base32.
 
 ## Workspace
 
-The `workspace` field holds a workspace address, formatted according to the rules described earlier.
+The `workspace` field holds a workspace address, formatted according to the rules described in [Workspace Addresses](#workspace-addresses).
+
+Each document belongs to exactly one workspace and cannot be moved to another workspace (because that would cause the signature to become invalid).
 
 # Document Serialization
 
-There are 3 scenarios when we need to serialize a document to a string of bytes:
+There are 3 scenarios when we need to serialize a document to a series of bytes:
 
 * Hashing and signing
 * Network transmission
@@ -748,13 +791,15 @@ They have different needs and we use different formats for each.
 
 ## Serialization for Hashing and Signing
 
-When an author signs a document, they're actually signing a hash of the document.  We need a deterministic, standardized, and simple way to serialize a document to a sequence of bytes.  This is a **one-way** conversion -- we never need to deserialize this format.
+When an author signs a document, they're actually signing a hash of the document.  We need a deterministic, standardized, and simple way to serialize a document to a sequence of bytes that we can hash.  This is a **one-way** conversion -- we never need to deserialize this format.
 
 Earthstar libraries MUST use this exact process.
 
-To hash a document (pseudocode):
+To hash a document:
 
-```
+```ts
+// Pseudocode
+
 let hashDocument(document) : string => {
     // Get a deterministic hash of a document as a base32 string.
     // Preconditions:
@@ -771,14 +816,17 @@ let hashDocument(document) : string => {
         if (field === 'content' || field === 'signature') { continue; }
         if (value === null) { continue; }
         accum += fieldname + "\t" + value + "\n"  // convert integers to string here
-    let binaryHashDigest = sha256(accum).digest();
+
+    let binaryHashDigest = sha256(accum).digest();  // not hex digest string!
     return base32encode(binaryHashDigest);  // in Earthstar b32 format with leading 'b'
 }
 ```
 
-To sign a document (pseudocode)
+To sign a document:
 
-```
+```ts
+// Pseudocode
+
 let signDocument(authorKeypair, document) : void => {
     // Sign the document and store the signature into the document (mutating it).
     // Keypair contains a pubkey and a private key
@@ -791,7 +839,8 @@ let signDocument(authorKeypair, document) : void => {
 
 Preconditions that make this work:
 * Documents can only hold integers, strings, and null -- no floats or nested objects that could increase complexity or be nondeterministic
-* No document field name or field content can contain `\t` or `\n`, except `content`, which is not directly used (we use `contentHash instead`)
+* No document field name or field content can contain `\t` or `\n`, except `content`, which is not directly used (we use `contentHash` instead)
+* There are no fields that can hold either an integer or a string, so we don't need to worry about telling those types apart in the encoding.
 
 The reference implementation is in `hashDocument()` in `src/validators/es4.ts`.  Here's a summary:
 
@@ -801,7 +850,7 @@ The reference implementation is in `hashDocument()` in `src/validators/es4.ts`. 
 let serializeDocumentForHashing = (doc: Document): string => {
     // Fields in lexicographic order.
     // Convert numbers to strings.
-    // Omit null properties.
+    // Omit properties that are null.
     // Use the contentHash instead of the content.
     // Omit the signature.
     return (
@@ -834,7 +883,7 @@ let signDocument = (keypair: AuthorKeypair, doc: Document): Document => {
 }
 ```
 
-Example
+Actual example
 
 ```
 INPUT (shown as JSON, but is actually in memory before serialization)
@@ -879,9 +928,9 @@ bjljalsg2mulkut56anrteaejvrrtnjlrwfvswiqsi2psero22qqw7am34z3u3xcw7nx6mha42isfuza
 
 This is a **two-way** conversion between memory and bytes.
 
-Earthstar doesn't have strong opinions about networking.  This format does not need to be standardized, but it's good to choose widely used familiar tools.  JSON makes a good default choice.
+Earthstar doesn't have strong opinions about networking.  This format does not need to be standardized, but it's good to choose widely used familiar tools.  JSON is a good default choice.
 
-**Good choices**:
+**Other good choices**:
 
 * Encodings
   * JSON
@@ -889,8 +938,9 @@ Earthstar doesn't have strong opinions about networking.  This format does not n
   * CBOR
   * msgpack
 * Protocols
-  * GraphQL (relies on JSON)
   * REST
+  * JSON-RPC
+  * GraphQL (relies on JSON)
   * gRPC?
   * muxrpc (from SSB)
 
@@ -1047,15 +1097,17 @@ The hashes that are unique to one peer will reveal no information to the other p
 
 They can now proceed to sync each of their common workspaces, one at a time.
 
+### Eavesdropping
+
 An eavesdropper observing this exchange will know both pieces of entropy, and can confirm that the peers have or don't have workspaces that the eavesdropper already knows about, but can't un-hash the exchanged values to get the workspace addresses they don't already know.
 
-### A flaw
+But once the peers start trading actual workspace data, an eavesdropper can observe the workspace addresses in plaintext in the exchanged documents.
 
-Once the peers start trading actual workspace data, an eavesdropper can observe the workspace addresses in plaintext in the exchanged documents.
-
-TODO: peers may need to talk to each other over an encrypted and authenticated connection such as [secret-handshake](https://www.npmjs.com/package/secret-handshake).
+Peers SHOULD talk to each other over an encrypted connection such as HTTPS or [secret-handshake](https://www.npmjs.com/package/secret-handshake).
 
 ## Sync Queries
+
+(This feature is not implemented yet.)
 
 During a sync, apps SHOULD be able to specify which documents they're willing to share, and which they're interested in getting.
 
@@ -1098,7 +1150,7 @@ let outgoingQueries = [
 
 ## Resolving Conflicts
 
-See the Data Model section for details about conflict resolution.
+See the [Data model](#data-model) section for details about conflict resolution.
 
 # Future Directions
 
