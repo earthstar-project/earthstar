@@ -6,6 +6,7 @@ export * from './crypto/cryptoTypes';
 export * from './crypto/encoding';
 export * from './extras';
 export * from './storage/query';
+export * from './storage/queryHelpers';
 export * from './storage/storageBase';
 export * from './storage/storageLocalStorage';
 export * from './storage/storageMemory';

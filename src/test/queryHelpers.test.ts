@@ -73,7 +73,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // no asterisks
             glob: '/a',
-            esQuery: { path: '/a', contentLengthGt: 0, },  // exact path, not startsWith and endsWith
+            esQuery: { path: '/a' },  // exact path, not startsWith and endsWith
             pathRegex: null,  // no regex is needed
             matchingPaths: ['/a'],
             nonMatchingPaths: ['/', 'a', '/b', '-/a', '/a-'],
@@ -81,7 +81,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // one asterisk at beginning
             glob: '*a.txt',
-            esQuery: { pathEndsWith: 'a.txt', contentLengthGt: 0, },
+            esQuery: { pathEndsWith: 'a.txt' },
             pathRegex: null,  // no regex needed
             matchingPaths: [
                 'a.txt',
@@ -97,7 +97,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // one asterisk at end
             glob: '/abc*',
-            esQuery: { pathStartsWith: '/abc', contentLengthGt: 0, },
+            esQuery: { pathStartsWith: '/abc' },
             pathRegex: null,  // no regex needed
             matchingPaths: [
                 '/abc',
@@ -112,7 +112,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // one asterisk in the middle
             glob: '/a*a.txt',
-            esQuery: { pathStartsWith: '/a', pathEndsWith: 'a.txt', contentLengthGt: 0, },
+            esQuery: { pathStartsWith: '/a', pathEndsWith: 'a.txt' },
             pathRegex: '^/a.*a\\.txt$',
             matchingPaths: [
                 '/aa.txt',
@@ -133,7 +133,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // one asterisk at start and one in the middle
             glob: '*a*b',
-            esQuery: { pathEndsWith: 'b', contentLengthGt: 0, },
+            esQuery: { pathEndsWith: 'b' },
             pathRegex: '^.*a.*b$',
             matchingPaths: [
                 'ab',
@@ -150,7 +150,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // one asterisk at end and one in the middle
             glob: 'a*b*',
-            esQuery: { pathStartsWith: 'a', contentLengthGt: 0, },
+            esQuery: { pathStartsWith: 'a' },
             pathRegex: '^a.*b.*$',
             matchingPaths: [
                 'ab',
@@ -167,7 +167,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // one asterisk at start and one at end
             glob: '*abc*',
-            esQuery: { contentLengthGt: 0, },
+            esQuery: {},
             pathRegex: '^.*abc.*$',
             matchingPaths: [
                 'abc',
@@ -183,7 +183,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // one asterisk at start, one in middle, one at end
             glob: '*a*b*',
-            esQuery: { contentLengthGt: 0, },
+            esQuery: {},
             pathRegex: '^.*a.*b.*$',
             matchingPaths: [
                 'ab',
@@ -202,7 +202,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // multiple asterisks not at the start or end
             glob: '/foo:*/bar:*.json',
-            esQuery: { pathStartsWith: '/foo:', pathEndsWith: '.json', contentLengthGt: 0, },
+            esQuery: { pathStartsWith: '/foo:', pathEndsWith: '.json' },
             pathRegex: '^/foo:.*/bar:.*\\.json$',
             matchingPaths: [
                 '/foo:/bar:.json',
@@ -218,7 +218,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         {
             // consecutive asterisks just act like a single asterisk
             glob: '/foo**bar',
-            esQuery: { pathStartsWith: '/foo', pathEndsWith: 'bar', contentLengthGt: 0, },
+            esQuery: { pathStartsWith: '/foo', pathEndsWith: 'bar' },
             pathRegex: '^/foo.*.*bar$',
             matchingPaths: [
                 '/foobar',
@@ -341,7 +341,9 @@ t.test('queryByGlobSync', (t: any) => {
 
     for (let vector of queryVectors) {
         let { glob, expectedPaths } = vector;
-        let docs = queryByGlobSync(storage, glob);
+        // TODO: all these test docs are by author1, so this isn't a very good test
+        // of moreQueryOptions, but it's better than nothing.
+        let docs = queryByGlobSync(storage, glob, { author: keypair1.address });
         let actualPaths = docs.map(doc => doc.path);
         actualPaths.sort();
         expectedPaths.sort();

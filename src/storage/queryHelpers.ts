@@ -59,9 +59,8 @@ export let escapeStringForRegex = (s: string): string => {
  * 
  */
 export let globToEarthstarQueryAndPathRegex = (glob: string): { query: Query, pathRegex: string | null } => {
-
     let parts = glob.split('*');
-    let query: Query = { contentLengthGt: 0 };  // skip deleted edges
+    let query: Query = {};
     let pathRegex = null;
 
     if (parts.length === 1) {
@@ -102,8 +101,24 @@ export let globToEarthstarQueryAndPathRegex = (glob: string): { query: Query, pa
     return { query, pathRegex };
 }
 
-export let queryByGlobSync = (storage: IStorage, glob: string): Document[] => {
+/*
+ * Find documents whose path matches the glob string.
+ * See documentation for globToEarthstarQueryAndPathRegex for details on
+ * glob strings.
+ *
+ * This is a synchronous function and `storage` must be synchronous (an `IStorage`).
+ * 
+ * You can specify additional query options by providing a `moreQueryOptions` object.
+ * For example, you might want to set { contentLengthGt: 0 } to skip documents
+ * with empty content (e.g. "deleted" documents).
+ * 
+ * If `moreQueryOptions` has `path`, `pathStartsWith`, and/or `pathEndsWith` properties,
+ * those will be overridden as needed to satisfy the glob query, so it's best not to
+ * set those yourself.
+ */
+export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions: Query = {}): Document[] => {
     let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
+    query = { ...moreQueryOptions, ...query };
  
     let docs = storage.documents(query);
     if (pathRegex != null) {
@@ -113,8 +128,25 @@ export let queryByGlobSync = (storage: IStorage, glob: string): Document[] => {
     return docs;
 }
 
-export let queryByGlobAsync = async (storage: IStorage | IStorageAsync, glob: string): Promise<Document[]> => {
+/*
+ * Find documents whose path matches the glob string.
+ * See documentation for globToEarthstarQueryAndPathRegex for details on
+ * glob strings.
+ * 
+ * This is an async function and `storage` can be either an async or sync storage
+ * (`IStorage` or `IStorageAsync`).
+ *
+ * You can specify additional query options by providing a `moreQueryOptions` object.
+ * For example, you might want to set { contentLengthGt: 0 } to skip documents
+ * with empty content (e.g. "deleted" documents).
+ * 
+ * If `moreQueryOptions` has `path`, `pathStartsWith`, and/or `pathEndsWith` properties,
+ * those will be overridden as needed to satisfy the glob query, so it's best not to
+ * set those yourself.
+ */
+export let queryByGlobAsync = async (storage: IStorage | IStorageAsync, glob: string, moreQueryOptions: Query = {}): Promise<Document[]> => {
     let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
+    query = { ...moreQueryOptions, ...query };
  
     let docs = await storage.documents(query);
     if (pathRegex != null) {
