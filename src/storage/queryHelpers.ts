@@ -14,7 +14,7 @@ import {
  * (Put a backslash in front of each special regex character
  *  so the string won't trigger any regex behavior).
  */
-export let escapeStringForRegex = (s: string) => {
+export let escapeStringForRegex = (s: string): string => {
     // Javascript regex syntax characters:
     // https://tc39.es/ecma262/#prod-SyntaxCharacter
     //    ^ $ \ . * + ? ( ) [ ] { } |
