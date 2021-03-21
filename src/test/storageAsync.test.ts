@@ -36,9 +36,7 @@ import {
     StorageMemory
 } from '../storage/storageMemory';
 import {
-    pushLocal,
     pushLocalAsync,
-    syncLocal,
     syncLocalAsync,
 } from '../sync/syncLocal';
 import { uniq, sorted, sleep } from '../util/helpers';
