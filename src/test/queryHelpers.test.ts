@@ -215,6 +215,23 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
                 '/foo:a/bar:a.json-',
             ],
         },
+        {
+            // consecutive asterisks just act like a single asterisk
+            glob: '/foo**bar',
+            esQuery: { pathStartsWith: '/foo', pathEndsWith: 'bar', contentLengthGt: 0, },
+            pathRegex: '^/foo.*.*bar$',
+            matchingPaths: [
+                '/foobar',
+                '/foo-bar',
+                '/foo/bar',
+                '/foo/a/b/c/bar',
+                '/foo-------bar',
+            ],
+            nonMatchingPaths: [
+                '-/foobar',
+                '/foobar-',
+            ],
+        },
     ];
 
     for (let vector of vectors) {

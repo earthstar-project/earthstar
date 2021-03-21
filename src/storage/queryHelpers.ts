@@ -31,9 +31,10 @@ export let escapeStringForRegex = (s: string): string => {
  * 
  * The glob string only supports '*' as a wildcard.
  * You can use multiple '*' in any position in the query.
- * No other special wildcards like '?' or '**' as in Bash.
+ * There are no other special wildcards like '?' or '**' as in Bash.
+ * '**' will act the same as '*'.
  * 
- * The glob is allowed to match across multiple path segments (e.g. it can
+ * The asterisk is allowed to match across multiple path segments (e.g. it can
  * include slashes): '/hello/*.txt' can match '/hello/deeply/nested/path.txt'.
  * 
  * To use this function, run the query yourself and apply the regex
