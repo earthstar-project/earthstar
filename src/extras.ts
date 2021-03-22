@@ -31,7 +31,7 @@ export let deleteMyDocuments = (storage: IStorage, keypair: AuthorKeypair) => {
             path: doc.path,
             content: '',
             timestamp: doc.timestamp + 1,
-        }
+        };
         if (doc.deleteAfter !== null) {
             emptyDoc.deleteAfter = doc.deleteAfter + 1;
         }
@@ -68,7 +68,7 @@ export let deleteMyDocumentsAsync = async (storage: IStorage | IStorageAsync, ke
             path: doc.path,
             content: '',
             timestamp: doc.timestamp + 1,
-        }
+        };
         if (doc.deleteAfter !== null) {
             emptyDoc.deleteAfter = doc.deleteAfter + 1;
         }

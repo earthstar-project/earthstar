@@ -2,6 +2,7 @@
 // Generated on Mon Aug 24 2020 10:35:01 GMT-0700 (Pacific Daylight Time)
 
 /*
+Earthstar notes:
 How this works
 
 Run `npm run test-in-browser` to do all these steps at once:

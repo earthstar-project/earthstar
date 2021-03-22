@@ -211,7 +211,7 @@ export class OnePubOneWorkspaceSyncer {
         this.pullStream.onerror = (e) => {
             logPullStream('connection failed');
             syncLogger.error(e);
-        }
+        };
         this.pullStream.onmessage = async (e) => {
             // TODO: if (this.state.closed) { return; }
             logPullStream('    message', e.data);
@@ -298,7 +298,7 @@ export class OnePubOneWorkspaceSyncer {
         await sleep(150);
 
         // get docs...
-        const storageDocs = await this.storage.documents({history: 'all'})
+        const storageDocs = await this.storage.documents({history: 'all'});
         // ...and push them
         stats = await this._pushDocs(url, storageDocs);
     
@@ -416,6 +416,6 @@ export class OnePubOneWorkspaceSyncer {
         return {
             push: pushStats,
             pull: pullStats,
-        }
+        };
     }
 }

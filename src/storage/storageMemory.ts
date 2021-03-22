@@ -159,7 +159,6 @@ export class StorageMemory extends StorageBase {
 
     _filterDocs(shouldKeep: (doc: Document) => boolean): void {
         this._assertNotClosed();
-        let now = this._now || (Date.now() * 1000);
         // using "for... in" on purpose since we're deleting while iterating
         for (let path in this._docs) {
             let slots = this._docs[path];

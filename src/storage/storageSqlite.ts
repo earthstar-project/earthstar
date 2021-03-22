@@ -122,7 +122,7 @@ export class StorageSqlite extends StorageBase {
                 this.close();
                 throw workspaceErrs[0];
             }
-        }
+        };
 
         // check workspace
         if (opts.mode === 'create') {

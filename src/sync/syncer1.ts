@@ -133,7 +133,7 @@ export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain 
     let resultStats : any = {
         pull: null,
         push: null,
-    }
+    };
     domain = ensureTrailingSlash(domain);
 
     // pull from server

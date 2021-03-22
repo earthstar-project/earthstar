@@ -54,7 +54,7 @@ export let decodeBase32ToBuffer = (str: Base32String): Buffer => {
     if (!str.startsWith('b')) { throw new ValidationError("can't decode base32 buffer - it should start with a 'b'. " + str); }
     // this can also throw an Error('invalid base32 character')
     return multibase.decode(str);
-}
+};
 
 export let encodePubkey = encodeBufferToBase32;
 export let encodeSecret = encodeBufferToBase32;

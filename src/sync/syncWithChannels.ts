@@ -138,6 +138,7 @@ let chanZip = async <T>(name: string, inChan1: Chan<T | null>, inChan2: Chan<T |
         } else {
             let key1 = sortKey(item1);
             let key2 = sortKey(item2);
+            // TODO: use an array comparison function here; right now these get converted to strings which is incorrect
             if (key1 < key2) {
                 logSyncThread(`${name} chanZip: item 1 goes first`);
                 await outChan.put([item1, null]);
@@ -275,12 +276,12 @@ let docToFingerprint = (doc: Document): Fingerprint =>
 
 // sort key functions
 
-let fingerprintPathAndAuthor = ([path, author, timestamp, signature]: Fingerprint): any => {
+let fingerprintPathAndAuthor = ([path, author, timestamp, signature]: Fingerprint) => {
     // sort fingerprints loosely just by path and author
     // this is used by zip
     return [path, author];
 }
-let fingerprintNewestFirst = ([path, author, timestamp, signature]: Fingerprint): any => {
+let fingerprintNewestFirst = ([path, author, timestamp, signature]: Fingerprint) => {
     // sort winner first (higher timestamps come first, e.g. timestamp DESC)
     // this is used to decide which fingerprint in a zipped pair is the newer one
     // to decide if it should be pushed or pulled
@@ -289,7 +290,7 @@ let fingerprintNewestFirst = ([path, author, timestamp, signature]: Fingerprint)
 
 // given a fingerprint, look up the matching doc
 let lookUpFingerprint = async (storage: IStorageAsync | IStorage, f: Fingerprint): Promise<Document | undefined> => {
-    let [path, author, timestamp, signature] = f;
+    let [path, author, timestamp, _signature] = f;
     let docs = await storage.documents({ path, author, history: 'all', limit: 1 });
     if (docs.length === 0) { return undefined; }
     let doc = docs[0];
@@ -330,6 +331,7 @@ let sortFingerprintsToPushAndPull = async (name: string, inChan: Chan<[Fingerpri
             } else {
                 let keyMe = fingerprintNewestFirst(fMe);
                 let keyThem = fingerprintNewestFirst(fThem);
+                // TODO: use an array comparison function here; right now these get converted to strings which is incorrect
                 if (keyMe < keyThem) {
                     // me is newer
                     logSyncThread(`${name} sortFingerprintsToPushAndPull: push this one (it's newer)`);

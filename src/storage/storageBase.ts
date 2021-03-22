@@ -197,6 +197,7 @@ export abstract class StorageBase implements IStorage {
         // Compare signature to break timestamp ties.
         // Note this is based only on timestamp and does not care about deleteAfter
         // (e.g. the lifespan of ephemeral documents doesn't matter when comparing them)
+        // TODO: can't compare arrays like this, use an array comparison function
         if (existingSameAuthor !== undefined
             && [doc.timestamp, doc.signature]
             <= [existingSameAuthor.timestamp, existingSameAuthor.signature]
@@ -258,7 +259,7 @@ export abstract class StorageBase implements IStorage {
             timestamp: docToSet.timestamp,
             deleteAfter: docToSet.deleteAfter || null,
             signature: '',
-        }
+        };
 
         // BEGIN LOCK (only needed if shouldBumpTimestamp)
         // this lock recurses into ingestDocument
