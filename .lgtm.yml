@@ -1,0 +1,8 @@
+path_classifiers:
+  generated:
+    - browserify-test-bundle
+    - build
+    - dist
+  test:
+    - ignore
+
