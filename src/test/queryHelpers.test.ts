@@ -63,6 +63,7 @@ t.test('escapeStringForRegex', (t: any) => {
 
 t.test('globToEarthstarQueryAndPathRegex', async (t) => {
     interface Vector {
+        note?: string,
         glob: string,
         esQuery: Query,
         pathRegex: string | null,
@@ -71,16 +72,8 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
     };
     let vectors: Vector[] = [
         {
-            // no asterisks
-            glob: '/a',
-            esQuery: { path: '/a' },  // exact path, not startsWith and endsWith
-            pathRegex: null,  // no regex is needed
-            matchingPaths: ['/a'],
-            nonMatchingPaths: ['/', 'a', '/b', '-/a', '/a-'],
-        },
-        {
-            // one asterisk at beginning
-            glob: '*a.txt',
+            note: 'no regex needed',
+            glob: '**a.txt',
             esQuery: { pathEndsWith: 'a.txt' },
             pathRegex: null,  // no regex needed
             matchingPaths: [
@@ -95,141 +88,135 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
             ],
         },
         {
-            // one asterisk at end
-            glob: '/abc*',
-            esQuery: { pathStartsWith: '/abc' },
-            pathRegex: null,  // no regex needed
+            glob: '*a.txt',
+            esQuery: { pathEndsWith: 'a.txt' },
+            pathRegex: '^[^/]*a\\.txt$',
             matchingPaths: [
-                '/abc',
-                '/abc-',
-                '/abc/xyz.foo',
+                'a.txt',
+                '-a.txt',
+                '----a.txt',
             ],
             nonMatchingPaths: [
-                'abc',
-                '-/abc/',
+                '-------a.txt------',  // no extra stuff all around
+                '/a.txt', // can't match a slash
+                'a-txt',  // the dot should not become a wildcard
             ],
         },
         {
-            // one asterisk in the middle
-            glob: '/a*a.txt',
-            esQuery: { pathStartsWith: '/a', pathEndsWith: 'a.txt' },
-            pathRegex: '^/a.*a\\.txt$',
+            glob: '/posts/*',
+            esQuery: { pathStartsWith: '/posts/' },
+            pathRegex: '^/posts/[^/]*$',
             matchingPaths: [
-                '/aa.txt',
-                '/a/a.txt',
-                '/aaaa.txt',
-                '/aa/aa.txt',
-                '/aa/b/b/b/b/b/aa.txt',
-                '/a-----a.txt',
+                '/posts/hello',
+                '/posts/hello.txt',
             ],
             nonMatchingPaths: [
-                '/a.txt',  // the prefix and suffix should not be able to overlap
-                '/aa-txt',  // the dot should not become a wildcard
-                '-/aa.txt',  // no extra stuff at beginning
-                '/aa.txt-',  // no extra stuff at end
-                '-/a-a.txt-',
+                '--/posts/hello',
+                '/posts/deeper/hello',
             ],
         },
         {
-            // one asterisk at start and one in the middle
-            glob: '*a*b',
-            esQuery: { pathEndsWith: 'b' },
-            pathRegex: '^.*a.*b$',
+            note: 'no regex needed',
+            glob: '/posts/**',
+            esQuery: { pathStartsWith: '/posts/' },
+            pathRegex: null,
             matchingPaths: [
-                'ab',
-                '-ab',
-                'a-b',
-                '-a-b',
-                '---a---b',
+                '/posts/hello',
+                '/posts/hello.txt',
+                '/posts/deeper/hello',
             ],
             nonMatchingPaths: [
-                'ab-',
-                'aa',
+                '--/posts/hello',
             ],
         },
         {
-            // one asterisk at end and one in the middle
-            glob: 'a*b*',
-            esQuery: { pathStartsWith: 'a' },
-            pathRegex: '^a.*b.*$',
+            glob: '/posts/*.txt',
+            esQuery: { pathStartsWith: '/posts/', pathEndsWith: '.txt' },
+            pathRegex: '^/posts/[^/]*\\.txt$',
             matchingPaths: [
-                'ab',
-                'ab-',
-                'a-b',
-                'a-b-',
-                'a---b---',
+                '/posts/.txt',
+                '/posts/hello.txt',
             ],
             nonMatchingPaths: [
-                '-ab',
-                'aa',
+                '-/posts/.txt',
+                '-/posts/.txt-',
+                '/posts/deeper/hello.txt',
+                '/posts/Ztxt',  // period is not a wildcard
             ],
         },
         {
-            // one asterisk at start and one at end
-            glob: '*abc*',
-            esQuery: {},
-            pathRegex: '^.*abc.*$',
+            glob: '/posts/**.txt',
+            esQuery: { pathStartsWith: '/posts/', pathEndsWith: '.txt' },
+            pathRegex: '^/posts/.*\\.txt$',
             matchingPaths: [
-                'abc',
-                'abc-',
-                '-abc',
-                '-abc-',
-                '---abc---',
+                '/posts/.txt',
+                '/posts/hello.txt',
+                '/posts/deeper/hello.txt',
             ],
             nonMatchingPaths: [
-                'ac',
+                '-/posts/.txt',
+                '/posts/.txt-',
+                '/posts/Ztxt',  // period is not a wildcard
             ],
         },
         {
-            // one asterisk at start, one in middle, one at end
-            glob: '*a*b*',
-            esQuery: {},
-            pathRegex: '^.*a.*b.*$',
+            glob: '/aaa/**/*.txt',
+            esQuery: { pathStartsWith: '/aaa/', pathEndsWith: '.txt' },
+            pathRegex: '^/aaa/.*/[^/]*\\.txt$',
             matchingPaths: [
-                'ab',
-                'ab-',
-                '-ab',
-                '-ab-',
-                '---ab---',
-                '---a----b---',
-                'a-b',
-                '-a-b-',
+                '/aaa//.txt',
+                '/aaa/z/z.txt',
+                '/aaa/xxx/yyy/zzz.txt',
             ],
             nonMatchingPaths: [
-                'ac',
+                '/aaa/zzz.txt',
+                '/aaa/xx/zzzPtxt',
             ],
         },
         {
-            // multiple asterisks not at the start or end
-            glob: '/foo:*/bar:*.json',
-            esQuery: { pathStartsWith: '/foo:', pathEndsWith: '.json' },
-            pathRegex: '^/foo:.*/bar:.*\\.json$',
+            glob: '/aaaa*aaaa',
+            esQuery: { pathStartsWith: '/aaaa', pathEndsWith: 'aaaa' },
+            pathRegex: '^/aaaa[^/]*aaaa$',
             matchingPaths: [
-                '/foo:/bar:.json',
-                '/foo:a/bar:a.json',
-                '/foo:-----/bar:-----.json',
+                '/aaaaaaaa',
+                '/aaaa_aaaa',
+                '/aaaa______aaaa',
             ],
             nonMatchingPaths: [
-                '/foo:.json',  // middle parts should be present
-                '-/foo:a/bar:a.json',
-                '/foo:a/bar:a.json-',
+                '/aaaa',  // no overlap allowed even though pathStartsWith and pathEndsWith can overlap
+                '/aaaa/aaaa',
             ],
         },
         {
-            // consecutive asterisks just act like a single asterisk
-            glob: '/foo**bar',
-            esQuery: { pathStartsWith: '/foo', pathEndsWith: 'bar' },
-            pathRegex: '^/foo.*.*bar$',
+            glob: '**a**',
+            esQuery: { },
+            pathRegex: '^.*a.*$',
             matchingPaths: [
-                '/foobar',
-                '/foo-bar',
-                '/foo/bar',
-                '/foo/a/b/c/bar',
-                '/foo-------bar',
+                'a',
+                '/a',
+                'a----',
+                '-/---a-/--',
+                'aaaaaaaaaaaaaa',
             ],
             nonMatchingPaths: [
-                '-/foobar',
-                '/foobar-',
+                'b',
+            ],
+        },
+        {
+            glob: '*a*',
+            esQuery: { },
+            pathRegex: '^[^/]*a[^/]*$',
+            matchingPaths: [
+                'a',
+                'a----',
+                '---a',
+                'aaaaaaaaaaaaaa',
+            ],
+            nonMatchingPaths: [
+                '/a',
+                'a/',
+                '/a/',
+                '----/---a----/----',
             ],
         },
     ];
@@ -239,12 +226,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
 
         let result = globToEarthstarQueryAndPathRegex(glob);
 
-        //log('---');
-        //log(JSON.stringify({
-        //    ...vector,
-        //    result,
-        //}, null, 4));
-
+        t.same(true, true, `--- ${vector.glob}   ${vector.note ?? ''} ---`);
         t.same(result.query, esQuery, 'query is as expected: ' + glob);
         t.same(result.pathRegex, pathRegex, 'regex is as expected: ' + glob);
         if (result.pathRegex != null) {
@@ -266,6 +248,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
 
 let docPaths = [
     '/aa',
+    '/a---a',
     '/aa/aa/aa/aa/aa',
     '/posts',
     '/posts/123.json',
@@ -280,6 +263,10 @@ interface QueryVector {
 let queryVectors: QueryVector[] = [
     {
         glob: '*',
+        expectedPaths: [],
+    },
+    {
+        glob: '**',
         expectedPaths: [...docPaths],
     },
     {
@@ -294,6 +281,12 @@ let queryVectors: QueryVector[] = [
         glob: '/posts/*.txt',
         expectedPaths: [
             '/posts/123.txt',
+        ],
+    },
+    {
+        glob: '/posts/**.txt',
+        expectedPaths: [
+            '/posts/123.txt',
             '/posts/v1/123.txt'
         ],
     },
@@ -301,19 +294,35 @@ let queryVectors: QueryVector[] = [
         glob: '/a*a',
         expectedPaths: [
             '/aa',
-            '/aa/aa/aa/aa/aa',
+            '/a---a',
         ],
-        note: 'slashes are allowed in the glob',
+    },
+    {
+        glob: '/a**a',
+        expectedPaths: [
+            '/aa',
+            '/a---a',
+            '/aa/aa/aa/aa/aa'
+        ],
     },
     {
         glob: '/aa*aa',
         expectedPaths: [
-            '/aa/aa/aa/aa/aa',
         ],
-        note: 'should not match /aa, unlike when just using prefix and suffix',
+    },
+    {
+        glob: '/aa**aa',
+        expectedPaths: [
+            '/aa/aa/aa/aa/aa'
+        ],
     },
     {
         glob: '*.txt',
+        expectedPaths: [
+        ],
+    },
+    {
+        glob: '**.txt',
         expectedPaths: [
             '/posts/123.txt',
             '/posts/v1/123.txt'
@@ -321,6 +330,13 @@ let queryVectors: QueryVector[] = [
     },
     {
         glob: '/posts/*',
+        expectedPaths: [
+            '/posts/123.json',
+            '/posts/123.txt',
+        ],
+    },
+    {
+        glob: '/posts/**',
         expectedPaths: [
             '/posts/123.json',
             '/posts/123.txt',

@@ -1,5 +1,5 @@
 import {
-    Document,
+    Document, ValidationError,
 } from '../util/types';
 import {
     IStorage,
@@ -22,80 +22,100 @@ export let escapeStringForRegex = (s: string): string => {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
+let replaceAll = (str: string, from: string, to: string): string => {
+    return str.split(from).join(to);
+}
+
 /*
  * Helper for querying Earthstar docs using a glob-style query string.
  *
  * Given a glob string, return:
  *    - an earthstar Query
  *    - and a regular expression (as a plain string, not a RegExp instance).
- * 
- * The glob string only supports '*' as a wildcard.
- * You can use multiple '*' in any position in the query.
- * There are no other special wildcards like '?' or '**' as in Bash.
- * '**' will act the same as '*'.
- * 
- * The asterisk is allowed to match across multiple path segments (e.g. it can
- * include slashes): '/hello/*.txt' can match '/hello/deeply/nested/path.txt'.
+ *
+ * Glob strings support '*' and '**' as wildcards.
+ * '**' matches any sequence of characters at all.
+ * '*' matches any sequence of characters except a forward slash --
+ *  it does not span directories in the path.
+ * You glob string may have multiple asterisks in various positions,
+ * except they cannot be directly adjecent to each other (no '***' should
+ * ever occur -- this will cause a ValidationError to be thrown).
  * 
  * To use this function, run the query yourself and apply the regex
  * as a filter to the paths of the resulting documents,
  * to get only the documents whose paths match the glob.
  * The regex will be null if it's not needed.
- *
- * Example usage:
- *
- *   let queryByGlob = (storage: IStorage, glob: string): Document[] => {
- *      let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
  * 
- *      let docs = storage.documents(query);
- *      if (pathRegex != null) {
- *          let re = new RegExp(pathRegex);
- *          docs = docs.filter(doc => re.test(doc.path));
- *      }
- *      return docs;
- *   }
- * 
- *   let posts = queryByGlob(myStorage, '/posts/*.txt');
- * 
+ * The returned query will use some subset of
+ * the `path`, `pathStartsWith`, and `pathEndswith` properties,
+ * and no other properties.
  */
+
+// Example glob strings:
+//
+//     "/posts/*/*.json"    matches "/posts/sailing/12345.json"
+//
+//     "/posts/**.json"     matches "/posts/sailing/12345.json"
+//                              and "/posts/a/b/c/d/e/f/g/12345.json"
+//                              and "/posts/.json"
+//
+// To use it:
+// 
+//    let queryByGlob = (storage: IStorage, glob: string): Document[] => {
+//       let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
+//  
+//       let docs = storage.documents(query);
+//       if (pathRegex != null) {
+//           let re = new RegExp(pathRegex);
+//           docs = docs.filter(doc => re.test(doc.path));
+//       }
+//       return docs;
+//    }
+//  
+//    let posts = queryByGlob(myStorage, '/posts/*.txt');
+
 export let globToEarthstarQueryAndPathRegex = (glob: string): { query: Query, pathRegex: string | null } => {
-    let parts = glob.split('*');
+    // Three stars in a row are not allowed - throw
+    if (glob.indexOf('***') !== -1) {
+        throw new ValidationError('invalid glob query has three stars in a row: ' + glob);
+    }
+
+    // If no stars at all, this is just a direct path query.  Easy.
+    if (glob.indexOf('*') === -1)  {
+        return { query: { path: glob }, pathRegex: null }
+    }
+
+    // Get the parts of the glob before the first star and after the last star.
+    // These will become our pathStartWith and pathEndsWith query paramters.
+    let globParts = glob.split('*');
+    let firstPart = globParts[0];
+    let lastPart = globParts[globParts.length - 1];
+
+    // Convert the glob into a regex.
+    // First replace * and ** with characters that are not allowed in earthstar strings,
+    // and are also not regex control characters...
+    let regex = replaceAll(glob, '**', ';');
+    regex = replaceAll(regex, '*', '#');
+    // Then escape the string for regex safety...
+    regex = escapeStringForRegex(regex);
+    // Then finally replace the standin characters with active regex pieces.
+    regex = replaceAll(regex, ';', '.*');  // any characters
+    regex = replaceAll(regex, '#', '[^/]*');  // anything but slashes
+    // Force the regex to match all way from beginning to end of string
+    regex = '^' + regex + '$';
+
+    // Put startsWith and endsWith into the query if needed
     let query: Query = {};
-    let pathRegex = null;
+    if (firstPart) { query.pathStartsWith = firstPart; }
+    if (lastPart) { query.pathEndsWith = lastPart; }
 
-    if (parts.length === 1) {
-        // The glob has no wildcards, and the path is completely defined.
-        query = {
-            ...query,
-            path: glob,
-        };
-    } else {
-        // The glob has wildcard(s) within it.
-        query = {
-            ...query,
-            pathStartsWith: parts[0],
-            pathEndsWith: parts[parts.length - 1],
-        };
-        // Make a regex to enforce the glob.
-        pathRegex = '^' + parts.map(escapeStringForRegex).join('.*') + '$';
-
-        // Optimize some special cases:
-
-        // If the glob starts or ends with a wildcard, the first or last part
-        // will just be empty strings
-        // and we can trim them from the query.
-        if (query.pathStartsWith === '') {
-            delete query.pathStartsWith;
-        }
-        if (query.pathEndsWith === '') {
-            delete query.pathEndsWith;
-        }
-
-        // Special case for '*foo' or 'foo*' -- no regex is needed,
-        // we can just rely on pathStartsWith or pathEndsWith to do all the work.
-        if (parts.length === 2 && (parts[0] === '' || parts[parts.length-1] === '')) {
-            pathRegex = null;
-        }
+    // Special case for "**foo" or "foo**" -- no regex is needed for these,
+    // we can rely completely on pathStartsWith or pathEndsWith
+    let pathRegex: string | null = regex;
+    if (globParts.length === 3) {
+        let [a, b, c] = globParts;
+        if (a === '' && b === '') { pathRegex = null }
+        if (b === '' && c === '') { pathRegex = null }
     }
 
     return { query, pathRegex };
@@ -112,13 +132,13 @@ export let globToEarthstarQueryAndPathRegex = (glob: string): { query: Query, pa
  * For example, you might want to set { contentLengthGt: 0 } to skip documents
  * with empty content (e.g. "deleted" documents).
  * 
- * If `moreQueryOptions` has `path`, `pathStartsWith`, and/or `pathEndsWith` properties,
- * those will be overridden as needed to satisfy the glob query, so it's best not to
- * set those yourself.
+ * `moreQueryOptions` will override the glob's query, so it's best to avoid setting
+ * `path`, `pathStartsWith` or `pathEndsWith` in your moreQueryOptions unless you
+ * intend to override the glob's query.
  */
 export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions: Query = {}): Document[] => {
     let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
-    query = { ...moreQueryOptions, ...query };
+    query = { ...query, ...moreQueryOptions };
  
     let docs = storage.documents(query);
     if (pathRegex != null) {
@@ -140,13 +160,13 @@ export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions:
  * For example, you might want to set { contentLengthGt: 0 } to skip documents
  * with empty content (e.g. "deleted" documents).
  * 
- * If `moreQueryOptions` has `path`, `pathStartsWith`, and/or `pathEndsWith` properties,
- * those will be overridden as needed to satisfy the glob query, so it's best not to
- * set those yourself.
+ * `moreQueryOptions` will override the glob's query, so it's best to avoid setting
+ * `path`, `pathStartsWith` or `pathEndsWith` in your moreQueryOptions unless you
+ * intend to override the glob's query.
  */
 export let queryByGlobAsync = async (storage: IStorage | IStorageAsync, glob: string, moreQueryOptions: Query = {}): Promise<Document[]> => {
     let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
-    query = { ...moreQueryOptions, ...query };
+    query = { ...query, ...moreQueryOptions };
  
     let docs = await storage.documents(query);
     if (pathRegex != null) {
