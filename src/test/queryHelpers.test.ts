@@ -5,7 +5,8 @@ import {
     AuthorKeypair,
     FormatName,
     isErr,
-    IValidator
+    IValidator,
+    ValidationError
 } from '../util/types';
 import { Query } from '../storage/query';
 import { ValidatorEs4 } from '../validator/es4';
@@ -16,8 +17,11 @@ import { generateAuthorKeypair } from '../crypto/crypto';
 import {
     escapeStringForRegex,
     globToEarthstarQueryAndPathRegex,
+    matchTemplateAndPath,
     queryByGlobAsync,
-    queryByGlobSync
+    queryByGlobSync,
+    _matchRegexAndPath,
+    _templateToPathMatcherRegex
 } from '../storage/queryHelpers';
 
 //================================================================================
@@ -392,5 +396,173 @@ t.test('queryByGlobAsync', async (t) => {
     }
 
     await storage.close();
+    t.done();
+});
+
+//================================================================================
+
+t.test('matchTemplateAndPath', (t: any) => {
+
+    type StringToString = Record<string, string>;
+    interface ValidVector {
+        template: string,
+        varNames: string[],
+        pathsAndExtractedVars: Record<string, StringToString | null>,
+    }
+    interface InvalidVector {
+        template: string,
+        invalid: true;
+    }
+    type Vector = ValidVector | InvalidVector;
+    let vectors: Vector[] = [
+        {
+            template: '',
+            varNames: [],
+            pathsAndExtractedVars: {
+                '/novars.json': null,
+                '/nope': null,
+                '': {},
+            },
+        },
+        {
+            template: '/novars.json',
+            varNames: [],
+            pathsAndExtractedVars: {
+                '/novars.json': {},
+                '/nope': null,
+                '': null,
+            },
+        },
+        {
+            template: '/onevar/{_underscores_CAPS_and_digits_12345}.json',
+            varNames: ['_underscores_CAPS_and_digits_12345'],
+            pathsAndExtractedVars: {
+                '/onevar/123.json': { '_underscores_CAPS_and_digits_12345': '123' },
+            },
+        },
+        {
+            template: '/onevar/{___}.json',
+            varNames: ['___'],
+            pathsAndExtractedVars: {
+                '/onevar/123.json': { '___': '123' },
+            },
+        },
+        {
+            template: '/onevar/{_0}.json',
+            varNames: ['_0'],
+            pathsAndExtractedVars: {
+                '/onevar/123.json': { '_0': '123' },
+            },
+        },
+        {
+            template: '/onevar/{postId}.json',
+            varNames: ['postId'],
+            pathsAndExtractedVars: {
+                '/onevar/123.json': { postId: '123' },
+                '/onevar/12/34.json': null, // variable can't span across a path segment ('/')
+                '/onevar/.json': null,
+                '/nope': null,
+                '': null,
+            },
+        },
+        {
+            template: '/onevar/post:{postId}.json',
+            varNames: ['postId'],
+            pathsAndExtractedVars: {
+                '/onevar/post:123.json': { postId: '123' },
+            },
+        },
+        {
+            template: '/onevar/thisIsPost{postId}yesThatOne.json',
+            varNames: ['postId'],
+            pathsAndExtractedVars: {
+                '/onevar/thisIsPost123yesThatOne.json': { postId: '123' },
+            },
+        },
+        {
+            template: '/twovars/{category}/{postId}.json',
+            varNames: ['category', 'postId'],
+            pathsAndExtractedVars: {
+                '/twovars/gardening/123.json': { category: 'gardening', postId: '123' },
+                '/twovars/gardening/123.txt': null,
+                '/twovars//123.json': null,
+                '/twovars/gardening': null,
+                '/nope': null,
+                '': null,
+            },
+        },
+        {
+            template: '/twovars/{category}/{postId}.{ext}',
+            varNames: ['category', 'postId', 'ext'],
+            pathsAndExtractedVars: {
+                '/twovars/gardening/123.json': { category: 'gardening', postId: '123', ext: 'json' },
+                '/twovars//123.json': null,
+                '/twovars/gardening': null,
+                '/nope': null,
+                '': null,
+            },
+        },
+        //--------------------------------------------------
+        // invalid: should throw a Validation Error
+        { invalid: true, template: '/two/consecutive/vars/{a}{b}/in/a/row' },
+        { invalid: true, template: '/var/starting/with/number/{0abc}' },
+        { invalid: true, template: '/var/with/no/name/{}' },
+        { invalid: true, template: '/var/with/space/for/name/{ }' },
+        { invalid: true, template: '/var/{ withspaces }' },
+        { invalid: true, template: '/{one}/{ invalid }/{var}/in-the-middle' },
+        { invalid: true, template: '/var/{with-dashes}' },
+        { invalid: true, template: '/var/{with/slash}' },
+        { invalid: true, template: '/var/{only/one/opening/brace' },
+        { invalid: true, template: '/var/only/one/closing}/brace' },
+        { invalid: true, template: '/var/{weirdly{nested}/braces/a' },
+        { invalid: true, template: '/var/{weirdly}nested}/braces/a' },
+        { invalid: true, template: '/var/{recursivly{nested}braces}/a' },
+        { invalid: true, template: '/var/}backwards{/braces' },
+        { invalid: true, template: '/var/{normal}/and/}backwards{/braces' },
+    ];
+
+    for (let vector of vectors) {
+        if ('invalid' in vector) {
+            try {
+                t.true(true, `---  ${vector.template}  ---`);
+                // this should throw a ValidationError
+                let _thisShouldThrow = _templateToPathMatcherRegex(vector.template);
+                t.true(false, `${vector.template} - should throw a ValidationError but did not (_template...)`);
+            } catch (err) {
+                if (err instanceof ValidationError) {
+                    t.true(true, `should throw a ValidationError (message was: ${err.message})`);
+                } else {
+                    t.true(false, 'should throw a ValidationError but instead threw a ' + err.name);
+                    console.error(err);
+                }
+            }
+
+            try {
+                // this should also throw a ValidationError
+                let _thisShouldThrow = matchTemplateAndPath(vector.template, '/hello');
+                t.true(false, `${vector.template} - should throw a ValidationError but did not (matchTemplate...)`);
+            } catch (err) {
+                if (err instanceof ValidationError) {
+                    t.true(true, `should throw a ValidationError (message was: ${err.message})`);
+                } else {
+                    t.true(false, 'should throw a ValidationError but instead threw a ' + err.name);
+                    console.error(err);
+                }
+            }
+        } else {
+            // should be valid
+
+            t.true(true, `---  ${vector.template}  ---`);
+            let { varNames, pathMatcherRe } = _templateToPathMatcherRegex(vector.template);
+            t.same(varNames, vector.varNames, 'varNames should match');
+
+            for (let [path, expectedVars] of Object.entries(vector.pathsAndExtractedVars)) {
+                let actualVars = _matchRegexAndPath(pathMatcherRe, path);
+                t.same(actualVars, expectedVars, `${path} - extracted variables should match (_matchRegexAndPath)`);
+                t.same(matchTemplateAndPath(vector.template, path), expectedVars, `${path} - extracted variables should match (matchTemplateAndPath)`);
+            }
+        }
+    }
+
     t.done();
 });
