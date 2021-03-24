@@ -231,8 +231,9 @@ while ((m = variableRe.exec(template)) !== null) {
 */
 
 interface TemplateToPathMatcherReturn {
-    varNames: string[],
-    pathMatcherRe: string,
+    varNames: string[],  // the names of the variables, in the order they occur, without brackets
+    glob: string,  // the template with all the variables replaced by '*'
+    pathMatcherRe: string,  // a regex string that will match paths and do named captures of the variables
 }
 export let _templateToPathMatcherRegex = (template: string): TemplateToPathMatcherReturn => {
     // This is a low-level helper for the template matching code; don't use it directly.
@@ -281,6 +282,12 @@ export let _templateToPathMatcherRegex = (template: string): TemplateToPathMatch
         throw new ValidationError('weird curly brace mismatch, maybe }backwards{');
     }
 
+    //--------------------------------------------------
+    // MAKE GLOB VERSION
+
+    // replace all the {vars} with *
+    let glob = template.replace(bracketVarRe, '*');
+
     //--------------------------------------------------------------------------------
     // MAKE PATH REGEX
 
@@ -315,8 +322,9 @@ export let _templateToPathMatcherRegex = (template: string): TemplateToPathMatch
     let pathMatcherRe = '^' + parts.join('') + '$';
 
     return {
-        varNames: varNames,
-        pathMatcherRe: pathMatcherRe,
+        varNames,
+        glob,
+        pathMatcherRe,
     };
 }
 
@@ -373,7 +381,7 @@ export let matchTemplateAndPath = (template: string, path: string): Record<strin
     if (template.indexOf('{') === -1 && template.indexOf('}') === -1) {
         return (template === path ? {} : null);
     }
-    // this also returns { varnames } but we don't use it here
+    // this also returns { varnames, glob } but we don't use them here
     let { pathMatcherRe } = _templateToPathMatcherRegex(template);
     return _matchRegexAndPath(pathMatcherRe, path);
 }

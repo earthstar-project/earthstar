@@ -406,6 +406,7 @@ t.test('matchTemplateAndPath', (t: any) => {
     type StringToString = Record<string, string>;
     interface ValidVector {
         template: string,
+        glob?: string,
         varNames: string[],
         pathsAndExtractedVars: Record<string, StringToString | null>,
     }
@@ -417,6 +418,7 @@ t.test('matchTemplateAndPath', (t: any) => {
     let vectors: Vector[] = [
         {
             template: '',
+            glob: '',
             varNames: [],
             pathsAndExtractedVars: {
                 '/novars.json': null,
@@ -426,6 +428,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/novars.json',
+            glob: '/novars.json',
             varNames: [],
             pathsAndExtractedVars: {
                 '/novars.json': {},
@@ -435,6 +438,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/onevar/{_underscores_CAPS_and_digits_12345}.json',
+            glob: '/onevar/*.json',
             varNames: ['_underscores_CAPS_and_digits_12345'],
             pathsAndExtractedVars: {
                 '/onevar/123.json': { '_underscores_CAPS_and_digits_12345': '123' },
@@ -442,6 +446,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/onevar/{___}.json',
+            glob: '/onevar/*.json',
             varNames: ['___'],
             pathsAndExtractedVars: {
                 '/onevar/123.json': { '___': '123' },
@@ -449,6 +454,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/onevar/{_0}.json',
+            glob: '/onevar/*.json',
             varNames: ['_0'],
             pathsAndExtractedVars: {
                 '/onevar/123.json': { '_0': '123' },
@@ -456,6 +462,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/onevar/{postId}.json',
+            glob: '/onevar/*.json',
             varNames: ['postId'],
             pathsAndExtractedVars: {
                 '/onevar/123.json': { postId: '123' },
@@ -467,6 +474,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/onevar/post:{postId}.json',
+            glob: '/onevar/post:*.json',
             varNames: ['postId'],
             pathsAndExtractedVars: {
                 '/onevar/post:123.json': { postId: '123' },
@@ -474,6 +482,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/onevar/thisIsPost{postId}yesThatOne.json',
+            glob: '/onevar/thisIsPost*yesThatOne.json',
             varNames: ['postId'],
             pathsAndExtractedVars: {
                 '/onevar/thisIsPost123yesThatOne.json': { postId: '123' },
@@ -481,6 +490,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/twovars/{category}/{postId}.json',
+            glob: '/twovars/*/*.json',
             varNames: ['category', 'postId'],
             pathsAndExtractedVars: {
                 '/twovars/gardening/123.json': { category: 'gardening', postId: '123' },
@@ -493,6 +503,7 @@ t.test('matchTemplateAndPath', (t: any) => {
         },
         {
             template: '/twovars/{category}/{postId}.{ext}',
+            glob: '/twovars/*/*.*',
             varNames: ['category', 'postId', 'ext'],
             pathsAndExtractedVars: {
                 '/twovars/gardening/123.json': { category: 'gardening', postId: '123', ext: 'json' },
@@ -553,8 +564,11 @@ t.test('matchTemplateAndPath', (t: any) => {
             // should be valid
 
             t.true(true, `---  ${vector.template}  ---`);
-            let { varNames, pathMatcherRe } = _templateToPathMatcherRegex(vector.template);
+            let { varNames, glob, pathMatcherRe } = _templateToPathMatcherRegex(vector.template);
             t.same(varNames, vector.varNames, 'varNames should match');
+            if (vector.glob !== undefined) {
+                t.same(glob, vector.glob, 'glob should match');
+            }
 
             for (let [path, expectedVars] of Object.entries(vector.pathsAndExtractedVars)) {
                 let actualVars = _matchRegexAndPath(pathMatcherRe, path);
