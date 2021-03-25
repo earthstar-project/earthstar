@@ -539,3 +539,7 @@ You'll be able to put the literal string "`(hash)`" in a path.  It will be repla
 * It would be easy make an overlay view of different path prefixes ("folders") within a Storage
 * Or overlay two Storage instances
 * For example you could combine `/wiki/~@a.xxxx` and `/wiki/~@b.xxxx` into one namespace
+
+---
+
+#### Hosting & deployment of our demo apps: [Netlify](https://www.netlify.com/)
