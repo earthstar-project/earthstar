@@ -18,8 +18,8 @@ jobs:
 
     - name: npm install, build, test-coverage
       run: |
-        npm install
-        npm build
+        npm ci
+        npm run build
         npm run test-coverage
 
     - name: Coveralls
