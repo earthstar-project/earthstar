@@ -523,20 +523,21 @@ t.test('_parseTemplate', (t: any) => {
             },
         },
         {
-            template: '/twovars/{category}/{postId}.{ext}',
-            glob: '/twovars/*/*.*',
+            template: '/threevars/{category}/{postId}.{ext}',
+            glob: '/threevars/*/*.*',
             varNames: ['category', 'postId', 'ext'],
             pathsAndExtractedVars: {
-                '/twovars/gardening/123.json': { category: 'gardening', postId: '123', ext: 'json' },
+                '/threevars/gardening/123.json': { category: 'gardening', postId: '123', ext: 'json' },
                 // (note that this test example is not a valid earthstar path because it contains '//')
-                '/twovars//123.json': { category: '', postId: '123', ext: 'json' },
-                '/twovars/gardening': null,
+                '/threevars//123.json': { category: '', postId: '123', ext: 'json' },
+                '/threevars/gardening': null,
                 '/nope': null,
                 '': null,
             },
         },
         //--------------------------------------------------
         // invalid: should throw a Validation Error
+        { invalid: true, template: '/same/var/repeated/twice/{a}/{a}' },
         { invalid: true, template: '/two/consecutive/vars/{a}{b}/in/a/row' },
         { invalid: true, template: '/var/starting/with/number/{0abc}' },
         { invalid: true, template: '/var/with/no/name/{}' },
@@ -558,27 +559,29 @@ t.test('_parseTemplate', (t: any) => {
         if ('invalid' in vector) {
             try {
                 t.true(true, `---  ${vector.template}  ---`);
+                t.true(true, `_parseTemplate...`);
                 // this should throw a ValidationError
                 let _thisShouldThrow = _parseTemplate(vector.template);
                 t.true(false, `${vector.template} - should throw a ValidationError but did not (_template...)`);
             } catch (err) {
                 if (err instanceof ValidationError) {
-                    t.true(true, `should throw a ValidationError`);// (message was: ${err.message})`);
+                    t.true(true, `${vector.template} - should throw a ValidationError`);// (message was: ${err.message})`);
                 } else {
-                    t.true(false, 'should throw a ValidationError but instead threw a ' + err.name);
+                    t.true(false, `${vector.template} - should throw a ValidationError but instead threw a ${err.name}`);
                     console.error(err);
                 }
             }
 
             try {
+                t.true(true, `extractTemplateVariablesFromPath`);
                 // this should also throw a ValidationError
                 let _thisShouldThrow = extractTemplateVariablesFromPath(vector.template, '/hello');
                 t.true(false, `${vector.template} - should throw a ValidationError but did not (matchTemplate...)`);
             } catch (err) {
                 if (err instanceof ValidationError) {
-                    t.true(true, `should throw a ValidationError`);// (message was: ${err.message})`);
+                    t.true(true, `${vector.template} - should throw a ValidationError`);// (message was: ${err.message})`);
                 } else {
-                    t.true(false, 'should throw a ValidationError but instead threw a ' + err.name);
+                    t.true(false, `${vector.template} - should throw a ValidationError but instead threw a ${err.name}`);
                     console.error(err);
                 }
             }
@@ -691,11 +694,6 @@ t.test('queryByTemplateSync', (t: any) => {
         let actualPaths = docs.map(doc => doc.path);
         actualPaths.sort();
         expectedPaths.sort();
-
-        console.log(template);
-        console.log(expectedPaths);
-        console.log(actualPaths);
-
         let note = vector.note ? ` (${vector.note})` : '';
         t.same(actualPaths, expectedPaths, `template: ${template} should match ${expectedPaths.length} paths.${note}`);
     }
@@ -721,11 +719,6 @@ t.test('queryByTemplateAsyncSync', async (t) => {
         let actualPaths = docs.map(doc => doc.path);
         actualPaths.sort();
         expectedPaths.sort();
-
-        console.log(template);
-        console.log(expectedPaths);
-        console.log(actualPaths);
-
         let note = vector.note ? ` (${vector.note})` : '';
         t.same(actualPaths, expectedPaths, `template: ${template} should match ${expectedPaths.length} paths.${note}`);
     }

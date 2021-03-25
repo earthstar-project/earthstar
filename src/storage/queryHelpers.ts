@@ -273,6 +273,12 @@ export let _parseTemplate = (template: string): _parseTemplateReturn => {
         throw new ValidationError('weird curly brace mismatch, maybe }backwards{');
     }
 
+    // check for duplicate varNames
+    let varNamesSet = new Set(varNames);
+    if (varNamesSet.size !== varNames.length) {
+        throw new ValidationError('variable names may not be repeated');
+    }
+
     //--------------------------------------------------
     // MAKE GLOB VERSION
 
