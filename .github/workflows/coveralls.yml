@@ -16,9 +16,10 @@ jobs:
       with:
         node-version: 12.x
 
-    - name: npm install, make test-coverage
+    - name: npm install, build, test-coverage
       run: |
         npm install
+        npm build
         npm run test-coverage
 
     - name: Coveralls
