@@ -73,7 +73,7 @@
     "better-sqlite3": "^7.1.1",
     "chalk": "^4.1.0",
     "chloride": "^2.3.0",
-    "concurrency-friends": "^0.2.0",
+    "concurrency-friends": "^1.0.0",
     "fast-equals": "^2.0.0",
     "isomorphic-fetch": "^2.2.1",
     "lodash.debounce": "^4.0.8",
