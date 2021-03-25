@@ -51,3 +51,14 @@ export let objWithoutUndefined = <T extends Record<string, any>>(obj: T): T => {
     }
     return obj2 as T;
 }
+
+// replace all occurrences of substring "from" with "to"
+export let replaceAll = (str: string, from: string, to: string): string => {
+    return str.split(from).join(to);
+};
+
+// how many times does the character occur in the string?
+export let countChars = (str: string, char: string) => {
+    if (char.length != 1) { throw new Error('char must have length 1 but is ' + JSON.stringify(char)); }
+    return str.split(char).length - 1;
+};

@@ -15,13 +15,15 @@ import { StorageToAsync } from '../storage/storageToAsync';
 import { generateAuthorKeypair } from '../crypto/crypto';
 
 import {
+    _extractTemplateValuesUsingRe,
+    _parseGlob,
+    _parseTemplate,
     escapeStringForRegex,
-    globToEarthstarQueryAndPathRegex,
-    matchTemplateAndPath,
+    extractTemplateVariablesFromPath,
     queryByGlobAsync,
     queryByGlobSync,
-    _matchRegexAndPath,
-    _templateToPathMatcherRegex
+    queryByTemplateAsync,
+    queryByTemplateSync,
 } from '../storage/queryHelpers';
 
 //================================================================================
@@ -65,7 +67,7 @@ t.test('escapeStringForRegex', (t: any) => {
     t.done();
 });
 
-t.test('globToEarthstarQueryAndPathRegex', async (t) => {
+t.test('_parseGlob', async (t) => {
     interface Vector {
         note?: string,
         glob: string,
@@ -228,7 +230,7 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
     for (let vector of vectors) {
         let { glob, esQuery, pathRegex, matchingPaths, nonMatchingPaths } = vector;
 
-        let result = globToEarthstarQueryAndPathRegex(glob);
+        let result = _parseGlob(glob);
 
         t.same(true, true, `--- ${vector.glob}   ${vector.note ?? ''} ---`);
         t.same(result.query, esQuery, 'query is as expected: ' + glob);
@@ -244,13 +246,25 @@ t.test('globToEarthstarQueryAndPathRegex', async (t) => {
         }
     }
 
+    try {
+        _parseGlob('***');
+        t.true(false, 'three stars should have thrown but did not');
+    } catch (err) {
+        if (err instanceof ValidationError) {
+            t.true(true, 'three stars should throw a ValidationError');
+        } else {
+            t.true(false, 'three stars threw something besides a ValidationError');
+            throw err
+        }
+    }
+
     t.done();
 });
 
 //================================================================================
 // test queryByGlobSync and queryByGlobAsync
 
-let docPaths = [
+let docPathsForGlobTest = [
     '/aa',
     '/a---a',
     '/aa/aa/aa/aa/aa',
@@ -259,19 +273,19 @@ let docPaths = [
     '/posts/123.txt',
     '/posts/v1/123.txt',
 ]
-interface QueryVector {
+interface GlobQueryVector {
     glob: string,
     expectedPaths: string[],
     note?: string,
 }
-let queryVectors: QueryVector[] = [
+let globQueryVectors: GlobQueryVector[] = [
     {
         glob: '*',
         expectedPaths: [],
     },
     {
         glob: '**',
-        expectedPaths: [...docPaths],
+        expectedPaths: [...docPathsForGlobTest],
     },
     {
         glob: '/posts/123.txt',
@@ -351,7 +365,7 @@ let queryVectors: QueryVector[] = [
 
 t.test('queryByGlobSync', (t: any) => {
     let storage = new StorageMemory(VALIDATORS, WORKSPACE);
-    for (let path of docPaths) {
+    for (let path of docPathsForGlobTest) {
         storage.set(keypair1, {
             format: 'es.4',
             path: path,
@@ -359,16 +373,19 @@ t.test('queryByGlobSync', (t: any) => {
         });
     }
 
-    for (let vector of queryVectors) {
+    for (let vector of globQueryVectors) {
         let { glob, expectedPaths } = vector;
         // TODO: all these test docs are by author1, so this isn't a very good test
         // of moreQueryOptions, but it's better than nothing.
-        let docs = queryByGlobSync(storage, glob, { author: keypair1.address });
+        let docs = queryByGlobSync(storage, glob);
         let actualPaths = docs.map(doc => doc.path);
         actualPaths.sort();
         expectedPaths.sort();
         let note = vector.note ? ` (${vector.note})` : '';
         t.same(actualPaths, expectedPaths, `glob: ${glob} should match ${expectedPaths.length} paths.${note}`);
+
+        let docsLimit2 = queryByGlobSync(storage, glob, { limit: 1 });
+        t.true(docsLimit2.length <= 1, 'limit was applied');
     }
 
     storage.close();
@@ -377,7 +394,7 @@ t.test('queryByGlobSync', (t: any) => {
 
 t.test('queryByGlobAsync', async (t) => {
     let storage = new StorageToAsync(new StorageMemory(VALIDATORS, WORKSPACE), 10);
-    for (let path of docPaths) {
+    for (let path of docPathsForGlobTest) {
         storage.set(keypair1, {
             format: 'es.4',
             path: path,
@@ -385,7 +402,7 @@ t.test('queryByGlobAsync', async (t) => {
         });
     }
 
-    for (let vector of queryVectors) {
+    for (let vector of globQueryVectors) {
         let { glob, expectedPaths } = vector;
         let docs = await queryByGlobAsync(storage, glob);
         let actualPaths = docs.map(doc => doc.path);
@@ -393,6 +410,9 @@ t.test('queryByGlobAsync', async (t) => {
         expectedPaths.sort();
         let note = vector.note ? ` (${vector.note})` : '';
         t.same(actualPaths, expectedPaths, `glob: ${glob} should match ${expectedPaths.length} paths.${note}`);
+
+        let docsLimit2 = await queryByGlobAsync(storage, glob, { limit: 1 });
+        t.true(docsLimit2.length <= 1, 'limit was applied');
     }
 
     await storage.close();
@@ -400,8 +420,9 @@ t.test('queryByGlobAsync', async (t) => {
 });
 
 //================================================================================
+// TEMPLATES
 
-t.test('matchTemplateAndPath', (t: any) => {
+t.test('_parseTemplate', (t: any) => {
 
     type StringToString = Record<string, string>;
     interface ValidVector {
@@ -466,8 +487,8 @@ t.test('matchTemplateAndPath', (t: any) => {
             varNames: ['postId'],
             pathsAndExtractedVars: {
                 '/onevar/123.json': { postId: '123' },
+                '/onevar/.json': { postId: '' },  // empty matches are ok
                 '/onevar/12/34.json': null, // variable can't span across a path segment ('/')
-                '/onevar/.json': null,
                 '/nope': null,
                 '': null,
             },
@@ -489,14 +510,14 @@ t.test('matchTemplateAndPath', (t: any) => {
             },
         },
         {
-            template: '/twovars/{category}/{postId}.json',
-            glob: '/twovars/*/*.json',
+            template: '/twovars/cat:{category}/{postId}.json',
+            glob: '/twovars/cat:*/*.json',
             varNames: ['category', 'postId'],
             pathsAndExtractedVars: {
-                '/twovars/gardening/123.json': { category: 'gardening', postId: '123' },
-                '/twovars/gardening/123.txt': null,
-                '/twovars//123.json': null,
-                '/twovars/gardening': null,
+                '/twovars/cat:gardening/123.json': { category: 'gardening', postId: '123' },
+                '/twovars/cat:gardening/123.txt': null,
+                '/twovars/cat:/123.json': { category: '', postId: '123' },
+                '/twovars/cat:gardening': null,
                 '/nope': null,
                 '': null,
             },
@@ -507,7 +528,8 @@ t.test('matchTemplateAndPath', (t: any) => {
             varNames: ['category', 'postId', 'ext'],
             pathsAndExtractedVars: {
                 '/twovars/gardening/123.json': { category: 'gardening', postId: '123', ext: 'json' },
-                '/twovars//123.json': null,
+                // (note that this test example is not a valid earthstar path because it contains '//')
+                '/twovars//123.json': { category: '', postId: '123', ext: 'json' },
                 '/twovars/gardening': null,
                 '/nope': null,
                 '': null,
@@ -537,11 +559,11 @@ t.test('matchTemplateAndPath', (t: any) => {
             try {
                 t.true(true, `---  ${vector.template}  ---`);
                 // this should throw a ValidationError
-                let _thisShouldThrow = _templateToPathMatcherRegex(vector.template);
+                let _thisShouldThrow = _parseTemplate(vector.template);
                 t.true(false, `${vector.template} - should throw a ValidationError but did not (_template...)`);
             } catch (err) {
                 if (err instanceof ValidationError) {
-                    t.true(true, `should throw a ValidationError (message was: ${err.message})`);
+                    t.true(true, `should throw a ValidationError`);// (message was: ${err.message})`);
                 } else {
                     t.true(false, 'should throw a ValidationError but instead threw a ' + err.name);
                     console.error(err);
@@ -550,11 +572,11 @@ t.test('matchTemplateAndPath', (t: any) => {
 
             try {
                 // this should also throw a ValidationError
-                let _thisShouldThrow = matchTemplateAndPath(vector.template, '/hello');
+                let _thisShouldThrow = extractTemplateVariablesFromPath(vector.template, '/hello');
                 t.true(false, `${vector.template} - should throw a ValidationError but did not (matchTemplate...)`);
             } catch (err) {
                 if (err instanceof ValidationError) {
-                    t.true(true, `should throw a ValidationError (message was: ${err.message})`);
+                    t.true(true, `should throw a ValidationError`);// (message was: ${err.message})`);
                 } else {
                     t.true(false, 'should throw a ValidationError but instead threw a ' + err.name);
                     console.error(err);
@@ -564,19 +586,150 @@ t.test('matchTemplateAndPath', (t: any) => {
             // should be valid
 
             t.true(true, `---  ${vector.template}  ---`);
-            let { varNames, glob, pathMatcherRe } = _templateToPathMatcherRegex(vector.template);
+            let { varNames, glob, pathMatcherRe } = _parseTemplate(vector.template);
             t.same(varNames, vector.varNames, 'varNames should match');
             if (vector.glob !== undefined) {
                 t.same(glob, vector.glob, 'glob should match');
             }
 
             for (let [path, expectedVars] of Object.entries(vector.pathsAndExtractedVars)) {
-                let actualVars = _matchRegexAndPath(pathMatcherRe, path);
+                let actualVars = _extractTemplateValuesUsingRe(pathMatcherRe, path);
                 t.same(actualVars, expectedVars, `${path} - extracted variables should match (_matchRegexAndPath)`);
-                t.same(matchTemplateAndPath(vector.template, path), expectedVars, `${path} - extracted variables should match (matchTemplateAndPath)`);
+                t.same(extractTemplateVariablesFromPath(vector.template, path), expectedVars, `${path} - extracted variables should match (matchTemplateAndPath)`);
             }
         }
     }
 
+    t.done();
+});
+
+let docPathsForTemplateTest = [
+    '/aa',
+    '/aaa',
+    '/a---a',
+    '/aa/aa/aa/aa/aa',
+    '/posts',
+    '/posts/123.json',
+    '/posts/123.txt',
+    '/posts/gardening/123.txt',
+    '/posts/sailing/123.txt',
+]
+interface TemplateQueryVector {
+    template: string,
+    expectedPaths: string[],
+    note?: string,
+}
+let templateQueryVectors: TemplateQueryVector[] = [
+    {
+        template: '',
+        expectedPaths: [],
+    },
+    {
+        template: '/posts/{postId}.json',
+        expectedPaths: [
+            '/posts/123.json',
+        ],
+    },
+    {
+        template: '/posts/{postId}.{ext}',
+        expectedPaths: [
+            '/posts/123.json',
+            '/posts/123.txt',
+        ],
+    },
+    {
+        template: '/posts/{category}/{postId}.{ext}',
+        expectedPaths: [
+            '/posts/gardening/123.txt',
+            '/posts/sailing/123.txt',
+        ],
+    },
+    {
+        template: '/{_1}/{_2}/{_3}/{_4}/{_5}',
+        expectedPaths: [
+            '/aa/aa/aa/aa/aa',
+        ],
+    },
+    {
+        template: '/posts',
+        expectedPaths: [
+            '/posts',
+        ],
+    },
+    {
+        template: '/{oneLayerDeepOnly}',
+        expectedPaths: [
+            '/aa',
+            '/aaa',
+            '/a---a',
+            '/posts',
+        ],
+    },
+    {
+        template: '/a{A}a',
+        expectedPaths: [
+            '/aa',  // zero-length matches are allowed
+            '/aaa',
+            '/a---a',
+        ],
+    },
+];
+
+t.test('queryByTemplateSync', (t: any) => {
+    let storage = new StorageMemory(VALIDATORS, WORKSPACE);
+    for (let path of docPathsForTemplateTest) {
+        storage.set(keypair1, {
+            format: 'es.4',
+            path: path,
+            content: 'content at ' + path,
+        });
+    }
+
+    for (let vector of templateQueryVectors) {
+        let { template, expectedPaths } = vector;
+        let docs = queryByTemplateSync(storage, template);
+        let actualPaths = docs.map(doc => doc.path);
+        actualPaths.sort();
+        expectedPaths.sort();
+
+        console.log(template);
+        console.log(expectedPaths);
+        console.log(actualPaths);
+
+        let note = vector.note ? ` (${vector.note})` : '';
+        t.same(actualPaths, expectedPaths, `template: ${template} should match ${expectedPaths.length} paths.${note}`);
+    }
+
+    storage.close();
+    t.done();
+});
+
+
+t.test('queryByTemplateAsyncSync', async (t) => {
+    let storage = new StorageToAsync(new StorageMemory(VALIDATORS, WORKSPACE), 10);
+    for (let path of docPathsForTemplateTest) {
+        storage.set(keypair1, {
+            format: 'es.4',
+            path: path,
+            content: 'content at ' + path,
+        });
+    }
+
+    for (let vector of templateQueryVectors) {
+        let { template, expectedPaths } = vector;
+        let docs = await queryByTemplateAsync(storage, template);
+        let actualPaths = docs.map(doc => doc.path);
+        actualPaths.sort();
+        expectedPaths.sort();
+
+        console.log(template);
+        console.log(expectedPaths);
+        console.log(actualPaths);
+
+        let note = vector.note ? ` (${vector.note})` : '';
+        t.same(actualPaths, expectedPaths, `template: ${template} should match ${expectedPaths.length} paths.${note}`);
+    }
+
+    storage.close();
     t.done();
 });

@@ -8,6 +8,10 @@ import {
 import {
     Query
 } from './query';
+import {
+    countChars,
+    replaceAll,
+} from '../util/helpers';
 
 //================================================================================
 // HELPERS
@@ -25,15 +29,6 @@ export let escapeStringForRegex = (s: string): string => {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 };
 
-let replaceAll = (str: string, from: string, to: string): string => {
-    return str.split(from).join(to);
-};
-
-// how many times does the character occur in the string?
-let countChars = (str: string, char: string) => {
-    return str.split(char).length - 1;
-};
-
 // same as string.matchAll(regex) which is only supported in node 12+
 // returns [
 //    0: full match,
@@ -44,7 +39,7 @@ let countChars = (str: string, char: string) => {
 // ]
 // TODO: bug: this loops forever when the regex does not have the 'g' flag
 // because it keeps returning the first match.
-let matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
+let _matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
     if (re.flags.indexOf('g') === -1) {
         throw new Error('this matchAll function only works on global regexes (with "g")');
     }
@@ -83,7 +78,6 @@ let matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
  * the `path`, `pathStartsWith`, and `pathEndswith` properties,
  * and no other properties.
  */
-
 // Example glob strings:
 //
 //     "/posts/*/*.json"    matches "/posts/sailing/12345.json"
@@ -95,7 +89,7 @@ let matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
 // To use it:
 // 
 //    let queryByGlob = (storage: IStorage, glob: string): Document[] => {
-//       let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
+//       let { query, pathRegex } = _parseGlob(glob);
 //  
 //       let docs = storage.documents(query);
 //       if (pathRegex != null) {
@@ -106,8 +100,7 @@ let matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
 //    }
 //  
 //    let posts = queryByGlob(myStorage, '/posts/*.txt');
-
-export let globToEarthstarQueryAndPathRegex = (glob: string): { query: Query, pathRegex: string | null } => {
+export let _parseGlob = (glob: string): { query: Query, pathRegex: string | null } => {
     // Three stars in a row are not allowed - throw
     if (glob.indexOf('***') !== -1) {
         throw new ValidationError('invalid glob query has three stars in a row: ' + glob);
@@ -156,8 +149,7 @@ export let globToEarthstarQueryAndPathRegex = (glob: string): { query: Query, pa
 
 /*
  * Find documents whose path matches the glob string.
- * See documentation for globToEarthstarQueryAndPathRegex for details on
- * glob strings.
+ * See documentation for _parseGlob for details on glob strings.
  *
  * This is a synchronous function and `storage` must be synchronous (an `IStorage`).
  * 
@@ -170,7 +162,7 @@ export let globToEarthstarQueryAndPathRegex = (glob: string): { query: Query, pa
  * intend to override the glob's query.
  */
 export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions: Query = {}): Document[] => {
-    let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
+    let { query, pathRegex } = _parseGlob(glob);
     query = { ...query, ...moreQueryOptions };
  
     let docs = storage.documents(query);
@@ -183,8 +175,7 @@ export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions:
 
 /*
  * Find documents whose path matches the glob string.
- * See documentation for globToEarthstarQueryAndPathRegex for details on
- * glob strings.
+ * See documentation for _parseGlob for details on glob strings
  * 
  * This is an async function and `storage` can be either an async or sync storage
  * (`IStorage` or `IStorageAsync`).
@@ -198,7 +189,7 @@ export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions:
  * intend to override the glob's query.
  */
 export let queryByGlobAsync = async (storage: IStorage | IStorageAsync, glob: string, moreQueryOptions: Query = {}): Promise<Document[]> => {
-    let { query, pathRegex } = globToEarthstarQueryAndPathRegex(glob);
+    let { query, pathRegex } = _parseGlob(glob);
     query = { ...query, ...moreQueryOptions };
  
     let docs = await storage.documents(query);
@@ -230,13 +221,13 @@ while ((m = variableRe.exec(template)) !== null) {
 }
 */
 
-interface TemplateToPathMatcherReturn {
+interface _parseTemplateReturn {
     varNames: string[],  // the names of the variables, in the order they occur, without brackets
     glob: string,  // the template with all the variables replaced by '*'
     pathMatcherRe: string,  // a regex string that will match paths and do named captures of the variables
 }
-export let _templateToPathMatcherRegex = (template: string): TemplateToPathMatcherReturn => {
-    // This is a low-level helper for the template matching code; don't use it directly.
+export let _parseTemplate = (template: string): _parseTemplateReturn => {
+    // This is a low-level helper for the template matching code; probably don't use it directly.
     //
     // Given a template, parse it and return
     // - a list of variable names
@@ -269,7 +260,7 @@ export let _templateToPathMatcherRegex = (template: string): TemplateToPathMatch
     let bracketVarRe = /\{(.*?)\}/g  // match and capture anything in curly braces, lazily, to get smallest matches
     let validVarName = /^[a-zA-Z_][a-zA-Z0-9_]*$/  // requirement for variable names: (alpha alphanum*)
 
-    let varMatches = matchAll(bracketVarRe, template);
+    let varMatches = _matchAll(bracketVarRe, template);
     // capture anything in braces...
     let varNames = varMatches.map(match => match[1]);
     // ...then check if it's a valid variable name, and throw errors if it's not
@@ -307,7 +298,7 @@ export let _templateToPathMatcherRegex = (template: string): TemplateToPathMatch
         }
 
         // make a regex to capture the actual value of this variable in a path
-        let reForThisVariable = '(?<' + varName + '>[^/]+)';
+        let reForThisVariable = '(?<' + varName + '>[^/]*)';
         parts.push(reForThisVariable);
         
         if (ii <= varMatches.length - 2) {
@@ -328,14 +319,14 @@ export let _templateToPathMatcherRegex = (template: string): TemplateToPathMatch
     };
 }
 
-// This is a low-level helper for the template matching code; don't use it directly.
+// This is a low-level helper for the template matching code; probably don't use it directly.
 //
-// Given a pathMatcherRe (made from a template using templateToMathMatcherRegex),
+// Given a pathMatcherRe (made from a template using _parseTemplate),
 // check if a given Earthstar patch matches it.
 // If it does not match, return null.
 // If it does match, return an object with the variables from the template.
 // A template can have zero variables; in this case we return {} on match and null on no match.
-export let _matchRegexAndPath = (pathMatcherRe: string, path: string): Record<string, string> | null => {
+export let _extractTemplateValuesUsingRe = (pathMatcherRe: string, path: string): Record<string, string> | null => {
     const matches2 = path.match(new RegExp(pathMatcherRe));
     if (matches2 === null) { return null; }
     return { ...matches2.groups };
@@ -343,6 +334,7 @@ export let _matchRegexAndPath = (pathMatcherRe: string, path: string): Record<st
 
 /*
  * Compare template strings to actual paths and extract the variables from the paths.
+ * You can also use this to check if a template matches a path.
  * 
  * Given a template like '/posts/{postId}.json', check if a given Earthstar patch matches it.
  * If it DOES match, return an object with the variables from the template, like { postId: "abc" }.
@@ -364,9 +356,9 @@ export let _matchRegexAndPath = (pathMatcherRe: string, path: string): Record<st
  * A template can have zero variables; in this case we return {} if the template is identical
  * to the path, or null if it's different.
  * 
- * A path must have at least one character to fill the variable with.
+ * Zero-length matches are allowed.
  *   Example: template: '/posts/{postId}.json'
- *                path: '/posts/.json' will not match because the variable would be empty.
+ *                path: '/posts/.json' matches, and will be { postId: '' }
  * 
  * Variables can't span across path segments (they won't match '/' characters)
  *   Example: template: '/posts/{postId}.json'
@@ -375,13 +367,73 @@ export let _matchRegexAndPath = (pathMatcherRe: string, path: string): Record<st
  * Variable names must only contain upper or lower case letters, numbers, or underscores.
  * They must not start with a number.
  */
-export let matchTemplateAndPath = (template: string, path: string): Record<string, string> | null => {
+export let extractTemplateVariablesFromPath = (template: string, path: string): Record<string, string> | null => {
     // if template has no variables, just compare it directly with the path
     // and avoid all this regex nonsense
     if (template.indexOf('{') === -1 && template.indexOf('}') === -1) {
         return (template === path ? {} : null);
     }
     // this also returns { varnames, glob } but we don't use them here
-    let { pathMatcherRe } = _templateToPathMatcherRegex(template);
-    return _matchRegexAndPath(pathMatcherRe, path);
+    let { pathMatcherRe } = _parseTemplate(template);
+    return _extractTemplateValuesUsingRe(pathMatcherRe, path);
+}
+
+/*
+ * Given a template string like "/posts/{postId}.json",
+ * query the storage for docs with matching paths.
+ * 
+ * The storage must be synchronous.
+ * 
+ * See the docs for matchTemplateAndPath for details on template strings.
+ * 
+ * You can get the variables out of your document paths like this:
+ * 
+ *      let template = '/posts/{postId}.json';
+ *      let docs = queryByTemplateSync(myStorgae, template);
+ *      for (let doc of docs) {
+ *          // vars will be like { postId: 'abc' }
+ *          let vars = extractTemplateVariablesFromPath(template, doc.path);
+ *      }
+ */
+export let queryByTemplateSync = (storage: IStorage, template: string, moreQueryOptions: Query = {}): Document[] => {
+    let { glob } = _parseTemplate(template);
+    let { query, pathRegex } = _parseGlob(glob);
+    query = { ...query, ...moreQueryOptions };
+
+    let docs = storage.documents(query);
+    if (pathRegex != null) {
+        let re = new RegExp(pathRegex);
+        docs = docs.filter(doc => re.test(doc.path));
+    }
+    return docs;
+}
+
+/*
+ * Given a template string like "/posts/{postId}.json",
+ *  query the storage for docs with matching paths.
+ * 
+ * The storage can be synchronous or asynchronous.
+ * 
+ * See the docs for matchTemplateAndPath for details on template strings.
+ * 
+ * You can get the variables out of your document paths like this:
+ * 
+ *      let template = '/posts/{postId}.json';
+ *      let docs = await queryByTemplateAsync(myStorgae, template);
+ *      for (let doc of docs) {
+ *          // vars will be like { postId: 'abc' }
+ *          let vars = extractTemplateVariablesFromPath(template, doc.path);
+ *      }
+ */
+export let queryByTemplateAsync = async (storage: IStorage | IStorageAsync, template: string, moreQueryOptions: Query = {}): Promise<Document[]> => {
+    let { glob } = _parseTemplate(template);
+    let { query, pathRegex } = _parseGlob(glob);
+    query = { ...query, ...moreQueryOptions };
+ 
+    let docs = await storage.documents(query);
+    if (pathRegex != null) {
+        let re = new RegExp(pathRegex);
+        docs = docs.filter(doc => re.test(doc.path));
+    }
+    return docs;
 }
