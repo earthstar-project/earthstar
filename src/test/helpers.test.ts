@@ -2,9 +2,11 @@ import t = require('tap');
 //t.runOnly = true;
 
 import {
+    countChars,
     isPlainObject,
     objWithoutUndefined,
     range,
+    replaceAll,
     sorted,
     stringMult,
     uniq,
@@ -79,6 +81,43 @@ t.test('objWithoutUndefined', (t: any) => {
     for (let [inpt, goal] of cases) {
         let result = objWithoutUndefined(inpt);
         t.same(result, goal);
+    }
+    t.done();
+});
+
+t.test('replaceAll', (t: any) => {
+    let cases: [string, string, string, string][] = [
+        // input, desired output
+        ['hello', 'l', 'w', 'hewwo'],
+        ['hello', 'l', 'ww', 'hewwwwo'],
+        ['hello', 'l', '', 'heo'],
+        ['a-a-a-b-', 'a-', '', 'b-'],
+        ['a-a-a-b-', 'b-', '', 'a-a-a-'],
+        ['banana', 'ana', 'x', 'bxna'],
+    ]
+    for (let [str, from, to, goal] of cases) {
+        let result = replaceAll(str, from, to);
+        t.same(result, goal);
+    }
+    t.done();
+});
+
+t.test('countChars', (t: any) => {
+    let cases: [string, string, number | false][] = [
+        // input, desired output or false if it should throw
+        ['aaa', 'a', 3],
+        ['', 'a', 0],
+        ['___a_a_____a_aaa', 'a', 6],
+        ['aaa', 'not-one-char', false],
+        ['aaa', '', false],
+    ]
+    for (let [str, char, goal] of cases) {
+        if (goal === false) {
+            t.throws(() => countChars(str, char));
+        } else {
+            let result = countChars(str, char);
+            t.same(result, goal);
+        }
     }
     t.done();
 });
