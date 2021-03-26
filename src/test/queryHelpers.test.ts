@@ -15,9 +15,9 @@ import { StorageToAsync } from '../storage/storageToAsync';
 import { generateAuthorKeypair } from '../crypto/crypto';
 
 import {
-    _extractTemplateValuesUsingRe,
-    _globToQueryAndRegex,
-    _parseTemplate,
+    extractTemplateVariablesFromPathUsingRegex,
+    globToQueryAndRegex,
+    parseTemplate,
     escapeStringForRegex,
     extractTemplateVariablesFromPath,
     queryByGlobAsync,
@@ -85,7 +85,7 @@ t.test('_matchAll', (t: any) => {
 
 // TODO: test _globToRegex (though it's used vicariously through _globToQueryAndRegex)
 
-t.test('_globToQueryAndRegex', async (t) => {
+t.test('globToQueryAndRegex', async (t) => {
     interface Vector {
         note?: string,
         glob: string,
@@ -262,7 +262,7 @@ t.test('_globToQueryAndRegex', async (t) => {
     for (let vector of vectors) {
         let { glob, esQuery, regex, matchingPaths, nonMatchingPaths } = vector;
 
-        let result = _globToQueryAndRegex(glob);
+        let result = globToQueryAndRegex(glob);
 
         t.same(true, true, `--- ${vector.glob}   ${vector.note ?? ''} ---`);
         t.same(result.query, esQuery, 'query is as expected: ' + glob);
@@ -279,7 +279,7 @@ t.test('_globToQueryAndRegex', async (t) => {
     }
 
     try {
-        _globToQueryAndRegex('***');
+        globToQueryAndRegex('***');
         t.true(false, 'three stars should have thrown but did not');
     } catch (err) {
         if (err instanceof ValidationError) {
@@ -454,7 +454,7 @@ t.test('queryByGlobAsync', async (t) => {
 //================================================================================
 // TEMPLATES
 
-t.test('_parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
+t.test('parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
 
     type StringToString = Record<string, string>;
     interface ValidVector {
@@ -607,7 +607,7 @@ t.test('_parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
                 t.true(true, `---  ${vector.template}  ---`);
                 t.true(true, `_parseTemplate...`);
                 // this should throw a ValidationError
-                let _thisShouldThrow = _parseTemplate(vector.template);
+                let _thisShouldThrow = parseTemplate(vector.template);
                 t.true(false, `${vector.template} - should throw a ValidationError but did not (_template...)`);
             } catch (err) {
                 if (err instanceof ValidationError) {
@@ -635,14 +635,14 @@ t.test('_parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
             // should be valid
 
             t.true(true, `---  ${vector.template}  ---`);
-            let { varNames, glob, namedCaptureRegex } = _parseTemplate(vector.template);
+            let { varNames, glob, namedCaptureRegex } = parseTemplate(vector.template);
             t.same(varNames, vector.varNames, 'varNames should match');
             if (vector.glob !== undefined) {
                 t.same(glob, vector.glob, 'glob should match');
             }
 
             for (let [path, expectedVars] of Object.entries(vector.pathsAndExtractedVars)) {
-                let actualVars = _extractTemplateValuesUsingRe(namedCaptureRegex, path);
+                let actualVars = extractTemplateVariablesFromPathUsingRegex(namedCaptureRegex, path);
                 t.same(actualVars, expectedVars, `${path} - extracted variables should match (_matchRegexAndPath)`);
                 t.same(extractTemplateVariablesFromPath(vector.template, path), expectedVars, `${path} - extracted variables should match (matchTemplateAndPath)`);
             }

@@ -53,13 +53,13 @@ export let _matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
 // GLOBS
 
 /*
- *  A helper used by _globToQueryAndRegex -- see that function for details.
+ *  A helper used by globToQueryAndRegex -- see that function for details.
  *
  *  This function simply turns a glob string into a regex.
  *  The other function calls this one, but sometimes discards the regex
  *   if it's not needed because it can make a good enough Earthstar query.
  */
-export let _globToRegex = (glob: string, forceEntireMatch: boolean = true): string => {
+export let globToRegex = (glob: string, forceEntireMatch: boolean = true): string => {
     // Just turn a glob into a regex.
     // '/hello/**/world/*.txt' --> '/hello/.*/world/[^/]*.txt'
     // forceEntireMatch: make the regex match all way from beginning to end of string
@@ -126,7 +126,7 @@ export let _globToRegex = (glob: string, forceEntireMatch: boolean = true): stri
  * To use it:
  * 
  *    let queryByGlob = (storage: IStorage, glob: string): Document[] => {
- *       let { query, regex } = _globToQueryAndRegex(glob);
+ *       let { query, regex } = globToQueryAndRegex(glob);
  *  
  *       let docs = storage.documents(query);
  *       if (regex != null) {
@@ -138,7 +138,7 @@ export let _globToRegex = (glob: string, forceEntireMatch: boolean = true): stri
  *  
  *    let posts = queryByGlob(myStorage, '/posts/*.txt');
  */
-export let _globToQueryAndRegex = (glob: string): { query: Query, regex: string | null } => {
+export let globToQueryAndRegex = (glob: string): { query: Query, regex: string | null } => {
     // Turn a glob into a query and an optional regex, if a regex is needed.
 
     // If no stars at all, this is just a direct path query.
@@ -167,7 +167,7 @@ export let _globToQueryAndRegex = (glob: string): { query: Query, regex: string 
     }
     // special case did not apply, calculate the regex
     if (regex === '?') {
-        regex = _globToRegex(glob);
+        regex = globToRegex(glob);
     }
 
     return { query, regex };
@@ -178,7 +178,7 @@ export let _globToQueryAndRegex = (glob: string): { query: Query, regex: string 
 
 /*
  * Find documents whose path matches the glob string.
- * See documentation for _globToQueryAndRegex for details on glob strings.
+ * See documentation for globToQueryAndRegex for details on glob strings.
  *
  * This is a synchronous function and `storage` must be synchronous (an `IStorage`).
  * 
@@ -191,7 +191,7 @@ export let _globToQueryAndRegex = (glob: string): { query: Query, regex: string 
  * intend to override the glob's query.
  */
 export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions: Query = {}): Document[] => {
-    let { query, regex } = _globToQueryAndRegex(glob);
+    let { query, regex } = globToQueryAndRegex(glob);
     query = { ...query, ...moreQueryOptions };
  
     let docs = storage.documents(query);
@@ -204,7 +204,7 @@ export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions:
 
 /*
  * Find documents whose path matches the glob string.
- * See documentation for _globToQueryAndRegex for details on glob strings.
+ * See documentation for globToQueryAndRegex for details on glob strings.
  * 
  * This is an async function and `storage` can be either an async or sync storage
  * (`IStorage` or `IStorageAsync`).
@@ -218,7 +218,7 @@ export let queryByGlobSync = (storage: IStorage, glob: string, moreQueryOptions:
  * intend to override the glob's query.
  */
 export let queryByGlobAsync = async (storage: IStorage | IStorageAsync, glob: string, moreQueryOptions: Query = {}): Promise<Document[]> => {
-    let { query, regex } = _globToQueryAndRegex(glob);
+    let { query, regex } = globToQueryAndRegex(glob);
     query = { ...query, ...moreQueryOptions };
  
     let docs = await storage.documents(query);
@@ -250,7 +250,8 @@ while ((m = variableRe.exec(template)) !== null) {
 }
 */
 
-interface _parseTemplateReturn {
+interface ParsedTemplate {
+    template: string,
     varNames: string[],  // the names of the variables, in the order they occur, without brackets
     glob: string,  // the template with all the variables replaced by '*'
     namedCaptureRegex: string,  // a regex string that will match paths and do named captures of the variables
@@ -281,7 +282,7 @@ interface _parseTemplateReturn {
  *  If variable names don't match these rules, a ValidationError will be thrown.
  * 
  */
-export let _parseTemplate = (template: string): _parseTemplateReturn => {
+export let parseTemplate = (template: string): ParsedTemplate => {
 
     //--------------------------------------------------------------------------------
     // VALIDATE TEMPLATE and extract variable names
@@ -333,11 +334,11 @@ export let _parseTemplate = (template: string): _parseTemplateReturn => {
 
     // normally we would put each path part through escapeStringForRegex()...
     // but we want to allow stars to be mixed in with template variables,
-    // so instead we use _globToRegex() with false to prevent it from
+    // so instead we use globToRegex() with false to prevent it from
     // wrapping each part in ^ and $.
     let parts: string[] = [];
     if (varMatches.length === 0) {
-        parts.push(_globToRegex(template, false));
+        parts.push(globToRegex(template, false));
     }
     for (let ii = 0; ii < varMatches.length; ii++) {
         let bracketMatch = varMatches[ii];
@@ -347,7 +348,7 @@ export let _parseTemplate = (template: string): _parseTemplateReturn => {
 
         if (ii === 0) {
             let begin = template.slice(0, matchStart);
-            parts.push(_globToRegex(begin, false));
+            parts.push(globToRegex(begin, false));
         }
 
         // make a regex to capture the actual value of this variable in a path
@@ -357,15 +358,16 @@ export let _parseTemplate = (template: string): _parseTemplateReturn => {
         if (ii <= varMatches.length - 2) {
             let nextMatch = varMatches[ii+1];
             let between = template.slice(matchEnd, nextMatch.index);
-            parts.push(_globToRegex(between, false));
+            parts.push(globToRegex(between, false));
         } else {
             let end = template.slice(matchEnd);
-            parts.push(_globToRegex(end, false));
+            parts.push(globToRegex(end, false));
         }
     }
     let namedCaptureRegex = '^' + parts.join('') + '$';
 
     return {
+        template,
         varNames,
         glob,
         namedCaptureRegex,
@@ -376,13 +378,13 @@ export let _parseTemplate = (template: string): _parseTemplateReturn => {
  *  This is a low-level helper for the template matching code; probably don't use it directly.
  *  See extractTemplateVariablesFromPath for more details.
  *
- *  Given a namedCaptureRegex (made from a template using _parseTemplate),
+ *  Given a namedCaptureRegex (made from a template using parseTemplate),
  *   check if a given Earthstar path matches it.
  *  If it does match, return an object with the variables from the template.
  *  If it does not match, return null.
  *  A template can have zero variables; in this case we return {} on match and null on no match.
  */
-export let _extractTemplateValuesUsingRe = (namedCaptureRegex: string, path: string): Record<string, string> | null => {
+export let extractTemplateVariablesFromPathUsingRegex = (namedCaptureRegex: string, path: string): Record<string, string> | null => {
     const matches2 = path.match(new RegExp(namedCaptureRegex));
     if (matches2 === null) { return null; }
     return { ...matches2.groups };
@@ -433,8 +435,8 @@ export let extractTemplateVariablesFromPath = (template: string, path: string): 
         return (template === path ? {} : null);
     }
     // this also returns { varnames, glob } but we don't use them here
-    let { namedCaptureRegex } = _parseTemplate(template);
-    return _extractTemplateValuesUsingRe(namedCaptureRegex, path);
+    let { namedCaptureRegex } = parseTemplate(template);
+    return extractTemplateVariablesFromPathUsingRegex(namedCaptureRegex, path);
 }
 
 //================================================================================
@@ -458,8 +460,8 @@ export let extractTemplateVariablesFromPath = (template: string, path: string): 
  *      }
  */
 export let queryByTemplateSync = (storage: IStorage, template: string, moreQueryOptions: Query = {}): Document[] => {
-    let { glob } = _parseTemplate(template);
-    let { query, regex } = _globToQueryAndRegex(glob);
+    let { glob } = parseTemplate(template);
+    let { query, regex } = globToQueryAndRegex(glob);
     query = { ...query, ...moreQueryOptions };
 
     let docs = storage.documents(query);
@@ -488,8 +490,8 @@ export let queryByTemplateSync = (storage: IStorage, template: string, moreQuery
  *      }
  */
 export let queryByTemplateAsync = async (storage: IStorage | IStorageAsync, template: string, moreQueryOptions: Query = {}): Promise<Document[]> => {
-    let { glob } = _parseTemplate(template);
-    let { query, regex } = _globToQueryAndRegex(glob);
+    let { glob } = parseTemplate(template);
+    let { query, regex } = globToQueryAndRegex(glob);
     query = { ...query, ...moreQueryOptions };
  
     let docs = await storage.documents(query);
