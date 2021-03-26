@@ -16,7 +16,7 @@ import { generateAuthorKeypair } from '../crypto/crypto';
 
 import {
     _extractTemplateValuesUsingRe,
-    _parseGlob,
+    _globToQueryAndRegex,
     _parseTemplate,
     escapeStringForRegex,
     extractTemplateVariablesFromPath,
@@ -24,6 +24,7 @@ import {
     queryByGlobSync,
     queryByTemplateAsync,
     queryByTemplateSync,
+    _matchAll,
 } from '../storage/queryHelpers';
 
 //================================================================================
@@ -40,6 +41,7 @@ if (isErr(keypair1)) { throw "oops"; }
 let author1 = keypair1.address;
 
 //================================================================================
+// HELPERS
 
 t.test('escapeStringForRegex', (t: any) => {
     let specialChars = '.*+?^${}()|[]' + '\\';
@@ -67,12 +69,28 @@ t.test('escapeStringForRegex', (t: any) => {
     t.done();
 });
 
-t.test('_parseGlob', async (t) => {
+t.test('_matchAll', (t: any) => {
+    let gMatches = _matchAll(new RegExp(/\d/g), '123');
+    let gMatchStrings = gMatches.map(m => m[0]);
+    t.same(gMatches.length, 3, 'three matches with "g" flag');
+    t.same(gMatchStrings, ['1', '2', '3'], '1, 2, 3');
+
+    t.throws(() => _matchAll(new RegExp(/\d/), '123'), 'should throw without "g" flag');
+
+    t.done();
+});
+
+//================================================================================
+// GLOBS
+
+// TODO: test _globToRegex (though it's used vicariously through _globToQueryAndRegex)
+
+t.test('_globToQueryAndRegex', async (t) => {
     interface Vector {
         note?: string,
         glob: string,
         esQuery: Query,
-        pathRegex: string | null,
+        regex: string | null,
         matchingPaths: string[],
         nonMatchingPaths: string[],
     };
@@ -81,7 +99,7 @@ t.test('_parseGlob', async (t) => {
             note: 'no regex needed',
             glob: '**a.txt',
             esQuery: { pathEndsWith: 'a.txt' },
-            pathRegex: null,  // no regex needed
+            regex: null,  // no regex needed
             matchingPaths: [
                 'a.txt',
                 '-a.txt',
@@ -96,7 +114,7 @@ t.test('_parseGlob', async (t) => {
         {
             glob: '*a.txt',
             esQuery: { pathEndsWith: 'a.txt' },
-            pathRegex: '^[^/]*a\\.txt$',
+            regex: '^[^/]*a\\.txt$',
             matchingPaths: [
                 'a.txt',
                 '-a.txt',
@@ -111,7 +129,7 @@ t.test('_parseGlob', async (t) => {
         {
             glob: '/posts/*',
             esQuery: { pathStartsWith: '/posts/' },
-            pathRegex: '^/posts/[^/]*$',
+            regex: '^/posts/[^/]*$',
             matchingPaths: [
                 '/posts/hello',
                 '/posts/hello.txt',
@@ -125,7 +143,7 @@ t.test('_parseGlob', async (t) => {
             note: 'no regex needed',
             glob: '/posts/**',
             esQuery: { pathStartsWith: '/posts/' },
-            pathRegex: null,
+            regex: null,
             matchingPaths: [
                 '/posts/hello',
                 '/posts/hello.txt',
@@ -138,7 +156,7 @@ t.test('_parseGlob', async (t) => {
         {
             glob: '/posts/*.txt',
             esQuery: { pathStartsWith: '/posts/', pathEndsWith: '.txt' },
-            pathRegex: '^/posts/[^/]*\\.txt$',
+            regex: '^/posts/[^/]*\\.txt$',
             matchingPaths: [
                 '/posts/.txt',
                 '/posts/hello.txt',
@@ -153,7 +171,7 @@ t.test('_parseGlob', async (t) => {
         {
             glob: '/posts/**.txt',
             esQuery: { pathStartsWith: '/posts/', pathEndsWith: '.txt' },
-            pathRegex: '^/posts/.*\\.txt$',
+            regex: '^/posts/.*\\.txt$',
             matchingPaths: [
                 '/posts/.txt',
                 '/posts/hello.txt',
@@ -168,7 +186,7 @@ t.test('_parseGlob', async (t) => {
         {
             glob: '/aaa/**/*.txt',
             esQuery: { pathStartsWith: '/aaa/', pathEndsWith: '.txt' },
-            pathRegex: '^/aaa/.*/[^/]*\\.txt$',
+            regex: '^/aaa/.*/[^/]*\\.txt$',
             matchingPaths: [
                 '/aaa//.txt',
                 '/aaa/z/z.txt',
@@ -182,7 +200,7 @@ t.test('_parseGlob', async (t) => {
         {
             glob: '/aaaa*aaaa',
             esQuery: { pathStartsWith: '/aaaa', pathEndsWith: 'aaaa' },
-            pathRegex: '^/aaaa[^/]*aaaa$',
+            regex: '^/aaaa[^/]*aaaa$',
             matchingPaths: [
                 '/aaaaaaaa',
                 '/aaaa_aaaa',
@@ -196,7 +214,7 @@ t.test('_parseGlob', async (t) => {
         {
             glob: '**a**',
             esQuery: { },
-            pathRegex: '^.*a.*$',
+            regex: '^.*a.*$',
             matchingPaths: [
                 'a',
                 '/a',
@@ -209,9 +227,23 @@ t.test('_parseGlob', async (t) => {
             ],
         },
         {
+            glob: '**',
+            esQuery: { },
+            regex: null,  // no regex needed, we just want everything
+            matchingPaths: [
+                'a',
+                '/a',
+                'a----',
+                '-/---a-/--',
+                'aaaaaaaaaaaaaa',
+            ],
+            nonMatchingPaths: [
+            ],
+        },
+        {
             glob: '*a*',
             esQuery: { },
-            pathRegex: '^[^/]*a[^/]*$',
+            regex: '^[^/]*a[^/]*$',
             matchingPaths: [
                 'a',
                 'a----',
@@ -228,15 +260,15 @@ t.test('_parseGlob', async (t) => {
     ];
 
     for (let vector of vectors) {
-        let { glob, esQuery, pathRegex, matchingPaths, nonMatchingPaths } = vector;
+        let { glob, esQuery, regex, matchingPaths, nonMatchingPaths } = vector;
 
-        let result = _parseGlob(glob);
+        let result = _globToQueryAndRegex(glob);
 
         t.same(true, true, `--- ${vector.glob}   ${vector.note ?? ''} ---`);
         t.same(result.query, esQuery, 'query is as expected: ' + glob);
-        t.same(result.pathRegex, pathRegex, 'regex is as expected: ' + glob);
-        if (result.pathRegex != null) {
-            let resultRe = new RegExp(result.pathRegex);
+        t.same(result.regex, regex, 'regex is as expected: ' + glob);
+        if (result.regex != null) {
+            let resultRe = new RegExp(result.regex);
             for (let match of matchingPaths) {
                 t.true(resultRe.test(match), 'regex should match: ' + match);
             }
@@ -247,7 +279,7 @@ t.test('_parseGlob', async (t) => {
     }
 
     try {
-        _parseGlob('***');
+        _globToQueryAndRegex('***');
         t.true(false, 'three stars should have thrown but did not');
     } catch (err) {
         if (err instanceof ValidationError) {
@@ -262,7 +294,7 @@ t.test('_parseGlob', async (t) => {
 });
 
 //================================================================================
-// test queryByGlobSync and queryByGlobAsync
+// GLOB: USER-FACING API CALLS
 
 let docPathsForGlobTest = [
     '/aa',
@@ -422,7 +454,7 @@ t.test('queryByGlobAsync', async (t) => {
 //================================================================================
 // TEMPLATES
 
-t.test('_parseTemplate', (t: any) => {
+t.test('_parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
 
     type StringToString = Record<string, string>;
     interface ValidVector {
@@ -535,9 +567,23 @@ t.test('_parseTemplate', (t: any) => {
                 '': null,
             },
         },
+        {
+            template: '**/varsAndStars/*/{id}.json',
+            glob: '**/varsAndStars/*/*.json',
+            varNames: ['id'],
+            pathsAndExtractedVars: {
+                '/a/b/c/varsAndStars/something/id1.json': { id: 'id1' },
+                '/aaa/varsAndStars/something/id1.json': { id: 'id1' },
+                '/aaa/varsAndStars/something/id1.txt': null,
+                '/aaa/varsAndStars/two/parts/id1.json': null,
+                '/nope': null,
+                '': null,
+            },
+        },
         //--------------------------------------------------
         // invalid: should throw a Validation Error
         { invalid: true, template: '/same/var/repeated/twice/{a}/{a}' },
+        { invalid: true, template: '/var/touching/*{star}' },
         { invalid: true, template: '/two/consecutive/vars/{a}{b}/in/a/row' },
         { invalid: true, template: '/var/starting/with/number/{0abc}' },
         { invalid: true, template: '/var/with/no/name/{}' },
@@ -589,14 +635,14 @@ t.test('_parseTemplate', (t: any) => {
             // should be valid
 
             t.true(true, `---  ${vector.template}  ---`);
-            let { varNames, glob, pathMatcherRe } = _parseTemplate(vector.template);
+            let { varNames, glob, namedCaptureRegex } = _parseTemplate(vector.template);
             t.same(varNames, vector.varNames, 'varNames should match');
             if (vector.glob !== undefined) {
                 t.same(glob, vector.glob, 'glob should match');
             }
 
             for (let [path, expectedVars] of Object.entries(vector.pathsAndExtractedVars)) {
-                let actualVars = _extractTemplateValuesUsingRe(pathMatcherRe, path);
+                let actualVars = _extractTemplateValuesUsingRe(namedCaptureRegex, path);
                 t.same(actualVars, expectedVars, `${path} - extracted variables should match (_matchRegexAndPath)`);
                 t.same(extractTemplateVariablesFromPath(vector.template, path), expectedVars, `${path} - extracted variables should match (matchTemplateAndPath)`);
             }
@@ -605,6 +651,9 @@ t.test('_parseTemplate', (t: any) => {
 
     t.done();
 });
+
+//================================================================================
+// TEMPLATE: USER-FACING API CALLS
 
 let docPathsForTemplateTest = [
     '/aa',
