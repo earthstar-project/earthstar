@@ -424,7 +424,9 @@ export let extractTemplateVariablesFromPathUsingRegex = (namedCaptureRegex: stri
  * 
  * Variable names must only contain upper or lower case letters, numbers, or underscores.
  * They must not start with a number.
- * 
+ *
+ * Variable names can't be repeated; each must be unique.
+ *  
  * Template strings can also contain * and **; these are not counted as variables but do
  *  help determine if the overall path matches the template.  See the glob functions
  *  for details on how those wildcards work.
@@ -437,6 +439,30 @@ export let extractTemplateVariablesFromPath = (template: string, path: string): 
     // this also returns { varnames, glob } but we don't use them here
     let { namedCaptureRegex } = parseTemplate(template);
     return extractTemplateVariablesFromPathUsingRegex(namedCaptureRegex, path);
+}
+
+/*
+ * Replace some template variables with their actual values.
+ *
+ * You can have extra variables that are not used in the template (they are ignored)
+ * and you can omit some of the variables in the template (they will remain
+ * as {bracketed} variables in the output).
+ *
+ * Note that variables should not be repeated in the template string; doing so will
+ * result in the second copy being not replaced (and will also break the other
+ * template query functions).
+ * 
+ * You can also insert '*' as a value into a template, if you need to for some reason.
+ *  
+ * let vars = { category: 'gardening', okToHaveExtra: 'notUsedVariables' },
+ * let template = '/posts/{category}/{postId}.json';
+ * insertVariablesIntoTemplate(vars, template) === '/posts/gardening/{postId}.json'
+ */
+export let insertVariablesIntoTemplate = (vars: Record<string, string>, template: string): string => {
+    for (let [varName, value] of Object.entries(vars)) {
+        template = template.replace('{' + varName + '}', value);
+    }
+    return template;
 }
 
 //================================================================================

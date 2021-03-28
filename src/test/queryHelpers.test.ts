@@ -15,16 +15,17 @@ import { StorageToAsync } from '../storage/storageToAsync';
 import { generateAuthorKeypair } from '../crypto/crypto';
 
 import {
-    extractTemplateVariablesFromPathUsingRegex,
-    globToQueryAndRegex,
-    parseTemplate,
+    _matchAll,
     escapeStringForRegex,
     extractTemplateVariablesFromPath,
+    extractTemplateVariablesFromPathUsingRegex,
+    globToQueryAndRegex,
+    insertVariablesIntoTemplate,
+    parseTemplate,
     queryByGlobAsync,
     queryByGlobSync,
     queryByTemplateAsync,
     queryByTemplateSync,
-    _matchAll,
 } from '../storage/queryHelpers';
 
 //================================================================================
@@ -647,6 +648,31 @@ t.test('parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
                 t.same(extractTemplateVariablesFromPath(vector.template, path), expectedVars, `${path} - extracted variables should match (matchTemplateAndPath)`);
             }
         }
+    }
+
+    t.done();
+});
+
+t.test('insertVariablesIntoTemplate', (t: any) => {
+    interface Vector {
+        vars: Record<string, string>,
+        template: string,
+        expected: string,
+    }
+    let vectors: Vector[] = [
+        { vars: {}, template: '', expected: '' },
+        { vars: {}, template: '{unmatched}', expected: '{unmatched}' },
+        { vars: { extra: 'ok' }, template: '', expected: '' },
+        { vars: { extra: 'ok' }, template: '{unmatched}', expected: '{unmatched}' },
+        { vars: { category: 'gardening', postId: 'abc' }, template: '/posts/{category}/{postId}.json', expected: '/posts/gardening/abc.json' },
+        { vars: { postId: 'abc' }, template: '/posts/{category}/{postId}.json', expected: '/posts/{category}/abc.json' },
+        { vars: { category: 'gardening' }, template: '/posts/{category}/{postId}.json', expected: '/posts/gardening/{postId}.json' },
+        { vars: { category: 'gardening', postId: '*' }, template: '/posts/{category}/{postId}.json', expected: '/posts/gardening/*.json' },
+    ]
+
+    for (let { vars, template, expected } of vectors) {
+        let actual = insertVariablesIntoTemplate(vars, template);
+        t.same(actual, expected, `${JSON.stringify(vars)}, ${JSON.stringify(template)}`);
     }
 
     t.done();
