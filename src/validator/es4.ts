@@ -349,14 +349,14 @@ export const ValidatorEs4 : IValidatorES4 = class {
             // 53 chars including the leading 'b' == 52 chars of actual base32 data
             return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must be 53 characters long`);
         }
+        if (digits.indexOf(pubkey[0]) !== -1) {
+            return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not start with a number`);
+        }
         if (pubkey[0] !== 'b') {
             return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must start with 'b'`);
         }
         if (digits.indexOf(shortname[0]) !== -1) {
             return new ValidationError(`author shortname ${JSON.stringify(shortname)} must not start with a number`);
-        }
-        if (digits.indexOf(pubkey[0]) !== -1) {
-            return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not start with a number`);
         }
         if (!onlyHasChars(shortname, authorShortnameChars)) {
             return new ValidationError(`author shortname ${JSON.stringify(shortname)} must not use disallowed characters`);
@@ -364,6 +364,7 @@ export const ValidatorEs4 : IValidatorES4 = class {
         if (!onlyHasChars(pubkey, b32chars)) {
             return new ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not use disallowed characters`);
         }
+        // TODO: try decoding the base32 to see if it's decodable?
         return {
             address: addr,
             shortname: shortname,
