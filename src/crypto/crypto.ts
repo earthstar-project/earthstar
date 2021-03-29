@@ -69,9 +69,9 @@ export let generateAuthorKeypair = (shortname: string): AuthorKeypair | Validati
 
 /** Sign a message using an Earthstar keypair.  Return a signature encoded in base32. */
 export let sign = (keypair: AuthorKeypair, msg: string | Buffer): EncodedSig | ValidationError => {
-    let keypairBuffers = decodeAuthorKeypair(keypair);
-    if (isErr(keypairBuffers)) { return keypairBuffers; }
     try {
+        let keypairBuffers = decodeAuthorKeypair(keypair);
+        if (isErr(keypairBuffers)) { return keypairBuffers; }
         return LowLevelCrypto.sign(keypairBuffers, msg);
     } catch (err) {
         return new ValidationError('crash while signing: ' + err.message);
