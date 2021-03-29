@@ -73,9 +73,9 @@ export let encodeAuthorKeypair = (shortname: AuthorShortname, pair: KeypairBuffe
 
 /** Convert an AuthorKeypair back into a raw KeypairBuffers for use in crypto operations. */
 export let decodeAuthorKeypair = (pair: AuthorKeypair): KeypairBuffers | ValidationError => {
-    let authorParsed = ValidatorEs4.parseAuthorAddress(pair.address);
-    if (isErr(authorParsed)) { return authorParsed; }
     try {
+        let authorParsed = ValidatorEs4.parseAuthorAddress(pair.address);
+        if (isErr(authorParsed)) { return authorParsed; }
         return {
             pubkey: decodePubkey(authorParsed.pubkey),
             secret: decodeSecret(pair.secret),
