@@ -324,6 +324,10 @@ export const ValidatorEs4 : IValidatorES4 = class {
         // Can return a ValidationError if the address is not valid.
 
         // example: @suzy.b2hd23dh....
+
+        if (typeof addr !== 'string') {
+            return new ValidationError(`author address ${JSON.stringify(addr)} must be a string!`);
+        }
         if (!isOnlyPrintableAscii(addr)) {
             return new ValidationError(`author address ${JSON.stringify(addr)} must not have nonprintable or non-ASCII characters`);
         }
