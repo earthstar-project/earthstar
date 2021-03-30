@@ -76,10 +76,17 @@ export let decodeAuthorKeypair = (pair: AuthorKeypair): KeypairBuffers | Validat
     try {
         let authorParsed = ValidatorEs4.parseAuthorAddress(pair.address);
         if (isErr(authorParsed)) { return authorParsed; }
-        return {
+        let buffers = {
             pubkey: decodePubkey(authorParsed.pubkey),
             secret: decodeSecret(pair.secret),
         };
+        if (buffers.pubkey.length !== 32) {
+            return new ValidationError(`pubkey buffer should be 32 bytes long, not ${buffers.pubkey.length} after base32 decoding.  ${pair.address}`);
+        }
+        if (buffers.secret.length !== 32) {
+            return new ValidationError(`secret buffer should be 32 bytes long, not ${buffers.secret.length} after base32 decoding.  ${pair.secret}`);
+        }
+        return buffers;
     } catch (err) {
         return new ValidationError('crash while decoding author keypair: ' + err.message);
     }

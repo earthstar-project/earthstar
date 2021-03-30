@@ -4,14 +4,14 @@ import t = require('tap');
 import {
     AuthorKeypair,
     isErr,
+    ValidationError,
 } from '../util/types';
 import {
-    LowLevelCrypto,
+    checkAuthorKeypairIsValid,
     generateAuthorKeypair,
     sha256base32,
     sign,
     verify,
-    checkAuthorKeypairIsValid,
 } from '../crypto/crypto';
 import {
     decodeAuthorKeypair,
@@ -46,6 +46,7 @@ t.test('base32 encoding', (t: any) => {
     t.ok(b32.startsWith('b'), 'base32 startswith b');
 
     t.same(decodeBase32ToBuffer('b'), Buffer.from([]), 'base32 can decode just the string "b" to an empty buffer');
+    t.same(decodeBase32ToBuffer('baa'), Buffer.from([0]), 'base32 can decode the string "baa" to Buffer([0])');
 
     t.throws(() => decodeBase32ToBuffer(''), 'decoding base32 throws an exception if string is empty');
     t.throws(() => decodeBase32ToBuffer('abc'), 'decoding base32 throws an exception when it does not start with "b"');
@@ -56,6 +57,8 @@ t.test('base32 encoding', (t: any) => {
     t.throws(() => decodeBase32ToBuffer('babcxyz '), 'decoding base32 throws when encountering invalid base32 character');
     t.throws(() => decodeBase32ToBuffer('babcxyz\n'), 'decoding base32 throws when encountering invalid base32 character');
     t.throws(() => decodeBase32ToBuffer('BABC'), 'decoding base32 throws when encountering a different multibase encoding');
+    t.throws(() => decodeBase32ToBuffer('b???'), 'decoding base32 throws on "b???"');
+    t.throws(() => decodeBase32ToBuffer('b11'), 'decoding base32 throws on "b11"');
 
     // make sure we have a multibase version that fixed this bug:
     // https://github.com/multiformats/js-multibase/issues/17
@@ -279,5 +282,79 @@ t.test('signatures', (t: any) => {
     t.ok(verify(keypair.address, snowmanStringSig, snowmanJsString), 'signature roundtrip works on snowman utf-8 string');
     t.ok(verify(keypair.address, snowmanBufferSig, snowmanBufferUtf8), 'signature roundtrip works on snowman buffer');
 
+    t.end();
+});
+
+t.test('decodeAuthorKeypair checks buffer length', (t: any) => {
+    interface Vector {
+        valid: Boolean,
+        keypair: AuthorKeypair,
+    }
+    let vectors: Vector[] = [
+        {
+            valid: true,
+            keypair: {
+                address: '@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a',
+                secret: 'bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a'
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a',
+                secret: 'b'  // valid base32 but wrong length
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a',
+                secret: 'b???'  // invalid base32
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a',
+                secret: 'baa'  // valid base32 but wrong length
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.b',  // valid base32 but wrong length
+                secret: 'bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a'
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.b???',  // invalid base32
+                secret: 'bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a'
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.baa',  // valid base32 but wrong length
+                secret: 'bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a'
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a', // no b
+                secret: 'bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a'
+            },
+        }, {
+            valid: false,
+            keypair: {
+                address: '@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a',
+                secret: 'wgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a'  // no b
+            },
+        },
+    ];
+
+    for (let { valid, keypair } of vectors) {
+        let buffersOrErr = decodeAuthorKeypair(keypair);
+        if (valid) {
+            t.same(buffersOrErr instanceof ValidationError, false, 'should not be an error: ' + JSON.stringify(keypair));
+        } else {
+            t.same(buffersOrErr instanceof ValidationError, true, 'should be an error: ' + JSON.stringify(keypair));
+        }
+    }
     t.end();
 });
