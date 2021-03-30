@@ -44,11 +44,11 @@ let generateAuthorKeypair = (shortname) => {
 exports.generateAuthorKeypair = generateAuthorKeypair;
 /** Sign a message using an Earthstar keypair.  Return a signature encoded in base32. */
 let sign = (keypair, msg) => {
-    let keypairBuffers = encoding_1.decodeAuthorKeypair(keypair);
-    if (types_1.isErr(keypairBuffers)) {
-        return keypairBuffers;
-    }
     try {
+        let keypairBuffers = encoding_1.decodeAuthorKeypair(keypair);
+        if (types_1.isErr(keypairBuffers)) {
+            return keypairBuffers;
+        }
         return cryptoChloride_1.CryptoChloride.sign(keypairBuffers, msg);
     }
     catch (err) {
@@ -241,15 +241,22 @@ let encodeAuthorKeypair = (shortname, pair) => ({
 exports.encodeAuthorKeypair = encodeAuthorKeypair;
 /** Convert an AuthorKeypair back into a raw KeypairBuffers for use in crypto operations. */
 let decodeAuthorKeypair = (pair) => {
-    let authorParsed = es4_1.ValidatorEs4.parseAuthorAddress(pair.address);
-    if (types_1.isErr(authorParsed)) {
-        return authorParsed;
-    }
     try {
-        return {
+        let authorParsed = es4_1.ValidatorEs4.parseAuthorAddress(pair.address);
+        if (types_1.isErr(authorParsed)) {
+            return authorParsed;
+        }
+        let buffers = {
             pubkey: exports.decodePubkey(authorParsed.pubkey),
             secret: exports.decodeSecret(pair.secret),
         };
+        if (buffers.pubkey.length !== 32) {
+            return new types_1.ValidationError(`pubkey buffer should be 32 bytes long, not ${buffers.pubkey.length} after base32 decoding.  ${pair.address}`);
+        }
+        if (buffers.secret.length !== 32) {
+            return new types_1.ValidationError(`secret buffer should be 32 bytes long, not ${buffers.secret.length} after base32 decoding.  ${pair.secret}`);
+        }
+        return buffers;
     }
     catch (err) {
         return new types_1.ValidationError('crash while decoding author keypair: ' + err.message);
@@ -938,6 +945,8 @@ exports.extractTemplateVariablesFromPath = extractTemplateVariablesFromPath;
  * Note that variables should not be repeated in the template string; doing so will
  * result in the second copy being not replaced (and will also break the other
  * template query functions).
+ *
+ * You can also insert '*' as a value into a template, if you need to for some reason.
  *
  * let vars = { category: 'gardening', okToHaveExtra: 'notUsedVariables' },
  * let template = '/posts/{category}/{postId}.json';
@@ -3765,6 +3774,9 @@ exports.ValidatorEs4 = (_a = class {
             // Break apart the address into its parts.
             // Can return a ValidationError if the address is not valid.
             // example: @suzy.b2hd23dh....
+            if (typeof addr !== 'string') {
+                return new types_1.ValidationError(`author address ${JSON.stringify(addr)} must be a string!`);
+            }
             if (!characters_1.isOnlyPrintableAscii(addr)) {
                 return new types_1.ValidationError(`author address ${JSON.stringify(addr)} must not have nonprintable or non-ASCII characters`);
             }
@@ -3786,14 +3798,14 @@ exports.ValidatorEs4 = (_a = class {
                 // 53 chars including the leading 'b' == 52 chars of actual base32 data
                 return new types_1.ValidationError(`author pubkey ${JSON.stringify(pubkey)} must be 53 characters long`);
             }
+            if (characters_1.digits.indexOf(pubkey[0]) !== -1) {
+                return new types_1.ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not start with a number`);
+            }
             if (pubkey[0] !== 'b') {
                 return new types_1.ValidationError(`author pubkey ${JSON.stringify(pubkey)} must start with 'b'`);
             }
             if (characters_1.digits.indexOf(shortname[0]) !== -1) {
                 return new types_1.ValidationError(`author shortname ${JSON.stringify(shortname)} must not start with a number`);
-            }
-            if (characters_1.digits.indexOf(pubkey[0]) !== -1) {
-                return new types_1.ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not start with a number`);
             }
             if (!characters_1.onlyHasChars(shortname, characters_1.authorShortnameChars)) {
                 return new types_1.ValidationError(`author shortname ${JSON.stringify(shortname)} must not use disallowed characters`);
@@ -3801,6 +3813,7 @@ exports.ValidatorEs4 = (_a = class {
             if (!characters_1.onlyHasChars(pubkey, characters_1.b32chars)) {
                 return new types_1.ValidationError(`author pubkey ${JSON.stringify(pubkey)} must not use disallowed characters`);
             }
+            // TODO: try decoding the base32 to see if it's decodable?
             return {
                 address: addr,
                 shortname: shortname,
@@ -21926,7 +21939,7 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     o[k2] = m[k];
 }));
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
-    for (var p in m) if (p !== "default" && !exports.hasOwnProperty(p)) __createBinding(exports, m, p);
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./chan"), exports);
@@ -21978,28 +21991,28 @@ const conveyor_1 = require("./conveyor");
 class Mutex {
     constructor() {
         // A conveyor full of functions.  At the end of the conveyor, this handler just runs the functions.
-        this.conveyor = new conveyor_1.Conveyor(async (userFn) => {
+        this._conveyor = new conveyor_1.Conveyor(async (userFn) => {
             return await userFn();
         });
     }
     async run(userFn) {
         // this will resolve when the userFn has finished running
-        return await this.conveyor.push(userFn);
+        return await this._conveyor.push(userFn);
     }
 }
 exports.Mutex = Mutex;
 class PriorityMutex {
     constructor() {
         // A conveyor full of functions.  At the end of the conveyor, this handler just runs the functions.
-        this.conveyor = new conveyor_1.Conveyor(async (x) => {
-            let [n, userFn] = x;
+        let sortFn = ([priority, userFn]) => priority;
+        this._conveyor = new conveyor_1.Conveyor(async ([priority, userFn]) => {
             return await userFn();
-        }, x => x[0]);
+        }, sortFn);
     }
     async run(priority, userFn) {
         // lower priority goes first
         // this will resolve when the userFn has finished running
-        return await this.conveyor.push([priority, userFn]);
+        return await this._conveyor.push([priority, userFn]);
     }
 }
 exports.PriorityMutex = PriorityMutex;
