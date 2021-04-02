@@ -67,7 +67,7 @@ t.test('escapeStringForRegex', (t: any) => {
         t.same(reg.test(input), true, `RegExp(${actualOutput}).test(${input}) is true`);
     }
 
-    t.done();
+    t.end();
 });
 
 t.test('_matchAll', (t: any) => {
@@ -78,7 +78,7 @@ t.test('_matchAll', (t: any) => {
 
     t.throws(() => _matchAll(new RegExp(/\d/), '123'), 'should throw without "g" flag');
 
-    t.done();
+    t.end();
 });
 
 //================================================================================
@@ -291,7 +291,7 @@ t.test('globToQueryAndRegex', async (t) => {
         }
     }
 
-    t.done();
+    t.end();
 });
 
 //================================================================================
@@ -422,7 +422,7 @@ t.test('queryByGlobSync', (t: any) => {
     }
 
     storage.close();
-    t.done();
+    t.end();
 });
 
 t.test('queryByGlobAsync', async (t) => {
@@ -449,7 +449,7 @@ t.test('queryByGlobAsync', async (t) => {
     }
 
     await storage.close();
-    t.done();
+    t.end();
 });
 
 //================================================================================
@@ -650,7 +650,7 @@ t.test('parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
         }
     }
 
-    t.done();
+    t.end();
 });
 
 t.test('insertVariablesIntoTemplate', (t: any) => {
@@ -675,7 +675,7 @@ t.test('insertVariablesIntoTemplate', (t: any) => {
         t.same(actual, expected, `${JSON.stringify(vars)}, ${JSON.stringify(template)}`);
     }
 
-    t.done();
+    t.end();
 });
 
 //================================================================================
@@ -774,7 +774,7 @@ t.test('queryByTemplateSync', (t: any) => {
     }
 
     storage.close();
-    t.done();
+    t.end();
 });
 
 
@@ -799,5 +799,5 @@ t.test('queryByTemplateAsyncSync', async (t) => {
     }
 
     storage.close();
-    t.done();
+    t.end();
 });

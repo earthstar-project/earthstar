@@ -34,7 +34,7 @@ t.test('isPlainObject', (t: any) => {
     t.notOk(isPlainObject(undefined), 'undefined');
     t.notOk(isPlainObject('hello'), 'string');
 
-    t.done();
+    t.end();
 });
 
 t.test('range', (t: any) => {
@@ -42,7 +42,7 @@ t.test('range', (t: any) => {
     t.same(range(1), [0]);
     t.same(range(2), [0, 1]);
     t.same(range(3), [0, 1, 2]);
-    t.done();
+    t.end();
 });
 
 t.test('stringMult', (t: any) => {
@@ -50,7 +50,7 @@ t.test('stringMult', (t: any) => {
     t.same(stringMult('abc', 2), 'abcabc');
     t.same(stringMult('f', 0), '');
     t.same(stringMult('- ', 3), '- - - ');
-    t.done();
+    t.end();
 });
 
 t.test('uniq', (t: any) => {
@@ -59,7 +59,7 @@ t.test('uniq', (t: any) => {
     t.same(uniq(words), uniqued);
     t.same(uniq([]), []);
     t.same(uniq(['a']), ['a']);
-    t.done();
+    t.end();
 });
 
 t.test('sorted', (t: any) => {
@@ -68,7 +68,7 @@ t.test('sorted', (t: any) => {
     let result = sorted(words);
     t.same(result, correctlySorted);
     t.same(words[0], 'apple', 'original was modified');
-    t.done();
+    t.end();
 });
 
 t.test('objWithoutUndefined', (t: any) => {
@@ -82,7 +82,7 @@ t.test('objWithoutUndefined', (t: any) => {
         let result = objWithoutUndefined(inpt);
         t.same(result, goal);
     }
-    t.done();
+    t.end();
 });
 
 t.test('replaceAll', (t: any) => {
@@ -99,7 +99,7 @@ t.test('replaceAll', (t: any) => {
         let result = replaceAll(str, from, to);
         t.same(result, goal);
     }
-    t.done();
+    t.end();
 });
 
 t.test('countChars', (t: any) => {
@@ -119,5 +119,5 @@ t.test('countChars', (t: any) => {
             t.same(result, goal);
         }
     }
-    t.done();
+    t.end();
 });
