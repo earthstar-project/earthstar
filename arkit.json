@@ -1,0 +1,109 @@
+{
+  "excludePatterns": [
+    "**/types.ts",
+    "index*",
+    "../index*",
+    "*.d.ts",
+    "../*.d.ts",
+    "test/*.ts",
+    "**/*.test.ts",
+    "temp/*.ts",
+    "../test",
+    "../tests",
+    "../dist",
+    "../coverage",
+    "../**/*.test.*",
+    "../**/*.spec.*",
+    "../**/*.min.*"
+  ],
+  "components": [
+    {
+      "type": "Crypto",
+      "format": "full",
+      "patterns": [
+        "crypto/*.ts"
+      ]
+    },
+    {
+      "type": "Storage",
+      "format": "full",
+      "patterns": [
+        "storage/*.ts"
+      ]
+    },
+    {
+      "type": "Sync",
+      "format": "full",
+      "patterns": [
+        "sync/*.ts"
+      ]
+    },
+    {
+      "type": "Util",
+      "format": "full",
+      "patterns": [
+        "util/*.ts"
+      ]
+    },
+    {
+      "type": "Validator",
+      "format": "full",
+      "patterns": [
+        "validator/*.ts"
+      ]
+    },
+    {
+      "type": "Main",
+      "format": "full",
+      "patterns": [
+        "*.ts"
+      ]
+    }
+  ],
+  "output": [
+    {
+      "path": [
+        "../depgraph.svg"
+      ],
+      "direction": "vertical",
+      "groups": [
+        {
+          "first": true,
+          "components": [
+            "Main"
+          ]
+        },
+        {
+          "type": "Crypto",
+          "components": [
+            "Crypto"
+          ]
+        },
+        {
+          "type": "Storage",
+          "components": [
+            "Storage"
+          ]
+        },
+        {
+          "type": "Sync",
+          "components": [
+            "Sync"
+          ]
+        },
+        {
+          "type": "Util",
+          "components": [
+            "Util"
+          ]
+        },
+        {
+          "type": "Validator",
+          "components": [
+            "Validator"
+          ]
+        }
+      ]
+    }
+  ]
+}

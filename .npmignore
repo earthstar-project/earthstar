@@ -10,3 +10,4 @@ tsconfig.json
 *.sh
 typedoc/
 .vscode/
+depgraph.svg

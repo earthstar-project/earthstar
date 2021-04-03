@@ -542,4 +542,12 @@ You'll be able to put the literal string "`(hash)`" in a path.  It will be repla
 
 ---
 
-#### Hosting & deployment of our demo apps: [Netlify](https://www.netlify.com/)
+## Dependency graph
+
+Showing the folders and files in `src/`.
+
+`npm run depgraph` will rebuild this diagram.
+
+I've excluded `util/types.ts` because everything imports it.  I've also excluded `src/index.ts` because it imports everything.
+
+!['dependency graph'](depgraph.svg)
