@@ -2,12 +2,7 @@
   "excludePatterns": [
     "**/types.ts",
     "index*",
-    "../index*",
     "*.d.ts",
-    "../*.d.ts",
-    "test/*.ts",
-    "**/*.test.ts",
-    "temp/*.ts",
     "../test",
     "../tests",
     "../dist",

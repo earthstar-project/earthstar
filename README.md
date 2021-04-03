@@ -550,4 +550,6 @@ Showing the folders and files in `src/`.
 
 I've excluded `util/types.ts` because everything imports it.  I've also excluded `src/index.ts` because it imports everything.
 
+TODO: this is missing files that are imported directly by `index.ts` but not by anything else, such as `storageLocalStorage.ts`.
+
 !['dependency graph'](depgraph.svg)
