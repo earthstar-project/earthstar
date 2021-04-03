@@ -540,16 +540,3 @@ You'll be able to put the literal string "`(hash)`" in a path.  It will be repla
 * Or overlay two Storage instances
 * For example you could combine `/wiki/~@a.xxxx` and `/wiki/~@b.xxxx` into one namespace
 
----
-
-## Dependency graph
-
-Showing the folders and files in `src/`.
-
-`npm run depgraph` will rebuild this diagram.
-
-I've excluded `util/types.ts` because everything imports it.  I've also excluded `src/index.ts` because it imports everything.
-
-TODO: this is missing files that are imported directly by `index.ts` but not by anything else, such as `storageLocalStorage.ts`.
-
-!['dependency graph'](depgraph.svg)
