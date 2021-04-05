@@ -17,6 +17,7 @@ let now = () =>
 
 type Thunk = () => void;
 type Callback<T> = (data: T) => void;
+type AsyncCallback<T> = (data: T) => Promise<void>;
 
 type AuthorAddress = string;
 type Path = string;
@@ -98,10 +99,34 @@ interface WriteEvent {
 }
 
 interface Follower {
-    cb: Callback<Doc>;
-    nextIndex?: LocalIndex; // this should start at zero
-    kind: 'sync' | 'async blocking' | 'async non-blocking',
+    cb: Callback<Doc> | AsyncCallback<Doc>;
+    nextIndex: LocalIndex; // this should start at zero
+    kind: 'sync' | 'async';
+    state?: 'running' | 'sleeping' | 'quitting',
 }
+let wakeFollower = (follower: Follower, bowl: Bowl) => {
+    if (follower.state !== 'sleeping') { throw new Error('to start, follower should have been already sleeping'); }
+    follower.state = 'running';
+    setImmediate(() => continueFollower(follower, bowl));
+}
+let continueFollower = async (follower: Follower, bowl: Bowl) => {
+    if (follower.state === 'quitting') { return; }
+    if (follower.state === 'sleeping') { throw new Error('to continue, follower should have been already running'); }
+    if (follower.nextIndex > bowl.highestLocalIndex) {
+        // if we run out of docs to process, go to sleep and stop the thread.
+        follower.state = 'sleeping';
+        return;
+    } else {
+        // grab up to 30 docs and process them
+        let docs = bowl.getDocsSinceLocalIndex(follower.nextIndex, 30);
+        for (let doc of docs) {
+            await follower.cb(doc);
+        }
+        // and schedule ourselves to run again in 4ms
+        setImmediate(() => continueFollower(follower, bowl));
+    }
+}
+
 
 //================================================================================ 
 // QUERY
@@ -189,17 +214,27 @@ class Bowl {
     }
 
     addFollower(follower: Follower): Thunk {
-        if (follower.nextIndex === undefined) { follower.nextIndex = 0; }
+        follower.state = 'sleeping';
         this.followers.add(follower);
 
-        // catch up now, synchronously
-        // TODO: handle async followers here
-        for (let doc of this.getDocsSinceLocalIndex(follower.nextIndex)) {
-            follower.cb(doc);
+        if (follower.kind === 'sync') {
+            // catch up now, synchronously
+            follower.state = 'running';
+            for (let doc of this.getDocsSinceLocalIndex(follower.nextIndex)) {
+                follower.cb(doc);
+            }
+            follower.state = 'sleeping';
+        } else {
+            // async followers get started here and will proceed at their own pace
+            wakeFollower(follower, this);
         }
 
         // return an unsubscribe function
-        return () => this.followers.delete(follower);
+        // TODO: this should stop the thread too
+        return () => {
+            follower.state = 'sleeping';
+            this.followers.delete(follower);
+        }
     }
 
     getDocsSinceLocalIndex(startAt: LocalIndex, limit?: number): Doc[] {
@@ -381,10 +416,18 @@ class Bowl {
 
         // update followers
         for (let follower of this.followers) {
-            follower.nextIndex = this.highestLocalIndex + 1;
-            // TODO: can we give the follower richer information like isLatest?
-            // it will be hard to get during the initial catch-up phase.
-            follower.cb(doc);
+            if (follower.kind === 'sync') {
+                // sync followers run right now
+                follower.nextIndex = this.highestLocalIndex + 1;
+                follower.cb(doc);
+            } else {
+                // wake up async followers that are sleeping.
+                // they will continue at their own pace until they run out of docs to process,
+                // then go to sleep again.
+                if (follower.state === 'sleeping') {
+                    wakeFollower(follower, this);
+                }
+            }
         }
 
         return upsertResult;
