@@ -22,11 +22,11 @@ export let remap = (x: number, oldLo: number, oldHi: number, newLo: number, newH
 export let randRange = (lo: number, hi: number): number =>
     remap(Math.random(), 0, 1, lo, hi);
 
-export let uuid = () =>
+export let fakeUuid = () =>
     ('' + randRange(0, 999999999999999)).padStart(15, '0');
 
-export let hash = (s: string) => {
-    return 'fakehash' + uuid();
+export let fakeHash = (s: string) => {
+    return 'fakehash' + fakeUuid();
 }
 
 //================================================================================
