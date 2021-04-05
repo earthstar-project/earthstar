@@ -8,11 +8,10 @@ export let deepCopy = clone();
 
 export let log = console.log;
 
-export let sleep = (ms: number) => {
-    return new Promise((res, rej) => {
+export let sleep = (ms: number) =>
+    new Promise((res, rej) => {
         setTimeout(res, ms);
     });
-}
 
 export let remap = (x: number, oldLo: number, oldHi: number, newLo: number, newHi: number ): number => {
     let pct = (x - oldLo) / (oldHi - oldLo);
@@ -25,9 +24,8 @@ export let randRange = (lo: number, hi: number): number =>
 export let fakeUuid = () =>
     ('' + randRange(0, 999999999999999)).padStart(15, '0');
 
-export let fakeHash = (s: string) => {
-    return 'fakehash' + fakeUuid();
-}
+export let fakeHash = (s: string) =>
+    'fakehash' + fakeUuid();
 
 //================================================================================
 
@@ -37,11 +35,12 @@ export enum Cmp {
     EQ = 0,
     GT = 1,
 }
-export type CmpResult = '<' | '===' | '>';
+
 export let compare = (a: any, b: any): Cmp => {
     if (a === b) { return Cmp.EQ; }
     return (a < b) ? Cmp.LT : Cmp.GT;
 }
+
 export let arrayCompare = (a: any[], b: any[]): Cmp => {
     let minLen = Math.min(a.length, b.length);
     for (let ii = 0; ii < minLen; ii++) {
@@ -50,12 +49,15 @@ export let arrayCompare = (a: any[], b: any[]): Cmp => {
     }
     return compare(a.length, b.length);
 }
+
 export let keyComparer = (key: string) =>
     (a: Record<string, any>, b: Record<string, any>): Cmp =>
         compare(a[key], b[key]);
+
 export let fnComparer = (fn: (x: any) => any) =>
     (a: Record<string, any>, b: Record<string, any>): Cmp =>
         compare(fn(a), fn(b));
+
 export let arrayComparer = (fn: (x: any) => any[]) =>
     (a: Record<string, any>, b: Record<string, any>): Cmp =>
         arrayCompare(fn(a), fn(b));

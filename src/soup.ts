@@ -1,79 +1,32 @@
 import {
+    AuthorAddress,
+    AuthorKeypair,
+    Callback,
+    DEFAULT_QUERY,
+    Doc,
+    DocToWrite,
+    Follower,
+    LocalIndex,
+    Path,
+    Query,
+    QueryFilter,
+    Thunk,
+    UpsertResult,
+    WriteEvent,
+} from './types';
+import {
     Cmp,
     arrayCompare,
-    fakeUuid,
-    fakeHash,
-    keyComparer,
     deepEqual,
+    fakeHash,
+    fakeUuid,
+    keyComparer,
 } from './utils';
 
 //================================================================================ 
 
 let now = () =>
     Date.now() * 1000;
-
-//================================================================================ 
-// BASIC TYPES
-
-type Thunk = () => void;
-type Callback<T> = (data: T) => void;
-type AsyncCallback<T> = (data: T) => Promise<void>;
-
-type AuthorAddress = string;
-type Path = string;
-type Signature = string;
-type Timestamp = number;
-type LocalIndex = number;
-
-interface AuthorKeypair {
-    address: AuthorAddress,
-    secret: string,
-}
-
-//================================================================================ 
-// DOCUMENTS
-
-interface Doc {
-    // TODO: format
-    path: Path,
-    timestamp: Timestamp,
-    author: AuthorAddress,
-    content: string,
-    contentHash: string,
-    contentLength: number,
-    signature: Signature,
-
-    // Local Index:
-    // Our docs form a linear sequence with gaps.
-    // When a doc is updated (same author, same path, new content), it moves to the
-    // end of the sequence and gets a new, higher localIndex.
-    // This sequence is specific to this local storage, affected by the order it received
-    // documents.
-    //
-    // It's useful during syncing so that other peers can say "give me everything that's
-    // changed since your localIndex 23".
-    //
-    // This is sent over the wire as part of a Doc so the receiver knows what to ask for next time,
-    // but it's then moved into a separate data structure like:
-    //    knownPeerHighestLocalIndexes:
-    //        peer111: 77
-    //        peer222: 140
-    // ...which helps us continue syncing with that specific peer next time.
-    //
-    // When we upsert the doc into our own storage, we discard the other peer's value
-    // and replace it with our own localIndex.
-    //
-    // The localIndex is not included in the doc's signature.
-    _localIndex?: LocalIndex,
-}
-
-// A partial doc that is about to get written.
-// The rest of the properties will be filled in by Bowl.write().
-interface DocToWrite {
-    path: Path,
-    author: AuthorAddress,
-    content: string,
-}
 
 //================================================================================ 
 // DOCUMENT SORTING AND VALIDATION
@@ -112,59 +65,6 @@ let docIsValid = (doc: Doc): boolean =>
 
 //================================================================================ 
 // EVENTS AND FOLLOWERS
-
-enum UpsertResult {
-    // doc was not saved: negative numbers
-    Obsolete = -3,
-    AlreadyHadIt = -2,
-    Invalid = -1,
-
-    // doc was saved: positive numbers
-    AcceptedButNotLatest = 1,
-    AcceptedAndLatest = 2,
-}
-
-interface WriteEvent {
-    // This is only sent on a successful write.
-    doc: Doc,
-
-    // Is this doc the latest one at its path (for any author)?
-    isLatest: boolean,
-
-    // Prev doc from the same author at this path, if there was one.
-    // This may be present no matter the value of isLatest.
-    previousDocSameAuthor: Doc | undefined;
-
-    // If this doc isLatest, what was the previous latest doc until just now?
-    // It can be from the same author or a different one.
-    previousLatestDoc: Doc | undefined;
-}
-
-interface Follower {
-    // A Follower is a callback that progresses along the LocalIndex of documents
-
-    cb: Callback<Doc> | AsyncCallback<Doc>;
-
-    // The next doc to process.  This should start at zero.
-    nextIndex: LocalIndex;
-
-    // Sync followers are synchronous functions.
-    // - they block addFollower until they are all caught up.
-    // - they block upsert until they have run. 
-    //
-    // Async followers are async functions.
-    // - addFollower does not block
-    // - they move along lazily at their own pace along the LocalIndex
-    //    until they hit the end, then they go to sleep
-    // - they wake up when new docs are upserted
-    // - upsert does not wait for these followers to finish
-    // - TODO: need another callback or special event so an async follower
-    //    can know when it's caught up
-    kind: 'sync' | 'async';
-
-    // state, mostly used for async followers
-    state?: 'running' | 'sleeping' | 'quitting',
-}
 
 let wakeAsyncFollower = (follower: Follower, bowl: Bowl) => {
     // This function is called by Bowl.upsert on async followers that are sleeping,
@@ -207,57 +107,6 @@ let continueAsyncFollower = async (follower: Follower, bowl: Bowl) => {
 
 //================================================================================ 
 // QUERY
-
-// ways to filter an individual document with no other context
-interface QueryFilter {
-    path?: Path,
-    pathStartsWith?: string,
-    pathEndsWith?: string,
-    author?: AuthorAddress,
-    timestamp?: Timestamp,
-    timestampGt?: Timestamp,
-    timestampLt?: Timestamp,
-    contentLength?: number,
-    contentLengthGt?: number,
-    contentLengthLt?: number,
-}
-
-interface Query {
-    // for each property, the first option is the default if it's omitted
-
-    // this is in the order that processing happens:
-
-    // first, limit to latest docs or all docs
-    history?: 'latest' | 'all',
-
-    // then iterate in this order
-    //   "path ASC" is actually "path ASC then break ties with timestamp DESC"
-    //   "path DESC" is the reverse of that
-    orderBy?: 'path ASC' | 'path DESC' | 'localIndex ASC' | 'localIndex DESC';
-
-    // start iterating at this item
-    startAt?: {
-        // only when ordering by localIndex
-        localIndex?: number,
-        // only when ordering by path
-        path?: string,
-    }
-
-    // then apply filters, if any
-    filter?: QueryFilter,
-
-    // stop iterating after this number of docs
-    limit?: number;
-    // TODO: limitBytes
-}
-
-let defaultQuery: Query = {
-    history: 'latest',
-    orderBy: 'path ASC',
-    startAt: undefined,
-    limit: undefined,
-    filter: undefined,
-}
 
 let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
     if (filter.path !== undefined && doc.path !== filter.path) { return false; }
@@ -350,6 +199,7 @@ class Bowl {
         }
         return docs;
     }
+
     getLatestDocs(sort: boolean = true): Doc[] {
         // The latest doc for each path, sorted by path ASC.
         let docs: Doc[] = [];
@@ -361,20 +211,23 @@ class Bowl {
         }
         return docs;
     }
+
     getAllDocsAtPath(path: Path): Doc[] | undefined {
         // All docs at a given path, sorted newest first.
         return this.docsByPathNewestFirst.get(path);
     }
+
     getLatestDocAtPath(path: Path): Doc | undefined {
         // The one latest doc at a given path.
         let docs = this.docsByPathNewestFirst.get(path);
         if (!docs) { return undefined; }
         return docs[0];
     }
+
     queryDocs(query?: Query): Doc[] {
         // Query the documents.
 
-        query = { ...defaultQuery, ...query };
+        query = { ...DEFAULT_QUERY, ...query };
 
         // get history docs or all docs
         let docs = query.history === 'all'
@@ -597,4 +450,3 @@ class Bowl {
         return upsertResult;
     }
 }
-
