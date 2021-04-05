@@ -1,0 +1,31 @@
+{
+  "name": "typed-bus",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "repository": "",
+  "author": "Cinnamon <cinnamon_bun_github@fastmail.com>",
+  "homepage": "https://github.com/cinnamon-bun/typed-bus",
+  "license": "AGPL-3.0",
+  "scripts": {
+    "clean": "rm -rf build coverage .nyc_output",
+    "build": "tsc",
+    "start": "node build/index.js",
+    "test": "tap -Rspecy --jobs=1 build/test/*.test.js",
+    "build-and-test": "yarn build && yarn test",
+    "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
+    "test-coverage": "yarn test -- --coverage-report=lcov",
+    "prepublishOnly": "yarn run clean && yarn run build"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.25",
+    "@types/tap": "^14.10.2",
+    "onchange": "^7.1.0",
+    "tap": "^14.11.0",
+    "typescript": "^4.1.4"
+  },
+  "dependencies": {
+    "fast-deep-equal": "^3.1.3",
+    "rfdc": "^1.2.0"
+  }
+}

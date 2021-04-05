@@ -1,0 +1,8 @@
+.github/
+.nyc_output/
+coverage/
+src/
+build/test/
+build/example*
+tsconfig.json
+.vscode/
