@@ -25,6 +25,10 @@ export let randRange = (lo: number, hi: number): number =>
 export let uuid = () =>
     ('' + randRange(0, 999999999999999)).padStart(15, '0');
 
+export let hash = (s: string) => {
+    return 'fakehash' + uuid();
+}
+
 //================================================================================
 
 export enum Cmp {
