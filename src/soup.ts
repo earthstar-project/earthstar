@@ -193,6 +193,7 @@ let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
 }
 
 let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
+    // Does the doc match the filters?
     if (filter.path !== undefined && doc.path !== filter.path) { return false; }
     if (filter.pathStartsWith !== undefined && !doc.path.startsWith(filter.pathStartsWith)) { return false; }
     if (filter.pathEndsWith !== undefined && !doc.path.startsWith(filter.pathEndsWith)) { return false; }
@@ -209,17 +210,17 @@ let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
 //================================================================================ 
 
 class Storage implements IStorage {
-    // The max local index used so far.  the first doc will increment this and get index 1.
+    // The max local index used so far.  The first doc will increment this and get index 1.
     highestLocalIndex: LocalIndex = 0;
 
     // Our indexes.
-    // these maps hold the same Doc objects, so memory usage is not awful.
-    // the Doc objects are frozen.
+    // These maps all share the same Doc objects, so memory usage is not bad.
+    // The Doc objects are frozen.
     docWithLocalIndex: Map<LocalIndex, Doc> = new Map();  // localIndx --> doc
     docWithPathAndAuthor: Map<Path, Doc> = new Map();     // path+author --> doc
     docsByPathNewestFirst: Map<Path, Doc[]> = new Map();  // path --> array of docs with that path, sorted newest first
 
-    // callbacks and followers
+    // Callbacks and followers
     onWriteCbs: Set<Callback<WriteEvent>> = new Set();
     followers: Set<Follower> = new Set();
 
