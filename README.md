@@ -6,6 +6,8 @@ This code has never been run, but it compiles :)
 
 This is a sketch of ideas for improving [Earthstar](https://github.com/earthstar-project/earthstar) IStorage classes.
 
+Much of Earthstar is just faked here -- signing, document validity checking.
+
 ## "Reliable indexing / streaming"
 
 This shows an implementation of the "reliable indexing" idea discussed in [this issue](https://github.com/earthstar-project/earthstar/issues/66).
@@ -74,6 +76,8 @@ The order is:
 * startAt (continue from a certain point)
 * filter - the same options, timestamp, pathStartswith, etc etc
 * limit
+
+Also, the `cleanUpQuery` function is fancier and will also figure out if the query will match `all`, `some`, or `nothing` documents.  This helps with optimizations elsewhere.
 
 ## Slightly different API for Storage classes
 
