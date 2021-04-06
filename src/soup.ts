@@ -6,6 +6,7 @@ import {
     Doc,
     DocToWrite,
     Follower,
+    IStorage,
     LocalIndex,
     Path,
     Query,
@@ -66,8 +67,8 @@ let docIsValid = (doc: Doc): boolean =>
 //================================================================================ 
 // EVENTS AND FOLLOWERS
 
-let wakeAsyncFollower = (follower: Follower, bowl: Bowl) => {
-    // This function is called by Bowl.upsert on async followers that are sleeping,
+let wakeAsyncFollower = (follower: Follower, storage: IStorage) => {
+    // This function is called by storage.upsert on async followers that are sleeping,
     //  and on newly added async followers.
 
     // Change an async follower from 'sleeping' to 'running'
@@ -76,32 +77,32 @@ let wakeAsyncFollower = (follower: Follower, bowl: Bowl) => {
 
     if (follower.state !== 'sleeping') { throw new Error('to start, follower should have been already sleeping'); }
     follower.state = 'running';
-    setImmediate(() => continueAsyncFollower(follower, bowl));
+    setImmediate(() => continueAsyncFollower(follower, storage));
 }
 
-let continueAsyncFollower = async (follower: Follower, bowl: Bowl) => {
+let continueAsyncFollower = async (follower: Follower, storage: IStorage) => {
     // Continue an async follower that's 'running'.
     // This will call itself over and over using setImmediate until it runs out of docs to process,
     //  then it will go to sleep again.
     // If the state was changed to 'quitting' (from the outside), it will stop early.
-    //  (That happens when you unsubscribe it from the Bowl.)
+    //  (That happens when you unsubscribe it from the storage.)
 
     if (follower.state === 'quitting') { return; }
     if (follower.state === 'sleeping') { throw new Error('to continue, follower should have been already running'); }
-    if (follower.nextIndex > bowl.highestLocalIndex) {
+    if (follower.nextIndex > storage.highestLocalIndex) {
         // if we run out of docs to process, go to sleep and stop the thread.
         follower.state = 'sleeping';
         return;
     } else {
         // Since we only run every 4ms we only get to run at most 250 times per second,
         // so let's do a batch of work instead of just one doc.
-        let docs = bowl.getDocsSinceLocalIndex(follower.nextIndex, 40);
+        let docs = storage.getDocsSinceLocalIndex(follower.nextIndex, 40);
         for (let doc of docs) {
             // run the callback one at a time in series, waiting for it to finish each time
             await follower.cb(doc);
         }
         // and schedule ourselves to run again in 4ms
-        setImmediate(() => continueAsyncFollower(follower, bowl));
+        setImmediate(() => continueAsyncFollower(follower, storage));
     }
 }
 
@@ -124,7 +125,7 @@ let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
 
 //================================================================================ 
 
-class Bowl {
+class Storage implements IStorage {
     // The max local index used so far.  the first doc will increment this and get index 1.
     highestLocalIndex: LocalIndex = 0;
 
@@ -356,12 +357,13 @@ class Bowl {
         //  from path to path).
         let existingDocSamePath = this.getLatestDocAtPath(docToWrite.path);
         let doc: Doc = {
+            workspace: docToWrite.workspace,
             path: docToWrite.path,
-            timestamp: existingDocSamePath === undefined ? now() : existingDocSamePath.timestamp + 1,
             author: keypair.address,
             content: docToWrite.content,
             contentHash: fakeHash(docToWrite.content), // TODO: real hash
             contentLength: Buffer.byteLength(docToWrite.content),
+            timestamp: existingDocSamePath === undefined ? now() : existingDocSamePath.timestamp + 1,
             signature: '?',  // signature will be added in just a moment
             // _localIndex will be added during upsert.  it's not needed for the signature.
         }
@@ -373,7 +375,7 @@ class Bowl {
         // Add an already-signed doc obtained from write() or from another peer.
 
         // This sets doc._localIndex, overwriting the value from elsewhere,
-        // then freezes the doc object.  (All docs stored in this Bowl are frozen.)
+        // then freezes the doc object.  (All docs stored in this storage are frozen.)
 
         if (!docIsValid(doc)) { return UpsertResult.Invalid; }
 

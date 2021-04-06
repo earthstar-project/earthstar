@@ -4,6 +4,7 @@ export type Callback<T> = (data: T) => void;
 export type AsyncCallback<T> = (data: T) => Promise<void>;
 
 export type AuthorAddress = string;
+export type WorkspaceAddress = string;
 export type Path = string;
 export type Signature = string;
 export type Timestamp = number;
@@ -19,12 +20,13 @@ export interface AuthorKeypair {
 
 export interface Doc {
     // TODO: format
+    workspace: WorkspaceAddress,
     path: Path,
-    timestamp: Timestamp,
     author: AuthorAddress,
     content: string,
     contentHash: string,
     contentLength: number,
+    timestamp: Timestamp,
     signature: Signature,
 
     // Local Index:
@@ -52,8 +54,9 @@ export interface Doc {
 }
 
 // A partial doc that is about to get written.
-// The rest of the properties will be filled in by Bowl.write().
+// The rest of the properties will be filled in by storage.write().
 export interface DocToWrite {
+    workspace: WorkspaceAddress,
     path: Path,
     author: AuthorAddress,
     content: string,
@@ -171,7 +174,7 @@ export let DEFAULT_QUERY: Query = {
 
 //================================================================================ 
 
-export interface IBowl {
+export interface IStorage {
     // The max local index used so far.  the first doc will increment this and get index 1.
     highestLocalIndex: LocalIndex;
 

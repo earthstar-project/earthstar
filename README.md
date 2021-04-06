@@ -4,12 +4,12 @@
 Notes
 
 
-workspace       soup
-author          chef
-storage         bowl
+Workspace       Soup?
+Author          Chef?
+Storage         Bowl, Pot, Cauldron, Crockpot, Saucepan
+Document        Doc
 pub
 peer / node     
-document
 
 
 
