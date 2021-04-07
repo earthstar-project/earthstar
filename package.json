@@ -57,7 +57,7 @@
     "@types/tap": "^14.10.1",
     "@types/tape": "^4.13.0",
     "arkit": "^1.6.4",
-    "browser-run": "^9.0.0",
+    "browser-run": "^10.0.0",
     "browserify": "^17.0.0",
     "karma": "^6.3.2",
     "karma-chrome-launcher": "^3.1.0",
