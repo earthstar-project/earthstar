@@ -1,3 +1,7 @@
+import {
+    Cmp
+} from './types/utilTypes';
+
 import equal from 'fast-deep-equal';
 import clone from 'rfdc';
 
@@ -6,7 +10,9 @@ export let deepCopy = clone();
 
 //================================================================================
 
-export let log = console.log;
+export let now = () =>
+    Date.now() * 1000;
+
 
 export let sleep = (ms: number) =>
     new Promise((res, rej) => {
@@ -24,17 +30,10 @@ export let randRange = (lo: number, hi: number): number =>
 export let fakeUuid = () =>
     ('' + randRange(0, 999999999999999)).padStart(15, '0');
 
-export let fakeHash = (s: string) =>
-    'fakehash' + fakeUuid();
+export let sha256b32 = (s: string) =>
+    'fake-sha-256:' + fakeUuid();  // TODO
 
 //================================================================================
-
-export enum Cmp {
-    // this sorts ascendingly
-    LT = -1,
-    EQ = 0,
-    GT = 1,
-}
 
 export let compare = (a: any, b: any): Cmp => {
     if (a === b) { return Cmp.EQ; }

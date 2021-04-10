@@ -1,0 +1,29 @@
+
+architecture:
+    are there multiple frontends per backend instance?
+
+events:
+    where to followers attach to, front or back?
+    does backend notify frontend of events?
+    wake followers
+
+closing:
+    what order do we close frontend and backend?
+    which closes the other?
+    does a close storage close its listeners too?
+
+startup
+    hatch?
+    config?
+
+
+
+
+
+
+
+
+
+
+
+
