@@ -39,15 +39,15 @@ let main = async () => {
     log('')
     let storageFrontend = new StorageFrontendAsync(storageBackend);
 
-    //log('')
-    //debug('adding follower');
-    //let follower = new Follower({
-    //    storageFrontend: storageFrontend,
-    //    onDoc: (doc: Doc) => {
-    //        debugFollower(doc);
-    //    },
-    //    historyMode: 'latest',
-    //});
+    log('')
+    debug('adding follower');
+    let follower = new Follower({
+        storageFrontend: storageFrontend,
+        onDoc: (doc: Doc) => {
+            debugFollower(doc);
+        },
+        historyMode: 'latest',
+    });
 
     for (let ii = 0; ii < 1; ii++) {
         log('')

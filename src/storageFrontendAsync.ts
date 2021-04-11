@@ -206,9 +206,12 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
 
         debug('    waking followers...');
         for (let follower of this.followers) {
-            follower.wake();
+            // TODO: wait for followers or let them run async?
+            setTimeout(() => {
+                follower.wake();
+            }, 0);
         }
-        debug('    ...followers are awake');
+        debug('    ...followers have been woken and will run later');
 
         return result;
     }

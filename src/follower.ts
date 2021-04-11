@@ -63,25 +63,25 @@ export class Follower implements IFollower {
         if (this._state === 'running') { debug('...running'); return; }  // don't run twice at the same time
 
         // try to get some docs
-        debug('    getting docs');
-        let docs = await this._storageFrontend.getDocsSinceLocalIndex(this._historyMode, this._lastProcessedIndex, this._batchSize);
-        debug(`    got ${docs.length}`);
+        debug(`    getting batch of up to ${this._batchSize} docs`);
+        let docs = await this._storageFrontend.getDocsSinceLocalIndex(this._historyMode, this._lastProcessedIndex + 1, this._batchSize);
+        debug(`    ...got ${docs.length} doc in this batch query`);
 
         // if we got no docs, we've hit the end and we go to sleep.
         // the storage will wake us up later.
         if (docs.length === 0) {
-            debug('    going to sleep');
+            debug('    ...nothing to do; going to sleep');
             this._state = 'sleeping';
             return;
         } 
 
         // ok, we actually have some docs to process.
-        debug('    iterating docs in batch');
+        debug('    iterating docs in batch...');
         for (let doc of docs) {
             // constantly check if we're closed, and if so, stop this batch.
             if (this._state as any === 'closed') { debug('    ...closed'); return; }
             // run our callback and await it, if it's a promise
-            debug('    calling callback');
+            debug('        calling callback');
             let maybeProm = this._onDoc(doc);
             if (maybeProm instanceof Promise) {
                 debug('    waiting for callback promise to finish...');
@@ -90,10 +90,18 @@ export class Follower implements IFollower {
             }
             this._lastProcessedIndex = doc._localIndex as number;
         }
+        debug('    ...done iterating docs in batch');
 
-        // keep runnning to do the next batch
-        debug('    setTimeout for next wake().  done.');
-        setTimeout(this.wake.bind(this), 0);
+        if (docs.length < this._batchSize) {
+            // no more docs right now; go to sleep
+            debug('    that was not a full batch; going to sleep');
+            this._state = 'sleeping';
+            return;
+        } else {
+            // keep runnning to do the next batch
+            debug('    setTimeout for next wake().  done.');
+            setTimeout(this.wake.bind(this), 0);
+        }
     }
     close(): void {
         debug('close()');
