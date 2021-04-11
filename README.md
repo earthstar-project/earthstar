@@ -1,12 +1,33 @@
 # Stone Soup
 
-**WIP** April 6 2021
+**WIP** April 2021
 
-This code has never been run, but it compiles :)
-
-This is a sketch of ideas for improving [Earthstar](https://github.com/earthstar-project/earthstar) IStorage classes.
+This is a sketch of ideas for improving the way [Earthstar](https://github.com/earthstar-project/earthstar) is split into classes.
 
 Much of Earthstar is just faked here -- signing, document validity checking.
+
+## Splitting `IStorage` into `Frontend` and `Backend` classes
+
+This has nothing to do with normal web "frontend" and "backend", I should rename them.
+
+Think of this as `IStorageNiceAPIFullOfComplexity` and `IStorageSimpleLowLevelDriver`.
+
+I want to make it easier to add new kinds of storage so I'm splitting IStorage into two parts:
+
+The Frontend does:
+* the complex annoying stuff
+* set(): sign and add a document
+* ingest(): validate and accept a document from the outside
+* followers and events
+* user-friendly helper functions, getters, setters
+
+The Backend does:
+* simple stuff
+* query for documents
+* maintain indexes for querying (hopefully provided by the underlying storage technology)
+* simple upsert of a document
+
+Possibly even you can have multiple frontends for one backend, for example when you're using multiple tabs with indexedDb or localStorage.
 
 ## "Reliable indexing / streaming"
 
@@ -42,15 +63,17 @@ storage.getDocsSinceLocalIndex(
 
 (You can also still look up documents by path in the usual old way.)
 
-### Reliable streaming locally, to subscribers or indexes
+### Followers: Reliable streaming locally, to subscribers or indexes
 
-In addition to the usual `onWrite` events, there's now a new way to subscribe to a Storage: with a `Follower`.  A follower is like a pointer that moves along the sequence of documents, in order by `localIndex`, running a callback on each one.
+The old `onWrite` events are gone.  Now, there's now a new way to subscribe to a Storage: with a `Follower`.  A follower is like a pointer that moves along the sequence of documents, in order by `localIndex`, running a callback on each one.
 
 This is a Kafka or Kappa-db style architecture.
 
 You could use this to build an index or Layer that incrementally digests the content of an IStorage without ever missing anything, even if it only runs occasionally.  It just resumes from the last `localIndex` it saw, and proceeds from there.
 
-Followers can be async; they move along the sequence at their own pace, processing one document at a time.  There may be many followers attached to an IStorage, each crawling along at different speeds.
+Followers are async; they move along the sequence at their own pace, processing one document at a time.  There may be many followers attached to an IStorage, each crawling along at their own different speeds.
+
+There may also be sync-style followers -- the entire program would wait for them to always be caught up, to provide backpressure and keep a big backlog of work from developing.
 
 You can start a Follower anywhere in the sequence: at the beginning (good for indexes and Layers), or at the current most recent document (good for live syncing new changes).
 
@@ -66,6 +89,8 @@ This is similar to how append-only logs are synced in Scuttlebutt and Hyper, exc
 
 ## More informative `onWrite` events
 
+TODO: this is being moved into Followers.
+
 ## Slightly different querying
 
 Querying has been made more organized -- see the Query type in `types.ts`.  It looks a bit more like an SQL query but the pieces are written in the order they actually happen, so it's easier to understand.
@@ -79,10 +104,6 @@ The order is:
 
 Also, the `cleanUpQuery` function is fancier and will also figure out if the query will match `all`, `some`, or `nothing` documents.  This helps with optimizations elsewhere.
 
-## Slightly different API for Storage classes
-
-See the `IStorage` interface in `types.ts`.  WIP.  I was hoping to find a simpler set of methods and/or a simpler way to extend or subclass IStorage, but haven't achieved that yet.
-
 ## Problems left to solve
 
 * Ephemeral documents disappear without leaving a trace, do we need events for that?
@@ -92,6 +113,8 @@ See the `IStorage` interface in `types.ts`.  WIP.  I was hoping to find a simple
 * Syncing by `localIndex` doesn't work very well when you also have a sync query, because you have to scan the entire sequence to find the couple of docs you care about.  We probably still want another way of efficient syncing that goes in path order and uses hashing in some clever way, sort of like a Merkle tree but not.
 
 ## Silly new vocabulary ideas
+
+Very tentative idea to rename Earthstar to Stone Soup.
 
 It's probably a bad idea to use cute names, but:
 
