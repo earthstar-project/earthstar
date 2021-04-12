@@ -13,7 +13,6 @@ export let deepCopy = clone();
 export let now = () =>
     Date.now() * 1000;
 
-
 export let sleep = (ms: number) =>
     new Promise((res, rej) => {
         setTimeout(res, ms);
@@ -32,6 +31,16 @@ export let fakeUuid = () =>
 
 export let sha256b32 = (s: string) =>
     'fake-sha-256:' + fakeUuid();  // TODO
+
+export let getPromiseParts = <T>() => {
+    let resolve: (value: T | PromiseLike<T>) => void = null as any;
+    let reject: (reason?: any) => void = null as any;
+    let prom = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+    });
+    return { prom, resolve, reject };
+}
 
 //================================================================================
 

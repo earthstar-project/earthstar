@@ -13,6 +13,8 @@ import { HistoryMode } from './types/queryTypes';
 
 import { makeDebug } from './log';
 import chalk from 'chalk';
+import { threadId } from 'node:worker_threads';
+import { getPromiseParts } from './utils';
 let debug = makeDebug(chalk.magentaBright('                  [follower]'));
 
 let debug2 = (blocking: boolean, ...args: any[]) => {
@@ -47,7 +49,8 @@ export interface FollowerOpts {
     onDoc: SyncOrAsyncCallback<Doc | null>,
     historyMode: HistoryMode,
     batchSize?: 20,
-    // Block the storage writes?
+
+    // blocking: Block the IStorage set or ingest methods?
     // If blocking is false, the storage can accept a lot of writes and the
     // follower will slowly crawl forward at its own speed until it raeches the end.
     // If blocking is true, the storage won't finish a write operation until the
@@ -56,6 +59,14 @@ export interface FollowerOpts {
     // at a time)
     blocking: boolean,
 }
+
+// a shortcut to create a follower, just to make sure you let it hatch.
+export let addFollower = async (opts: FollowerOpts): Promise<Follower> => {
+    let follower = new Follower(opts);
+    await follower.hatch();
+    return follower;
+}
+
 export class Follower implements IFollower {
     _state: FollowerState = 'sleeping';
     _storageFrontend: IStorageFrontendAsync;
@@ -64,21 +75,68 @@ export class Follower implements IFollower {
     _batchSize: number;
     _historyMode: HistoryMode;
     blocking: boolean;
+
+    // this promise will resolve when the Follower is hatched
+    hatchedPromise: Promise<void>;
+    _resolveHatch: any;
+
     constructor(opts: FollowerOpts) {
+
+        // Important:
+        // To create a new follower, you must do these two steps:
+        //     let myFollower = new Follower({ ... opts ... });
+        //     await myFollower.hatch();  // it needs a chance to do some async stuff
+
         this._storageFrontend = opts.storageFrontend;
         this._onDoc = opts.onDoc;
         this._batchSize = opts.batchSize ?? 20;
         this._historyMode = opts.historyMode,
         this.blocking = opts.blocking ?? false;
-        // register with the storage.  it will wake us when there's new docs to process.
+
+        // Register with the storage.  it will wake us when there's new docs to process.
         debug2(this.blocking, 'constructor: registering with storageFrontend');
         this._storageFrontend.followers.add(this);
+
+        let { prom, resolve, reject } = getPromiseParts<void>();
+        this.hatchedPromise = prom;
+        this._resolveHatch = resolve;
+
+        // TODO: when adding a follower, it needs to wake up by default
+        // so it can catch up, in case it started at zero.
+        // Blocking followers also need to put a hold on the IStorage until they've caught up.
+        // Maybe followers need a waitUntilCaughtUp method?
     }
+
+    async hatch(): Promise<void> {
+        debug2(this.blocking, 'hatching...');
+        // Wake up the follower for the first time.
+        // This should be called just after instantiating it.
+        if (this.blocking) {
+            // TODO:  This needs to put a hold on the whole IStorage so nothing can write
+            //  until it's caught up
+            // Maybe we can grab the lock from the storage and hold it until the follower
+            //  is caught up.
+            debug2(this.blocking, '    waking up follower now and waiting for it to catch up:');
+            debug2(this.blocking, '    TODO: this needs to put a hold on the Storage until it\'s done');
+            await this.wake();
+            debug2(this.blocking, '    ...done waking up follower');
+        } else {
+            // lazy followers wake up later
+            debug2(this.blocking, '    scheduled to wake up later.');
+            setTimeout(this.wake.bind(this), 0);
+        }
+        debug2(this.blocking, '    ...done hatching');
+        debug2(this.blocking, '    ...resolving hatchPromise');
+        this._resolveHatch();
+    }
+
     async wake(): Promise<void> {
+
 
         // TODO: for blocking followers, this whole function needs to block
         // until the follower is completely caught up.
-        // instead, right now it only runs one batch and then schedules another one
+        // instead, right now it only runs one batch and then schedules another one recursively
+        // which works but can hit a stack overflow.
 
         debug2(this.blocking, 'wake()');
         if (this._state === 'closed')  { debug2(this.blocking, '...closed');  return; }  // never run again, if closed

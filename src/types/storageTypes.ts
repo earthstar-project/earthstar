@@ -20,6 +20,7 @@ export type FollowerState = 'running' | 'sleeping' | 'closed';
 export interface IFollower {
     blocking: boolean;
     wake(): Promise<void>;
+    hatch(): Promise<void>;
     close(): void;
 }
 

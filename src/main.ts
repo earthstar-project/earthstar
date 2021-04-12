@@ -1,7 +1,8 @@
 import { AuthorKeypair, Doc } from './types/docTypes';
 
 import {
-    Follower
+    Follower,
+    addFollower,
 } from './follower';
 import {
     StorageBackendAsyncMemory
@@ -49,40 +50,6 @@ let main = async () => {
 
     log('')
     debug('-----------\\')
-    debug('adding lazy follower');
-    let lazyFollower = new Follower({
-        storageFrontend: storageFrontend,
-        onDoc: (doc: Doc | null) => {
-            if (doc === null) {
-                debugLazyFollower('null -- I have become idle');
-            } else {
-                debugLazyFollower('got a doc:', doc);
-            }
-        },
-        historyMode: 'latest',
-        blocking: false,
-    });
-    debug('-----------/')
-
-    log('')
-    debug('-----------\\')
-    debug('adding blocking follower');
-    let blockingFollower = new Follower({
-        storageFrontend: storageFrontend,
-        onDoc: (doc: Doc | null) => {
-            if (doc === null) {
-                debugBlockingFollower('null -- I have become idle');
-            } else {
-                debugBlockingFollower('got a doc:', doc);
-            }
-        },
-        historyMode: 'latest',
-        blocking: true,
-    });
-    debug('-----------/')
-
-    log('')
-    debug('-----------\\')
     let numDocsToWrite = 1;
     debug(`setting ${numDocsToWrite} docs`)
     for (let ii = 0; ii < numDocsToWrite; ii++) {
@@ -101,6 +68,42 @@ let main = async () => {
     debug('-----------\\')
     debug('getting all docs');
     debug(await storageFrontend.getAllDocs());
+    debug('-----------/')
+
+    /*
+    log('')
+    debug('-----------\\')
+    debug('adding lazy follower');
+    let lazyFollower = await addFollower({
+        storageFrontend: storageFrontend,
+        onDoc: (doc: Doc | null) => {
+            if (doc === null) {
+                debugLazyFollower('null -- I have become idle');
+            } else {
+                debugLazyFollower('got a doc:', doc);
+            }
+        },
+        historyMode: 'latest',
+        blocking: false,
+    });
+    debug('-----------/')
+    */
+
+    log('')
+    debug('-----------\\')
+    debug('adding blocking follower');
+    let blockingFollower = await addFollower({
+        storageFrontend: storageFrontend,
+        onDoc: (doc: Doc | null) => {
+            if (doc === null) {
+                debugBlockingFollower('null -- I have become idle');
+            } else {
+                debugBlockingFollower('got a doc:', doc);
+            }
+        },
+        historyMode: 'latest',
+        blocking: true,
+    });
     debug('-----------/')
 
     log('')

@@ -71,11 +71,23 @@ This is a Kafka or Kappa-db style architecture.
 
 You could use this to build an index or Layer that incrementally digests the content of an IStorage without ever missing anything, even if it only runs occasionally.  It just resumes from the last `localIndex` it saw, and proceeds from there.
 
-Followers are async; they move along the sequence at their own pace, processing one document at a time.  There may be many followers attached to an IStorage, each crawling along at their own different speeds.
+There are 2 kinds of followers:
 
-There may also be sync-style followers -- the entire program would wait for them to always be caught up, to provide backpressure and keep a big backlog of work from developing.
+* Blocking followers must run before a write to the storage will complete.
+
+* Lazy followers run async'ly.  Writing to a storage will wake up a lazy follower, but it might not start running for a little while, and it will catch up to the end at its own speed.
+
+A follower has one callback (sync or async) that it runs on each doc in sequence.  It never allows that callback to overlap with itself, e.g. it waits to finish one doc before moving along to the next.  Both blocking and lazy followers work this way.  The difference between blocking and lazy is if the **IStorage** waits for them or not.
+
+An IStorage may have many followers of both/either blocking and lazy types.
+
+### Starting followers at the beginning or the end
 
 You can start a Follower anywhere in the sequence: at the beginning (good for indexes and Layers), or at the current most recent document (good for live syncing new changes).
+
+* Blocking followers hold up the entire IStorage until they catch up to the end
+
+* Lazy followers just crawl along on their own.
 
 ### Reliable streaming over the network, when syncing
 
