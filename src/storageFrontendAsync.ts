@@ -43,7 +43,7 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
     _backend: IStorageBackendAsync;
 
     constructor(backend: IStorageBackendAsync) {
-        debug('constructor');
+        debug('constructor, given a backend');
         this._backend = backend;
     }
 
@@ -205,13 +205,30 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
         debug('    ...done running protected region', result);
 
         debug('    waking followers...');
+        // Note: this section of code is outside of the protected region
+        // for ingest, but if we get here from set(), we're inside the protected
+        // region of set().  We should probably move the code inside the
+        // protected region of ingest for consistency.
+        // This also means that follower callbacks will not be allowed to call
+        // set() or ingest() or they'll deadlock...
         for (let follower of this.followers) {
-            // TODO: wait for followers or let them run async?
-            setTimeout(() => {
-                follower.wake();
-            }, 0);
+            if (follower.blocking) {
+                // run blocking followers right now
+                debug('    - waking a blocking follower');
+                // TODO: optimization: if the blocking follower is already up to date,
+                // we only need to feed it this one new doc and then it won't
+                // have to do a whole query
+                await follower.wake();
+                debug('    - ...that blocking follower is now done');
+            } else {
+                // lazy followers can be woken up later
+                debug('    - setTimeout for a lazy follower to run later');
+                setTimeout(() => {
+                    follower.wake();
+                }, 0);
+            }
         }
-        debug('    ...followers have been woken and will run later');
+        debug('    ...done waking followers');
 
         return result;
     }

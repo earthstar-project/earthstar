@@ -13,8 +13,15 @@ import { HistoryMode } from './types/queryTypes';
 
 import { makeDebug } from './log';
 import chalk from 'chalk';
-let debug = makeDebug(chalk.magenta('                  [follower]'));
+let debug = makeDebug(chalk.magentaBright('                  [follower]'));
 
+let debug2 = (blocking: boolean, ...args: any[]) => {
+    if (blocking) {
+        console.log(chalk.magentaBright('                  [follower (blocking)]'), ...args);
+    } else {
+        console.log(chalk.magentaBright('                  [follower (lazy)]'), ...args);
+    }
+}
 
 //================================================================================ 
 // EVENTS AND FOLLOWERS
@@ -37,120 +44,98 @@ is called, and it stays there forever.
 
 export interface FollowerOpts {
     storageFrontend: IStorageFrontendAsync,
-    onDoc: SyncOrAsyncCallback<Doc>,
+    onDoc: SyncOrAsyncCallback<Doc | null>,
     historyMode: HistoryMode,
     batchSize?: 20,
+    // Block the storage writes?
+    // If blocking is false, the storage can accept a lot of writes and the
+    // follower will slowly crawl forward at its own speed until it raeches the end.
+    // If blocking is true, the storage won't finish a write operation until the
+    // follower's callback has finished running.
+    // (No matter this setting, the follower will only run one copy of its callback
+    // at a time)
+    blocking: boolean,
 }
 export class Follower implements IFollower {
     _state: FollowerState = 'sleeping';
     _storageFrontend: IStorageFrontendAsync;
-    _onDoc: SyncOrAsyncCallback<Doc>;
+    _onDoc: SyncOrAsyncCallback<Doc | null>;  // null means idle
     _lastProcessedIndex: number = -1;
     _batchSize: number;
     _historyMode: HistoryMode;
+    blocking: boolean;
     constructor(opts: FollowerOpts) {
         this._storageFrontend = opts.storageFrontend;
         this._onDoc = opts.onDoc;
         this._batchSize = opts.batchSize ?? 20;
         this._historyMode = opts.historyMode,
+        this.blocking = opts.blocking ?? false;
         // register with the storage.  it will wake us when there's new docs to process.
-        debug('constructor: registering with storageFrontend');
+        debug2(this.blocking, 'constructor: registering with storageFrontend');
         this._storageFrontend.followers.add(this);
     }
     async wake(): Promise<void> {
-        debug('wake()');
-        if (this._state === 'closed')  { debug('...closed');  return; }  // never run again, if closed
-        if (this._state === 'running') { debug('...running'); return; }  // don't run twice at the same time
+
+        // TODO: for blocking followers, this whole function needs to block
+        // until the follower is completely caught up.
+        // instead, right now it only runs one batch and then schedules another one
+
+        debug2(this.blocking, 'wake()');
+        if (this._state === 'closed')  { debug2(this.blocking, '...closed');  return; }  // never run again, if closed
+        if (this._state === 'running') { debug2(this.blocking, '...running'); return; }  // don't run twice at the same time
 
         // try to get some docs
-        debug(`    getting batch of up to ${this._batchSize} docs`);
+        debug2(this.blocking, `    getting batch of up to ${this._batchSize} docs`);
         let docs = await this._storageFrontend.getDocsSinceLocalIndex(this._historyMode, this._lastProcessedIndex + 1, this._batchSize);
-        debug(`    ...got ${docs.length} doc in this batch query`);
+        debug2(this.blocking, `    ...got ${docs.length} doc in this batch query`);
 
-        // if we got no docs, we've hit the end and we go to sleep.
-        // the storage will wake us up later.
-        if (docs.length === 0) {
-            debug('    ...nothing to do; going to sleep');
-            this._state = 'sleeping';
-            return;
-        } 
-
-        // ok, we actually have some docs to process.
-        debug('    iterating docs in batch...');
+        // process the docs, if we got any
+        debug2(this.blocking, `    iterating ${docs.length} docs in batch...`);
         for (let doc of docs) {
             // constantly check if we're closed, and if so, stop this batch.
-            if (this._state as any === 'closed') { debug('    ...closed'); return; }
+            if (this._state as any === 'closed') { debug2(this.blocking, '    ...closed'); return; }
             // run our callback and await it, if it's a promise
-            debug('        calling callback');
+            debug2(this.blocking, '        calling callback');
             let maybeProm = this._onDoc(doc);
             if (maybeProm instanceof Promise) {
-                debug('    waiting for callback promise to finish...');
+                debug2(this.blocking, '    waiting for callback promise to finish...');
                 await maybeProm;
-                debug('    ...done');
+                debug2(this.blocking, '    ...done');
             }
             this._lastProcessedIndex = doc._localIndex as number;
         }
-        debug('    ...done iterating docs in batch');
+        debug2(this.blocking, '    ...done iterating docs in batch');
 
         if (docs.length < this._batchSize) {
             // no more docs right now; go to sleep
-            debug('    that was not a full batch; going to sleep');
+            debug2(this.blocking, '    that was not a full batch; going to sleep');
             this._state = 'sleeping';
+            // announce to our callback that we have become idle
+            let maybeProm = this._onDoc(null);
+            if (maybeProm instanceof Promise) {
+                await maybeProm;
+            }
             return;
         } else {
+            debug2(this.blocking, '    done with this batch but there\'s more to do.');
             // keep runnning to do the next batch
-            debug('    setTimeout for next wake().  done.');
-            setTimeout(this.wake.bind(this), 0);
+            if (this.blocking) {
+                // TODO: this is a stack overflow waiting to happen, need to do this without recursion
+                debug2(this.blocking, '    blocking mode: recursing into next batch and not returning until that one is done.');
+                await this.wake();
+                debug2(this.blocking, '    ...unwinding call stack');
+            } else {
+                debug2(this.blocking, '    follower is lazy.  setTimeout for next wake() to get next batch.  done for now.');
+                setTimeout(this.wake.bind(this), 0);
+            }
         }
     }
     close(): void {
-        debug('close()');
+        debug2(this.blocking, 'close()');
         this._state = 'closed';
         // unregister from the storage
-        debug('    unregistering from storageFrontend');
+        debug2(this.blocking, '    unregistering from storageFrontend');
         this._storageFrontend.followers.delete(this);
+        // TODO: don't tell our callback that we're idle, I guess?
     }
 }
-
-
-
-/*
-export let wakeAsyncFollower = (follower: Follower, storage: IStorage) => {
-    // This function is called by storage.upsert on async followers that are sleeping,
-    //  and on newly added async followers.
-
-    // Change an async follower from 'sleeping' to 'running'
-    // It will start work after setImmediate fires.
-    // It will continue running until it runs out of docs to process, then go to sleep again.
-
-    if (follower.state !== 'sleeping') { throw new Error('to start, follower should have been already sleeping'); }
-    follower.state = 'running';
-    setImmediate(() => continueAsyncFollower(follower, storage));
-}
-
-export let continueAsyncFollower = async (follower: Follower, storage: IStorage) => {
-    // Continue an async follower that's 'running'.
-    // This will call itself over and over using setImmediate until it runs out of docs to process,
-    //  then it will go to sleep again.
-    // If the state was changed to 'quitting' (from the outside), it will stop early.
-    //  (That happens when you unsubscribe it from the storage.)
-
-    if (follower.state === 'quitting') { return; }
-    if (follower.state === 'sleeping') { throw new Error('to continue, follower should have been already running'); }
-    if (follower.nextIndex > storage.highestLocalIndex) {
-        // if we run out of docs to process, go to sleep and stop the thread.
-        follower.state = 'sleeping';
-        return;
-    } else {
-        // Since we only run every 4ms we only get to run at most 250 times per second,
-        // so let's do a batch of work instead of just one doc.
-        let docs = storage.getDocsSinceLocalIndex(follower.nextIndex, 40);
-        for (let doc of docs) {
-            // run the callback one at a time in series, waiting for it to finish each time
-            await follower.cb(doc);
-        }
-        // and schedule ourselves to run again in 4ms
-        setImmediate(() => continueAsyncFollower(follower, storage));
-    }
-}
-*/
