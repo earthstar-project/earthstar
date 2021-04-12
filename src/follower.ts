@@ -13,10 +13,7 @@ import { HistoryMode } from './types/queryTypes';
 
 import { makeDebug } from './log';
 import chalk from 'chalk';
-import { threadId } from 'node:worker_threads';
-import { getPromiseParts } from './utils';
 let debug = makeDebug(chalk.magentaBright('                  [follower]'));
-
 let debug2 = (blocking: boolean, ...args: any[]) => {
     if (blocking) {
         console.log(chalk.magentaBright('                  [follower (blocking)]'), ...args);
@@ -48,7 +45,7 @@ export interface FollowerOpts {
     storageFrontend: IStorageFrontendAsync,
     onDoc: SyncOrAsyncCallback<Doc | null>,
     historyMode: HistoryMode,
-    batchSize?: 20,
+    batchSize?: number,  // default 20
 
     // blocking: Block the IStorage set or ingest methods?
     // If blocking is false, the storage can accept a lot of writes and the
@@ -76,10 +73,6 @@ export class Follower implements IFollower {
     _historyMode: HistoryMode;
     blocking: boolean;
 
-    // this promise will resolve when the Follower is hatched
-    hatchedPromise: Promise<void>;
-    _resolveHatch: any;
-
     constructor(opts: FollowerOpts) {
 
         // Important:
@@ -96,10 +89,6 @@ export class Follower implements IFollower {
         // Register with the storage.  it will wake us when there's new docs to process.
         debug2(this.blocking, 'constructor: registering with storageFrontend');
         this._storageFrontend.followers.add(this);
-
-        let { prom, resolve, reject } = getPromiseParts<void>();
-        this.hatchedPromise = prom;
-        this._resolveHatch = resolve;
 
         // TODO: when adding a follower, it needs to wake up by default
         // so it can catch up, in case it started at zero.
@@ -127,11 +116,9 @@ export class Follower implements IFollower {
         }
         debug2(this.blocking, '    ...done hatching');
         debug2(this.blocking, '    ...resolving hatchPromise');
-        this._resolveHatch();
     }
 
     async wake(): Promise<void> {
-
 
         // TODO: for blocking followers, this whole function needs to block
         // until the follower is completely caught up.

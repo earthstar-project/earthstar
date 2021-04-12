@@ -50,15 +50,15 @@ let main = async () => {
 
     log('')
     debug('-----------\\')
-    let numDocsToWrite = 1;
+    let numDocsToWrite = 3;
     debug(`setting ${numDocsToWrite} docs`)
     for (let ii = 0; ii < numDocsToWrite; ii++) {
         log('')
         debug(`setting #${ii}`);
         let result = await storageFrontend.set(keypair, {
             workspace,
-            path: '/about/displayName.txt',
-            content: `Suzy ${ii}`,
+            path: `/posts/post-${(''+ii).padStart(4, '0')}.txt`,
+            content: `Hello ${ii}`,
         });
         debug('    set result', result);
     }
@@ -70,7 +70,6 @@ let main = async () => {
     debug(await storageFrontend.getAllDocs());
     debug('-----------/')
 
-    /*
     log('')
     debug('-----------\\')
     debug('adding lazy follower');
@@ -85,9 +84,9 @@ let main = async () => {
         },
         historyMode: 'latest',
         blocking: false,
+        batchSize: 2,
     });
     debug('-----------/')
-    */
 
     log('')
     debug('-----------\\')
@@ -103,6 +102,7 @@ let main = async () => {
         },
         historyMode: 'latest',
         blocking: true,
+        batchSize: 2,
     });
     debug('-----------/')
 
