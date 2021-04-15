@@ -52,6 +52,11 @@ export let encodeBufferToBase32 = (buf: Buffer): Base32String =>
  */
 export let decodeBase32ToBuffer = (str: Base32String): Buffer => {
     if (!str.startsWith('b')) { throw new ValidationError("can't decode base32 buffer - it should start with a 'b'. " + str); }
+    // enforce only lower case characters
+    // TODO: this is probably slow on large strings, probably faster to scan character by character?  or use regex?  need to benchmark it
+    if (str !== str.toLowerCase()) {
+        throw new ValidationError("can't decode base32 string - it contains uppercase characters");
+    }
     // this can also throw an Error('invalid base32 character')
     return multibase.decode(str);
 };

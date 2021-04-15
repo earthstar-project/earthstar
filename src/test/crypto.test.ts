@@ -50,6 +50,7 @@ t.test('base32 encoding', (t: any) => {
 
     t.throws(() => decodeBase32ToBuffer(''), 'decoding base32 throws an exception if string is empty');
     t.throws(() => decodeBase32ToBuffer('abc'), 'decoding base32 throws an exception when it does not start with "b"');
+    t.throws(() => decodeBase32ToBuffer('baA'), 'decoding base32 throws when encountering uppercase character');
     t.throws(() => decodeBase32ToBuffer('b123'), 'decoding base32 throws when encountering invalid base32 character');
     t.throws(() => decodeBase32ToBuffer('babc?xyz'), 'decoding base32 throws when encountering invalid base32 character');
     t.throws(() => decodeBase32ToBuffer('babc xyz'), 'decoding base32 throws when encountering invalid base32 character');
