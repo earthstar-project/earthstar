@@ -7,11 +7,11 @@ import {
 import {
     FollowerState,
     IFollower,
-    IStorageFrontendAsync
+    IStorageAsync
 } from './types/storageTypes';
 import { HistoryMode } from './types/queryTypes';
 
-import { makeDebug } from './log';
+import { makeDebug } from './util/log';
 import chalk from 'chalk';
 let debug = makeDebug(chalk.magentaBright('                  [follower]'));
 let debug2 = (blocking: boolean, ...args: any[]) => {
@@ -42,7 +42,7 @@ is called, and it stays there forever.
 */
 
 export interface FollowerOpts {
-    storageFrontend: IStorageFrontendAsync,
+    storage: IStorageAsync,
     onDoc: SyncOrAsyncCallback<Doc | null>,
     historyMode: HistoryMode,
     batchSize?: number,  // default 20
@@ -66,7 +66,7 @@ export let addFollower = async (opts: FollowerOpts): Promise<Follower> => {
 
 export class Follower implements IFollower {
     _state: FollowerState = 'sleeping';
-    _storageFrontend: IStorageFrontendAsync;
+    _storage: IStorageAsync;
     _onDoc: SyncOrAsyncCallback<Doc | null>;  // null means idle
     _lastProcessedIndex: number = -1;
     _batchSize: number;
@@ -80,15 +80,15 @@ export class Follower implements IFollower {
         //     let myFollower = new Follower({ ... opts ... });
         //     await myFollower.hatch();  // it needs a chance to do some async stuff
 
-        this._storageFrontend = opts.storageFrontend;
+        this._storage = opts.storage;
         this._onDoc = opts.onDoc;
         this._batchSize = opts.batchSize ?? 20;
         this._historyMode = opts.historyMode,
         this.blocking = opts.blocking ?? false;
 
         // Register with the storage.  it will wake us when there's new docs to process.
-        debug2(this.blocking, 'constructor: registering with storageFrontend');
-        this._storageFrontend.followers.add(this);
+        debug2(this.blocking, 'constructor: registering with storage');
+        this._storage.followers.add(this);
 
         // TODO: when adding a follower, it needs to wake up by default
         // so it can catch up, in case it started at zero.
@@ -131,7 +131,7 @@ export class Follower implements IFollower {
 
         // try to get some docs
         debug2(this.blocking, `    getting batch of up to ${this._batchSize} docs`);
-        let docs = await this._storageFrontend.getDocsSinceLocalIndex(this._historyMode, this._lastProcessedIndex + 1, this._batchSize);
+        let docs = await this._storage.getDocsSinceLocalIndex(this._historyMode, this._lastProcessedIndex + 1, this._batchSize);
         debug2(this.blocking, `    ...got ${docs.length} doc in this batch query`);
 
         // process the docs, if we got any
@@ -179,8 +179,8 @@ export class Follower implements IFollower {
         debug2(this.blocking, 'close()');
         this._state = 'closed';
         // unregister from the storage
-        debug2(this.blocking, '    unregistering from storageFrontend');
-        this._storageFrontend.followers.delete(this);
+        debug2(this.blocking, '    unregistering from storage');
+        this._storage.followers.delete(this);
         // TODO: don't tell our callback that we're idle, I guess?
     }
 }

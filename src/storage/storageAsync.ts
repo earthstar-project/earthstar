@@ -1,41 +1,41 @@
 import {
     Cmp,
-} from './types/utilTypes';
+} from '../types/utilTypes';
 import {
     AuthorKeypair,
     Doc,
     DocToSet,
     LocalIndex,
     Path,
-} from './types/docTypes';
+} from '../types/docTypes';
 import {
     HistoryMode,
     Query,
-} from './types/queryTypes';
+} from '../types/queryTypes';
 import {
     IFollower,
     IngestResult,
     IStorageDriverAsync,
-    IStorageFrontendAsync,
-} from './types/storageTypes';
+    IStorageAsync,
+} from '../types/storageTypes';
 
 import {
     sha256b32,
     now
-} from './utils';
+} from '../util/utils';
 import {
     docCompareForOverwrite,
     docIsValid,
     signDoc
-} from './doc';
+} from '../doc';
 
-import { makeDebug } from './log';
+import { makeDebug } from '../util/log';
 import chalk from 'chalk';
-let debug = makeDebug(chalk.yellow('      [frontend]'));
+let debug = makeDebug(chalk.yellow('      [storage]'));
 
 //================================================================================
 
-export class StorageFrontendAsync implements IStorageFrontendAsync {
+export class StorageAsync implements IStorageAsync {
 
     // Followers
     followers: Set<IFollower> = new Set();

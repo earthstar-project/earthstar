@@ -2,23 +2,23 @@ import {
     Doc,
     LocalIndex,
     Path
-} from "./types/docTypes";
+} from "../types/docTypes";
 import {
     Query
-} from "./types/queryTypes";
+} from "../types/queryTypes";
 import {
     IStorageDriverAsync as IStorageDriverAsync
-} from "./types/storageTypes";
+} from "../types/storageTypes";
 
 import {
     combinePathAndAuthor,
     docComparePathThenNewestFirst
-} from "./doc";
-import { cleanUpQuery, docMatchesFilter } from './query';
-import { Lock } from './lock';
-import { keyComparer } from './utils';
+} from "../doc";
+import { cleanUpQuery, docMatchesFilter } from '../query';
+import { Lock } from '../util/lock';
+import { keyComparer } from '../util/utils';
 
-import { makeDebug } from './log';
+import { makeDebug } from '../util/log';
 import chalk from 'chalk';
 let debug = makeDebug(chalk.cyan('            [driver]'));
 

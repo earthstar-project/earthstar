@@ -9,9 +9,9 @@ import {
 import {
     arrayCompare,
     fakeUuid,
-} from './utils';
+} from './util/utils';
 
-import { makeDebug } from './log';
+import { makeDebug } from './util/log';
 import chalk from 'chalk';
 let debug = makeDebug(chalk.white('                                 [doc]'));
 

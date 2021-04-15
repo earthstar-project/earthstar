@@ -1,21 +1,20 @@
 import { AuthorKeypair, Doc } from './types/docTypes';
 
 import {
-    Follower,
     addFollower,
 } from './follower';
 import {
     StorageDriverAsyncMemory
-} from './storageDriverAsyncMemory';
+} from './storage/storageDriverAsyncMemory';
 import {
-    StorageFrontendAsync as StorageAsync
-} from './storageFrontendAsync';
-import { sleep } from './utils';
+    StorageAsync as StorageAsync
+} from './storage/storageAsync';
+import { sleep } from './util/utils';
 
 import {
     log,
     makeDebug,
-} from './log';
+} from './util/log';
 import chalk from 'chalk';
 let debug = makeDebug(chalk.greenBright('[main]'));
 let debugLazyFollower = makeDebug(chalk.magenta(' [main\'s lazy follower]'));
@@ -74,7 +73,7 @@ let main = async () => {
     debug('-----------\\')
     debug('adding lazy follower');
     let lazyFollower = await addFollower({
-        storageFrontend: storage,
+        storage: storage,
         onDoc: (doc: Doc | null) => {
             if (doc === null) {
                 debugLazyFollower('null -- I have become idle');
@@ -92,7 +91,7 @@ let main = async () => {
     debug('-----------\\')
     debug('adding blocking follower');
     let blockingFollower = await addFollower({
-        storageFrontend: storage,
+        storage: storage,
         onDoc: (doc: Doc | null) => {
             if (doc === null) {
                 debugBlockingFollower('null -- I have become idle');

@@ -12,7 +12,7 @@ import {
 
 import {
     Lock,
-} from '../lock';
+} from '../util/lock';
 
 //================================================================================
 
@@ -24,7 +24,7 @@ export interface IFollower {
     close(): void;
 }
 
-export interface IStorageFrontendAsync {
+export interface IStorageAsync {
     //--------------------------------------------------
     // CALLBACKS AND FOLLOWERS
 

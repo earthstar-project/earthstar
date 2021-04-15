@@ -16,7 +16,8 @@
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "test-coverage": "yarn test -- --coverage-report=lcov",
     "prepublishOnly": "yarn run clean && yarn run build",
-    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/utils.ts src/log.ts --rankdir LR -o depchart/depchart --open"
+    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/util/utils.ts src/util/log.ts --rankdir LR -o depchart/depchart --node_modules omit --open",
+    "depchart-types": "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit --open"
   },
   "devDependencies": {
     "@types/node": "^14.14.25",
