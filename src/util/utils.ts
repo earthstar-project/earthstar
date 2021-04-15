@@ -9,6 +9,7 @@ export let deepEqual = equal;
 export let deepCopy = clone();
 
 //================================================================================
+// TIME
 
 export let microsecondNow = () =>
     Date.now() * 1000;
@@ -18,6 +19,9 @@ export let sleep = (ms: number) =>
         setTimeout(res, ms);
     });
 
+//================================================================================
+// NUMBERS
+
 export let remap = (x: number, oldLo: number, oldHi: number, newLo: number, newHi: number ): number => {
     let pct = (x - oldLo) / (oldHi - oldLo);
     return newLo + (newHi - newLo) * pct;
@@ -26,13 +30,20 @@ export let remap = (x: number, oldLo: number, oldHi: number, newLo: number, newH
 export let randRange = (lo: number, hi: number): number =>
     remap(Math.random(), 0, 1, lo, hi);
 
+//================================================================================
+// TEMP FAKE HACKS
+
 export let fakeUuid = () =>
     ('' + randRange(0, 999999999999999)).padStart(15, '0');
 
 export let sha256b32 = (s: string) =>
     'fake-sha-256:' + fakeUuid();  // TODO
 
+//================================================================================
+// MISC 
+
 export let getPromiseParts = <T>() => {
+    // make a promise, extract the res and rej methods, and return all three.
     let resolve: (value: T | PromiseLike<T>) => void = null as any;
     let reject: (reason?: any) => void = null as any;
     let prom = new Promise<T>((res, rej) => {
@@ -43,6 +54,7 @@ export let getPromiseParts = <T>() => {
 }
 
 //================================================================================
+// SORTING
 
 export let compare = (a: any, b: any): Cmp => {
     if (a === b) { return Cmp.EQ; }

@@ -7,6 +7,7 @@ export type Path = string;
 export type Signature = string;
 export type Timestamp = number;
 export type LocalIndex = number;
+export type Base32String = string;
 
 export interface AuthorKeypair {
     address: AuthorAddress,

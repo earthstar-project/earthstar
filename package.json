@@ -8,18 +8,21 @@
   "homepage": "https://github.com/cinnamon-bun/stone-soup",
   "license": "AGPL-3.0",
   "scripts": {
-    "clean": "rm -rf build coverage .nyc_output depchart/*",
+    "clean": "rm -rf build coverage .nyc_output",
     "build": "tsc",
     "start": "node build/main.js",
-    "test": "tap -Rspecy --jobs=1 build/test/*.test.js",
+    "test": "tap --timeout=120 build/test/*.test.js",
+    "test2": "tap -Rspecy --no-bail --jobs=1 build/test/*.test.js",
     "build-and-test": "yarn build && yarn test",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "test-coverage": "yarn test -- --coverage-report=lcov",
     "prepublishOnly": "yarn run clean && yarn run build",
-    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/util/utils.ts src/util/log.ts --rankdir LR -o depchart/depchart --node_modules omit --open",
-    "depchart-types": "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit --open"
+    "depchart-main": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/util/utils.ts src/util/log.ts --rankdir LR -o depchart/depchart --node_modules omit",
+    "depchart-types": "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
+    "depchart": "yarn run depchart-main && yarn run depchart-types"
   },
   "devDependencies": {
+    "@types/multibase": "0.6.0",
     "@types/node": "^14.14.39",
     "@types/tap": "^14.10.2",
     "depchart": "^1.1.0",
@@ -30,6 +33,8 @@
   "dependencies": {
     "chalk": "^4.1.0",
     "fast-deep-equal": "^3.1.3",
+    "multibase": "2.0.0",
+    "rfc4648": "^1.4.0",
     "rfdc": "^1.2.0"
   }
 }
