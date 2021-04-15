@@ -32,11 +32,11 @@ let author1 = keypair1.address;
 let author2 = keypair2.address;
 let Val = ValidatorEs4;
 
-let snowmanJsString = '☃';
+//let snowmanJsString = '☃';
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
 let snowmanJs2 = snowmanBufferUtf8.toString('utf8');
 let snowmanU = '\u2603';
-let sparkleEmoji = '✨';
+//let sparkleEmoji = '✨';
 
 let NOW = 1500000000000000;
 
@@ -426,7 +426,7 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: false, path: '/newline\n' },
         { valid: false, path: '/tab\t' },
         { valid: false, path: '/@starts/with/at/sign' },
-        { valid: false, path: '/' + snowmanJsString, note: 'snowman 1' },
+        //{ valid: false, path: '/' + snowmanJsString, note: 'snowman 1' },
         { valid: false, path: '/' + snowmanJs2, note: 'snowman 2' },
         { valid: false, path: '/' + snowmanU, note: 'snowman 3' },
 
@@ -511,9 +511,9 @@ t.test('parseAuthorAddress', (t: any) => {
         { valid: false, address: '@suzy.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'question mark in key' },
         { valid: false, address: '@@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'double @ + 4 letter name' },
         { valid: false, address: '@@uzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'double @ + 3 letter name' },
-        { valid: false, address: `@suz${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 3 letters' },
-        { valid: false, address: `@su${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 2 letters' },
-        { valid: false, address: `@s${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 1 letter' },
+        { valid: false, address: `@suz${snowmanU}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 3 letters' },
+        { valid: false, address: `@su${snowmanU}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 2 letters' },
+        { valid: false, address: `@s${snowmanU}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 1 letter' },
         { valid: false, address: 123 as any as string, note: 'a number' },
         { valid: false, address: undefined as any as string, note: 'undefined' },
         { valid: false, address: null as any as string, note: 'null' },
@@ -641,7 +641,7 @@ t.test('parseWorkspaceAddress', (t: any) => {
         { valid: false, address: '+garden.bxx@xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: '@ in middle of key' },
         { valid: false, address: '+gardening.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'question mark in key' },
         { valid: false, address: '++gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'double +' },
-        { valid: false, address: `+garden${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name' },
+        { valid: false, address: `+garden${snowmanU}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name' },
     ];
     for (let v of vectors) {
         if (v.valid) {
@@ -666,7 +666,7 @@ t.test('_checkContentMatchesHash', (t: any) => {
         { valid: true, content: '', contentHash: sha256base32('') },
         { valid: true, content: 'abc', contentHash: sha256base32('abc') },
         { valid: true, content: 'a\nb', contentHash: sha256base32('a\nb') },
-        { valid: true, content: snowmanJsString, contentHash: sha256base32(snowmanJsString) },
+        { valid: true, content: snowmanU, contentHash: sha256base32(snowmanU) },
 
         { valid: false, content: '', contentHash: '' },
         { valid: false, content: 'hello', contentHash: sha256base32('abc') },

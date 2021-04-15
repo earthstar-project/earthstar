@@ -4,7 +4,7 @@ import { deepEqual } from 'fast-equals';
 let log = console.log;
 
 let now = 1500000000000000;
-let snowmanJsString = '☃';
+let snowmanJsString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 let invalidUnicode = Buffer.from([127, 128]);  // this is invalid unicode
 
 let doc = {

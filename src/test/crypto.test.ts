@@ -27,7 +27,7 @@ import {
 } from '../crypto/encoding';
 
 // use this unicode character for testing
-let snowmanJsString = '☃';
+let snowmanJsString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
 
 t.test('snowman test data', (t: any) => {
