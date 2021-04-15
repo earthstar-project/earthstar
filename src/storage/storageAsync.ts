@@ -21,7 +21,7 @@ import {
 
 import {
     sha256b32,
-    now
+    microsecondNow
 } from '../util/utils';
 import {
     docCompareForOverwrite,
@@ -116,10 +116,10 @@ export class StorageAsync implements IStorageAsync {
             let timestamp: number;
             if (existingDocSamePath === undefined) {
                 debug('  |     no existing doc, setting timestamp to now()');
-                timestamp = now();
+                timestamp = microsecondNow();
             } else {
                 debug('  |     existing doc found, bumping timestamp to win if needed');
-                timestamp = Math.max(now(), existingDocSamePath.timestamp + 1);
+                timestamp = Math.max(microsecondNow(), existingDocSamePath.timestamp + 1);
             }
 
             let doc: Doc = {

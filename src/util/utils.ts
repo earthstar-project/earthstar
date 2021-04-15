@@ -10,7 +10,7 @@ export let deepCopy = clone();
 
 //================================================================================
 
-export let now = () =>
+export let microsecondNow = () =>
     Date.now() * 1000;
 
 export let sleep = (ms: number) =>

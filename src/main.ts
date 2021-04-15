@@ -1,5 +1,9 @@
-import { AuthorKeypair, Doc } from './types/docTypes';
+import {
+    AuthorKeypair,
+    Doc
+} from './types/docTypes';
 
+import { sleep } from './util/utils';
 import {
     addFollower,
 } from './follower';
@@ -9,7 +13,6 @@ import {
 import {
     StorageAsync as StorageAsync
 } from './storage/storageAsync';
-import { sleep } from './util/utils';
 
 import {
     log,

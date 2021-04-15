@@ -4,12 +4,12 @@ import {
 import {
     Doc,
 } from './types/docTypes';
+import { HistoryMode } from './types/queryTypes';
 import {
     FollowerState,
     IFollower,
     IStorageAsync
 } from './types/storageTypes';
-import { HistoryMode } from './types/queryTypes';
 
 import { makeDebug } from './util/log';
 import chalk from 'chalk';

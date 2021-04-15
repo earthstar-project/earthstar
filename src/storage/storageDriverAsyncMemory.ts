@@ -10,13 +10,13 @@ import {
     IStorageDriverAsync as IStorageDriverAsync
 } from "../types/storageTypes";
 
+import { keyComparer } from '../util/utils';
+import { Lock } from '../util/lock';
 import {
     combinePathAndAuthor,
     docComparePathThenNewestFirst
 } from "../doc";
 import { cleanUpQuery, docMatchesFilter } from '../query';
-import { Lock } from '../util/lock';
-import { keyComparer } from '../util/utils';
 
 import { makeDebug } from '../util/log';
 import chalk from 'chalk';
