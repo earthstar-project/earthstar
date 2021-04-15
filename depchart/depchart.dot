@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster5430435735 {
+    subgraph cluster9665341910 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -23,7 +23,7 @@ digraph G {
         "src/main.ts" [label="main.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster2012074250 {
+        subgraph cluster7709359912 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -34,13 +34,15 @@ digraph G {
             "src/storage/storageDriverAsyncMemory.ts" [label="storageDriverAsyncMemory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster3984700285 {
+        subgraph cluster2944378225 {
             label=<<b>util</b>>;
             style="rounded,filled";
             fillcolor=bisque;
             color=bisque4;
             penwidth=2;
                 
+            "src/util/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/util/errors.ts" [label="errors.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/util/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
     }
@@ -50,8 +52,9 @@ digraph G {
     "src/main.ts" -> "src/storage/storageDriverAsyncMemory.ts" [penwidth=2; color=darkslategray4];
     "src/main.ts" -> "src/storage/storageAsync.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageAsync.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageDriverAsyncMemory.ts" -> "src/util/lock.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/query.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/storageDriverAsyncMemory.ts" -> "src/util/lock.ts" [penwidth=2; color=darkslategray4];
+    "src/util/base32.ts" -> "src/util/errors.ts" [penwidth=2; color=darkslategray4];
 
 }
