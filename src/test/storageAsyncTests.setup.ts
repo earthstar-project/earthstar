@@ -71,7 +71,22 @@ let MIN = SEC * 60;
 let HOUR = MIN * 60;
 let DAY = HOUR * 24;
 
-let SNOWMAN = '☃';  // \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+// a character to test our unicode handling
+let SNOWMAN = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+/*
+// Debug encoding issues with the snowman.
+// We used to set SNOWMAN to a literal Unicode snowman character, above.
+// If our source files were served as ASCII instead of UTF-8, the snowman
+// was interpreted as 3 extended ASCII chars instead of one UTF-8 code
+// point.  This happened when using the Python SimpleHTTPServer which
+// failed to set the charset HTTP header.
+console.log('SNOWMAN', SNOWMAN);
+console.log('SNOWMAN to Buffer as utf-8', Buffer.from(SNOWMAN, 'utf-8'));  // should be [226, 152, 131]
+console.log('SNOWMAN to Buffer as utf16le', Buffer.from(SNOWMAN, 'utf16le'));  // should be [ 3, 38 ]
+console.log('Buffer.byteLength(SNOWMAN, utf-8)', Buffer.byteLength(SNOWMAN, 'utf-8'));  // should be 3
+console.log('Buffer.byteLength(SNOWMAN, utf16le)', Buffer.byteLength(SNOWMAN, 'utf16le'));  // should be 2
+console.log('SNOWMAN.length', SNOWMAN.length);  // should be 1
+*/
 
 type MakeDocOpts = {
         workspace: WorkspaceAddress,

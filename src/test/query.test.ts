@@ -59,7 +59,7 @@ let MIN = SEC * 60;
 let HOUR = MIN * 60;
 let DAY = HOUR * 24;
 
-let SNOWMAN = '☃';  // \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+let SNOWMAN = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 
 type MakeDocOpts = {
         workspace: WorkspaceAddress,

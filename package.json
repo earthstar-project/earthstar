@@ -16,7 +16,7 @@
     "tap": "tape"
   },
   "scripts": {
-    "clean": "rm -rf build/* .nyc_output coverage browserify-test-bundle",
+    "clean": "rm -rf build/* .nyc_output coverage browserify-test-bundle/bundle.js",
     "toc": "./update-table-of-contents.sh",
     "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/\\|/util/\\|/temp/'` src/decls.d.ts --rankdir LR --node_modules separated --open",
     "build": "tsc",
