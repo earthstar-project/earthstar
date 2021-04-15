@@ -5,10 +5,10 @@ import {
     addFollower,
 } from './follower';
 import {
-    StorageBackendAsyncMemory
-} from './storageBackendAsyncMemory';
+    StorageDriverAsyncMemory
+} from './storageDriverAsyncMemory';
 import {
-    StorageFrontendAsync
+    StorageFrontendAsync as StorageAsync
 } from './storageFrontendAsync';
 import { sleep } from './utils';
 
@@ -38,14 +38,14 @@ let main = async () => {
 
     log('')
     debug('-----------\\')
-    debug('init backend')
-    let storageBackend = new StorageBackendAsyncMemory();
+    debug('init driver')
+    let storageDriver = new StorageDriverAsyncMemory();
     debug('-----------/')
 
     log('')
     debug('-----------\\')
-    debug('init frontend')
-    let storageFrontend = new StorageFrontendAsync(storageBackend);
+    debug('init storage')
+    let storage = new StorageAsync(storageDriver);
     debug('-----------/')
 
     log('')
@@ -55,7 +55,7 @@ let main = async () => {
     for (let ii = 0; ii < numDocsToWrite; ii++) {
         log('')
         debug(`setting #${ii}`);
-        let result = await storageFrontend.set(keypair, {
+        let result = await storage.set(keypair, {
             workspace,
             path: `/posts/post-${(''+ii).padStart(4, '0')}.txt`,
             content: `Hello ${ii}`,
@@ -67,14 +67,14 @@ let main = async () => {
     log('')
     debug('-----------\\')
     debug('getting all docs');
-    debug(await storageFrontend.getAllDocs());
+    debug(await storage.getAllDocs());
     debug('-----------/')
 
     log('')
     debug('-----------\\')
     debug('adding lazy follower');
     let lazyFollower = await addFollower({
-        storageFrontend: storageFrontend,
+        storageFrontend: storage,
         onDoc: (doc: Doc | null) => {
             if (doc === null) {
                 debugLazyFollower('null -- I have become idle');
@@ -92,7 +92,7 @@ let main = async () => {
     debug('-----------\\')
     debug('adding blocking follower');
     let blockingFollower = await addFollower({
-        storageFrontend: storageFrontend,
+        storageFrontend: storage,
         onDoc: (doc: Doc | null) => {
             if (doc === null) {
                 debugBlockingFollower('null -- I have become idle');

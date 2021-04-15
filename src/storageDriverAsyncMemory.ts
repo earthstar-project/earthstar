@@ -7,7 +7,7 @@ import {
     Query
 } from "./types/queryTypes";
 import {
-    IStorageBackendAsync
+    IStorageDriverAsync as IStorageDriverAsync
 } from "./types/storageTypes";
 
 import {
@@ -20,11 +20,11 @@ import { keyComparer } from './utils';
 
 import { makeDebug } from './log';
 import chalk from 'chalk';
-let debug = makeDebug(chalk.cyan('            [backend]'));
+let debug = makeDebug(chalk.cyan('            [driver]'));
 
 //================================================================================
 
-export class StorageBackendAsyncMemory implements IStorageBackendAsync {
+export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     lock: Lock;
     _highestLocalIndex: LocalIndex = 0;
   

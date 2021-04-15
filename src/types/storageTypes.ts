@@ -28,7 +28,7 @@ export interface IStorageFrontendAsync {
     //--------------------------------------------------
     // CALLBACKS AND FOLLOWERS
 
-    // TODO: does this belong on the frontend or backend?
+    // TODO: does this belong on the main storage or the driver?
     followers: Set<IFollower>;
 
     getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
@@ -48,7 +48,7 @@ export interface IStorageFrontendAsync {
     ingest(doc: Doc): Promise<IngestResult>;
 }
 
-export interface IStorageBackendAsync {
+export interface IStorageDriverAsync {
     lock: Lock;
     // The max local index used so far.  the first doc will increment this and get index 1.
     //highestLocalIndex: LocalIndex;

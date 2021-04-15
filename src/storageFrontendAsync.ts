@@ -15,7 +15,7 @@ import {
 import {
     IFollower,
     IngestResult,
-    IStorageBackendAsync,
+    IStorageDriverAsync,
     IStorageFrontendAsync,
 } from './types/storageTypes';
 
@@ -40,11 +40,11 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
     // Followers
     followers: Set<IFollower> = new Set();
 
-    _backend: IStorageBackendAsync;
+    _driver: IStorageDriverAsync;
 
-    constructor(backend: IStorageBackendAsync) {
-        debug('constructor, given a backend');
-        this._backend = backend;
+    constructor(driver: IStorageDriverAsync) {
+        debug('constructor, given a storageDriver');
+        this._driver = driver;
     }
 
     async getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]> {
@@ -57,28 +57,28 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
             },
             limit,
         };
-        return await this._backend.queryDocs(query);
+        return await this._driver.queryDocs(query);
     }
 
     //--------------------------------------------------
     // GET
     async getAllDocs(): Promise<Doc[]> {
         debug(`getAllDocs()`);
-        return await this._backend.queryDocs({
+        return await this._driver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
         });
     }
     async getLatestDocs(): Promise<Doc[]> {
         debug(`getLatestDocs()`);
-        return await this._backend.queryDocs({
+        return await this._driver.queryDocs({
             historyMode: 'latest',
             orderBy: 'path DESC',
         });
     }
     async getAllDocsAtPath(path: Path): Promise<Doc[]> {
         debug(`getAllDocsAtPath("${path}")`);
-        return await this._backend.queryDocs({
+        return await this._driver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
             filter: { path: path, }
@@ -86,7 +86,7 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
     }
     async getLatestDocAtPath(path: Path): Promise<Doc | undefined> {
         debug(`getLatestDocsAtPath("${path}")`);
-        let docs = await this._backend.queryDocs({
+        let docs = await this._driver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
             filter: { path: path, }
@@ -97,7 +97,7 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
 
     async queryDocs(query: Query = {}): Promise<Doc[]> {
         debug(`queryDocs`, query);
-        return await this._backend.queryDocs(query);
+        return await this._driver.queryDocs(query);
     }
 
     //queryPaths(query?: Query): Path[];
@@ -143,7 +143,7 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
         }
 
         debug('    running protected region...');
-        let result = await this._backend.lock.run(protectedCode);
+        let result = await this._driver.lock.run(protectedCode);
         debug('    ...done running protected region', result);
 
         return result;
@@ -159,7 +159,7 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
         let protectedCode = async (): Promise<IngestResult> => {
             // get other docs at the same path
             debug('  > getting other docs at the same path');
-            let existingDocsSamePath = await this._backend.queryDocs({
+            let existingDocsSamePath = await this._driver.queryDocs({
                 historyMode: 'all',
                 orderBy: 'path DESC', // newest first
                 filter: { path: doc.path }
@@ -184,9 +184,9 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
             }
 
             // save it
-            debug('  > upserting into backend...');
-            let success = await this._backend.upsert(doc);
-            debug('  > ...done upserting into backend');
+            debug('  > upserting into storageDriver...');
+            let success = await this._driver.upsert(doc);
+            debug('  > ...done upserting into storageDriver');
 
             if (!success) { return IngestResult.WriteError; }
             return isLatest
@@ -197,7 +197,7 @@ export class StorageFrontendAsync implements IStorageFrontendAsync {
         debug('    running protected region...');
         let result: IngestResult;
         if (_getLock) {
-            result = await this._backend.lock.run(protectedCode);
+            result = await this._driver.lock.run(protectedCode);
         } else {
             // we are already in a lock, just run the code
             result = await protectedCode();
