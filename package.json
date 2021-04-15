@@ -18,7 +18,7 @@
   "scripts": {
     "clean": "rm -rf build/* .nyc_output coverage browserify-test-bundle",
     "toc": "./update-table-of-contents.sh",
-    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/\\|/util/\\|/temp/'` src/decls.d.ts --rankdir rl --node_modules separated --open",
+    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/\\|/util/\\|/temp/'` src/decls.d.ts --rankdir LR --node_modules separated --open",
     "build": "tsc",
     "build-standalone": "mkdir -p dist && browserify --standalone earthstar build/index.browser.js > dist/earthstar.js && terser --compress -- dist/earthstar.js > dist/earthstar.min.js && ls -la dist",
     "browserify-for-karma": "mkdir -p browserify-test-bundle && browserify build/test/storageMemory.test.js > browserify-test-bundle/bundle.js",

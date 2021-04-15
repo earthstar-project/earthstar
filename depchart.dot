@@ -3,7 +3,7 @@ digraph G {
     //splines=line;
     //splines=polyline;
     splines=true;
-    rankdir=RL;
+    rankdir=LR;
     //newrank=true;
     compound=true;
     graph [fontname = "helvetica"];  // dpi=72
@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster1137788808 {
+    subgraph cluster1242441587 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -23,7 +23,7 @@ digraph G {
         "src/index.ts" [label="index.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/readme-example.ts" [label="readme-example.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster7567053913 {
+        subgraph cluster4766328072 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -37,7 +37,7 @@ digraph G {
             "src/crypto/encoding.ts" [label="encoding.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster4326192970 {
+        subgraph cluster786744886 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -54,7 +54,7 @@ digraph G {
             "src/storage/storageTypes.ts" [label="storageTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster7242525918 {
+        subgraph cluster9677068709 {
             label=<<b>sync</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -67,7 +67,7 @@ digraph G {
             "src/sync/syncer2.ts" [label="syncer2.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster6794025274 {
+        subgraph cluster4759481671 {
             label=<<b>validator</b>>;
             style="rounded,filled";
             fillcolor=bisque;

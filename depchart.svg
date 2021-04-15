@@ -10,551 +10,551 @@
 <title>G</title>
 <polygon fill="white" stroke="transparent" points="-4,4 -4,-971 1134,-971 1134,4 -4,4"/>
 <g id="clust1" class="cluster">
-<title>cluster1137788808</title>
+<title>cluster1242441587</title>
 <path fill="none" stroke="#8b7d6b" stroke-width="2" d="M20,-152C20,-152 1110,-152 1110,-152 1116,-152 1122,-158 1122,-164 1122,-164 1122,-947 1122,-947 1122,-953 1116,-959 1110,-959 1110,-959 20,-959 20,-959 14,-959 8,-953 8,-947 8,-947 8,-164 8,-164 8,-158 14,-152 20,-152"/>
 <text text-anchor="start" x="554.5" y="-944.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">src</text>
 </g>
 <g id="clust2" class="cluster">
-<title>cluster7567053913</title>
-<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M28,-759C28,-759 537.5,-759 537.5,-759 543.5,-759 549.5,-765 549.5,-771 549.5,-771 549.5,-916 549.5,-916 549.5,-922 543.5,-928 537.5,-928 537.5,-928 28,-928 28,-928 22,-928 16,-922 16,-916 16,-916 16,-771 16,-771 16,-765 22,-759 28,-759"/>
-<text text-anchor="start" x="261.75" y="-913.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">crypto</text>
+<title>cluster4766328072</title>
+<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M592.5,-759C592.5,-759 1102,-759 1102,-759 1108,-759 1114,-765 1114,-771 1114,-771 1114,-916 1114,-916 1114,-922 1108,-928 1102,-928 1102,-928 592.5,-928 592.5,-928 586.5,-928 580.5,-922 580.5,-916 580.5,-916 580.5,-771 580.5,-771 580.5,-765 586.5,-759 592.5,-759"/>
+<text text-anchor="start" x="826.25" y="-913.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">crypto</text>
 </g>
 <g id="clust3" class="cluster">
-<title>cluster4326192970</title>
-<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M317,-405C317,-405 1102,-405 1102,-405 1108,-405 1114,-411 1114,-417 1114,-417 1114,-656 1114,-656 1114,-662 1108,-668 1102,-668 1102,-668 317,-668 317,-668 311,-668 305,-662 305,-656 305,-656 305,-417 305,-417 305,-411 311,-405 317,-405"/>
-<text text-anchor="start" x="685" y="-653.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">storage</text>
+<title>cluster786744886</title>
+<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M28,-405C28,-405 813,-405 813,-405 819,-405 825,-411 825,-417 825,-417 825,-656 825,-656 825,-662 819,-668 813,-668 813,-668 28,-668 28,-668 22,-668 16,-662 16,-656 16,-656 16,-417 16,-417 16,-411 22,-405 28,-405"/>
+<text text-anchor="start" x="396" y="-653.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">storage</text>
 </g>
 <g id="clust4" class="cluster">
-<title>cluster7242525918</title>
-<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M615,-160C615,-160 750,-160 750,-160 756,-160 762,-166 762,-172 762,-172 762,-385 762,-385 762,-391 756,-397 750,-397 750,-397 615,-397 615,-397 609,-397 603,-391 603,-385 603,-385 603,-172 603,-172 603,-166 609,-160 615,-160"/>
-<text text-anchor="start" x="667" y="-382.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">sync</text>
+<title>cluster9677068709</title>
+<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M380,-160C380,-160 515,-160 515,-160 521,-160 527,-166 527,-172 527,-172 527,-385 527,-385 527,-391 521,-397 515,-397 515,-397 380,-397 380,-397 374,-397 368,-391 368,-385 368,-385 368,-172 368,-172 368,-166 374,-160 380,-160"/>
+<text text-anchor="start" x="432" y="-382.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">sync</text>
 </g>
 <g id="clust5" class="cluster">
-<title>cluster6794025274</title>
-<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M320,-676C320,-676 369,-676 369,-676 375,-676 381,-682 381,-688 381,-688 381,-739 381,-739 381,-745 375,-751 369,-751 369,-751 320,-751 320,-751 314,-751 308,-745 308,-739 308,-739 308,-688 308,-688 308,-682 314,-676 320,-676"/>
-<text text-anchor="start" x="316" y="-736.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">validator</text>
+<title>cluster4759481671</title>
+<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M761,-676C761,-676 810,-676 810,-676 816,-676 822,-682 822,-688 822,-688 822,-739 822,-739 822,-745 816,-751 810,-751 810,-751 761,-751 761,-751 755,-751 749,-745 749,-739 749,-739 749,-688 749,-688 749,-682 755,-676 761,-676"/>
+<text text-anchor="start" x="757" y="-736.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">validator</text>
 </g>
 <!-- src/extras.ts -->
 <g id="node1" class="node">
 <title>src/extras.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M704.5,-712C704.5,-712 660.5,-712 660.5,-712 654.5,-712 648.5,-706 648.5,-700 648.5,-700 648.5,-688 648.5,-688 648.5,-682 654.5,-676 660.5,-676 660.5,-676 704.5,-676 704.5,-676 710.5,-676 716.5,-682 716.5,-688 716.5,-688 716.5,-700 716.5,-700 716.5,-706 710.5,-712 704.5,-712"/>
-<text text-anchor="middle" x="682.5" y="-690.3" font-family="Helvetica,sans-Serif" font-size="14.00">extras.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M469.5,-712C469.5,-712 425.5,-712 425.5,-712 419.5,-712 413.5,-706 413.5,-700 413.5,-700 413.5,-688 413.5,-688 413.5,-682 419.5,-676 425.5,-676 425.5,-676 469.5,-676 469.5,-676 475.5,-676 481.5,-682 481.5,-688 481.5,-688 481.5,-700 481.5,-700 481.5,-706 475.5,-712 469.5,-712"/>
+<text text-anchor="middle" x="447.5" y="-690.3" font-family="Helvetica,sans-Serif" font-size="14.00">extras.ts</text>
 </g>
 <!-- src/storage/storageTypes.ts -->
 <g id="node17" class="node">
 <title>src/storage/storageTypes.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M552,-474C552,-474 463,-474 463,-474 457,-474 451,-468 451,-462 451,-462 451,-450 451,-450 451,-444 457,-438 463,-438 463,-438 552,-438 552,-438 558,-438 564,-444 564,-450 564,-450 564,-462 564,-462 564,-468 558,-474 552,-474"/>
-<text text-anchor="middle" x="507.5" y="-452.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageTypes.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M667,-474C667,-474 578,-474 578,-474 572,-474 566,-468 566,-462 566,-462 566,-450 566,-450 566,-444 572,-438 578,-438 578,-438 667,-438 667,-438 673,-438 679,-444 679,-450 679,-450 679,-462 679,-462 679,-468 673,-474 667,-474"/>
+<text text-anchor="middle" x="622.5" y="-452.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageTypes.ts</text>
 </g>
 <!-- src/extras.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge11" class="edge">
 <title>src/extras.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M648.25,-691.2C632.97,-688.4 615.5,-682.87 603,-672 545.41,-621.91 521.58,-530.19 512.88,-484.06"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="516.32,-483.38 511.12,-474.15 509.42,-484.61 516.32,-483.38"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M481.75,-691.2C497.03,-688.4 514.5,-682.87 527,-672 584.59,-621.91 608.42,-530.19 617.12,-484.06"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="620.58,-484.61 618.88,-474.15 613.68,-483.38 620.58,-484.61"/>
 </g>
 <!-- src/index.browser.ts -->
 <g id="node2" class="node">
 <title>src/index.browser.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M1074,-820C1074,-820 983,-820 983,-820 977,-820 971,-814 971,-808 971,-808 971,-796 971,-796 971,-790 977,-784 983,-784 983,-784 1074,-784 1074,-784 1080,-784 1086,-790 1086,-796 1086,-796 1086,-808 1086,-808 1086,-814 1080,-820 1074,-820"/>
-<text text-anchor="middle" x="1028.5" y="-798.3" font-family="Helvetica,sans-Serif" font-size="14.00">index.browser.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M147,-820C147,-820 56,-820 56,-820 50,-820 44,-814 44,-808 44,-808 44,-796 44,-796 44,-790 50,-784 56,-784 56,-784 147,-784 147,-784 153,-784 159,-790 159,-796 159,-796 159,-808 159,-808 159,-814 153,-820 147,-820"/>
+<text text-anchor="middle" x="101.5" y="-798.3" font-family="Helvetica,sans-Serif" font-size="14.00">index.browser.ts</text>
 </g>
 <!-- src/index.ts -->
 <g id="node3" class="node">
 <title>src/index.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M872,-395C872,-395 833,-395 833,-395 827,-395 821,-389 821,-383 821,-383 821,-371 821,-371 821,-365 827,-359 833,-359 833,-359 872,-359 872,-359 878,-359 884,-365 884,-371 884,-371 884,-383 884,-383 884,-389 878,-395 872,-395"/>
-<text text-anchor="middle" x="852.5" y="-373.3" font-family="Helvetica,sans-Serif" font-size="14.00">index.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M297,-395C297,-395 258,-395 258,-395 252,-395 246,-389 246,-383 246,-383 246,-371 246,-371 246,-365 252,-359 258,-359 258,-359 297,-359 297,-359 303,-359 309,-365 309,-371 309,-371 309,-383 309,-383 309,-389 303,-395 297,-395"/>
+<text text-anchor="middle" x="277.5" y="-373.3" font-family="Helvetica,sans-Serif" font-size="14.00">index.ts</text>
 </g>
 <!-- src/readme&#45;example.ts -->
 <g id="node4" class="node">
 <title>src/readme&#45;example.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M1083.5,-395C1083.5,-395 973.5,-395 973.5,-395 967.5,-395 961.5,-389 961.5,-383 961.5,-383 961.5,-371 961.5,-371 961.5,-365 967.5,-359 973.5,-359 973.5,-359 1083.5,-359 1083.5,-359 1089.5,-359 1095.5,-365 1095.5,-371 1095.5,-371 1095.5,-383 1095.5,-383 1095.5,-389 1089.5,-395 1083.5,-395"/>
-<text text-anchor="middle" x="1028.5" y="-373.3" font-family="Helvetica,sans-Serif" font-size="14.00">readme&#45;example.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M156.5,-395C156.5,-395 46.5,-395 46.5,-395 40.5,-395 34.5,-389 34.5,-383 34.5,-383 34.5,-371 34.5,-371 34.5,-365 40.5,-359 46.5,-359 46.5,-359 156.5,-359 156.5,-359 162.5,-359 168.5,-365 168.5,-371 168.5,-371 168.5,-383 168.5,-383 168.5,-389 162.5,-395 156.5,-395"/>
+<text text-anchor="middle" x="101.5" y="-373.3" font-family="Helvetica,sans-Serif" font-size="14.00">readme&#45;example.ts</text>
 </g>
 <!-- src/readme&#45;example.ts&#45;&gt;src/index.ts -->
 <g id="edge12" class="edge">
 <title>src/readme&#45;example.ts&#45;&gt;src/index.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M961.22,-377C938.75,-377 914.33,-377 894.42,-377"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="894.17,-373.5 884.17,-377 894.17,-380.5 894.17,-373.5"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M168.78,-377C191.25,-377 215.67,-377 235.58,-377"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="235.83,-380.5 245.83,-377 235.83,-373.5 235.83,-380.5"/>
 </g>
 <!-- src/storage/storageMemory.ts -->
 <g id="node14" class="node">
 <title>src/storage/storageMemory.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M903,-533C903,-533 802,-533 802,-533 796,-533 790,-527 790,-521 790,-521 790,-509 790,-509 790,-503 796,-497 802,-497 802,-497 903,-497 903,-497 909,-497 915,-503 915,-509 915,-509 915,-521 915,-521 915,-527 909,-533 903,-533"/>
-<text text-anchor="middle" x="852.5" y="-511.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageMemory.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M328,-533C328,-533 227,-533 227,-533 221,-533 215,-527 215,-521 215,-521 215,-509 215,-509 215,-503 221,-497 227,-497 227,-497 328,-497 328,-497 334,-497 340,-503 340,-509 340,-509 340,-521 340,-521 340,-527 334,-533 328,-533"/>
+<text text-anchor="middle" x="277.5" y="-511.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageMemory.ts</text>
 </g>
 <!-- src/readme&#45;example.ts&#45;&gt;src/storage/storageMemory.ts -->
 <g id="edge13" class="edge">
 <title>src/readme&#45;example.ts&#45;&gt;src/storage/storageMemory.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M961.27,-394.34C957.66,-396.33 954.2,-398.54 951,-401 927.25,-419.27 934.15,-434.95 915,-458 905.49,-469.44 893.77,-480.83 883.13,-490.39"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="880.81,-487.77 875.61,-497 885.43,-493.02 880.81,-487.77"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M168.73,-394.34C172.34,-396.33 175.8,-398.54 179,-401 202.75,-419.27 195.85,-434.95 215,-458 224.51,-469.44 236.23,-480.83 246.87,-490.39"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="244.57,-493.02 254.39,-497 249.19,-487.77 244.57,-493.02"/>
 </g>
 <!-- src/sync/syncLocal.ts -->
 <g id="node18" class="node">
 <title>src/sync/syncLocal.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M716,-366C716,-366 649,-366 649,-366 643,-366 637,-360 637,-354 637,-354 637,-342 637,-342 637,-336 643,-330 649,-330 649,-330 716,-330 716,-330 722,-330 728,-336 728,-342 728,-342 728,-354 728,-354 728,-360 722,-366 716,-366"/>
-<text text-anchor="middle" x="682.5" y="-344.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncLocal.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M481,-366C481,-366 414,-366 414,-366 408,-366 402,-360 402,-354 402,-354 402,-342 402,-342 402,-336 408,-330 414,-330 414,-330 481,-330 481,-330 487,-330 493,-336 493,-342 493,-342 493,-354 493,-354 493,-360 487,-366 481,-366"/>
+<text text-anchor="middle" x="447.5" y="-344.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncLocal.ts</text>
 </g>
 <!-- src/readme&#45;example.ts&#45;&gt;src/sync/syncLocal.ts -->
 <g id="edge14" class="edge">
 <title>src/readme&#45;example.ts&#45;&gt;src/sync/syncLocal.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M963.41,-358.97C947.7,-355.29 930.85,-351.94 915,-350 854.92,-342.63 785.4,-343.24 738.35,-344.99"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="737.93,-341.5 728.08,-345.4 738.21,-348.5 737.93,-341.5"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M166.59,-358.97C182.3,-355.29 199.15,-351.94 215,-350 275.08,-342.63 344.6,-343.24 391.65,-344.99"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="391.79,-348.5 401.92,-345.4 392.07,-341.5 391.79,-348.5"/>
 </g>
 <!-- src/crypto/crypto.ts -->
 <g id="node5" class="node">
 <title>src/crypto/crypto.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M529.5,-803C529.5,-803 485.5,-803 485.5,-803 479.5,-803 473.5,-797 473.5,-791 473.5,-791 473.5,-779 473.5,-779 473.5,-773 479.5,-767 485.5,-767 485.5,-767 529.5,-767 529.5,-767 535.5,-767 541.5,-773 541.5,-779 541.5,-779 541.5,-791 541.5,-791 541.5,-797 535.5,-803 529.5,-803"/>
-<text text-anchor="middle" x="507.5" y="-781.3" font-family="Helvetica,sans-Serif" font-size="14.00">crypto.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M644.5,-803C644.5,-803 600.5,-803 600.5,-803 594.5,-803 588.5,-797 588.5,-791 588.5,-791 588.5,-779 588.5,-779 588.5,-773 594.5,-767 600.5,-767 600.5,-767 644.5,-767 644.5,-767 650.5,-767 656.5,-773 656.5,-779 656.5,-779 656.5,-791 656.5,-791 656.5,-797 650.5,-803 644.5,-803"/>
+<text text-anchor="middle" x="622.5" y="-781.3" font-family="Helvetica,sans-Serif" font-size="14.00">crypto.ts</text>
 </g>
 <!-- src/crypto/cryptoChloride.ts -->
 <g id="node6" class="node">
 <title>src/crypto/cryptoChloride.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M392,-803C392,-803 298,-803 298,-803 292,-803 286,-797 286,-791 286,-791 286,-779 286,-779 286,-773 292,-767 298,-767 298,-767 392,-767 392,-767 398,-767 404,-773 404,-779 404,-779 404,-791 404,-791 404,-797 398,-803 392,-803"/>
-<text text-anchor="middle" x="345" y="-781.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoChloride.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M832,-803C832,-803 738,-803 738,-803 732,-803 726,-797 726,-791 726,-791 726,-779 726,-779 726,-773 732,-767 738,-767 738,-767 832,-767 832,-767 838,-767 844,-773 844,-779 844,-779 844,-791 844,-791 844,-797 838,-803 832,-803"/>
+<text text-anchor="middle" x="785" y="-781.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoChloride.ts</text>
 </g>
 <!-- src/crypto/crypto.ts&#45;&gt;src/crypto/cryptoChloride.ts -->
 <g id="edge1" class="edge">
 <title>src/crypto/crypto.ts&#45;&gt;src/crypto/cryptoChloride.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M473.24,-785C456.2,-785 434.79,-785 414.42,-785"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="414.2,-781.5 404.2,-785 414.2,-788.5 414.2,-781.5"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M656.76,-785C673.8,-785 695.21,-785 715.58,-785"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="715.8,-788.5 725.8,-785 715.8,-781.5 715.8,-788.5"/>
 </g>
 <!-- src/crypto/cryptoTypes.ts -->
 <g id="node8" class="node">
 <title>src/crypto/cryptoTypes.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M116,-863C116,-863 36,-863 36,-863 30,-863 24,-857 24,-851 24,-851 24,-839 24,-839 24,-833 30,-827 36,-827 36,-827 116,-827 116,-827 122,-827 128,-833 128,-839 128,-839 128,-851 128,-851 128,-857 122,-863 116,-863"/>
-<text text-anchor="middle" x="76" y="-841.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoTypes.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M1094,-863C1094,-863 1014,-863 1014,-863 1008,-863 1002,-857 1002,-851 1002,-851 1002,-839 1002,-839 1002,-833 1008,-827 1014,-827 1014,-827 1094,-827 1094,-827 1100,-827 1106,-833 1106,-839 1106,-839 1106,-851 1106,-851 1106,-857 1100,-863 1094,-863"/>
+<text text-anchor="middle" x="1054" y="-841.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoTypes.ts</text>
 </g>
 <!-- src/crypto/crypto.ts&#45;&gt;src/crypto/cryptoTypes.ts -->
 <g id="edge2" class="edge">
 <title>src/crypto/crypto.ts&#45;&gt;src/crypto/cryptoTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M494.93,-803.13C478.25,-827.37 444.92,-869.23 404,-886 312.04,-923.7 194.32,-891.36 128.14,-866.67"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="129.35,-863.39 118.76,-863.09 126.85,-869.93 129.35,-863.39"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M635.07,-803.13C651.75,-827.37 685.08,-869.23 726,-886 817.96,-923.7 935.68,-891.36 1001.86,-866.67"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="1003.15,-869.93 1011.24,-863.09 1000.65,-863.39 1003.15,-869.93"/>
 </g>
 <!-- src/crypto/encoding.ts -->
 <g id="node9" class="node">
 <title>src/crypto/encoding.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M238,-811C238,-811 176,-811 176,-811 170,-811 164,-805 164,-799 164,-799 164,-787 164,-787 164,-781 170,-775 176,-775 176,-775 238,-775 238,-775 244,-775 250,-781 250,-787 250,-787 250,-799 250,-799 250,-805 244,-811 238,-811"/>
-<text text-anchor="middle" x="207" y="-789.3" font-family="Helvetica,sans-Serif" font-size="14.00">encoding.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M954,-811C954,-811 892,-811 892,-811 886,-811 880,-805 880,-799 880,-799 880,-787 880,-787 880,-781 886,-775 892,-775 892,-775 954,-775 954,-775 960,-775 966,-781 966,-787 966,-787 966,-799 966,-799 966,-805 960,-811 954,-811"/>
+<text text-anchor="middle" x="923" y="-789.3" font-family="Helvetica,sans-Serif" font-size="14.00">encoding.ts</text>
 </g>
 <!-- src/crypto/crypto.ts&#45;&gt;src/crypto/encoding.ts -->
 <g id="edge3" class="edge">
 <title>src/crypto/crypto.ts&#45;&gt;src/crypto/encoding.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M473.23,-796.09C453.39,-802.12 427.54,-808.95 404,-812 351.99,-818.74 338.07,-818.25 286,-812 277.55,-810.99 268.68,-809.37 260.09,-807.51"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="260.7,-804.05 250.17,-805.22 259.13,-810.87 260.7,-804.05"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M656.77,-796.09C676.61,-802.12 702.46,-808.95 726,-812 778.01,-818.74 791.93,-818.25 844,-812 852.45,-810.99 861.32,-809.37 869.91,-807.51"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="870.87,-810.87 879.83,-805.22 869.3,-804.05 870.87,-810.87"/>
 </g>
 <!-- src/validator/es4.ts -->
 <g id="node22" class="node">
 <title>src/validator/es4.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M360,-720C360,-720 330,-720 330,-720 324,-720 318,-714 318,-708 318,-708 318,-696 318,-696 318,-690 324,-684 330,-684 330,-684 360,-684 360,-684 366,-684 372,-690 372,-696 372,-696 372,-708 372,-708 372,-714 366,-720 360,-720"/>
-<text text-anchor="middle" x="345" y="-698.3" font-family="Helvetica,sans-Serif" font-size="14.00">es4.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M800,-720C800,-720 770,-720 770,-720 764,-720 758,-714 758,-708 758,-708 758,-696 758,-696 758,-690 764,-684 770,-684 770,-684 800,-684 800,-684 806,-684 812,-690 812,-696 812,-696 812,-708 812,-708 812,-714 806,-720 800,-720"/>
+<text text-anchor="middle" x="785" y="-698.3" font-family="Helvetica,sans-Serif" font-size="14.00">es4.ts</text>
 </g>
 <!-- src/crypto/crypto.ts&#45;&gt;src/validator/es4.ts -->
 <g id="edge4" class="edge">
 <title>src/crypto/crypto.ts&#45;&gt;src/validator/es4.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M473.24,-773.4C446.02,-760.84 407.66,-741.02 380.19,-725.32"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="381.72,-722.17 371.32,-720.17 378.21,-728.22 381.72,-722.17"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M656.76,-773.4C683.98,-760.84 722.34,-741.02 749.81,-725.32"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="751.79,-728.22 758.68,-720.17 748.28,-722.17 751.79,-728.22"/>
 </g>
 <!-- src/crypto/cryptoChloride.ts&#45;&gt;src/crypto/cryptoTypes.ts -->
 <g id="edge5" class="edge">
 <title>src/crypto/cryptoChloride.ts&#45;&gt;src/crypto/cryptoTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M301.09,-803.17C285.27,-809.28 267.04,-815.65 250,-820 213.49,-829.32 171.71,-835.48 138.35,-839.35"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="137.83,-835.89 128.28,-840.48 138.61,-842.85 137.83,-835.89"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M828.91,-803.17C844.73,-809.28 862.96,-815.65 880,-820 916.51,-829.32 958.29,-835.48 991.65,-839.35"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="991.39,-842.85 1001.72,-840.48 992.17,-835.89 991.39,-842.85"/>
 </g>
 <!-- src/crypto/cryptoChloride.ts&#45;&gt;src/crypto/encoding.ts -->
 <g id="edge6" class="edge">
 <title>src/crypto/cryptoChloride.ts&#45;&gt;src/crypto/encoding.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M285.93,-788.42C277.41,-788.92 268.68,-789.43 260.28,-789.92"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="260.02,-786.43 250.25,-790.51 260.43,-793.42 260.02,-786.43"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M844.07,-788.42C852.59,-788.92 861.32,-789.43 869.72,-789.92"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="869.57,-793.42 879.75,-790.51 869.98,-786.43 869.57,-793.42"/>
 </g>
 <!-- crypto -->
 <g id="node23" class="node">
 <title>crypto</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="234,-144 184,-144 180,-140 180,-108 230,-108 234,-112 234,-144"/>
-<polyline fill="none" stroke="#8b8878" points="230,-140 180,-140 "/>
-<polyline fill="none" stroke="#8b8878" points="230,-140 230,-108 "/>
-<polyline fill="none" stroke="#8b8878" points="230,-140 234,-144 "/>
-<text text-anchor="middle" x="207" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">crypto</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="950,-144 900,-144 896,-140 896,-108 946,-108 950,-112 950,-144"/>
+<polyline fill="none" stroke="#8b8878" points="946,-140 896,-140 "/>
+<polyline fill="none" stroke="#8b8878" points="946,-140 946,-108 "/>
+<polyline fill="none" stroke="#8b8878" points="946,-140 950,-144 "/>
+<text text-anchor="middle" x="923" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">crypto</text>
 </g>
 <!-- src/crypto/cryptoChloride.ts&#45;&gt;crypto -->
 <g id="edge37" class="edge">
 <title>src/crypto/cryptoChloride.ts&#45;&gt;crypto</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M297.79,-766.82C293.26,-763.47 289.18,-759.56 286,-755 216.91,-655.81 208.96,-263.59 208.09,-154.36"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="211.59,-154.11 208.03,-144.14 204.59,-154.16 211.59,-154.11"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M832.21,-766.82C836.74,-763.47 840.82,-759.56 844,-755 913.09,-655.81 921.04,-263.59 921.91,-154.36"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="925.41,-154.16 921.97,-144.14 918.41,-154.11 925.41,-154.16"/>
 </g>
 <!-- chloride -->
 <g id="node24" class="node">
 <title>chloride</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="239,-90 179,-90 175,-86 175,-54 235,-54 239,-58 239,-90"/>
-<polyline fill="none" stroke="#8b8878" points="235,-86 175,-86 "/>
-<polyline fill="none" stroke="#8b8878" points="235,-86 235,-54 "/>
-<polyline fill="none" stroke="#8b8878" points="235,-86 239,-90 "/>
-<text text-anchor="middle" x="207" y="-68.3" font-family="Helvetica,sans-Serif" font-size="14.00">chloride</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="955,-90 895,-90 891,-86 891,-54 951,-54 955,-58 955,-90"/>
+<polyline fill="none" stroke="#8b8878" points="951,-86 891,-86 "/>
+<polyline fill="none" stroke="#8b8878" points="951,-86 951,-54 "/>
+<polyline fill="none" stroke="#8b8878" points="951,-86 955,-90 "/>
+<text text-anchor="middle" x="923" y="-68.3" font-family="Helvetica,sans-Serif" font-size="14.00">chloride</text>
 </g>
 <!-- src/crypto/cryptoChloride.ts&#45;&gt;chloride -->
 <g id="edge38" class="edge">
 <title>src/crypto/cryptoChloride.ts&#45;&gt;chloride</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M297.21,-766.82C292.84,-763.48 288.96,-759.57 286,-755 206.71,-632.41 323.45,-225.18 250,-99 248.99,-97.26 247.81,-95.61 246.51,-94.05"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="248.79,-91.39 239.14,-87.01 243.96,-96.45 248.79,-91.39"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M832.79,-766.82C837.16,-763.48 841.04,-759.57 844,-755 923.29,-632.41 806.55,-225.18 880,-99 881.01,-97.26 882.19,-95.61 883.49,-94.05"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="886.04,-96.45 890.86,-87.01 881.21,-91.39 886.04,-96.45"/>
 </g>
 <!-- src/crypto/cryptoNode.ts -->
 <g id="node7" class="node">
 <title>src/crypto/cryptoNode.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M383,-877C383,-877 307,-877 307,-877 301,-877 295,-871 295,-865 295,-865 295,-853 295,-853 295,-847 301,-841 307,-841 307,-841 383,-841 383,-841 389,-841 395,-847 395,-853 395,-853 395,-865 395,-865 395,-871 389,-877 383,-877"/>
-<text text-anchor="middle" x="345" y="-855.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoNode.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M823,-877C823,-877 747,-877 747,-877 741,-877 735,-871 735,-865 735,-865 735,-853 735,-853 735,-847 741,-841 747,-841 747,-841 823,-841 823,-841 829,-841 835,-847 835,-853 835,-853 835,-865 835,-865 835,-871 829,-877 823,-877"/>
+<text text-anchor="middle" x="785" y="-855.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoNode.ts</text>
 </g>
 <!-- src/crypto/cryptoNode.ts&#45;&gt;src/crypto/cryptoTypes.ts -->
 <g id="edge7" class="edge">
 <title>src/crypto/cryptoNode.ts&#45;&gt;src/crypto/cryptoTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M294.72,-856.42C250.64,-854.1 185.85,-850.71 138.42,-848.22"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="138.44,-844.72 128.27,-847.69 138.07,-851.71 138.44,-844.72"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M835.28,-856.42C879.36,-854.1 944.15,-850.71 991.58,-848.22"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="991.93,-851.71 1001.73,-847.69 991.56,-844.72 991.93,-851.71"/>
 </g>
 <!-- src/crypto/cryptoNode.ts&#45;&gt;src/crypto/encoding.ts -->
 <g id="edge8" class="edge">
 <title>src/crypto/cryptoNode.ts&#45;&gt;src/crypto/encoding.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M306.84,-840.97C290.65,-833.11 271.5,-823.81 254.38,-815.51"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="255.64,-812.23 245.12,-811.01 252.59,-818.53 255.64,-812.23"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M823.16,-840.97C839.35,-833.11 858.5,-823.81 875.62,-815.51"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="877.41,-818.53 884.88,-811.01 874.36,-812.23 877.41,-818.53"/>
 </g>
 <!-- src/crypto/cryptoNode.ts&#45;&gt;crypto -->
 <g id="edge39" class="edge">
 <title>src/crypto/cryptoNode.ts&#45;&gt;crypto</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M312.88,-840.8C302.65,-833.22 292.29,-823.48 286,-812 222.29,-695.8 210.45,-268.55 208.4,-154.27"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="211.9,-154.15 208.23,-144.21 204.9,-154.26 211.9,-154.15"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M817.12,-840.8C827.35,-833.22 837.71,-823.48 844,-812 907.71,-695.8 919.55,-268.55 921.6,-154.27"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="925.1,-154.26 921.77,-144.21 918.1,-154.15 925.1,-154.26"/>
 </g>
 <!-- src/crypto/encoding.ts&#45;&gt;src/crypto/cryptoTypes.ts -->
 <g id="edge9" class="edge">
 <title>src/crypto/encoding.ts&#45;&gt;src/crypto/cryptoTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M163.76,-810.03C153.42,-814.2 142.2,-818.72 131.38,-823.08"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="129.97,-819.88 122,-826.86 132.58,-826.37 129.97,-819.88"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M966.24,-810.03C976.58,-814.2 987.8,-818.72 998.62,-823.08"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="997.42,-826.37 1008,-826.86 1000.03,-819.88 997.42,-826.37"/>
 </g>
 <!-- src/crypto/encoding.ts&#45;&gt;src/validator/es4.ts -->
 <g id="edge10" class="edge">
 <title>src/crypto/encoding.ts&#45;&gt;src/validator/es4.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M235.07,-774.89C256.38,-760.63 286.24,-740.65 309.3,-725.22"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="311.41,-728.02 317.78,-719.55 307.52,-722.2 311.41,-728.02"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M894.93,-774.89C873.62,-760.63 843.76,-740.65 820.7,-725.22"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="822.48,-722.2 812.22,-719.55 818.59,-728.02 822.48,-722.2"/>
 </g>
 <!-- multibase -->
 <g id="node25" class="node">
 <title>multibase</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="113.5,-144 42.5,-144 38.5,-140 38.5,-108 109.5,-108 113.5,-112 113.5,-144"/>
-<polyline fill="none" stroke="#8b8878" points="109.5,-140 38.5,-140 "/>
-<polyline fill="none" stroke="#8b8878" points="109.5,-140 109.5,-108 "/>
-<polyline fill="none" stroke="#8b8878" points="109.5,-140 113.5,-144 "/>
-<text text-anchor="middle" x="76" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">multibase</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="1091.5,-144 1020.5,-144 1016.5,-140 1016.5,-108 1087.5,-108 1091.5,-112 1091.5,-144"/>
+<polyline fill="none" stroke="#8b8878" points="1087.5,-140 1016.5,-140 "/>
+<polyline fill="none" stroke="#8b8878" points="1087.5,-140 1087.5,-108 "/>
+<polyline fill="none" stroke="#8b8878" points="1087.5,-140 1091.5,-144 "/>
+<text text-anchor="middle" x="1054" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">multibase</text>
 </g>
 <!-- src/crypto/encoding.ts&#45;&gt;multibase -->
 <g id="edge40" class="edge">
 <title>src/crypto/encoding.ts&#45;&gt;multibase</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M202.48,-774.81C184.64,-682.58 104.18,-266.52 82.43,-154.08"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="85.85,-153.32 80.51,-144.17 78.98,-154.65 85.85,-153.32"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M927.52,-774.81C945.36,-682.58 1025.82,-266.52 1047.57,-154.08"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="1051.02,-154.65 1049.49,-144.17 1044.15,-153.32 1051.02,-154.65"/>
 </g>
 <!-- src/storage/query.ts -->
 <g id="node10" class="node">
 <title>src/storage/query.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M365,-543C365,-543 325,-543 325,-543 319,-543 313,-537 313,-531 313,-531 313,-519 313,-519 313,-513 319,-507 325,-507 325,-507 365,-507 365,-507 371,-507 377,-513 377,-519 377,-519 377,-531 377,-531 377,-537 371,-543 365,-543"/>
-<text text-anchor="middle" x="345" y="-521.3" font-family="Helvetica,sans-Serif" font-size="14.00">query.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M805,-543C805,-543 765,-543 765,-543 759,-543 753,-537 753,-531 753,-531 753,-519 753,-519 753,-513 759,-507 765,-507 765,-507 805,-507 805,-507 811,-507 817,-513 817,-519 817,-519 817,-531 817,-531 817,-537 811,-543 805,-543"/>
+<text text-anchor="middle" x="785" y="-521.3" font-family="Helvetica,sans-Serif" font-size="14.00">query.ts</text>
 </g>
 <!-- src/storage/queryHelpers.ts -->
 <g id="node11" class="node">
 <title>src/storage/queryHelpers.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M726,-597C726,-597 639,-597 639,-597 633,-597 627,-591 627,-585 627,-585 627,-573 627,-573 627,-567 633,-561 639,-561 639,-561 726,-561 726,-561 732,-561 738,-567 738,-573 738,-573 738,-585 738,-585 738,-591 732,-597 726,-597"/>
-<text text-anchor="middle" x="682.5" y="-575.3" font-family="Helvetica,sans-Serif" font-size="14.00">queryHelpers.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M491,-597C491,-597 404,-597 404,-597 398,-597 392,-591 392,-585 392,-585 392,-573 392,-573 392,-567 398,-561 404,-561 404,-561 491,-561 491,-561 497,-561 503,-567 503,-573 503,-573 503,-585 503,-585 503,-591 497,-597 491,-597"/>
+<text text-anchor="middle" x="447.5" y="-575.3" font-family="Helvetica,sans-Serif" font-size="14.00">queryHelpers.ts</text>
 </g>
 <!-- src/storage/queryHelpers.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge16" class="edge">
 <title>src/storage/queryHelpers.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M626.85,-570.2C559.8,-559.41 447.62,-541.36 387.33,-531.65"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="387.83,-528.19 377.41,-530.05 386.72,-535.1 387.83,-528.19"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M503.15,-570.2C570.2,-559.41 682.38,-541.36 742.67,-531.65"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="743.28,-535.1 752.59,-530.05 742.17,-528.19 743.28,-535.1"/>
 </g>
 <!-- src/storage/queryHelpers.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge15" class="edge">
 <title>src/storage/queryHelpers.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M626.78,-563.86C618.51,-560.54 610.32,-556.61 603,-552 573.31,-533.29 545.95,-503.52 528.4,-482.09"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="530.93,-479.66 521.94,-474.05 525.47,-484.04 530.93,-479.66"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M503.22,-563.86C511.49,-560.54 519.68,-556.61 527,-552 556.69,-533.29 584.05,-503.52 601.6,-482.09"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="604.53,-484.04 608.06,-474.05 599.07,-479.66 604.53,-484.04"/>
 </g>
 <!-- src/storage/storageBase.ts -->
 <g id="node12" class="node">
 <title>src/storage/storageBase.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M724,-543C724,-543 641,-543 641,-543 635,-543 629,-537 629,-531 629,-531 629,-519 629,-519 629,-513 635,-507 641,-507 641,-507 724,-507 724,-507 730,-507 736,-513 736,-519 736,-519 736,-531 736,-531 736,-537 730,-543 724,-543"/>
-<text text-anchor="middle" x="682.5" y="-521.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageBase.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M489,-543C489,-543 406,-543 406,-543 400,-543 394,-537 394,-531 394,-531 394,-519 394,-519 394,-513 400,-507 406,-507 406,-507 489,-507 489,-507 495,-507 501,-513 501,-519 501,-519 501,-531 501,-531 501,-537 495,-543 489,-543"/>
+<text text-anchor="middle" x="447.5" y="-521.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageBase.ts</text>
 </g>
 <!-- src/storage/storageBase.ts&#45;&gt;src/crypto/crypto.ts -->
 <g id="edge19" class="edge">
 <title>src/storage/storageBase.ts&#45;&gt;src/crypto/crypto.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M628.91,-534.86C619.21,-538.79 609.95,-544.3 603,-552 566.3,-592.65 595.34,-621.15 575,-672 562.52,-703.21 542.31,-736.01 527.44,-758.18"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="524.37,-756.47 521.64,-766.71 530.16,-760.41 524.37,-756.47"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M501.09,-534.86C510.79,-538.79 520.05,-544.3 527,-552 563.7,-592.65 534.66,-621.15 555,-672 567.48,-703.21 587.69,-736.01 602.56,-758.18"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="599.84,-760.41 608.36,-766.71 605.63,-756.47 599.84,-760.41"/>
 </g>
 <!-- src/storage/storageBase.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge18" class="edge">
 <title>src/storage/storageBase.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M628.71,-519.92C561.9,-517.55 448.21,-517.7 387.35,-520.38"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="387.15,-516.88 377.34,-520.87 387.5,-523.87 387.15,-516.88"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M501.29,-519.92C568.1,-517.55 681.79,-517.7 742.65,-520.38"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="742.5,-523.87 752.66,-520.87 742.85,-516.88 742.5,-523.87"/>
 </g>
 <!-- src/storage/storageBase.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge20" class="edge">
 <title>src/storage/storageBase.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M628.71,-530.08C561.9,-532.45 448.21,-532.3 387.35,-529.62"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="387.5,-526.13 377.34,-529.13 387.15,-533.12 387.5,-526.13"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M501.29,-530.08C568.1,-532.45 681.79,-532.3 742.65,-529.62"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="742.85,-533.12 752.66,-529.13 742.5,-526.13 742.85,-533.12"/>
 </g>
 <!-- src/storage/storageBase.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge17" class="edge">
 <title>src/storage/storageBase.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M628.91,-507.62C620.21,-504.54 611.32,-501.27 603,-498 587.79,-492.02 571.44,-484.98 556.69,-478.39"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="557.81,-475.05 547.26,-474.14 554.94,-481.44 557.81,-475.05"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M501.09,-507.62C509.79,-504.54 518.68,-501.27 527,-498 542.21,-492.02 558.56,-484.98 573.31,-478.39"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="575.06,-481.44 582.74,-474.14 572.19,-475.05 575.06,-481.44"/>
 </g>
 <!-- fast&#45;equals -->
 <g id="node26" class="node">
 <title>fast&#45;equals</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="248.5,-36 169.5,-36 165.5,-32 165.5,0 244.5,0 248.5,-4 248.5,-36"/>
-<polyline fill="none" stroke="#8b8878" points="244.5,-32 165.5,-32 "/>
-<polyline fill="none" stroke="#8b8878" points="244.5,-32 244.5,0 "/>
-<polyline fill="none" stroke="#8b8878" points="244.5,-32 248.5,-36 "/>
-<text text-anchor="middle" x="207" y="-14.3" font-family="Helvetica,sans-Serif" font-size="14.00">fast&#45;equals</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="964.5,-36 885.5,-36 881.5,-32 881.5,0 960.5,0 964.5,-4 964.5,-36"/>
+<polyline fill="none" stroke="#8b8878" points="960.5,-32 881.5,-32 "/>
+<polyline fill="none" stroke="#8b8878" points="960.5,-32 960.5,0 "/>
+<polyline fill="none" stroke="#8b8878" points="960.5,-32 964.5,-36 "/>
+<text text-anchor="middle" x="923" y="-14.3" font-family="Helvetica,sans-Serif" font-size="14.00">fast&#45;equals</text>
 </g>
 <!-- src/storage/storageBase.ts&#45;&gt;fast&#45;equals -->
 <g id="edge41" class="edge">
 <title>src/storage/storageBase.ts&#45;&gt;fast&#45;equals</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M629,-513.94C619.51,-510.1 610.32,-504.94 603,-498 578.97,-475.24 592.13,-457.32 575,-429 459.29,-237.68 418.11,-192.41 250,-45 249.01,-44.13 247.99,-43.27 246.95,-42.42"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="248.7,-39.36 238.61,-36.14 244.49,-44.95 248.7,-39.36"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M501,-513.94C510.49,-510.1 519.68,-504.94 527,-498 551.03,-475.24 537.87,-457.32 555,-429 670.71,-237.68 711.89,-192.41 880,-45 880.99,-44.13 882.01,-43.27 883.05,-42.42"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="885.51,-44.95 891.39,-36.14 881.3,-39.36 885.51,-44.95"/>
 </g>
 <!-- src/storage/storageLocalStorage.ts -->
 <g id="node13" class="node">
 <title>src/storage/storageLocalStorage.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M1094,-509C1094,-509 963,-509 963,-509 957,-509 951,-503 951,-497 951,-497 951,-485 951,-485 951,-479 957,-473 963,-473 963,-473 1094,-473 1094,-473 1100,-473 1106,-479 1106,-485 1106,-485 1106,-497 1106,-497 1106,-503 1100,-509 1094,-509"/>
-<text text-anchor="middle" x="1028.5" y="-487.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageLocalStorage.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M167,-509C167,-509 36,-509 36,-509 30,-509 24,-503 24,-497 24,-497 24,-485 24,-485 24,-479 30,-473 36,-473 36,-473 167,-473 167,-473 173,-473 179,-479 179,-485 179,-485 179,-497 179,-497 179,-503 173,-509 167,-509"/>
+<text text-anchor="middle" x="101.5" y="-487.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageLocalStorage.ts</text>
 </g>
 <!-- src/storage/storageLocalStorage.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge22" class="edge">
 <title>src/storage/storageLocalStorage.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M959.36,-509.03C956.5,-510.28 953.7,-511.6 951,-513 932.77,-522.47 932.24,-530.83 915,-542 850.94,-583.5 836.22,-602.17 762,-620 692.29,-636.74 506.1,-627.77 440,-600 413.29,-588.78 387.92,-567.69 370.29,-550.73"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="372.32,-547.82 362.75,-543.27 367.4,-552.79 372.32,-547.82"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M170.64,-509.03C173.5,-510.28 176.3,-511.6 179,-513 197.23,-522.47 197.76,-530.83 215,-542 279.06,-583.5 293.78,-602.17 368,-620 437.71,-636.74 623.9,-627.77 690,-600 716.71,-588.78 742.08,-567.69 759.71,-550.73"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="762.6,-552.79 767.25,-543.27 757.68,-547.82 762.6,-552.79"/>
 </g>
 <!-- src/storage/storageLocalStorage.ts&#45;&gt;src/storage/storageMemory.ts -->
 <g id="edge23" class="edge">
 <title>src/storage/storageLocalStorage.ts&#45;&gt;src/storage/storageMemory.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M950.93,-501.56C942.44,-502.73 933.81,-503.92 925.38,-505.09"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="924.64,-501.65 915.22,-506.49 925.6,-508.59 924.64,-501.65"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M179.07,-501.56C187.56,-502.73 196.19,-503.92 204.62,-505.09"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="204.4,-508.59 214.78,-506.49 205.36,-501.65 204.4,-508.59"/>
 </g>
 <!-- src/storage/storageLocalStorage.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge21" class="edge">
 <title>src/storage/storageLocalStorage.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M950.99,-486.71C903.75,-482.52 842.38,-474.25 790,-458 776.71,-453.88 775.54,-447.2 762,-444 693.22,-427.76 673.53,-439.54 603,-444 593.79,-444.58 584.1,-445.48 574.58,-446.53"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="573.88,-443.09 564.35,-447.72 574.69,-450.04 573.88,-443.09"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M179.01,-486.71C226.25,-482.52 287.62,-474.25 340,-458 353.29,-453.88 354.46,-447.2 368,-444 436.78,-427.76 456.47,-439.54 527,-444 536.21,-444.58 545.9,-445.48 555.42,-446.53"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="555.31,-450.04 565.65,-447.72 556.12,-443.09 555.31,-450.04"/>
 </g>
 <!-- lodash.debounce -->
 <g id="node27" class="node">
 <title>lodash.debounce</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="912,-144 797,-144 793,-140 793,-108 908,-108 912,-112 912,-144"/>
-<polyline fill="none" stroke="#8b8878" points="908,-140 793,-140 "/>
-<polyline fill="none" stroke="#8b8878" points="908,-140 908,-108 "/>
-<polyline fill="none" stroke="#8b8878" points="908,-140 912,-144 "/>
-<text text-anchor="middle" x="852.5" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">lodash.debounce</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="337,-144 222,-144 218,-140 218,-108 333,-108 337,-112 337,-144"/>
+<polyline fill="none" stroke="#8b8878" points="333,-140 218,-140 "/>
+<polyline fill="none" stroke="#8b8878" points="333,-140 333,-108 "/>
+<polyline fill="none" stroke="#8b8878" points="333,-140 337,-144 "/>
+<text text-anchor="middle" x="277.5" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">lodash.debounce</text>
 </g>
 <!-- src/storage/storageLocalStorage.ts&#45;&gt;lodash.debounce -->
 <g id="edge42" class="edge">
 <title>src/storage/storageLocalStorage.ts&#45;&gt;lodash.debounce</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M954.7,-472.87C953.4,-471.66 952.16,-470.37 951,-469 860.55,-361.88 997.39,-265.21 917.48,-152.17"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="920.14,-149.9 911.34,-144 914.55,-154.1 920.14,-149.9"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M175.3,-472.87C176.6,-471.66 177.84,-470.37 179,-469 269.45,-361.88 132.61,-265.21 212.52,-152.17"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="215.45,-154.1 218.66,-144 209.86,-149.9 215.45,-154.1"/>
 </g>
 <!-- src/storage/storageMemory.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge24" class="edge">
 <title>src/storage/storageMemory.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M840.27,-533.2C825.47,-555.25 797.15,-591.27 762,-606 631.68,-660.61 462.79,-587.71 386.53,-547.87"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="387.73,-544.55 377.26,-542.95 384.45,-550.73 387.73,-544.55"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M289.73,-533.2C304.53,-555.25 332.85,-591.27 368,-606 498.32,-660.61 667.21,-587.71 743.47,-547.87"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="745.55,-550.73 752.74,-542.95 742.27,-544.55 745.55,-550.73"/>
 </g>
 <!-- src/storage/storageMemory.ts&#45;&gt;src/storage/storageBase.ts -->
 <g id="edge25" class="edge">
 <title>src/storage/storageMemory.ts&#45;&gt;src/storage/storageBase.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M789.9,-518.67C775.73,-519.51 760.65,-520.41 746.42,-521.25"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="746.02,-517.77 736.25,-521.86 746.44,-524.76 746.02,-517.77"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M340.1,-518.67C354.27,-519.51 369.35,-520.41 383.58,-521.25"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="383.56,-524.76 393.75,-521.86 383.98,-517.77 383.56,-524.76"/>
 </g>
 <!-- src/storage/storageSqlite.ts -->
 <g id="node15" class="node">
 <title>src/storage/storageSqlite.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M895.5,-449C895.5,-449 809.5,-449 809.5,-449 803.5,-449 797.5,-443 797.5,-437 797.5,-437 797.5,-425 797.5,-425 797.5,-419 803.5,-413 809.5,-413 809.5,-413 895.5,-413 895.5,-413 901.5,-413 907.5,-419 907.5,-425 907.5,-425 907.5,-437 907.5,-437 907.5,-443 901.5,-449 895.5,-449"/>
-<text text-anchor="middle" x="852.5" y="-427.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageSqlite.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M320.5,-449C320.5,-449 234.5,-449 234.5,-449 228.5,-449 222.5,-443 222.5,-437 222.5,-437 222.5,-425 222.5,-425 222.5,-419 228.5,-413 234.5,-413 234.5,-413 320.5,-413 320.5,-413 326.5,-413 332.5,-419 332.5,-425 332.5,-425 332.5,-437 332.5,-437 332.5,-443 326.5,-449 320.5,-449"/>
+<text text-anchor="middle" x="277.5" y="-427.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageSqlite.ts</text>
 </g>
 <!-- src/storage/storageSqlite.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge26" class="edge">
 <title>src/storage/storageSqlite.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M797.17,-425.53C700.48,-416.65 502.81,-402.59 440,-429 406.82,-442.95 379.49,-474.95 363.01,-498.18"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="360.01,-496.38 357.24,-506.6 365.78,-500.34 360.01,-496.38"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M332.83,-425.53C429.52,-416.65 627.19,-402.59 690,-429 723.18,-442.95 750.51,-474.95 766.99,-498.18"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="764.22,-500.34 772.76,-506.6 769.99,-496.38 764.22,-500.34"/>
 </g>
 <!-- src/storage/storageSqlite.ts&#45;&gt;src/storage/storageBase.ts -->
 <g id="edge27" class="edge">
 <title>src/storage/storageSqlite.ts&#45;&gt;src/storage/storageBase.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M831.06,-449.24C813.68,-463.99 787.56,-484.47 762,-498 756.86,-500.72 751.39,-503.26 745.82,-505.6"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="744.39,-502.4 736.4,-509.35 746.98,-508.9 744.39,-502.4"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M298.94,-449.24C316.32,-463.99 342.44,-484.47 368,-498 373.14,-500.72 378.61,-503.26 384.18,-505.6"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="383.02,-508.9 393.6,-509.35 385.61,-502.4 383.02,-508.9"/>
 </g>
 <!-- fs -->
 <g id="node28" class="node">
 <title>fs</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="709.5,-144 659.5,-144 655.5,-140 655.5,-108 705.5,-108 709.5,-112 709.5,-144"/>
-<polyline fill="none" stroke="#8b8878" points="705.5,-140 655.5,-140 "/>
-<polyline fill="none" stroke="#8b8878" points="705.5,-140 705.5,-108 "/>
-<polyline fill="none" stroke="#8b8878" points="705.5,-140 709.5,-144 "/>
-<text text-anchor="middle" x="682.5" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">fs</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="474.5,-144 424.5,-144 420.5,-140 420.5,-108 470.5,-108 474.5,-112 474.5,-144"/>
+<polyline fill="none" stroke="#8b8878" points="470.5,-140 420.5,-140 "/>
+<polyline fill="none" stroke="#8b8878" points="470.5,-140 470.5,-108 "/>
+<polyline fill="none" stroke="#8b8878" points="470.5,-140 474.5,-144 "/>
+<text text-anchor="middle" x="447.5" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">fs</text>
 </g>
 <!-- src/storage/storageSqlite.ts&#45;&gt;fs -->
 <g id="edge43" class="edge">
 <title>src/storage/storageSqlite.ts&#45;&gt;fs</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M797.27,-416.08C794.57,-414.01 792.11,-411.67 790,-409 719.86,-320.24 831.18,-245.51 762,-156 751.75,-142.74 734.9,-135.34 719.43,-131.21"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="720.08,-127.77 709.55,-128.94 718.51,-134.59 720.08,-127.77"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M332.73,-416.08C335.43,-414.01 337.89,-411.67 340,-409 410.14,-320.24 298.82,-245.51 368,-156 378.25,-142.74 395.1,-135.34 410.57,-131.21"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="411.49,-134.59 420.45,-128.94 409.92,-127.77 411.49,-134.59"/>
 </g>
 <!-- better&#45;sqlite3 -->
 <g id="node29" class="node">
 <title>better&#45;sqlite3</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="730,-90 639,-90 635,-86 635,-54 726,-54 730,-58 730,-90"/>
-<polyline fill="none" stroke="#8b8878" points="726,-86 635,-86 "/>
-<polyline fill="none" stroke="#8b8878" points="726,-86 726,-54 "/>
-<polyline fill="none" stroke="#8b8878" points="726,-86 730,-90 "/>
-<text text-anchor="middle" x="682.5" y="-68.3" font-family="Helvetica,sans-Serif" font-size="14.00">better&#45;sqlite3</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="495,-90 404,-90 400,-86 400,-54 491,-54 495,-58 495,-90"/>
+<polyline fill="none" stroke="#8b8878" points="491,-86 400,-86 "/>
+<polyline fill="none" stroke="#8b8878" points="491,-86 491,-54 "/>
+<polyline fill="none" stroke="#8b8878" points="491,-86 495,-90 "/>
+<text text-anchor="middle" x="447.5" y="-68.3" font-family="Helvetica,sans-Serif" font-size="14.00">better&#45;sqlite3</text>
 </g>
 <!-- src/storage/storageSqlite.ts&#45;&gt;better&#45;sqlite3 -->
 <g id="edge44" class="edge">
 <title>src/storage/storageSqlite.ts&#45;&gt;better&#45;sqlite3</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M806.49,-412.95C800.13,-409.72 794.3,-405.56 790,-400 747.66,-345.3 804.67,-144.44 762,-90 756.19,-82.59 748.23,-77.2 739.59,-73.43"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="740.63,-70.09 730.03,-69.97 738.24,-76.67 740.63,-70.09"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M323.51,-412.95C329.87,-409.72 335.7,-405.56 340,-400 382.34,-345.3 325.33,-144.44 368,-90 373.81,-82.59 381.77,-77.2 390.41,-73.43"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="391.76,-76.67 399.97,-69.97 389.37,-70.09 391.76,-76.67"/>
 </g>
 <!-- src/storage/storageSqlite.ts&#45;&gt;better&#45;sqlite3 -->
 <g id="edge45" class="edge">
 <title>src/storage/storageSqlite.ts&#45;&gt;better&#45;sqlite3</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M797.47,-425.32C794.68,-423.21 792.15,-420.78 790,-418 747.66,-363.3 804.67,-162.44 762,-108 756.13,-100.51 748.06,-95.08 739.32,-91.01"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="740.61,-87.75 730.03,-87.21 737.97,-94.23 740.61,-87.75"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M332.53,-425.32C335.32,-423.21 337.85,-420.78 340,-418 382.34,-363.3 325.33,-162.44 368,-108 373.87,-100.51 381.94,-95.08 390.68,-91.01"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="392.03,-94.23 399.97,-87.21 389.39,-87.75 392.03,-94.23"/>
 </g>
 <!-- src/storage/storageToAsync.ts -->
 <g id="node16" class="node">
 <title>src/storage/storageToAsync.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M734,-489C734,-489 631,-489 631,-489 625,-489 619,-483 619,-477 619,-477 619,-465 619,-465 619,-459 625,-453 631,-453 631,-453 734,-453 734,-453 740,-453 746,-459 746,-465 746,-465 746,-477 746,-477 746,-483 740,-489 734,-489"/>
-<text text-anchor="middle" x="682.5" y="-467.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageToAsync.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M499,-489C499,-489 396,-489 396,-489 390,-489 384,-483 384,-477 384,-477 384,-465 384,-465 384,-459 390,-453 396,-453 396,-453 499,-453 499,-453 505,-453 511,-459 511,-465 511,-465 511,-477 511,-477 511,-483 505,-489 499,-489"/>
+<text text-anchor="middle" x="447.5" y="-467.3" font-family="Helvetica,sans-Serif" font-size="14.00">storageToAsync.ts</text>
 </g>
 <!-- src/storage/storageToAsync.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge28" class="edge">
 <title>src/storage/storageToAsync.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M618.79,-481.09C550.98,-492.01 444.85,-509.09 386.99,-518.4"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="386.42,-514.95 377.11,-519.99 387.54,-521.86 386.42,-514.95"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M511.21,-481.09C579.02,-492.01 685.15,-509.09 743.01,-518.4"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="742.46,-521.86 752.89,-519.99 743.58,-514.95 742.46,-521.86"/>
 </g>
 <!-- src/storage/storageToAsync.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge29" class="edge">
 <title>src/storage/storageToAsync.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M618.55,-465.54C604.25,-464.3 589.01,-462.98 574.58,-461.73"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="574.51,-458.21 564.24,-460.83 573.9,-465.18 574.51,-458.21"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M511.45,-465.54C525.75,-464.3 540.99,-462.98 555.42,-461.73"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="556.1,-465.18 565.76,-460.83 555.49,-458.21 556.1,-465.18"/>
 </g>
 <!-- src/storage/storageTypes.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge30" class="edge">
 <title>src/storage/storageTypes.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M464.33,-474.13C440.33,-484.45 410.42,-497.31 386.67,-507.52"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="385.04,-504.41 377.24,-511.57 387.81,-510.84 385.04,-504.41"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M665.67,-474.13C689.67,-484.45 719.58,-497.31 743.33,-507.52"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="742.19,-510.84 752.76,-511.57 744.96,-504.41 742.19,-510.84"/>
 </g>
 <!-- src/sync/syncLocal.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge31" class="edge">
 <title>src/sync/syncLocal.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M652.54,-366.08C623.35,-384.3 578.16,-412.51 546.19,-432.47"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="544.18,-429.6 537.55,-437.86 547.89,-435.54 544.18,-429.6"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M477.46,-366.08C506.65,-384.3 551.84,-412.51 583.81,-432.47"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="582.11,-435.54 592.45,-437.86 585.82,-429.6 582.11,-435.54"/>
 </g>
 <!-- src/sync/syncWithChannels.ts -->
 <g id="node19" class="node">
 <title>src/sync/syncWithChannels.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M742,-312C742,-312 623,-312 623,-312 617,-312 611,-306 611,-300 611,-300 611,-288 611,-288 611,-282 617,-276 623,-276 623,-276 742,-276 742,-276 748,-276 754,-282 754,-288 754,-288 754,-300 754,-300 754,-306 748,-312 742,-312"/>
-<text text-anchor="middle" x="682.5" y="-290.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncWithChannels.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M507,-312C507,-312 388,-312 388,-312 382,-312 376,-306 376,-300 376,-300 376,-288 376,-288 376,-282 382,-276 388,-276 388,-276 507,-276 507,-276 513,-276 519,-282 519,-288 519,-288 519,-300 519,-300 519,-306 513,-312 507,-312"/>
+<text text-anchor="middle" x="447.5" y="-290.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncWithChannels.ts</text>
 </g>
 <!-- src/sync/syncWithChannels.ts&#45;&gt;src/storage/query.ts -->
 <g id="edge32" class="edge">
 <title>src/sync/syncWithChannels.ts&#45;&gt;src/storage/query.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M624.51,-312.03C572.5,-330.48 495.49,-362.98 440,-409 408.59,-435.05 380.26,-472.93 363.1,-498.24"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="360.15,-496.37 357.51,-506.63 365.97,-500.25 360.15,-496.37"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M505.49,-312.03C557.5,-330.48 634.51,-362.98 690,-409 721.41,-435.05 749.74,-472.93 766.9,-498.24"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="764.03,-500.25 772.49,-506.63 769.85,-496.37 764.03,-500.25"/>
 </g>
 <!-- src/sync/syncWithChannels.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge33" class="edge">
 <title>src/sync/syncWithChannels.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M617.59,-312.02C612.43,-314.64 607.49,-317.62 603,-321 582.92,-336.13 545.85,-394.14 524.6,-429"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="521.49,-427.38 519.31,-437.75 527.48,-431.01 521.49,-427.38"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M512.41,-312.02C517.57,-314.64 522.51,-317.62 527,-321 547.08,-336.13 584.15,-394.14 605.4,-429"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="602.52,-431.01 610.69,-437.75 608.51,-427.38 602.52,-431.01"/>
 </g>
 <!-- chalk -->
 <g id="node30" class="node">
 <title>chalk</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="534.5,-90 484.5,-90 480.5,-86 480.5,-54 530.5,-54 534.5,-58 534.5,-90"/>
-<polyline fill="none" stroke="#8b8878" points="530.5,-86 480.5,-86 "/>
-<polyline fill="none" stroke="#8b8878" points="530.5,-86 530.5,-54 "/>
-<polyline fill="none" stroke="#8b8878" points="530.5,-86 534.5,-90 "/>
-<text text-anchor="middle" x="507.5" y="-68.3" font-family="Helvetica,sans-Serif" font-size="14.00">chalk</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="649.5,-90 599.5,-90 595.5,-86 595.5,-54 645.5,-54 649.5,-58 649.5,-90"/>
+<polyline fill="none" stroke="#8b8878" points="645.5,-86 595.5,-86 "/>
+<polyline fill="none" stroke="#8b8878" points="645.5,-86 645.5,-54 "/>
+<polyline fill="none" stroke="#8b8878" points="645.5,-86 649.5,-90 "/>
+<text text-anchor="middle" x="622.5" y="-68.3" font-family="Helvetica,sans-Serif" font-size="14.00">chalk</text>
 </g>
 <!-- src/sync/syncWithChannels.ts&#45;&gt;chalk -->
 <g id="edge46" class="edge">
 <title>src/sync/syncWithChannels.ts&#45;&gt;chalk</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M612.86,-276C609.22,-273.39 605.89,-270.41 603,-267 554.1,-209.22 622.31,-158.09 575,-99 567.35,-89.45 555.78,-83.25 544.43,-79.24"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="545.19,-75.81 534.61,-76.25 543.15,-82.51 545.19,-75.81"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M517.14,-276C520.78,-273.39 524.11,-270.41 527,-267 575.9,-209.22 507.69,-158.09 555,-99 562.65,-89.45 574.22,-83.25 585.57,-79.24"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="586.85,-82.51 595.39,-76.25 584.81,-75.81 586.85,-82.51"/>
 </g>
 <!-- concurrency&#45;friends -->
 <g id="node31" class="node">
 <title>concurrency&#45;friends</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="575,-144 444,-144 440,-140 440,-108 571,-108 575,-112 575,-144"/>
-<polyline fill="none" stroke="#8b8878" points="571,-140 440,-140 "/>
-<polyline fill="none" stroke="#8b8878" points="571,-140 571,-108 "/>
-<polyline fill="none" stroke="#8b8878" points="571,-140 575,-144 "/>
-<text text-anchor="middle" x="507.5" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">concurrency&#45;friends</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="690,-144 559,-144 555,-140 555,-108 686,-108 690,-112 690,-144"/>
+<polyline fill="none" stroke="#8b8878" points="686,-140 555,-140 "/>
+<polyline fill="none" stroke="#8b8878" points="686,-140 686,-108 "/>
+<polyline fill="none" stroke="#8b8878" points="686,-140 690,-144 "/>
+<text text-anchor="middle" x="622.5" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">concurrency&#45;friends</text>
 </g>
 <!-- src/sync/syncWithChannels.ts&#45;&gt;concurrency&#45;friends -->
 <g id="edge47" class="edge">
 <title>src/sync/syncWithChannels.ts&#45;&gt;concurrency&#45;friends</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M617.12,-275.87C612.12,-273.28 607.34,-270.34 603,-267 563.63,-236.71 535.14,-185.18 520.26,-153.51"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="523.43,-152.01 516.09,-144.36 517.06,-154.91 523.43,-152.01"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M512.88,-275.87C517.88,-273.28 522.66,-270.34 527,-267 566.37,-236.71 594.86,-185.18 609.74,-153.51"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="612.94,-154.91 613.91,-144.36 606.57,-152.01 612.94,-154.91"/>
 </g>
 <!-- src/sync/syncer1.ts -->
 <g id="node20" class="node">
 <title>src/sync/syncer1.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M709.5,-258C709.5,-258 655.5,-258 655.5,-258 649.5,-258 643.5,-252 643.5,-246 643.5,-246 643.5,-234 643.5,-234 643.5,-228 649.5,-222 655.5,-222 655.5,-222 709.5,-222 709.5,-222 715.5,-222 721.5,-228 721.5,-234 721.5,-234 721.5,-246 721.5,-246 721.5,-252 715.5,-258 709.5,-258"/>
-<text text-anchor="middle" x="682.5" y="-236.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncer1.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M474.5,-258C474.5,-258 420.5,-258 420.5,-258 414.5,-258 408.5,-252 408.5,-246 408.5,-246 408.5,-234 408.5,-234 408.5,-228 414.5,-222 420.5,-222 420.5,-222 474.5,-222 474.5,-222 480.5,-222 486.5,-228 486.5,-234 486.5,-234 486.5,-246 486.5,-246 486.5,-252 480.5,-258 474.5,-258"/>
+<text text-anchor="middle" x="447.5" y="-236.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncer1.ts</text>
 </g>
 <!-- src/sync/syncer1.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge34" class="edge">
 <title>src/sync/syncer1.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M643.27,-246.81C629.35,-250.82 614.28,-257.13 603,-267 553.11,-310.69 526.56,-386.91 515.26,-427.94"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="511.82,-427.25 512.65,-437.81 518.59,-429.04 511.82,-427.25"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M486.73,-246.81C500.65,-250.82 515.72,-257.13 527,-267 576.89,-310.69 603.44,-386.91 614.74,-427.94"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="611.41,-429.04 617.35,-437.81 618.18,-427.25 611.41,-429.04"/>
 </g>
 <!-- isomorphic&#45;fetch -->
 <g id="node32" class="node">
 <title>isomorphic&#45;fetch</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="565.5,-36 453.5,-36 449.5,-32 449.5,0 561.5,0 565.5,-4 565.5,-36"/>
-<polyline fill="none" stroke="#8b8878" points="561.5,-32 449.5,-32 "/>
-<polyline fill="none" stroke="#8b8878" points="561.5,-32 561.5,0 "/>
-<polyline fill="none" stroke="#8b8878" points="561.5,-32 565.5,-36 "/>
-<text text-anchor="middle" x="507.5" y="-14.3" font-family="Helvetica,sans-Serif" font-size="14.00">isomorphic&#45;fetch</text>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="680.5,-36 568.5,-36 564.5,-32 564.5,0 676.5,0 680.5,-4 680.5,-36"/>
+<polyline fill="none" stroke="#8b8878" points="676.5,-32 564.5,-32 "/>
+<polyline fill="none" stroke="#8b8878" points="676.5,-32 676.5,0 "/>
+<polyline fill="none" stroke="#8b8878" points="676.5,-32 680.5,-36 "/>
+<text text-anchor="middle" x="622.5" y="-14.3" font-family="Helvetica,sans-Serif" font-size="14.00">isomorphic&#45;fetch</text>
 </g>
 <!-- src/sync/syncer1.ts&#45;&gt;isomorphic&#45;fetch -->
 <g id="edge48" class="edge">
 <title>src/sync/syncer1.ts&#45;&gt;isomorphic&#45;fetch</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M643.21,-235.27C628.6,-231.54 613.06,-224.88 603,-213 554.1,-155.22 622.31,-104.09 575,-45 574.4,-44.26 573.78,-43.53 573.14,-42.83"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="575.31,-40.07 565.52,-36.01 570.64,-45.29 575.31,-40.07"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M486.79,-235.27C501.4,-231.54 516.94,-224.88 527,-213 575.9,-155.22 507.69,-104.09 555,-45 555.6,-44.26 556.22,-43.53 556.86,-42.83"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="559.36,-45.29 564.48,-36.01 554.69,-40.07 559.36,-45.29"/>
 </g>
 <!-- src/sync/syncer2.ts -->
 <g id="node21" class="node">
 <title>src/sync/syncer2.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M709.5,-204C709.5,-204 655.5,-204 655.5,-204 649.5,-204 643.5,-198 643.5,-192 643.5,-192 643.5,-180 643.5,-180 643.5,-174 649.5,-168 655.5,-168 655.5,-168 709.5,-168 709.5,-168 715.5,-168 721.5,-174 721.5,-180 721.5,-180 721.5,-192 721.5,-192 721.5,-198 715.5,-204 709.5,-204"/>
-<text text-anchor="middle" x="682.5" y="-182.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncer2.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M474.5,-204C474.5,-204 420.5,-204 420.5,-204 414.5,-204 408.5,-198 408.5,-192 408.5,-192 408.5,-180 408.5,-180 408.5,-174 414.5,-168 420.5,-168 420.5,-168 474.5,-168 474.5,-168 480.5,-168 486.5,-174 486.5,-180 486.5,-180 486.5,-192 486.5,-192 486.5,-198 480.5,-204 474.5,-204"/>
+<text text-anchor="middle" x="447.5" y="-182.3" font-family="Helvetica,sans-Serif" font-size="14.00">syncer2.ts</text>
 </g>
 <!-- src/sync/syncer2.ts&#45;&gt;src/storage/storageTypes.ts -->
 <g id="edge35" class="edge">
 <title>src/sync/syncer2.ts&#45;&gt;src/storage/storageTypes.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M643.17,-192.15C629.08,-196.09 613.91,-202.51 603,-213 540.98,-272.61 518.96,-377.65 511.73,-427.8"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="508.24,-427.54 510.37,-437.92 515.18,-428.47 508.24,-427.54"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M486.83,-192.15C500.92,-196.09 516.09,-202.51 527,-213 589.02,-272.61 611.04,-377.65 618.27,-427.8"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="614.82,-428.47 619.63,-437.92 621.76,-427.54 614.82,-428.47"/>
 </g>
 <!-- src/sync/syncer2.ts&#45;&gt;isomorphic&#45;fetch -->
 <g id="edge49" class="edge">
 <title>src/sync/syncer2.ts&#45;&gt;isomorphic&#45;fetch</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M643.2,-177.63C628.76,-172.69 613.35,-164.96 603,-153 570.56,-115.5 607.67,-82.3 575,-45 574.26,-44.16 573.49,-43.34 572.7,-42.55"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="574.81,-39.75 564.88,-36.07 570.35,-45.15 574.81,-39.75"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M486.8,-177.63C501.24,-172.69 516.65,-164.96 527,-153 559.44,-115.5 522.33,-82.3 555,-45 555.74,-44.16 556.51,-43.34 557.3,-42.55"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="559.65,-45.15 565.12,-36.07 555.19,-39.75 559.65,-45.15"/>
 </g>
 <!-- src/validator/es4.ts&#45;&gt;src/crypto/crypto.ts -->
 <g id="edge36" class="edge">
 <title>src/validator/es4.ts&#45;&gt;src/crypto/crypto.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M372.23,-710.42C399.61,-722.61 442.64,-744.71 472.58,-761.83"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="471.02,-764.97 481.42,-766.97 474.54,-758.92 471.02,-764.97"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M757.77,-710.42C730.39,-722.61 687.36,-744.71 657.42,-761.83"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="655.46,-758.92 648.58,-766.97 658.98,-764.97 655.46,-758.92"/>
 </g>
 <!-- src/validator/es4.ts&#45;&gt;fast&#45;equals -->
 <g id="edge50" class="edge">
 <title>src/validator/es4.ts&#45;&gt;fast&#45;equals</title>
-<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M317.95,-695.03C306.17,-690.47 293.28,-683.22 286,-672 210.05,-554.91 320.36,-165.53 250,-45 249.76,-44.59 249.51,-44.18 249.25,-43.78"/>
-<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="251.88,-41.47 242.75,-36.1 246.54,-46 251.88,-41.47"/>
+<path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M812.05,-695.03C823.83,-690.47 836.72,-683.22 844,-672 919.95,-554.91 809.64,-165.53 880,-45 880.24,-44.59 880.49,-44.18 880.75,-43.78"/>
+<polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="883.46,-46 887.25,-36.1 878.12,-41.47 883.46,-46"/>
 </g>
 </g>
 </svg>
