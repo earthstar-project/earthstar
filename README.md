@@ -540,3 +540,14 @@ You'll be able to put the literal string "`(hash)`" in a path.  It will be repla
 * Or overlay two Storage instances
 * For example you could combine `/wiki/~@a.xxxx` and `/wiki/~@b.xxxx` into one namespace
 
+# Dependency chart
+
+Low level files on the left, high level on the right.
+
+`low.ts <-- high.ts` means `low.ts` is imported by `high.ts`.
+
+Omitting `test` and `util` because they had too many arrows, and not showing how `index.ts` brings everything together.
+
+Run `npm run depchart` to regnerate this.  It's made using [depchart](https://github.com/cinnamon-bun/depchart) by @cinnamon.
+
+![](depchart.png)

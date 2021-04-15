@@ -1,0 +1,147 @@
+
+digraph G {
+    //splines=line;
+    //splines=polyline;
+    splines=true;
+    rankdir=RL;
+    //newrank=true;
+    compound=true;
+    graph [fontname = "helvetica"];  // dpi=72
+    node [fontname = "helvetica"];
+    edge [fontname = "helvetica"];
+    
+    // files in their folder clusters
+
+    subgraph cluster1137788808 {
+        label=<<b>src</b>>;
+        style="rounded";
+        color=bisque4;
+        penwidth=2;
+                
+        "src/extras.ts" [label="extras.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/index.browser.ts" [label="index.browser.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/index.ts" [label="index.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/readme-example.ts" [label="readme-example.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+
+        subgraph cluster7567053913 {
+            label=<<b>crypto</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/crypto/crypto.ts" [label="crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/cryptoChloride.ts" [label="cryptoChloride.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/cryptoNode.ts" [label="cryptoNode.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/cryptoTypes.ts" [label="cryptoTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/encoding.ts" [label="encoding.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster4326192970 {
+            label=<<b>storage</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/storage/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/queryHelpers.ts" [label="queryHelpers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storageBase.ts" [label="storageBase.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storageLocalStorage.ts" [label="storageLocalStorage.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storageMemory.ts" [label="storageMemory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storageSqlite.ts" [label="storageSqlite.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storageToAsync.ts" [label="storageToAsync.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storageTypes.ts" [label="storageTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster7242525918 {
+            label=<<b>sync</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/sync/syncLocal.ts" [label="syncLocal.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/sync/syncWithChannels.ts" [label="syncWithChannels.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/sync/syncer1.ts" [label="syncer1.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/sync/syncer2.ts" [label="syncer2.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster6794025274 {
+            label=<<b>validator</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/validator/es4.ts" [label="es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+    }
+
+    // packages not in their own cluster
+        "crypto" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "chloride" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "multibase" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "fast-equals" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "lodash.debounce" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "fs" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "better-sqlite3" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "chalk" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "concurrency-friends" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "isomorphic-fetch" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+
+    // edges between files
+    "src/crypto/crypto.ts" -> "src/crypto/cryptoChloride.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/crypto/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoChloride.ts" -> "src/crypto/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoChloride.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoNode.ts" -> "src/crypto/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoNode.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/encoding.ts" -> "src/crypto/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/encoding.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
+    "src/extras.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/readme-example.ts" -> "src/index.ts" [penwidth=2; color=darkslategray4];
+    "src/readme-example.ts" -> "src/storage/storageMemory.ts" [penwidth=2; color=darkslategray4];
+    "src/readme-example.ts" -> "src/sync/syncLocal.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/queryHelpers.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/queryHelpers.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageBase.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageBase.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageBase.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageBase.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageLocalStorage.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageLocalStorage.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageLocalStorage.ts" -> "src/storage/storageMemory.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageMemory.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageMemory.ts" -> "src/storage/storageBase.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageSqlite.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageSqlite.ts" -> "src/storage/storageBase.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageToAsync.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageToAsync.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageTypes.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/sync/syncLocal.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/sync/syncWithChannels.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/sync/syncWithChannels.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/sync/syncer1.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/sync/syncer2.ts" -> "src/storage/storageTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/validator/es4.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
+
+    // edges from files to packages
+    "src/crypto/cryptoChloride.ts" -> "crypto" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/crypto/cryptoChloride.ts" -> "chloride" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/crypto/cryptoNode.ts" -> "crypto" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/crypto/encoding.ts" -> "multibase" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/storage/storageBase.ts" -> "fast-equals" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/storage/storageLocalStorage.ts" -> "lodash.debounce" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/storage/storageSqlite.ts" -> "fs" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/storage/storageSqlite.ts" -> "better-sqlite3" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/storage/storageSqlite.ts" -> "better-sqlite3" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/sync/syncWithChannels.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/sync/syncWithChannels.ts" -> "concurrency-friends" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/sync/syncer1.ts" -> "isomorphic-fetch" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/sync/syncer2.ts" -> "isomorphic-fetch" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/validator/es4.ts" -> "fast-equals" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+
+}
