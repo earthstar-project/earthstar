@@ -1,33 +1,40 @@
 # Stone Soup
 
+
 **WIP** April 2021
 
 This is a sketch of ideas for improving the way [Earthstar](https://github.com/earthstar-project/earthstar) is split into classes.
 
 Much of Earthstar is just faked here -- signing, document validity checking.
 
-## Splitting `IStorage` into `Frontend` and `Backend` classes
+## Dependency chart
 
-This has nothing to do with normal web "frontend" and "backend", I should rename them.
+Regenerate this with `yarn depchart`.
+
+For readability this omits: `/test`, `/types`, `utils.ts`, and `log.ts`.
+
+![](depchart.png)
+
+## Splitting `IStorage` into `Storage` and `StorageDriver` classes
 
 Think of this as `IStorageNiceAPIFullOfComplexity` and `IStorageSimpleLowLevelDriver`.
 
 I want to make it easier to add new kinds of storage so I'm splitting IStorage into two parts:
 
-The Frontend does:
-* the complex annoying stuff
-* set(): sign and add a document
-* ingest(): validate and accept a document from the outside
+The Storage does:
+* the complex annoying stuff we only want to write once
+* `set():` sign and add a document
+* `ingest():` validate and accept a document from the outside
 * followers and events
 * user-friendly helper functions, getters, setters
 
-The Backend does:
-* simple stuff
-* query for documents
+The StorageDriver does:
+* simple stuff, so we can make lots of drivers
+* query for documents (this is actually pretty complicated)
 * maintain indexes for querying (hopefully provided by the underlying storage technology)
-* simple upsert of a document
+* simple upsert of a document with no smartness
 
-Possibly even you can have multiple frontends for one backend, for example when you're using multiple tabs with indexedDb or localStorage.
+Possibly even you can have multiple Storages for one Driver, for example when you're using multiple tabs with indexedDb or localStorage.
 
 ## "Reliable indexing / streaming"
 
@@ -123,6 +130,10 @@ Also, the `cleanUpQuery` function is fancier and will also figure out if the que
   * localIndex could be a tuple `[generation, localIndex]` where generation is an integer that increments on each big change like that
   * or give each IStorage a UUID which gets randomly changed when big changes happen.  This would be helpful for other reasons too (to prevent echoing back documents to the storage that just gave them back to us, we need to track who gave them to us)
 * Syncing by `localIndex` doesn't work very well when you also have a sync query, because you have to scan the entire sequence to find the couple of docs you care about.  We probably still want another way of efficient syncing that goes in path order and uses hashing in some clever way, sort of like a Merkle tree but not.
+
+## Other small improvements
+
+* The `Document` type is now named `Doc` to avoid collision with an existing built-in Typescript type
 
 ## Silly new vocabulary ideas
 

@@ -266,6 +266,11 @@
   resolved "https://registry.yarnpkg.com/@blakeembrey/template/-/template-1.0.0.tgz#bf8828bc3ae8004d97904d78f64e3cc2cd216438"
   integrity sha512-J6WGZqCLdRMHUkyRG6fBSIFJ0rL60/nsQNh5rQvsYZ5u0PsKw6XQcJcA3DWvd9cN3j/IQx5yB1fexhCafwwUUw==
 
+"@types/argparse@^2.0.5":
+  version "2.0.5"
+  resolved "https://registry.yarnpkg.com/@types/argparse/-/argparse-2.0.5.tgz#5192f160931442a32c1c23e9480fff3f8d7cd0e4"
+  integrity sha512-m0CQ4TzFW+JdAN875vqqNO7H92jnN9hrH0bxEjJStePjfSfBDNgIlH+ieZQvBH9CuSPguFpjEzXcJHqV+fJqOQ==
+
 "@types/node@*", "@types/node@^14.14.25":
   version "14.14.37"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-14.14.37.tgz#a3dd8da4eb84a996c36e331df98d82abd76b516e"
@@ -394,6 +399,11 @@ argparse@^1.0.7:
   integrity sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==
   dependencies:
     sprintf-js "~1.0.2"
+
+argparse@^2.0.1:
+  version "2.0.1"
+  resolved "https://registry.yarnpkg.com/argparse/-/argparse-2.0.1.tgz#246f50f3ca78a3240f6c997e8a9bd1eac49e4b38"
+  integrity sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==
 
 arrify@^2.0.1:
   version "2.0.1"
@@ -797,6 +807,17 @@ delayed-stream@~1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/delayed-stream/-/delayed-stream-1.0.0.tgz#df3ae199acadfb7d440aaae0b29e2272b24ec619"
   integrity sha1-3zrhmayt+31ECqrgsp4icrJOxhk=
+
+depchart@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/depchart/-/depchart-1.1.0.tgz#eca2acb0bda6b1630bdd60568e392c60c641c0e2"
+  integrity sha512-25wsr9+/TmFesH+n7qAJqsfPF8QMdZxOym+S+U+HujgBTK/j9r8nlfyEULESGENj6Hr6GeKIIoR2Jw/IuozqnA==
+  dependencies:
+    "@types/argparse" "^2.0.5"
+    argparse "^2.0.1"
+    chalk "^4.1.0"
+    fast-deep-equal "^3.1.3"
+    rfdc "^1.2.0"
 
 diff-frag@^1.0.1:
   version "1.1.1"

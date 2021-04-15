@@ -1,11 +1,11 @@
 {
-  "name": "typed-bus",
-  "version": "0.0.1",
+  "name": "stone-soup",
+  "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "repository": "",
   "author": "Cinnamon <cinnamon_bun_github@fastmail.com>",
-  "homepage": "https://github.com/cinnamon-bun/typed-bus",
+  "homepage": "https://github.com/cinnamon-bun/stone-soup",
   "license": "AGPL-3.0",
   "scripts": {
     "clean": "rm -rf build coverage .nyc_output",
@@ -15,11 +15,13 @@
     "build-and-test": "yarn build && yarn test",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "test-coverage": "yarn test -- --coverage-report=lcov",
-    "prepublishOnly": "yarn run clean && yarn run build"
+    "prepublishOnly": "yarn run clean && yarn run build",
+    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/utils.ts src/log.ts --rankdir LR --open"
   },
   "devDependencies": {
     "@types/node": "^14.14.25",
     "@types/tap": "^14.10.2",
+    "depchart": "^1.1.0",
     "onchange": "^7.1.0",
     "tap": "^14.11.0",
     "typescript": "^4.1.4"

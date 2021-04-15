@@ -1,0 +1,39 @@
+
+digraph G {
+    //splines=line;
+    //splines=polyline;
+    splines=true;
+    rankdir=LR;
+    //newrank=true;
+    compound=true;
+    graph [fontname = "helvetica"];  // dpi=72
+    node [fontname = "helvetica"];
+    edge [fontname = "helvetica"];
+    
+    // files in their folder clusters
+
+    subgraph cluster4045814576 {
+        label=<<b>src</b>>;
+        style="rounded";
+        color=bisque4;
+        penwidth=2;
+                
+        "src/doc.ts" [label="doc.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/follower.ts" [label="follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/main.ts" [label="main.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/storageDriverAsyncMemory.ts" [label="storageDriverAsyncMemory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/storageFrontendAsync.ts" [label="storageFrontendAsync.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+    }
+
+    // edges between files
+    "src/main.ts" -> "src/follower.ts" [penwidth=2; color=darkslategray4];
+    "src/main.ts" -> "src/storageDriverAsyncMemory.ts" [penwidth=2; color=darkslategray4];
+    "src/main.ts" -> "src/storageFrontendAsync.ts" [penwidth=2; color=darkslategray4];
+    "src/storageDriverAsyncMemory.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
+    "src/storageDriverAsyncMemory.ts" -> "src/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storageDriverAsyncMemory.ts" -> "src/lock.ts" [penwidth=2; color=darkslategray4];
+    "src/storageFrontendAsync.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
+
+}
