@@ -8,7 +8,7 @@
   "homepage": "https://github.com/cinnamon-bun/stone-soup",
   "license": "AGPL-3.0",
   "scripts": {
-    "clean": "rm -rf build coverage .nyc_output",
+    "clean": "rm -rf build coverage .nyc_output depchart/*",
     "build": "tsc",
     "start": "node build/main.js",
     "test": "tap -Rspecy --jobs=1 build/test/*.test.js",
@@ -16,7 +16,7 @@
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "test-coverage": "yarn test -- --coverage-report=lcov",
     "prepublishOnly": "yarn run clean && yarn run build",
-    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/utils.ts src/log.ts --rankdir LR --open"
+    "depchart": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/utils.ts src/log.ts --rankdir LR -o depchart/depchart --open"
   },
   "devDependencies": {
     "@types/node": "^14.14.25",

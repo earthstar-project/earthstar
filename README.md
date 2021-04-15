@@ -9,11 +9,13 @@ Much of Earthstar is just faked here -- signing, document validity checking.
 
 ## Dependency chart
 
-Regenerate this with `yarn depchart`.
+A --> B means "A imports B".
 
 For readability this omits: `/test`, `/types`, `utils.ts`, and `log.ts`.
 
-![](depchart.png)
+Run `yarn depchart` to regenerate this.  You'll need graphviz installed.
+
+![](depchart/depchart.png)
 
 ## Splitting `IStorage` into `Storage` and `StorageDriver` classes
 
