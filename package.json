@@ -83,6 +83,6 @@
     "isomorphic-fetch": "^2.2.1",
     "lodash.debounce": "^4.0.8",
     "rfc4648": "^1.4.0",
-    "tslib": "^2.0.3"
+    "tslib": "^2.2.0"
   }
 }
