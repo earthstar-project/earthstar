@@ -10,27 +10,27 @@
 <title>G</title>
 <polygon fill="white" stroke="transparent" points="-4,4 -4,-971 1134,-971 1134,4 -4,4"/>
 <g id="clust1" class="cluster">
-<title>cluster1242441587</title>
+<title>cluster6771759012</title>
 <path fill="none" stroke="#8b7d6b" stroke-width="2" d="M20,-152C20,-152 1110,-152 1110,-152 1116,-152 1122,-158 1122,-164 1122,-164 1122,-947 1122,-947 1122,-953 1116,-959 1110,-959 1110,-959 20,-959 20,-959 14,-959 8,-953 8,-947 8,-947 8,-164 8,-164 8,-158 14,-152 20,-152"/>
 <text text-anchor="start" x="554.5" y="-944.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">src</text>
 </g>
 <g id="clust2" class="cluster">
-<title>cluster4766328072</title>
+<title>cluster219385455</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M592.5,-759C592.5,-759 1102,-759 1102,-759 1108,-759 1114,-765 1114,-771 1114,-771 1114,-916 1114,-916 1114,-922 1108,-928 1102,-928 1102,-928 592.5,-928 592.5,-928 586.5,-928 580.5,-922 580.5,-916 580.5,-916 580.5,-771 580.5,-771 580.5,-765 586.5,-759 592.5,-759"/>
 <text text-anchor="start" x="826.25" y="-913.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">crypto</text>
 </g>
 <g id="clust3" class="cluster">
-<title>cluster786744886</title>
+<title>cluster6750832814</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M28,-405C28,-405 813,-405 813,-405 819,-405 825,-411 825,-417 825,-417 825,-656 825,-656 825,-662 819,-668 813,-668 813,-668 28,-668 28,-668 22,-668 16,-662 16,-656 16,-656 16,-417 16,-417 16,-411 22,-405 28,-405"/>
 <text text-anchor="start" x="396" y="-653.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">storage</text>
 </g>
 <g id="clust4" class="cluster">
-<title>cluster9677068709</title>
+<title>cluster3919837237</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M380,-160C380,-160 515,-160 515,-160 521,-160 527,-166 527,-172 527,-172 527,-385 527,-385 527,-391 521,-397 515,-397 515,-397 380,-397 380,-397 374,-397 368,-391 368,-385 368,-385 368,-172 368,-172 368,-166 374,-160 380,-160"/>
 <text text-anchor="start" x="432" y="-382.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">sync</text>
 </g>
 <g id="clust5" class="cluster">
-<title>cluster4759481671</title>
+<title>cluster8218432789</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M761,-676C761,-676 810,-676 810,-676 816,-676 822,-682 822,-688 822,-688 822,-739 822,-739 822,-745 816,-751 810,-751 810,-751 761,-751 761,-751 755,-751 749,-745 749,-739 749,-739 749,-688 749,-688 749,-682 755,-676 761,-676"/>
 <text text-anchor="start" x="757" y="-736.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">validator</text>
 </g>
@@ -232,18 +232,18 @@
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M894.93,-774.89C873.62,-760.63 843.76,-740.65 820.7,-725.22"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="822.48,-722.2 812.22,-719.55 818.59,-728.02 822.48,-722.2"/>
 </g>
-<!-- multibase -->
+<!-- rfc4648 -->
 <g id="node25" class="node">
-<title>multibase</title>
-<polygon fill="#cdc8b1" stroke="#8b8878" points="1091.5,-144 1020.5,-144 1016.5,-140 1016.5,-108 1087.5,-108 1091.5,-112 1091.5,-144"/>
-<polyline fill="none" stroke="#8b8878" points="1087.5,-140 1016.5,-140 "/>
-<polyline fill="none" stroke="#8b8878" points="1087.5,-140 1087.5,-108 "/>
-<polyline fill="none" stroke="#8b8878" points="1087.5,-140 1091.5,-144 "/>
-<text text-anchor="middle" x="1054" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">multibase</text>
+<title>rfc4648</title>
+<polygon fill="#cdc8b1" stroke="#8b8878" points="1085,-144 1027,-144 1023,-140 1023,-108 1081,-108 1085,-112 1085,-144"/>
+<polyline fill="none" stroke="#8b8878" points="1081,-140 1023,-140 "/>
+<polyline fill="none" stroke="#8b8878" points="1081,-140 1081,-108 "/>
+<polyline fill="none" stroke="#8b8878" points="1081,-140 1085,-144 "/>
+<text text-anchor="middle" x="1054" y="-122.3" font-family="Helvetica,sans-Serif" font-size="14.00">rfc4648</text>
 </g>
-<!-- src/crypto/encoding.ts&#45;&gt;multibase -->
+<!-- src/crypto/encoding.ts&#45;&gt;rfc4648 -->
 <g id="edge40" class="edge">
-<title>src/crypto/encoding.ts&#45;&gt;multibase</title>
+<title>src/crypto/encoding.ts&#45;&gt;rfc4648</title>
 <path fill="none" stroke="#8b8878" stroke-width="1.5" stroke-dasharray="5,2" d="M927.52,-774.81C945.36,-682.58 1025.82,-266.52 1047.57,-154.08"/>
 <polygon fill="#8b8878" stroke="#8b8878" stroke-width="1.5" points="1051.02,-154.65 1049.49,-144.17 1044.15,-153.32 1051.02,-154.65"/>
 </g>
