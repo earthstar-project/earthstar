@@ -2,10 +2,8 @@ import t = require('tap');
 //t.runOnly = true;
 
 import {
-    base32StringToBufferMultibase,
-    bufferToBase32StringMultibase,
-    base32StringToBufferRfc,
-    bufferToBase32StringRfc,
+    base32StringToBuffer,
+    bufferToBase32String,
 } from '../util/base32';
 
 //================================================================================ 
@@ -16,7 +14,7 @@ let log = console.log;
 
 //================================================================================ 
 
-let testBase32 = (t: any, bufferToBase32String: any, base32StringToBuffer: any) => {
+t.test('base32 encoding', (t: any) => {
     let buf = Buffer.from([1, 2, 3, 4, 5]);
     let b32 = bufferToBase32String(buf);
     let buf2 = base32StringToBuffer(b32);
@@ -68,24 +66,6 @@ let testBase32 = (t: any, bufferToBase32String: any, base32StringToBuffer: any) 
 
     t.same(base32StringToBuffer(unpadded_b32), matching_buf, 'unpadded base32 is handled ok');
     t.throws(() => base32StringToBuffer(padded_b32), 'padded base32 is not allowed');
-};
-
-t.test('base32 encoding with multibase', (t: any) => {
-    testBase32(t, bufferToBase32StringMultibase, base32StringToBufferMultibase);
-    t.end();
-});
-
-t.test('base32 encoding with rfc4648 library', (t: any) => {
-    testBase32(t, bufferToBase32StringRfc, base32StringToBufferRfc);
-    t.end();
-});
-
-t.test('base32 encoding matches between libraries', (t: any) => {
-    let buf = Buffer.from([43, 22, 3, 88, 127, 2, 244]);
-    t.same(bufferToBase32StringMultibase(buf), bufferToBase32StringRfc(buf), 'libraries match each other when encoding');
-
-    let b32 = 'bciqbed3k6ya5i3qqwljochwxdrk5exzqilbckapedujenz5b5hj5r3a';
-    t.same(base32StringToBufferMultibase(b32), base32StringToBufferRfc(b32), 'libraries match each when decoding');
 
     t.end();
 });
