@@ -1,4 +1,7 @@
-import multibase = require('multibase');
+import {
+    codec
+} from 'rfc4648';
+
 import {
     AuthorAddress,
     AuthorKeypair,
@@ -44,21 +47,37 @@ let assembleAuthorAddress = (shortname: AuthorShortname, encodedPubkey: EncodedK
  * 
  * The decoding must be strict (it doesn't allow a 1 in place of an i, etc).
  */
+
+const myEncoding = {
+    // this should match b32chars from characters.ts
+    chars: "abcdefghijklmnopqrstuvwxyz234567",
+    bits: 5,
+};
+
+/**
+ * Encode buffer to base32 string
+ */
 export let encodeBufferToBase32 = (buf: Buffer): Base32String =>
-    multibase.encode('base32', buf).toString();
+    'b' + codec.stringify(buf, myEncoding, { pad: false });
 
 /**
  * Decode base32 data to a Buffer.  Throw a ValidationError if the string is bad.
  */
 export let decodeBase32ToBuffer = (str: Base32String): Buffer => {
-    if (!str.startsWith('b')) { throw new ValidationError("can't decode base32 buffer - it should start with a 'b'. " + str); }
-    // enforce only lower case characters
-    // TODO: this is probably slow on large strings, probably faster to scan character by character?  or use regex?  need to benchmark it
-    if (str !== str.toLowerCase()) {
-        throw new ValidationError("can't decode base32 string - it contains uppercase characters");
+    if (!str.startsWith('b')) { throw new ValidationError("can't decode base32 string - it should start with a 'b'. " + str); }
+
+    // this library combines padding and looseness settings into a single "loose" option, so
+    // we have to set "loose: true" in order to handle unpadded inputs.
+    // with a custom codec, loose mode:
+    // -- allows padding or no padding -- we have to check for this
+    // -- does not allow uppercase -- good
+    // -- does not allow 1/i substitution -- good
+
+    // make sure no padding characters are on the end
+    if (str[str.length-1] === '=') {
+        throw new ValidationError("can't decode base32 string - it contains padding characters ('=')");
     }
-    // this can also throw an Error('invalid base32 character')
-    return multibase.decode(str);
+    return codec.parse(str.slice(1), myEncoding, { loose: true, out: Buffer.alloc as any }) as any as Buffer;
 };
 
 export let encodePubkey = encodeBufferToBase32;
