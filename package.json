@@ -79,7 +79,7 @@
     "chalk": "^4.1.0",
     "chloride": "^2.3.0",
     "concurrency-friends": "^1.0.1",
-    "fast-equals": "^2.0.0",
+    "fast-equals": "^2.0.1",
     "isomorphic-fetch": "^2.2.1",
     "lodash.debounce": "^4.0.8",
     "rfc4648": "^1.4.0",
