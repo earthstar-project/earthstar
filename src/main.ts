@@ -5,6 +5,9 @@ import {
 
 import { sleep } from './util/utils';
 import {
+    ValidatorEs4
+} from './validator/es4';
+import {
     addFollower,
 } from './follower';
 import {
@@ -47,7 +50,7 @@ let main = async () => {
     log('')
     debug('-----------\\')
     debug('init storage')
-    let storage = new StorageAsync(storageDriver);
+    let storage = new StorageAsync(ValidatorEs4, storageDriver);
     debug('-----------/')
 
     log('')

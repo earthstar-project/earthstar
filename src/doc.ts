@@ -2,13 +2,11 @@ import {
     Cmp,
 } from './types/utilTypes';
 import {
-    AuthorKeypair,
     Doc,
 } from './types/docTypes';
 
 import {
     arrayCompare,
-    fakeUuid,
 } from './util/utils';
 
 import { makeDebug } from './util/log';
@@ -38,15 +36,4 @@ export let docCompareForOverwrite = (newDoc: Doc, oldDoc: Doc): Cmp => {
         [newDoc.timestamp, newDoc.signature],
         [oldDoc.timestamp, oldDoc.signature],
     );
-}
-
-export let signDoc = (authorKeypair: AuthorKeypair, doc: Doc): void => {
-    // mutate the doc to set the signature.
-    debug('signDoc');
-    doc.signature = 'fake-sig:' + fakeUuid();  // TODO
-}
-
-export let docIsValid = (doc: Doc): boolean => {
-    debug('docIsValid');
-    return true;  // TODO: check document validity
 }

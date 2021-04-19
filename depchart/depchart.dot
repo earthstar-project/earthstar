@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster9665341910 {
+    subgraph cluster4799500460 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -23,7 +23,19 @@ digraph G {
         "src/main.ts" [label="main.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster7709359912 {
+        subgraph cluster4646258807 {
+            label=<<b>crypto</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/crypto/crypto.ts" [label="crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/cryptoNode.ts" [label="cryptoNode.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/encoding.ts" [label="encoding.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster9390286189 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -34,7 +46,7 @@ digraph G {
             "src/storage/storageDriverAsyncMemory.ts" [label="storageDriverAsyncMemory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster2944378225 {
+        subgraph cluster298585301 {
             label=<<b>util</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -42,19 +54,35 @@ digraph G {
             penwidth=2;
                 
             "src/util/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/util/errors.ts" [label="errors.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/util/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster819977387 {
+            label=<<b>validator</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/validator/es4.ts" [label="es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
     }
 
     // edges between files
+    "src/crypto/crypto.ts" -> "src/crypto/cryptoNode.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoNode.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/encoding.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
+    "src/main.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
     "src/main.ts" -> "src/follower.ts" [penwidth=2; color=darkslategray4];
     "src/main.ts" -> "src/storage/storageDriverAsyncMemory.ts" [penwidth=2; color=darkslategray4];
     "src/main.ts" -> "src/storage/storageAsync.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageAsync.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageAsync.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/util/lock.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/query.ts" [penwidth=2; color=darkslategray4];
-    "src/util/base32.ts" -> "src/util/errors.ts" [penwidth=2; color=darkslategray4];
+    "src/validator/es4.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
 
 }

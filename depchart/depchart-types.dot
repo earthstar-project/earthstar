@@ -12,22 +12,44 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster8209126472 {
+    subgraph cluster8521669135 {
         label=<<b>types</b>>;
         style="rounded";
         color=bisque4;
         penwidth=2;
                 
+        "src/types/cryptoTypes.ts" [label="cryptoTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/docTypes.ts" [label="docTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/queryTypes.ts" [label="queryTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/storageTypes.ts" [label="storageTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/utilTypes.ts" [label="utilTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/validatorTypes.ts" [label="validatorTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+    }
+
+    subgraph cluster8191843671 {
+        label=<<b>util</b>>;
+        style="rounded";
+        color=bisque4;
+        penwidth=2;
+                
+        "src/util/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/util/errors.ts" [label="errors.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/util/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/util/log.ts" [label="log.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/util/utils.ts" [label="utils.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
     }
 
     // edges between files
+    "src/types/cryptoTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/types/queryTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/types/storageTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/types/storageTypes.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/storageTypes.ts" -> "src/util/lock" [penwidth=2; color=darkslategray4];
+    "src/types/storageTypes.ts" -> "src/util/lock.ts" [penwidth=2; color=darkslategray4];
+    "src/types/validatorTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/types/validatorTypes.ts" -> "src/util/errors.ts" [penwidth=2; color=darkslategray4];
+    "src/util/base32.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/util/base32.ts" -> "src/util/errors.ts" [penwidth=2; color=darkslategray4];
+    "src/util/lock.ts" -> "src/util/utils.ts" [penwidth=2; color=darkslategray4];
+    "src/util/utils.ts" -> "src/types/utilTypes.ts" [penwidth=2; color=darkslategray4];
 
 }

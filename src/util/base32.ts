@@ -1,4 +1,4 @@
-import { base32, codec } from "rfc4648";
+import { codec } from "rfc4648";
 
 import { Base32String } from '../types/docTypes';
 import { ValidationError} from './errors';

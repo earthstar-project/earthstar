@@ -2,17 +2,32 @@
 // PRIMITIVE DATA TYPES SPECIFIC TO OUR CODE
 
 export type AuthorAddress = string;
+export type AuthorShortname = string;
 export type WorkspaceAddress = string;
+export type WorkspaceName = string;
 export type Path = string;
 export type Signature = string;
 export type Timestamp = number;
 export type LocalIndex = number;
 export type Base32String = string;
+export type FormatName = string;
 
 export interface AuthorKeypair {
     address: AuthorAddress,
     secret: string,
 }
+
+export type AuthorParsed = {
+    address: AuthorAddress,
+    shortname: AuthorShortname,
+    pubkey: Base32String,
+};
+
+export type WorkspaceParsed = {
+    address: WorkspaceAddress,
+    name: WorkspaceName,
+    pubkey: Base32String,
+};
 
 //================================================================================ 
 // DOCUMENTS

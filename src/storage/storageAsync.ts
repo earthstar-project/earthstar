@@ -18,6 +18,9 @@ import {
     IStorageDriverAsync,
     IStorageAsync,
 } from '../types/storageTypes';
+import {
+    IValidator,
+} from '../types/validatorTypes';
 
 import {
     sha256b32,
@@ -25,12 +28,14 @@ import {
 } from '../util/utils';
 import {
     docCompareForOverwrite,
-    docIsValid,
-    signDoc
 } from '../doc';
+import {
+    ValidatorEs4
+} from '../validator/es4';
 
 import { makeDebug } from '../util/log';
 import chalk from 'chalk';
+import { isErr } from '../util/errors';
 let debug = makeDebug(chalk.yellow('      [storage]'));
 
 //================================================================================
@@ -40,10 +45,12 @@ export class StorageAsync implements IStorageAsync {
     // Followers
     followers: Set<IFollower> = new Set();
 
+    _validator: IValidator;
     _driver: IStorageDriverAsync;
 
-    constructor(driver: IStorageDriverAsync) {
+    constructor(validator: IValidator, driver: IStorageDriverAsync) {
         debug('constructor, given a storageDriver');
+        this._validator = validator;
         this._driver = driver;
     }
 
@@ -133,10 +140,13 @@ export class StorageAsync implements IStorageAsync {
                 signature: '?',  // signature will be added in just a moment
                 // _localIndex will be added during upsert.  it's not needed for the signature.
             }
+
             debug('  | signing doc');
-            signDoc(keypair, doc);
+            let signedDoc = this._validator.signDocument(keypair, doc);
+            if (isErr(signedDoc)) { return IngestResult.Invalid; }
+
             debug('  | ingesting...');
-            let result = await this.ingest(doc, false);  // false meanse don't get lock again
+            let result = await this.ingest(signedDoc, false);  // false meanse don't get lock again
             debug('  | ...done ingesting', result);
             debug('  +');
             return result;
@@ -154,7 +164,8 @@ export class StorageAsync implements IStorageAsync {
 
         // check basic validity (signature, etc)
         debug('    checking doc validity');
-        if (!docIsValid(doc)) { return IngestResult.Invalid; }
+        let docIsValid = this._validator.checkDocumentIsValid(doc);
+        if (isErr(docIsValid)) { return IngestResult.Invalid; }
 
         let protectedCode = async (): Promise<IngestResult> => {
             // get other docs at the same path
