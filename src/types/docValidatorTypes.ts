@@ -8,7 +8,7 @@ import {
     Path,
     WorkspaceAddress,
     WorkspaceParsed,
-} from '../types/docTypes';
+} from './docTypes';
 import { ValidationError } from '../util/errors';
 
 
@@ -26,7 +26,7 @@ import { ValidationError } from '../util/errors';
  * You won't be making instances of Validators because they have no state.
  * They're just a collection of functions.
  */
-export interface IValidator {
+export interface IDocValidator {
     /** The string name of the format, like "es.4" */
     format: FormatName;
 
@@ -53,24 +53,11 @@ export interface IValidator {
     _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError;
     _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError;
     _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError;
-    _checkAuthorIsValid(authorAddress: AuthorAddress): true | ValidationError;
-    _checkWorkspaceIsValid(workspaceAddress: WorkspaceAddress): true | ValidationError;
     _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError;
     _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError;
-
-    /** Parse an author address into its parts. */
-    parseAuthorAddress(addr : AuthorAddress) : AuthorParsed | ValidationError;
-
-    /** Parse a workspace address into its parts. */
-    parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed | ValidationError;
 
     // TODO: add these methods for building addresses
     // and remove them from crypto.ts and encoding.ts
     // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
     // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
-}
-
-/** A validator for format "es.4" */
-export interface IValidatorES4 extends IValidator {
-    format: 'es.4';
 }

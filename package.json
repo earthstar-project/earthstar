@@ -10,17 +10,17 @@
   "scripts": {
     "clean": "rm -rf build coverage .nyc_output",
     "build": "tsc",
-    "start": "node build/main.js",
+    "start": "node build/example-app.js",
     "test": "tap --timeout=120 build/test/*.test.js",
     "test2": "tap -Rspecy --no-bail --jobs=1 build/test/*.test.js",
     "build-and-test": "yarn build && yarn test",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "test-coverage": "yarn test -- --coverage-report=lcov",
     "prepublishOnly": "yarn run clean && yarn run build",
-    "depchart-main": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/util/utils.ts src/util/log.ts src/util/errors.ts --rankdir LR -o depchart/depchart --node_modules omit",
-    "depchart-types": "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
-    "depchart-most": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` src/types/docTypes.ts src/util/log.ts src/util/errors.ts src/util/utils.ts --rankdir LR -o depchart/depchart-most --node_modules omit",
-    "depchart": "yarn run depchart-main && yarn run depchart-types && yarn run depchart-most"
+    "depchart-types":   "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
+    "depchart-notypes": "depchart `find src | grep .ts` --exclude `find src | grep '/util/'` `find src | grep '/test/'` `find src | grep '/types/'` --rankdir LR -o depchart/depchart-notypes --node_modules omit",
+    "depchart-most":    "depchart `find src | grep .ts` --exclude `find src | grep '/util/'` `find src | grep '/test/'` --rankdir LR -o depchart/depchart-most --node_modules omit",
+    "depchart": "yarn run depchart-notypes && yarn run depchart-types && yarn run depchart-most"
   },
   "devDependencies": {
     "@types/node": "^14.14.39",

@@ -3,26 +3,28 @@ import {
     Doc
 } from './types/docTypes';
 
-import { sleep } from './util/utils';
+import { sleep } from './util/misc';
 import {
-    ValidatorEs4
-} from './validator/es4';
-import {
-    addFollower,
-} from './follower';
+    DocValidatorEs4
+} from './docValidators/es4';
 import {
     StorageDriverAsyncMemory
 } from './storage/storageDriverAsyncMemory';
 import {
     StorageAsync as StorageAsync
 } from './storage/storageAsync';
+import {
+    addFollower,
+} from './follower';
+
+//--------------------------------------------------
 
 import {
     log,
     makeDebug,
 } from './util/log';
 import chalk from 'chalk';
-let debug = makeDebug(chalk.greenBright('[main]'));
+let debugMain = makeDebug(chalk.greenBright('[main]'));
 let debugLazyFollower = makeDebug(chalk.magenta(' [main\'s lazy follower]'));
 let debugBlockingFollower = makeDebug(chalk.magenta(' [main\'s blocking follower]'));
 
@@ -36,48 +38,48 @@ let main = async () => {
         secret: 'secret:123',
     };
     log('')
-    debug('-----------\\')
-    debug('workspace:', workspace);
-    debug('keypair:', keypair);
-    debug('-----------/')
+    debugMain('-----------\\')
+    debugMain('workspace:', workspace);
+    debugMain('keypair:', keypair);
+    debugMain('-----------/')
 
     log('')
-    debug('-----------\\')
-    debug('init driver')
+    debugMain('-----------\\')
+    debugMain('init driver')
     let storageDriver = new StorageDriverAsyncMemory();
-    debug('-----------/')
+    debugMain('-----------/')
 
     log('')
-    debug('-----------\\')
-    debug('init storage')
-    let storage = new StorageAsync(ValidatorEs4, storageDriver);
-    debug('-----------/')
+    debugMain('-----------\\')
+    debugMain('init storage')
+    let storage = new StorageAsync(DocValidatorEs4, storageDriver);
+    debugMain('-----------/')
 
     log('')
-    debug('-----------\\')
+    debugMain('-----------\\')
     let numDocsToWrite = 3;
-    debug(`setting ${numDocsToWrite} docs`)
+    debugMain(`setting ${numDocsToWrite} docs`)
     for (let ii = 0; ii < numDocsToWrite; ii++) {
         log('')
-        debug(`setting #${ii}`);
+        debugMain(`setting #${ii}`);
         let result = await storage.set(keypair, {
             workspace,
             path: `/posts/post-${(''+ii).padStart(4, '0')}.txt`,
             content: `Hello ${ii}`,
         });
-        debug('    set result', result);
+        debugMain('    set result', result);
     }
-    debug('-----------/')
+    debugMain('-----------/')
 
     log('')
-    debug('-----------\\')
-    debug('getting all docs');
-    debug(await storage.getAllDocs());
-    debug('-----------/')
+    debugMain('-----------\\')
+    debugMain('getting all docs');
+    debugMain(await storage.getAllDocs());
+    debugMain('-----------/')
 
     log('')
-    debug('-----------\\')
-    debug('adding lazy follower');
+    debugMain('-----------\\')
+    debugMain('adding lazy follower');
     let lazyFollower = await addFollower({
         storage: storage,
         onDoc: (doc: Doc | null) => {
@@ -91,11 +93,11 @@ let main = async () => {
         blocking: false,
         batchSize: 2,
     });
-    debug('-----------/')
+    debugMain('-----------/')
 
     log('')
-    debug('-----------\\')
-    debug('adding blocking follower');
+    debugMain('-----------\\')
+    debugMain('adding blocking follower');
     let blockingFollower = await addFollower({
         storage: storage,
         onDoc: (doc: Doc | null) => {
@@ -109,14 +111,14 @@ let main = async () => {
         blocking: true,
         batchSize: 2,
     });
-    debug('-----------/')
+    debugMain('-----------/')
 
     log('')
-    debug('sleep 100');
+    debugMain('sleep 100');
     log('')
-    debug('-------------------------------------------')
-    debug('-------------------------------------------')
-    debug('-------------------------------------------')
+    debugMain('-------------------------------------------')
+    debugMain('-------------------------------------------')
+    debugMain('-------------------------------------------')
     log('')
     await sleep(100);
 

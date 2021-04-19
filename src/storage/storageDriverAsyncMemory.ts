@@ -1,4 +1,7 @@
 import {
+    Cmp
+} from '../types/utilTypes';
+import {
     Doc,
     LocalIndex,
     Path
@@ -7,22 +10,43 @@ import {
     Query
 } from "../types/queryTypes";
 import {
-    IStorageDriverAsync as IStorageDriverAsync
+    IStorageDriverAsync
 } from "../types/storageTypes";
 
-import { keyComparer } from '../util/utils';
-import { Lock } from '../util/lock';
 import {
-    combinePathAndAuthor,
-    docComparePathThenNewestFirst
-} from "../doc";
-import { cleanUpQuery, docMatchesFilter } from '../query';
+    arrayCompare,
+    keyComparer,
+} from '../util/compare';
+import {
+    cleanUpQuery,
+    docMatchesFilter
+} from '../query';
+import {
+    Lock
+} from '../lock';
+
+//--------------------------------------------------
 
 import { makeDebug } from '../util/log';
 import chalk from 'chalk';
 let debug = makeDebug(chalk.cyan('            [driver]'));
 
 //================================================================================
+
+let combinePathAndAuthor = (doc: Doc) => {
+    // This is used as a key into the path&author index
+    // It must use a separator character that's not valid in either paths or author addresses
+    return `${doc.path}|${doc.author}`;
+}
+
+let docComparePathThenNewestFirst = (a: Doc, b: Doc): Cmp => {
+    // Sorts docs by path ASC, then breaks ties by timestamp DESC (newest first)
+    if (a.signature === b.signature) { return Cmp.EQ; }
+    return arrayCompare(
+        [a.path, -a.timestamp],
+        [b.path, -b.timestamp],
+    );
+}
 
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     lock: Lock;

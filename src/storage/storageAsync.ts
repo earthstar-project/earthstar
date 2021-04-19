@@ -19,36 +19,48 @@ import {
     IStorageAsync,
 } from '../types/storageTypes';
 import {
-    IValidator,
-} from '../types/validatorTypes';
+    IDocValidator,
+} from '../types/docValidatorTypes';
 
 import {
-    sha256b32,
-    microsecondNow
-} from '../util/utils';
+    isErr,
+} from '../util/errors';
 import {
-    docCompareForOverwrite,
-} from '../doc';
+    microsecondNow,
+} from '../util/misc';
 import {
-    ValidatorEs4
-} from '../validator/es4';
+    arrayCompare,
+} from '../util/compare';
+import {
+    sha256base32,
+} from '../crypto/crypto';
+
+//--------------------------------------------------
 
 import { makeDebug } from '../util/log';
 import chalk from 'chalk';
-import { isErr } from '../util/errors';
 let debug = makeDebug(chalk.yellow('      [storage]'));
 
 //================================================================================
+
+export let docCompareForOverwrite = (newDoc: Doc, oldDoc: Doc): Cmp => {
+    // A doc can overwrite another doc if the timestamp is higher, or
+    // if the timestamp is tied, if the signature is higher.
+    return arrayCompare(
+        [newDoc.timestamp, newDoc.signature],
+        [oldDoc.timestamp, oldDoc.signature],
+    );
+}
 
 export class StorageAsync implements IStorageAsync {
 
     // Followers
     followers: Set<IFollower> = new Set();
 
-    _validator: IValidator;
+    _validator: IDocValidator;
     _driver: IStorageDriverAsync;
 
-    constructor(validator: IValidator, driver: IStorageDriverAsync) {
+    constructor(validator: IDocValidator, driver: IStorageDriverAsync) {
         debug('constructor, given a storageDriver');
         this._validator = validator;
         this._driver = driver;
@@ -134,7 +146,7 @@ export class StorageAsync implements IStorageAsync {
                 path: docToSet.path,
                 author: keypair.address,
                 content: docToSet.content,
-                contentHash: sha256b32(docToSet.content), // TODO: real hash
+                contentHash: sha256base32(docToSet.content), // TODO: real hash
                 contentLength: Buffer.byteLength(docToSet.content),
                 timestamp,
                 signature: '?',  // signature will be added in just a moment

@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster5837620290 {
+    subgraph cluster7390895838 {
         label=<<b>types</b>>;
         style="rounded";
         color=bisque4;
@@ -20,19 +20,19 @@ digraph G {
                 
         "src/types/cryptoTypes.ts" [label="cryptoTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/docTypes.ts" [label="docTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/docValidatorTypes.ts" [label="docValidatorTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/queryTypes.ts" [label="queryTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/storageTypes.ts" [label="storageTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/utilTypes.ts" [label="utilTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/types/validatorTypes.ts" [label="validatorTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
     }
 
     // edges between files
     "src/types/cryptoTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/types/docValidatorTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/types/docValidatorTypes.ts" -> "src/util/errors" [penwidth=2; color=darkslategray4];
     "src/types/queryTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/types/storageTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/types/storageTypes.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/storageTypes.ts" -> "src/util/lock" [penwidth=2; color=darkslategray4];
-    "src/types/validatorTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/validatorTypes.ts" -> "src/util/errors" [penwidth=2; color=darkslategray4];
+    "src/types/storageTypes.ts" -> "src/lock" [penwidth=2; color=darkslategray4];
 
 }

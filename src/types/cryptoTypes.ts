@@ -10,7 +10,7 @@ export interface KeypairBuffers {
  * There are several implementations which provide this interface,
  * e.g. native Node, Chloride, etc.
  */
-export interface ILowLevelCrypto {
+export interface ICryptoDriver {
     sha256(input: string | Buffer): Buffer;
     generateKeypairBuffers(): KeypairBuffers;
     sign(keypair: KeypairBuffers, msg: string | Buffer): Base32String;

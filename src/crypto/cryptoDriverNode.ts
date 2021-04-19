@@ -1,16 +1,18 @@
+// This file is meant to be swappable with other libraries, for supporting different platforms.
+
 import crypto = require('crypto');
 
 import {
     Base32String,
 } from '../types/docTypes';
 import {
-    ILowLevelCrypto,
+    ICryptoDriver,
     KeypairBuffers,
 } from '../types/cryptoTypes';
 import {
-    decodeSig,
-    encodeSig,
-} from './encoding';
+    base32StringToBuffer,
+    bufferToBase32String,
+} from '../base32';
 
 const _generateKeypairDerBuffers = (): KeypairBuffers => {
     // Typescript has outdated definitions, doesn't know about ed25519
@@ -51,7 +53,7 @@ let _lengthenDerSecret = (b: Buffer): Buffer =>
  * Requires a recent version of Node, perhaps 12+?
  * Does not work in the browser.
  */
-export const CryptoNode: ILowLevelCrypto = class {
+export const CryptoDriverNode: ICryptoDriver = class {
     static sha256(input: string | Buffer): Buffer {
         return crypto.createHash('sha256').update(input).digest();
     }
@@ -61,7 +63,7 @@ export const CryptoNode: ILowLevelCrypto = class {
     static sign(keypair: KeypairBuffers, msg: string | Buffer): Base32String {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         // prettier-ignore
-        return encodeSig(crypto.sign(
+        return bufferToBase32String(crypto.sign(
             null,
             msg,
             {
@@ -83,7 +85,7 @@ export const CryptoNode: ILowLevelCrypto = class {
                     format: 'der',
                     type: 'spki',
                 } as any,
-                decodeSig(sig),
+                base32StringToBuffer(sig),
             );
         } catch (e) {
             return false;

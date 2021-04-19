@@ -1,13 +1,10 @@
-import { CryptoNode as LowLevelCrypto } from './cryptoNode';
-export { LowLevelCrypto };
+import { CryptoDriverNode as CryptoDriver } from './cryptoDriverNode';
+export { CryptoDriver };
 
 import {
     AuthorAddress,
     AuthorKeypair,
-    AuthorShortname,
     Base32String,
-    WorkspaceAddress,
-    WorkspaceName,
 } from '../types/docTypes';
 import {
     KeypairBuffers,
@@ -17,32 +14,23 @@ import {
     isErr,
 } from '../util/errors';
 import {
+    base32StringToBuffer,
+    bufferToBase32String
+} from '../base32';
+import {
     decodeAuthorKeypair,
-    decodePubkey,
-    encodeHash,
-    encodePubkey,
-    encodeSecret,
 } from './encoding';
 import {
-    ValidatorEs4
-} from '../validator/es4';
-
-//================================================================================
-// TODO: this really should happen in the validator?
-
-let assembleWorkspaceAddress = (name: WorkspaceName, encodedPubkey: Base32String): WorkspaceAddress =>
-    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
-    `+${name}.${encodedPubkey}`;
-
-let assembleAuthorAddress = (shortname: AuthorShortname, encodedPubkey: Base32String): AuthorAddress =>
-    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
-    `@${shortname}.${encodedPubkey}`;
+    assembleAuthorAddress,
+    checkAuthorIsValid,
+    parseAuthorAddress
+} from '../coreValidators/addresses';
 
 //================================================================================
 
 /** Do a sha256 hash, then return the output buffer encoded as base32. */
 export let sha256base32 = (input: string | Buffer): Base32String =>
-    encodeHash(LowLevelCrypto.sha256(input));
+    bufferToBase32String(CryptoDriver.sha256(input));
 
 /**
  * Generate a new author identity -- a keypair of public and private keys.
@@ -55,13 +43,13 @@ export let sha256base32 = (input: string | Buffer): Base32String =>
 export let generateAuthorKeypair = (shortname: string): AuthorKeypair | ValidationError => {
     // This returns a ValidationError if the shortname doesn't follow the rules.
 
-    let bufferPair: KeypairBuffers = LowLevelCrypto.generateKeypairBuffers();
+    let bufferPair: KeypairBuffers = CryptoDriver.generateKeypairBuffers();
     let keypair = {
-        address: assembleAuthorAddress(shortname, encodePubkey(bufferPair.pubkey)),
-        secret: encodeSecret(bufferPair.secret),
+        address: assembleAuthorAddress(shortname, bufferToBase32String(bufferPair.pubkey)),
+        secret: bufferToBase32String(bufferPair.secret),
     };
     // Make sure it's valid (correct length, etc).  return error if invalid.
-    let err = ValidatorEs4._checkAuthorIsValid(keypair.address);
+    let err = checkAuthorIsValid(keypair.address);
     if (isErr(err)) { return err; }
     return keypair;
 }
@@ -71,7 +59,7 @@ export let sign = (keypair: AuthorKeypair, msg: string | Buffer): Base32String |
     try {
         let keypairBuffers = decodeAuthorKeypair(keypair);
         if (isErr(keypairBuffers)) { return keypairBuffers; }
-        return LowLevelCrypto.sign(keypairBuffers, msg);
+        return CryptoDriver.sign(keypairBuffers, msg);
     } catch (err) {
         return new ValidationError('crash while signing: ' + err.message);
     }
@@ -89,9 +77,9 @@ export let sign = (keypair: AuthorKeypair, msg: string | Buffer): Base32String |
  */
 export let verify = (authorAddress: AuthorAddress, sig: Base32String, msg: string | Buffer): boolean => {
     try {
-        let authorParsed = ValidatorEs4.parseAuthorAddress(authorAddress);
+        let authorParsed = parseAuthorAddress(authorAddress);
         if (isErr(authorParsed)) { return false; }
-        return LowLevelCrypto.verify(decodePubkey(authorParsed.pubkey), sig, msg);
+        return CryptoDriver.verify(base32StringToBuffer(authorParsed.pubkey), sig, msg);
     } catch (err) {
         throw err;
     }
@@ -118,7 +106,7 @@ export let checkAuthorKeypairIsValid = (keypair: AuthorKeypair): true | Validati
         if (typeof keypair.address !== 'string' || typeof keypair.secret !== 'string') {
             return new ValidationError('address and secret must be strings');
         }
-        let addressErr = ValidatorEs4._checkAuthorIsValid(keypair.address);
+        let addressErr = checkAuthorIsValid(keypair.address);
         if (isErr(addressErr)) { return addressErr; }
 
         let msg = 'a test message to sign';

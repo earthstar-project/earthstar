@@ -1,7 +1,9 @@
+// This file is meant to be swappable with other libraries, for supporting different platforms.
+
 import { codec } from "rfc4648";
 
-import { Base32String } from '../types/docTypes';
-import { ValidationError} from './errors';
+import { Base32String } from './types/docTypes';
+import { ValidationError} from './util/errors';
 
 /**
  * For base32 encoding we use rfc4648, no padding, lowercase, prefixed with "b".

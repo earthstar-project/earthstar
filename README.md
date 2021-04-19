@@ -11,9 +11,9 @@ Much of Earthstar is just faked here -- signing, document validity checking.
 
 A --> B means "A imports B".
 
-For readability this hides: `/test`, `/types`, `utils.ts`, and `log.ts`.
+For readability this hides: `/test`, `/types`, `/util`.
 
-![](depchart/depchart.png)
+![](depchart/depchart-notypes.png)
 
 And here's `/types` by itself
 

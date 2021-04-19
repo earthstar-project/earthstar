@@ -11,14 +11,15 @@ import {
     IStorageAsync
 } from './types/storageTypes';
 
-import { makeDebug } from './util/log';
+//--------------------------------------------------
+
 import chalk from 'chalk';
-let debug = makeDebug(chalk.magentaBright('                  [follower]'));
+import { log } from './util/log';
 let debug2 = (blocking: boolean, ...args: any[]) => {
     if (blocking) {
-        console.log(chalk.magentaBright('                  [follower (blocking)]'), ...args);
+        log(chalk.magentaBright('                  [follower (blocking)]'), ...args);
     } else {
-        console.log(chalk.magentaBright('                  [follower (lazy)]'), ...args);
+        log(chalk.magentaBright('                  [follower (lazy)]'), ...args);
     }
 }
 

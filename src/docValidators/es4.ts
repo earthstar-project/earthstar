@@ -1,15 +1,16 @@
 import {
     AuthorAddress,
     AuthorKeypair,
-    AuthorParsed,
     Base32String,
     Doc,
     Path,
-    WorkspaceAddress,
-    WorkspaceParsed,
 } from '../types/docTypes';
-import { ValidationError } from '../util/errors';
-import { IValidatorES4 } from '../types/validatorTypes';
+import {
+    IDocValidator
+} from '../types/docValidatorTypes';
+import {
+    ValidationError
+} from '../util/errors';
 import { 
     sign,
     verify,
@@ -17,8 +18,8 @@ import {
 } from '../crypto/crypto';
 
 // This is always used as a static class
-// e.g. just `ValidatorEs4`, not `new ValidatorEs4()`
-export const ValidatorEs4: IValidatorES4 = class {
+// e.g. just `DocValidatorEs4`, not `new DocValidatorEs4()`
+export const DocValidatorEs4: IDocValidator = class {
     static format: 'es.4';
 
     /** Deterministic hash of this version of the document */
@@ -62,32 +63,11 @@ export const ValidatorEs4: IValidatorES4 = class {
     static _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError {
         return new ValidationError('not implemented yet');
     }
-    static _checkAuthorIsValid(authorAddress: AuthorAddress): true | ValidationError {
-        return new ValidationError('not implemented yet');
-    }
-    static _checkWorkspaceIsValid(workspaceAddress: WorkspaceAddress): true | ValidationError {
-        return new ValidationError('not implemented yet');
-    }
     static _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError {
         return new ValidationError('not implemented yet');
     }
     static _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError {
         return new ValidationError('not implemented yet');
     }
-
-    /** Parse an author address into its parts. */
-    static parseAuthorAddress(addr : AuthorAddress) : AuthorParsed | ValidationError {
-        return new ValidationError('not implemented yet');
-    }
-
-    /** Parse a workspace address into its parts. */
-    static parseWorkspaceAddress(addr : WorkspaceAddress) : WorkspaceParsed | ValidationError {
-        return new ValidationError('not implemented yet');
-    }
-
-    // TODO: add these methods for building addresses
-    // and remove them from crypto.ts and encoding.ts
-    // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
-    // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
 }
 

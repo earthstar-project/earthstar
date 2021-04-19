@@ -4,7 +4,7 @@ import t = require('tap');
 import {
     base32StringToBuffer,
     bufferToBase32String,
-} from '../util/base32';
+} from '../base32';
 
 //================================================================================ 
 // LOGGING

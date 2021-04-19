@@ -12,19 +12,29 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster866242721 {
+    subgraph cluster8050137510 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
         penwidth=2;
                 
-        "src/_old.ts" [label="_old.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/doc.ts" [label="doc.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/follower.ts" [label="follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/main.ts" [label="main.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster5736567750 {
+        subgraph cluster5708593272 {
+            label=<<b>coreValidators</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/coreValidators/addresses.ts" [label="addresses.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster1309598077 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -32,11 +42,21 @@ digraph G {
             penwidth=2;
                 
             "src/crypto/crypto.ts" [label="crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/crypto/cryptoNode.ts" [label="cryptoNode.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/cryptoDriverNode.ts" [label="cryptoDriverNode.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/encoding.ts" [label="encoding.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster545681161 {
+        subgraph cluster4561273787 {
+            label=<<b>docValidators</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                
+            "src/docValidators/es4.ts" [label="es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster2652589187 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -47,7 +67,7 @@ digraph G {
             "src/storage/storageDriverAsyncMemory.ts" [label="storageDriverAsyncMemory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster7827548194 {
+        subgraph cluster1110604010 {
             label=<<b>types</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -55,66 +75,61 @@ digraph G {
             penwidth=2;
                 
             "src/types/cryptoTypes.ts" [label="cryptoTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/types/docTypes.ts" [label="docTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/types/docValidatorTypes.ts" [label="docValidatorTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/types/queryTypes.ts" [label="queryTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/types/storageTypes.ts" [label="storageTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/types/utilTypes.ts" [label="utilTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/types/validatorTypes.ts" [label="validatorTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        }
-
-        subgraph cluster3227502810 {
-            label=<<b>util</b>>;
-            style="rounded,filled";
-            fillcolor=bisque;
-            color=bisque4;
-            penwidth=2;
-                
-            "src/util/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/util/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        }
-
-        subgraph cluster4702086311 {
-            label=<<b>validator</b>>;
-            style="rounded,filled";
-            fillcolor=bisque;
-            color=bisque4;
-            penwidth=2;
-                
-            "src/validator/es4.ts" [label="es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
     }
 
     // edges between files
-    "src/crypto/crypto.ts" -> "src/crypto/cryptoNode.ts" [penwidth=2; color=darkslategray4];
+    "src/base32.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/coreValidators/addresses.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/crypto/cryptoDriverNode.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/types/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
-    "src/crypto/crypto.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
-    "src/crypto/cryptoNode.ts" -> "src/types/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/crypto/cryptoNode.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/coreValidators/addresses.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoDriverNode.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoDriverNode.ts" -> "src/types/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/cryptoDriverNode.ts" -> "src/base32.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/encoding.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/encoding.ts" -> "src/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/encoding.ts" -> "src/types/cryptoTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/crypto/encoding.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
-    "src/doc.ts" -> "src/types/utilTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/encoding.ts" -> "src/coreValidators/addresses.ts" [penwidth=2; color=darkslategray4];
+    "src/docValidators/es4.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/docValidators/es4.ts" -> "src/types/docValidatorTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/docValidators/es4.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
+    "src/example-app.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/example-app.ts" -> "src/docValidators/es4.ts" [penwidth=2; color=darkslategray4];
+    "src/example-app.ts" -> "src/storage/storageDriverAsyncMemory.ts" [penwidth=2; color=darkslategray4];
+    "src/example-app.ts" -> "src/storage/storageAsync.ts" [penwidth=2; color=darkslategray4];
+    "src/example-app.ts" -> "src/follower.ts" [penwidth=2; color=darkslategray4];
     "src/follower.ts" -> "src/types/utilTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/follower.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/follower.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
     "src/follower.ts" -> "src/types/storageTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/main.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
-    "src/main.ts" -> "src/follower.ts" [penwidth=2; color=darkslategray4];
-    "src/main.ts" -> "src/storage/storageDriverAsyncMemory.ts" [penwidth=2; color=darkslategray4];
-    "src/main.ts" -> "src/storage/storageAsync.ts" [penwidth=2; color=darkslategray4];
+    "src/query.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/query.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageAsync.ts" -> "src/types/utilTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageAsync.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageAsync.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageAsync.ts" -> "src/types/storageTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/storageAsync.ts" -> "src/types/validatorTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/storageAsync.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/storageAsync.ts" -> "src/validator/es4.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageAsync.ts" -> "src/types/docValidatorTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageAsync.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageDriverAsyncMemory.ts" -> "src/types/utilTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageDriverAsyncMemory.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/types/storageTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/storageDriverAsyncMemory.ts" -> "src/util/lock.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/storageDriverAsyncMemory.ts" -> "src/doc.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storageDriverAsyncMemory.ts" -> "src/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storageDriverAsyncMemory.ts" -> "src/lock.ts" [penwidth=2; color=darkslategray4];
+    "src/types/cryptoTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/types/docValidatorTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/types/queryTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
+    "src/types/storageTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
     "src/types/storageTypes.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/storageTypes.ts" -> "src/util/lock.ts" [penwidth=2; color=darkslategray4];
-    "src/validator/es4.ts" -> "src/types/validatorTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/validator/es4.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
+    "src/types/storageTypes.ts" -> "src/lock.ts" [penwidth=2; color=darkslategray4];
 
 }
