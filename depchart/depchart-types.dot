@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster9440927136 {
+    subgraph cluster5837620290 {
         label=<<b>types</b>>;
         style="rounded";
         color=bisque4;
