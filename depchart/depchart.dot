@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster4799500460 {
+    subgraph cluster9232180355 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -23,7 +23,7 @@ digraph G {
         "src/main.ts" [label="main.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster4646258807 {
+        subgraph cluster2743514609 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -35,7 +35,7 @@ digraph G {
             "src/crypto/encoding.ts" [label="encoding.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster9390286189 {
+        subgraph cluster2714704196 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -46,7 +46,7 @@ digraph G {
             "src/storage/storageDriverAsyncMemory.ts" [label="storageDriverAsyncMemory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster298585301 {
+        subgraph cluster1280595229 {
             label=<<b>util</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -57,7 +57,7 @@ digraph G {
             "src/util/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster819977387 {
+        subgraph cluster8970482944 {
             label=<<b>validator</b>>;
             style="rounded,filled";
             fillcolor=bisque;

@@ -18,7 +18,7 @@
     "test-coverage": "yarn test -- --coverage-report=lcov",
     "prepublishOnly": "yarn run clean && yarn run build",
     "depchart-main": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` `find src | grep '/types/'` src/_old.ts src/util/utils.ts src/util/log.ts src/util/errors.ts --rankdir LR -o depchart/depchart --node_modules omit",
-    "depchart-types": "depchart `find src | grep '/types/' | grep .ts` `find src | grep '/util/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
+    "depchart-types": "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
     "depchart": "yarn run depchart-main && yarn run depchart-types"
   },
   "devDependencies": {
