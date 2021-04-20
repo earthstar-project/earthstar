@@ -10,35 +10,35 @@
 <title>G</title>
 <polygon fill="white" stroke="transparent" points="-4,4 -4,-338 923,-338 923,4 -4,4"/>
 <g id="clust1" class="cluster">
-<title>cluster8910818167</title>
+<title>cluster1213819692</title>
 <path fill="none" stroke="#8b7d6b" stroke-width="2" d="M20,-8C20,-8 899,-8 899,-8 905,-8 911,-14 911,-20 911,-20 911,-314 911,-314 911,-320 905,-326 899,-326 899,-326 20,-326 20,-326 14,-326 8,-320 8,-314 8,-314 8,-20 8,-20 8,-14 14,-8 20,-8"/>
 <text text-anchor="start" x="449" y="-311.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">src</text>
 </g>
+<g id="clust2" class="cluster">
+<title>cluster6146050023</title>
+<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M676,-28C676,-28 891,-28 891,-28 897,-28 903,-34 903,-40 903,-40 903,-145 903,-145 903,-151 897,-157 891,-157 891,-157 676,-157 676,-157 670,-157 664,-151 664,-145 664,-145 664,-40 664,-40 664,-34 670,-28 676,-28"/>
+<text text-anchor="start" x="736.5" y="-142.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">coreValidators</text>
+</g>
 <g id="clust3" class="cluster">
-<title>cluster6824281779</title>
+<title>cluster9384834104</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M400,-68C400,-68 632,-68 632,-68 638,-68 644,-74 644,-80 644,-80 644,-185 644,-185 644,-191 638,-197 632,-197 632,-197 400,-197 400,-197 394,-197 388,-191 388,-185 388,-185 388,-80 388,-80 388,-74 394,-68 400,-68"/>
 <text text-anchor="start" x="495" y="-182.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">crypto</text>
 </g>
 <g id="clust4" class="cluster">
-<title>cluster946117066</title>
+<title>cluster7505569071</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M220,-62C220,-62 302,-62 302,-62 308,-62 314,-68 314,-74 314,-74 314,-125 314,-125 314,-131 308,-137 302,-137 302,-137 220,-137 220,-137 214,-137 208,-131 208,-125 208,-125 208,-74 208,-74 208,-68 214,-62 220,-62"/>
 <text text-anchor="start" x="216" y="-122.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">docValidators</text>
 </g>
 <g id="clust5" class="cluster">
-<title>cluster2313110296</title>
+<title>cluster1255015210</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M166,-145C166,-145 356,-145 356,-145 362,-145 368,-151 368,-157 368,-157 368,-262 368,-262 368,-268 362,-274 356,-274 356,-274 166,-274 166,-274 160,-274 154,-268 154,-262 154,-262 154,-157 154,-157 154,-151 160,-145 166,-145"/>
 <text text-anchor="start" x="236.5" y="-259.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">storage</text>
-</g>
-<g id="clust2" class="cluster">
-<title>cluster2014048679</title>
-<path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M676,-28C676,-28 891,-28 891,-28 897,-28 903,-34 903,-40 903,-40 903,-145 903,-145 903,-151 897,-157 891,-157 891,-157 676,-157 676,-157 670,-157 664,-151 664,-145 664,-145 664,-40 664,-40 664,-34 670,-28 676,-28"/>
-<text text-anchor="start" x="736.5" y="-142.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">coreValidators</text>
 </g>
 <!-- src/base32.ts -->
 <g id="node1" class="node">
 <title>src/base32.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M744,-201C744,-201 693,-201 693,-201 687,-201 681,-195 681,-189 681,-189 681,-177 681,-177 681,-171 687,-165 693,-165 693,-165 744,-165 744,-165 750,-165 756,-171 756,-177 756,-177 756,-189 756,-189 756,-195 750,-201 744,-201"/>
-<text text-anchor="middle" x="718.5" y="-179.3" font-family="Helvetica,sans-Serif" font-size="14.00">base32.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M744,-202C744,-202 693,-202 693,-202 687,-202 681,-196 681,-190 681,-190 681,-178 681,-178 681,-172 687,-166 693,-166 693,-166 744,-166 744,-166 750,-166 756,-172 756,-178 756,-178 756,-190 756,-190 756,-196 750,-202 744,-202"/>
+<text text-anchor="middle" x="718.5" y="-180.3" font-family="Helvetica,sans-Serif" font-size="14.00">base32.ts</text>
 </g>
 <!-- src/example&#45;app.ts -->
 <g id="node2" class="node">
@@ -118,6 +118,12 @@
 <path fill="#79cdcd" stroke="#79cdcd" d="M883,-72C883,-72 813,-72 813,-72 807,-72 801,-66 801,-60 801,-60 801,-48 801,-48 801,-42 807,-36 813,-36 813,-36 883,-36 883,-36 889,-36 895,-42 895,-48 895,-48 895,-60 895,-60 895,-66 889,-72 883,-72"/>
 <text text-anchor="middle" x="848" y="-50.3" font-family="Helvetica,sans-Serif" font-size="14.00">characters.ts</text>
 </g>
+<!-- src/coreValidators/addresses.ts&#45;&gt;src/coreValidators/characters.ts -->
+<g id="edge1" class="edge">
+<title>src/coreValidators/addresses.ts&#45;&gt;src/coreValidators/characters.ts</title>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M762.31,-89.87C772.72,-85.46 783.96,-80.7 794.75,-76.13"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="796.24,-79.3 804.09,-72.18 793.51,-72.85 796.24,-79.3"/>
+</g>
 <!-- src/coreValidators/checkers.ts -->
 <g id="node8" class="node">
 <title>src/coreValidators/checkers.ts</title>
@@ -125,7 +131,7 @@
 <text text-anchor="middle" x="718.5" y="-50.3" font-family="Helvetica,sans-Serif" font-size="14.00">checkers.ts</text>
 </g>
 <!-- src/coreValidators/checkers.ts&#45;&gt;src/coreValidators/characters.ts -->
-<g id="edge1" class="edge">
+<g id="edge2" class="edge">
 <title>src/coreValidators/checkers.ts&#45;&gt;src/coreValidators/characters.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M761.25,-54C770.63,-54 780.73,-54 790.6,-54"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="790.75,-57.5 800.75,-54 790.75,-50.5 790.75,-57.5"/>
@@ -137,13 +143,13 @@
 <text text-anchor="middle" x="430" y="-117.3" font-family="Helvetica,sans-Serif" font-size="14.00">crypto.ts</text>
 </g>
 <!-- src/crypto/crypto.ts&#45;&gt;src/base32.ts -->
-<g id="edge3" class="edge">
+<g id="edge4" class="edge">
 <title>src/crypto/crypto.ts&#45;&gt;src/base32.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M458.92,-139.21C460.66,-140.47 462.36,-141.74 464,-143 480.95,-156.08 480.13,-167.03 500,-175 555.47,-197.26 625.43,-195.07 670.79,-190.14"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="671.41,-193.59 680.93,-188.95 670.59,-186.64 671.41,-193.59"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M458.92,-139.21C460.66,-140.47 462.36,-141.74 464,-143 480.95,-156.08 480.15,-166.98 500,-175 555.43,-197.4 625.4,-195.55 670.78,-190.87"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="671.37,-194.33 680.91,-189.74 670.59,-187.37 671.37,-194.33"/>
 </g>
 <!-- src/crypto/crypto.ts&#45;&gt;src/coreValidators/addresses.ts -->
-<g id="edge5" class="edge">
+<g id="edge6" class="edge">
 <title>src/crypto/crypto.ts&#45;&gt;src/coreValidators/addresses.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M447.44,-102.87C460.32,-90.11 479.44,-74.09 500,-67 560.5,-46.14 582.96,-47.76 644,-67 654.35,-70.26 654.69,-75.43 664,-81 666.31,-82.38 668.69,-83.76 671.12,-85.11"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="669.54,-88.24 680,-89.94 672.88,-82.09 669.54,-88.24"/>
@@ -151,44 +157,38 @@
 <!-- src/crypto/cryptoDriverNode.ts -->
 <g id="node10" class="node">
 <title>src/crypto/cryptoDriverNode.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M624,-166C624,-166 512,-166 512,-166 506,-166 500,-160 500,-154 500,-154 500,-142 500,-142 500,-136 506,-130 512,-130 512,-130 624,-130 624,-130 630,-130 636,-136 636,-142 636,-142 636,-154 636,-154 636,-160 630,-166 624,-166"/>
-<text text-anchor="middle" x="568" y="-144.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoDriverNode.ts</text>
+<path fill="#79cdcd" stroke="#79cdcd" d="M624,-112C624,-112 512,-112 512,-112 506,-112 500,-106 500,-100 500,-100 500,-88 500,-88 500,-82 506,-76 512,-76 512,-76 624,-76 624,-76 630,-76 636,-82 636,-88 636,-88 636,-100 636,-100 636,-106 630,-112 624,-112"/>
+<text text-anchor="middle" x="568" y="-90.3" font-family="Helvetica,sans-Serif" font-size="14.00">cryptoDriverNode.ts</text>
 </g>
 <!-- src/crypto/crypto.ts&#45;&gt;src/crypto/cryptoDriverNode.ts -->
-<g id="edge2" class="edge">
+<g id="edge3" class="edge">
 <title>src/crypto/crypto.ts&#45;&gt;src/crypto/cryptoDriverNode.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M464.27,-127.6C472.1,-129.16 480.76,-130.88 489.65,-132.64"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="489.25,-136.13 499.74,-134.65 490.61,-129.27 489.25,-136.13"/>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M464.27,-114.4C472.1,-112.84 480.76,-111.12 489.65,-109.36"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="490.61,-112.73 499.74,-107.35 489.25,-105.87 490.61,-112.73"/>
 </g>
-<!-- src/crypto/encoding.ts -->
+<!-- src/crypto/keypair.ts -->
 <g id="node11" class="node">
-<title>src/crypto/encoding.ts</title>
-<path fill="#79cdcd" stroke="#79cdcd" d="M599,-112C599,-112 537,-112 537,-112 531,-112 525,-106 525,-100 525,-100 525,-88 525,-88 525,-82 531,-76 537,-76 537,-76 599,-76 599,-76 605,-76 611,-82 611,-88 611,-88 611,-100 611,-100 611,-106 605,-112 599,-112"/>
-<text text-anchor="middle" x="568" y="-90.3" font-family="Helvetica,sans-Serif" font-size="14.00">encoding.ts</text>
+<title>src/crypto/keypair.ts</title>
+<path fill="#79cdcd" stroke="#79cdcd" d="M593,-166C593,-166 543,-166 543,-166 537,-166 531,-160 531,-154 531,-154 531,-142 531,-142 531,-136 537,-130 543,-130 543,-130 593,-130 593,-130 599,-130 605,-136 605,-142 605,-142 605,-154 605,-154 605,-160 599,-166 593,-166"/>
+<text text-anchor="middle" x="568" y="-144.3" font-family="Helvetica,sans-Serif" font-size="14.00">keypair.ts</text>
 </g>
-<!-- src/crypto/crypto.ts&#45;&gt;src/crypto/encoding.ts -->
-<g id="edge4" class="edge">
-<title>src/crypto/crypto.ts&#45;&gt;src/crypto/encoding.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M464.27,-114.4C479.52,-111.37 497.96,-107.71 514.98,-104.33"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="515.67,-107.76 524.8,-102.38 514.31,-100.89 515.67,-107.76"/>
+<!-- src/crypto/crypto.ts&#45;&gt;src/crypto/keypair.ts -->
+<g id="edge5" class="edge">
+<title>src/crypto/crypto.ts&#45;&gt;src/crypto/keypair.ts</title>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M464.27,-127.6C481.26,-130.98 502.19,-135.13 520.73,-138.81"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="520.24,-142.29 530.73,-140.8 521.61,-135.42 520.24,-142.29"/>
 </g>
-<!-- src/crypto/cryptoDriverNode.ts&#45;&gt;src/base32.ts -->
-<g id="edge6" class="edge">
-<title>src/crypto/cryptoDriverNode.ts&#45;&gt;src/base32.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M636.3,-163.86C648.05,-166.63 660.03,-169.46 671.06,-172.06"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="670.35,-175.48 680.89,-174.37 671.96,-168.67 670.35,-175.48"/>
-</g>
-<!-- src/crypto/encoding.ts&#45;&gt;src/base32.ts -->
+<!-- src/crypto/keypair.ts&#45;&gt;src/base32.ts -->
 <g id="edge7" class="edge">
-<title>src/crypto/encoding.ts&#45;&gt;src/base32.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M611.35,-103.04C622.92,-107.06 634.79,-112.82 644,-121 658.86,-134.2 649.44,-147.47 664,-161 666.43,-163.26 669.12,-165.3 671.96,-167.14"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="670.42,-170.28 680.86,-172.09 673.82,-164.17 670.42,-170.28"/>
+<title>src/crypto/keypair.ts&#45;&gt;src/base32.ts</title>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M605.33,-156.81C625.12,-161.6 649.82,-167.59 671.01,-172.73"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="670.23,-176.14 680.77,-175.1 671.88,-169.34 670.23,-176.14"/>
 </g>
-<!-- src/crypto/encoding.ts&#45;&gt;src/coreValidators/addresses.ts -->
+<!-- src/crypto/keypair.ts&#45;&gt;src/coreValidators/addresses.ts -->
 <g id="edge8" class="edge">
-<title>src/crypto/encoding.ts&#45;&gt;src/coreValidators/addresses.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M611.16,-97.97C626.85,-99.45 644.91,-101.16 661.64,-102.73"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="661.57,-106.24 671.86,-103.7 662.23,-99.27 661.57,-106.24"/>
+<title>src/crypto/keypair.ts&#45;&gt;src/coreValidators/addresses.ts</title>
+<path fill="none" stroke="#528b8b" stroke-width="2" d="M605.33,-138.21C622.44,-133.61 643.22,-128.01 662.22,-122.89"/>
+<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="663.23,-126.24 671.97,-120.26 661.41,-119.48 663.23,-126.24"/>
 </g>
 <!-- src/docValidators/es4.ts&#45;&gt;src/coreValidators/characters.ts -->
 <g id="edge9" class="edge">
