@@ -15,7 +15,7 @@
     "test2": "tap -Rspecy --no-bail --jobs=1 build/test/*.test.js",
     "build-and-test": "yarn build && yarn test",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
-    "test-coverage": "yarn test -- --coverage-report=lcov",
+    "test-coverage": "yarn test --coverage-report=lcov",
     "prepublishOnly": "yarn run clean && yarn run build",
     "depchart-types": "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
     "depchart-notypes": "depchart `find src | grep .ts` --exclude `find src | grep '/util/'` `find src | grep '/test/'` `find src | grep '/types/'` --rankdir LR -o depchart/depchart-notypes --node_modules omit",

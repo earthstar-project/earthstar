@@ -12,19 +12,19 @@ import {
 } from '../util/errors';
 
 import {
-    authorAddressChars,
+    authorKeyChars,
     authorNameChars,
     isDigit,
     onlyHasChars,
-    workspaceAddressChars,
+    workspaceKeyChars,
     workspaceNameChars,
 } from './characters';
 
 //================================================================================
 
-export let assembleAuthorAddress = (shortname: AuthorShortname, encodedPubkey: Base32String): AuthorAddress =>
+export let assembleAuthorAddress = (name: AuthorShortname, encodedPubkey: Base32String): AuthorAddress =>
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
-    `@${shortname}.${encodedPubkey}`;
+    `@${name}.${encodedPubkey}`;
 
 export let assembleWorkspaceAddress = (name: WorkspaceName, encodedPubkey: Base32String): WorkspaceAddress =>
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
@@ -43,6 +43,7 @@ export let checkWorkspaceIsValid = (addr: WorkspaceAddress): true | ValidationEr
     return parsed;
 }
 
+
 /** Parse an author address into its parts. */
 export let parseAuthorAddress = (address: AuthorAddress): ParsedAddress | ValidationError => {
     return parseAddress(address, {
@@ -53,7 +54,7 @@ export let parseAuthorAddress = (address: AuthorAddress): ParsedAddress | Valida
         minPubkeyLength: 53,
         maxPubkeyLength: 53,
         allowedNameCharacters: authorNameChars,
-        allowedPubkeyCharacters: authorAddressChars,
+        allowedPubkeyCharacters: authorKeyChars,
         pubkeyMustStartWithB: true,
     });
 }
@@ -68,7 +69,7 @@ export let parseWorkspaceAddress = (address: WorkspaceAddress): ParsedAddress | 
         minPubkeyLength: 1,
         maxPubkeyLength: 53,
         allowedNameCharacters: workspaceNameChars,
-        allowedPubkeyCharacters: workspaceAddressChars,
+        allowedPubkeyCharacters: workspaceKeyChars,
         pubkeyMustStartWithB: false,
     });
 }

@@ -27,6 +27,8 @@ import {
 let snowmanJsString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
 
+//================================================================================
+
 t.test('snowman test data', (t: any) => {
     t.same(Buffer.from(snowmanJsString, 'utf8'), snowmanBufferUtf8, 'snowman test data is good');
     t.end();

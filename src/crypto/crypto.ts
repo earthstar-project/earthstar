@@ -61,7 +61,7 @@ export let sign = (keypair: AuthorKeypair, msg: string | Buffer): Base32String |
         if (isErr(keypairBuffers)) { return keypairBuffers; }
         return bufferToBase32String(CryptoDriver.sign(keypairBuffers, msg));
     } catch (err) {
-        return new ValidationError('crash while signing: ' + err.message);
+        return new ValidationError('unexpected error while signing: ' + err.message);
     }
 }
 
@@ -81,10 +81,9 @@ export let verify = (authorAddress: AuthorAddress, sig: Base32String, msg: strin
         if (isErr(authorParsed)) { return false; }
         return CryptoDriver.verify(base32StringToBuffer(authorParsed.pubkey), base32StringToBuffer(sig), msg);
     } catch (err) {
-        // base32 to buffer can throw a validation error -- catch that
-        if (err instanceof ValidationError) { return false; }
-        // any other error is unexpected and we should throw it
-        throw err;
+        // base32StringToBuffer can throw a validation error -- catch that.
+        // the crypto code might also throw any kind of error.
+        return false;
     }
 }
 
@@ -112,16 +111,16 @@ export let checkAuthorKeypairIsValid = (keypair: AuthorKeypair): true | Validati
         let addressErr = checkAuthorIsValid(keypair.address);
         if (isErr(addressErr)) { return addressErr; }
 
-        let msg = 'a test message to sign';
+        let msg = 'a test message to sign. ' + Math.random();
         let sig = sign(keypair, msg);
         if (isErr(sig)) { return sig; }
 
         let isValid = verify(keypair.address, sig, msg);
-
         if (isValid === false) { return new ValidationError('pubkey does not match secret'); }
+
         return true;
     } catch (err) {
-        return new ValidationError('unexpected error: ' + err.message);
+        return new ValidationError('unexpected error in checkAuthorKeypairIsValid: ' + err.message);
     }
 };
 
