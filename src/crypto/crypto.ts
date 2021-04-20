@@ -81,6 +81,9 @@ export let verify = (authorAddress: AuthorAddress, sig: Base32String, msg: strin
         if (isErr(authorParsed)) { return false; }
         return CryptoDriver.verify(base32StringToBuffer(authorParsed.pubkey), base32StringToBuffer(sig), msg);
     } catch (err) {
+        // base32 to buffer can throw a validation error -- catch that
+        if (err instanceof ValidationError) { return false; }
+        // any other error is unexpected and we should throw it
         throw err;
     }
 }

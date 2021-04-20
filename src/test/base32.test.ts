@@ -51,7 +51,6 @@ t.test('base32 encoding', (t: any) => {
     t.same(bufferToBase32String(raw), expected, 'edge case works');
 
     let buf_11 = Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
-    let b32_11_actual = bufferToBase32String(buf_11);
     let b32_11_correct = 'baebagbafaydqqcikbm';
     let b32_11_loose1 = 'baebagbafaydqqc1kbm';  // i to 1
     let b32_11_loose2 = 'baebagbafaydqqcikbM';  // uppercase M at end

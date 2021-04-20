@@ -1,13 +1,12 @@
 import {
     AuthorAddress,
     AuthorKeypair,
-    AuthorParsed,
     Base32String,
     Doc,
     FormatName,
+    ParsedAddress,
     Path,
     WorkspaceAddress,
-    WorkspaceParsed,
 } from './docTypes';
 import { ValidationError } from '../util/errors';
 

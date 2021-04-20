@@ -15,15 +15,20 @@ export let isOnlyPrintableAscii = (s: string) : boolean => {
     return true;
 }
 
+export let isDigit = (ch: string): boolean =>
+    digits.indexOf(ch) !== -1;
+
 export const alphaLower = 'abcdefghijklmnopqrstuvwxyz';
 export const alphaUpper = alphaLower.toUpperCase();
 export const digits = '0123456789';
 export const b32chars = alphaLower + '234567';
 
-export const authorShortnameChars = alphaLower + digits;
-export const authorAddressChars = authorShortnameChars + b32chars + '@.';
+export const authorNameChars = alphaLower + digits;
+export const authorKeyChars = b32chars;
+export const authorAddressChars = authorNameChars + b32chars + '@.';
 
 export const workspaceNameChars = alphaLower + digits;
+export const workspaceKeyChars = alphaLower + digits;
 export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
 
 // Characters allowed in Earthstar paths

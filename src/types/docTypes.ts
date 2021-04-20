@@ -17,15 +17,9 @@ export interface AuthorKeypair {
     secret: string,
 }
 
-export type AuthorParsed = {
+export type ParsedAddress = {
     address: AuthorAddress,
-    shortname: AuthorShortname,
-    pubkey: Base32String,
-};
-
-export type WorkspaceParsed = {
-    address: WorkspaceAddress,
-    name: WorkspaceName,
+    name: AuthorShortname,
     pubkey: Base32String,
 };
 
