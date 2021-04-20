@@ -68,7 +68,6 @@ digraph G {
     "src/crypto/crypto.ts" -> "src/coreValidators/addresses.ts" [penwidth=2; color=gray50];
     "src/coreValidators/addresses.ts" -> "src/coreValidators/characters.ts" [penwidth=2; color=gray50];
     "src/crypto/cryptoDriverNode.ts" -> "src/types/cryptoTypes.ts" [penwidth=2; color=gray50];
-    "src/crypto/cryptoDriverNode.ts" -> "src/base32.ts" [penwidth=2; color=gray50];
     "src/crypto/keypair.ts" -> "src/base32.ts" [penwidth=2; color=gray50];
     "src/crypto/keypair.ts" -> "src/types/cryptoTypes.ts" [penwidth=2; color=gray50];
     "src/crypto/keypair.ts" -> "src/coreValidators/addresses.ts" [penwidth=2; color=gray50];

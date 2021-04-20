@@ -1,16 +1,9 @@
 import crypto = require('crypto');
 
 import {
-    Base32String,
-} from '../types/docTypes';
-import {
     ICryptoDriver,
     KeypairBuffers,
 } from '../types/cryptoTypes';
-import {
-    base32StringToBuffer,
-    bufferToBase32String,
-} from '../base32';
 
 const _generateKeypairDerBuffers = (): KeypairBuffers => {
     // Typescript has outdated definitions, doesn't know about ed25519
@@ -58,10 +51,10 @@ export const CryptoDriverNode: ICryptoDriver = class {
     static generateKeypairBuffers(): KeypairBuffers {
         return _shortenDer(_generateKeypairDerBuffers());
     };
-    static sign(keypair: KeypairBuffers, msg: string | Buffer): Base32String {
+    static sign(keypair: KeypairBuffers, msg: string | Buffer): Buffer {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         // prettier-ignore
-        return bufferToBase32String(crypto.sign(
+        return crypto.sign(
             null,
             msg,
             {
@@ -69,9 +62,9 @@ export const CryptoDriverNode: ICryptoDriver = class {
                 format: 'der',
                 type: 'pkcs8',
             }
-        ));
+        );
     }
-    static verify(publicKey: Buffer, sig: Base32String, msg: string | Buffer): boolean {
+    static verify(publicKey: Buffer, sig: Buffer, msg: string | Buffer): boolean {
         if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
         try {
             // prettier-ignore
@@ -83,7 +76,7 @@ export const CryptoDriverNode: ICryptoDriver = class {
                     format: 'der',
                     type: 'spki',
                 } as any,
-                base32StringToBuffer(sig),
+                sig,
             );
         } catch (e) {
             return false;

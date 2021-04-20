@@ -13,6 +13,6 @@ export interface KeypairBuffers {
 export interface ICryptoDriver {
     sha256(input: string | Buffer): Buffer;
     generateKeypairBuffers(): KeypairBuffers;
-    sign(keypair: KeypairBuffers, msg: string | Buffer): Base32String;
-    verify(publicKey: Buffer, sig: Base32String, msg: string | Buffer): boolean;
+    sign(keypair: KeypairBuffers, msg: string | Buffer): Buffer;
+    verify(publicKey: Buffer, sig: Buffer, msg: string | Buffer): boolean;
 }

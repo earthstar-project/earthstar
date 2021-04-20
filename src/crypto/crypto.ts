@@ -59,7 +59,7 @@ export let sign = (keypair: AuthorKeypair, msg: string | Buffer): Base32String |
     try {
         let keypairBuffers = decodeAuthorKeypair(keypair);
         if (isErr(keypairBuffers)) { return keypairBuffers; }
-        return CryptoDriver.sign(keypairBuffers, msg);
+        return bufferToBase32String(CryptoDriver.sign(keypairBuffers, msg));
     } catch (err) {
         return new ValidationError('crash while signing: ' + err.message);
     }
@@ -79,7 +79,7 @@ export let verify = (authorAddress: AuthorAddress, sig: Base32String, msg: strin
     try {
         let authorParsed = parseAuthorAddress(authorAddress);
         if (isErr(authorParsed)) { return false; }
-        return CryptoDriver.verify(base32StringToBuffer(authorParsed.pubkey), sig, msg);
+        return CryptoDriver.verify(base32StringToBuffer(authorParsed.pubkey), base32StringToBuffer(sig), msg);
     } catch (err) {
         throw err;
     }
