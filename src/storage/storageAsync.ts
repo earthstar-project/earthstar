@@ -142,13 +142,14 @@ export class StorageAsync implements IStorageAsync {
             }
 
             let doc: Doc = {
-                workspace: docToSet.workspace,
-                path: docToSet.path,
+                format: 'es.4',
                 author: keypair.address,
                 content: docToSet.content,
                 contentHash: sha256base32(docToSet.content), // TODO: real hash
                 contentLength: Buffer.byteLength(docToSet.content),
+                path: docToSet.path,
                 timestamp,
+                workspace: docToSet.workspace,
                 signature: '?',  // signature will be added in just a moment
                 // _localIndex will be added during upsert.  it's not needed for the signature.
             }

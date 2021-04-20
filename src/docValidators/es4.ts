@@ -11,11 +11,50 @@ import {
 import {
     ValidationError
 } from '../util/errors';
+
+import {
+    authorAddressChars,
+    b32chars,
+    pathChars,
+    workspaceAddressChars,
+} from '../coreValidators/characters';
+import {
+    checkInt,
+    checkLiteral,
+    checkObj,
+    CheckObjOpts,
+    checkString,
+} from '../coreValidators/checkers';
+
 import { 
     sign,
     verify,
     sha256base32,
 } from '../crypto/crypto';
+
+//================================================================================
+
+let MIN_TIMESTAMP = 10000000000000;  // 10^13
+let MAX_TIMESTAMP = 9007199254740990;  // Number.MAX_SAFE_INTEGER - 1
+
+let HASH_STR_LEN = 53;  // including leading 'b'
+let SIG_STR_LEN = 104;  // including leading 'b'
+
+let ES4_SCHEMA: CheckObjOpts = {
+    objSchema: {
+        format: checkLiteral('es.4'),
+        author: checkString({ allowedChars: authorAddressChars }),
+        content: checkString(),
+        contentHash: checkString({ allowedChars: b32chars, len: HASH_STR_LEN }),
+        contentLength: checkInt({ min: 0 }),
+        path: checkString({ allowedChars: pathChars }),
+        signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
+        timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
+        workspace: checkString({ allowedChars: workspaceAddressChars }),
+    },
+    allowUndefined: false,
+    allowExtraKeys: false,
+}
 
 // This is always used as a static class
 // e.g. just `DocValidatorEs4`, not `new DocValidatorEs4()`
@@ -52,7 +91,9 @@ export const DocValidatorEs4: IDocValidator = class {
     // They will not normally be used directly; use the main assertDocumentIsValid instead.
     // Return true on success.
     static _checkBasicDocumentValidity(doc: Doc): true | ValidationError {  // check for correct fields and datatypes
-        return new ValidationError('not implemented yet');
+        let err = checkObj(ES4_SCHEMA)(doc);
+        if (err !== null) { return new ValidationError(err); }
+        return true; // TODO: is there more to check?
     }
     static _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError {
         return new ValidationError('not implemented yet');
@@ -67,7 +108,10 @@ export const DocValidatorEs4: IDocValidator = class {
         return new ValidationError('not implemented yet');
     }
     static _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError {
-        return new ValidationError('not implemented yet');
+        if (sha256base32(content) !== contentHash) {
+            return new ValidationError('content does not match contentHash');
+        }
+        return true;
     }
 }
 

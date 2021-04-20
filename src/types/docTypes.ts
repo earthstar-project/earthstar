@@ -34,14 +34,15 @@ export type WorkspaceParsed = {
 
 export interface Doc {
     // TODO: format
-    workspace: WorkspaceAddress,
-    path: Path,
+    format: string,
     author: AuthorAddress,
     content: string,
     contentHash: string,
     contentLength: number,
-    timestamp: Timestamp,
+    path: Path,
     signature: Signature,
+    timestamp: Timestamp,
+    workspace: WorkspaceAddress,
 
     // Local Index:
     // Our docs form a linear sequence with gaps.

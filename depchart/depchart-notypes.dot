@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster4169300457 {
+    subgraph cluster8803529267 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -24,7 +24,7 @@ digraph G {
         "src/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster5744159174 {
+        subgraph cluster7183007513 {
             label=<<b>coreValidators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -32,9 +32,11 @@ digraph G {
             penwidth=2;
                 
             "src/coreValidators/addresses.ts" [label="addresses.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/coreValidators/characters.ts" [label="characters.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/coreValidators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster8278969722 {
+        subgraph cluster9137571748 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -46,7 +48,7 @@ digraph G {
             "src/crypto/encoding.ts" [label="encoding.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster6209901412 {
+        subgraph cluster1025479157 {
             label=<<b>docValidators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -56,7 +58,7 @@ digraph G {
             "src/docValidators/es4.ts" [label="es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster9021175707 {
+        subgraph cluster9571430713 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -69,6 +71,7 @@ digraph G {
     }
 
     // edges between files
+    "src/coreValidators/checkers.ts" -> "src/coreValidators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/cryptoDriverNode.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/encoding.ts" [penwidth=2; color=darkslategray4];
@@ -76,6 +79,8 @@ digraph G {
     "src/crypto/cryptoDriverNode.ts" -> "src/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/encoding.ts" -> "src/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/encoding.ts" -> "src/coreValidators/addresses.ts" [penwidth=2; color=darkslategray4];
+    "src/docValidators/es4.ts" -> "src/coreValidators/characters.ts" [penwidth=2; color=darkslategray4];
+    "src/docValidators/es4.ts" -> "src/coreValidators/checkers.ts" [penwidth=2; color=darkslategray4];
     "src/docValidators/es4.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/docValidators/es4.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/storage/storageDriverAsyncMemory.ts" [penwidth=2; color=darkslategray4];
