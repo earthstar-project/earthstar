@@ -12,12 +12,12 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster3883359918 {
+    subgraph cluster6191760543 {
         label=<<b>types</b>>;
         style="rounded";
         color=bisque4;
         penwidth=2;
-                
+                    
         "src/types/cryptoTypes.ts" [label="cryptoTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/docTypes.ts" [label="docTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/types/docValidatorTypes.ts" [label="docValidatorTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];

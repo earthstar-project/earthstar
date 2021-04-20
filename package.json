@@ -17,15 +17,16 @@
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "test-coverage": "yarn test -- --coverage-report=lcov",
     "prepublishOnly": "yarn run clean && yarn run build",
-    "depchart-types":   "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
+    "depchart-types": "depchart `find src | grep '/types/' | grep .ts` --rankdir LR -o depchart/depchart-types --node_modules omit",
     "depchart-notypes": "depchart `find src | grep .ts` --exclude `find src | grep '/util/'` `find src | grep '/test/'` `find src | grep '/types/'` --rankdir LR -o depchart/depchart-notypes --node_modules omit",
-    "depchart-most":    "depchart `find src | grep .ts` --exclude `find src | grep '/util/'` `find src | grep '/test/'` --rankdir LR -o depchart/depchart-most --node_modules omit",
-    "depchart": "yarn run depchart-notypes && yarn run depchart-types && yarn run depchart-most"
+    "depchart-most": "depchart `find src | grep .ts` --exclude `find src | grep '/util/'` `find src | grep '/test/'` --rankdir LR -o depchart/depchart-most --node_modules omit",
+    "depchart-most-loose": "depchart `find src | grep .ts` --exclude `find src | grep '/test/'` --loose --rankdir LR -o depchart/depchart-most-loose --node_modules omit",
+    "depchart": "yarn run depchart-notypes && yarn run depchart-types && yarn run depchart-most && yarn run depchart-most-loose"
   },
   "devDependencies": {
     "@types/node": "^14.14.39",
     "@types/tap": "^14.10.2",
-    "depchart": "^1.1.0",
+    "depchart": "^1.2.0",
     "onchange": "^7.1.0",
     "tap": "^14.11.0",
     "typescript": "^4.2.4"

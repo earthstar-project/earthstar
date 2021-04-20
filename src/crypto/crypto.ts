@@ -19,7 +19,7 @@ import {
 } from '../base32';
 import {
     decodeAuthorKeypair,
-} from './encoding';
+} from './keypair';
 import {
     assembleAuthorAddress,
     checkAuthorIsValid,

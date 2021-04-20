@@ -1,5 +1,3 @@
-// This file is meant to be swappable with other libraries, for supporting different platforms.
-
 import {
     Cmp
 } from '../types/utilTypes';

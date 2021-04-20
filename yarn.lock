@@ -813,10 +813,10 @@ delayed-stream@~1.0.0:
   resolved "https://registry.yarnpkg.com/delayed-stream/-/delayed-stream-1.0.0.tgz#df3ae199acadfb7d440aaae0b29e2272b24ec619"
   integrity sha1-3zrhmayt+31ECqrgsp4icrJOxhk=
 
-depchart@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/depchart/-/depchart-1.1.0.tgz#eca2acb0bda6b1630bdd60568e392c60c641c0e2"
-  integrity sha512-25wsr9+/TmFesH+n7qAJqsfPF8QMdZxOym+S+U+HujgBTK/j9r8nlfyEULESGENj6Hr6GeKIIoR2Jw/IuozqnA==
+depchart@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/depchart/-/depchart-1.2.0.tgz#addcc79ed8edc07893bf6371097b2cfc4ec12faf"
+  integrity sha512-6WrHZvFr6b9OvFXY/m0ZVc1xcbVCCOxpNFEdcW5OAooWifr0Liy6FQz7PucRK+qdJ0WImqOhjtqYmH0ilQWvKA==
   dependencies:
     "@types/argparse" "^2.0.5"
     argparse "^2.0.1"

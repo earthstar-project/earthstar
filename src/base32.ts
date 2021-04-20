@@ -1,5 +1,3 @@
-// This file is meant to be swappable with other libraries, for supporting different platforms.
-
 import { codec } from "rfc4648";
 
 import { Base32String } from './types/docTypes';

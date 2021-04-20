@@ -12,59 +12,59 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster8803529267 {
+    subgraph cluster8910818167 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
         penwidth=2;
-                
+                    
         "src/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/follower.ts" [label="follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster7183007513 {
+        subgraph cluster2014048679 {
             label=<<b>coreValidators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
             color=bisque4;
             penwidth=2;
-                
+                    
             "src/coreValidators/addresses.ts" [label="addresses.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/coreValidators/characters.ts" [label="characters.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/coreValidators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster9137571748 {
+        subgraph cluster6824281779 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
             color=bisque4;
             penwidth=2;
-                
+                    
             "src/crypto/crypto.ts" [label="crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/cryptoDriverNode.ts" [label="cryptoDriverNode.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/encoding.ts" [label="encoding.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster1025479157 {
+        subgraph cluster946117066 {
             label=<<b>docValidators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
             color=bisque4;
             penwidth=2;
-                
+                    
             "src/docValidators/es4.ts" [label="es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster9571430713 {
+        subgraph cluster2313110296 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
             color=bisque4;
             penwidth=2;
-                
+                    
             "src/storage/storageAsync.ts" [label="storageAsync.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/storageDriverAsyncMemory.ts" [label="storageDriverAsyncMemory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
