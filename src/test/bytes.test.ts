@@ -21,17 +21,17 @@ let simpleBytes = Uint8Array.from([97, 97]);
 t.test('bytesToString', (t: any) => {
     t.same(bytesToString(simpleBytes), simpleString, 'simple bytes to string');
     t.same(bytesToString(snowmanBytes), snowmanString, 'snowman bytes to string');
-    t.done();
+    t.end();
 });
 
 t.test('stringToBytes', (t: any) => {
     t.same(stringToBytes(simpleString), simpleBytes, 'simple string to bytes');
     t.same(stringToBytes(snowmanString), snowmanBytes, 'snowman string to bytes');
-    t.done();
+    t.end();
 });
 
 t.test('stringLengthInBytes', (t: any) =>{
     t.same(stringLengthInBytes(simpleString), 2, 'simple string');
     t.same(stringLengthInBytes(snowmanString), 3, 'snowman string');
-    t.done();
+    t.end();
 });

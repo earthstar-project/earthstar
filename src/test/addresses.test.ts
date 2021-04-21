@@ -31,7 +31,7 @@ t.test('assemble addresses', (t: any) => {
     // note that this function doesn't check if the result is valid
     t.same(assembleAuthorAddress('suzy', 'bxxx'), '@suzy.bxxx', 'assembleAuthorAddress');
     t.same(assembleWorkspaceAddress('gardening', 'party'), '+gardening.party', 'assembleWorkspaceAddress');
-    t.done();
+    t.end();
 });
 
 type AuthorAddressVector = {
