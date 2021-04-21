@@ -11,6 +11,6 @@ export interface KeypairBytes {
 export interface ICryptoDriver {
     sha256(input: string | Uint8Array): Uint8Array;
     generateKeypairBytes(): KeypairBytes;
-    sign(keypair: KeypairBytes, msg: string | Uint8Array): Uint8Array;
+    sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array;
     verify(publicKey: Uint8Array, sig: Uint8Array, msg: string | Uint8Array): boolean;
 }

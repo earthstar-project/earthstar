@@ -5,6 +5,9 @@ import t = require('tap');
 //let t = { test: tape };
 
 import {
+    identifyBufOrBytes,
+    isBuffer,
+    isBytes,
     stringToBuffer,
     stringToBytes
 } from '../util/bytes';
@@ -42,7 +45,7 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
         ];
         for (let [input, expectedResult] of vectors) {
             let actualResult = driver.sha256(input);
-            t.ok(actualResult instanceof Uint8Array, 'sha256 outputs a Uint8Array');
+            t.same(identifyBufOrBytes(actualResult), 'bytes', 'sha256 outputs bytes');
             t.same(actualResult.length, 32, 'sha256 outputs 32 bytes');
             t.same(actualResult, expectedResult, `hash of bytes or string: ${JSON.stringify(input)}`)
         }
@@ -51,10 +54,28 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
 
     t.test('generateKeypairBytes', (t: any) => {
         let keypair = driver.generateKeypairBytes();
-        t.ok(keypair.pubkey instanceof Uint8Array, 'keypair has Uint8Array address');
-        t.ok(keypair.secret instanceof Uint8Array, 'keypair has Uint8Array secret');
+        t.same(identifyBufOrBytes(keypair.pubkey), 'bytes', 'keypair.pubkey is bytes');
+        t.same(identifyBufOrBytes(keypair.secret), 'bytes', 'keypair.secret is bytes');
         t.same(keypair.pubkey.length, 32, 'pubkey is 32 bytes long');
         t.same(keypair.secret.length, 32, 'secret is 32 bytes long');
+
+        let keypair2 = driver.generateKeypairBytes();
+        t.notSame(keypair.pubkey, keypair2.pubkey, 'generateKeypairBytes is non-deterministic (pubkey)');
+        t.notSame(keypair.secret, keypair2.secret, 'generateKeypairBytes is non-deterministic (secret)');
+
+        t.end();
+    });
+
+    t.test('sign and verify', (t: any) => {
+        t.ok(true, 'TODO');
+
+        let keypairBytes = driver.generateKeypairBytes();
+        let msg = 'hello'
+        let sigBytes = driver.sign(keypairBytes, msg);
+
+        t.same(identifyBufOrBytes(sigBytes), 'bytes', 'signature is bytes');
+        t.same(sigBytes.length, 64, 'sig is 64 bytes long');
+
         t.end();
     });
 

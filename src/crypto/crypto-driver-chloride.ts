@@ -38,8 +38,8 @@ export const CryptoDriverChloride: ICryptoDriver = class {
             secret: bufferToBytes((keys.privateKey || keys.secretKey).slice(0, 32)),
         };
     };
-    static sign(keypair: KeypairBytes, msg: string | Uint8Array): Uint8Array {
-        let secretBuf = bytesToBuffer(concatBytes(keypair.secret, keypair.pubkey));
+    static sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+        let secretBuf = bytesToBuffer(concatBytes(keypairBytes.secret, keypairBytes.pubkey));
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }
         if (msg instanceof Uint8Array) { msg = bytesToBuffer(msg); }
         return bufferToBytes(

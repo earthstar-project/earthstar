@@ -64,13 +64,13 @@ export const CryptoDriverNode: ICryptoDriver = class {
     static generateKeypairBytes(): KeypairBytes {
         return _shortenDer(_generateKeypairDerBytes());
     };
-    static sign(keypair: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+    static sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array {
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }
         return bufferToBytes(crypto.sign(
             null,
             msg,
             {
-                key: bytesToBuffer(_lengthenDerSecret(keypair.secret)),
+                key: bytesToBuffer(_lengthenDerSecret(keypairBytes.secret)),
                 format: 'der',
                 type: 'pkcs8',
             }
