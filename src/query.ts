@@ -1,11 +1,11 @@
 import {
     Doc,
-} from './types/docTypes';
+} from './types/doc-types';
 import {
     DEFAULT_QUERY,
     Query,
     QueryFilter,
-} from './types/queryTypes';
+} from './types/query-types';
 
 import {
     deepEqual,

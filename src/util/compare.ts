@@ -1,6 +1,6 @@
 import {
     Cmp
-} from '../types/utilTypes';
+} from '../types/util-types';
 
 export let baseCompare = (a: any, b: any): Cmp => {
     if (a === b) { return Cmp.EQ; }

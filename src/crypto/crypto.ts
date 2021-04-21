@@ -1,14 +1,14 @@
-import { CryptoDriverNode as CryptoDriver } from './cryptoDriverNode';
+import { CryptoDriverNode as CryptoDriver } from './crypto-driver-node';
 export { CryptoDriver };
 
 import {
     AuthorAddress,
     AuthorKeypair,
     Base32String,
-} from '../types/docTypes';
+} from '../types/doc-types';
 import {
     KeypairBuffers,
-} from '../types/cryptoTypes';
+} from '../types/crypto-types';
 import {
     ValidationError,
     isErr,
@@ -24,7 +24,7 @@ import {
     assembleAuthorAddress,
     checkAuthorIsValid,
     parseAuthorAddress
-} from '../coreValidators/addresses';
+} from '../core-validators/addresses';
 
 //================================================================================
 

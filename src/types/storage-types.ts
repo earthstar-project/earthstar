@@ -4,11 +4,11 @@ import {
     DocToSet,
     LocalIndex,
     Path,
-} from './docTypes';
+} from './doc-types';
 import {
     HistoryMode,
     Query,
-} from './queryTypes';
+} from './query-types';
 
 import {
     Lock,

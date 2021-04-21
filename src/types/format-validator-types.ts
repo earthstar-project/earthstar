@@ -7,7 +7,7 @@ import {
     ParsedAddress,
     Path,
     WorkspaceAddress,
-} from './docTypes';
+} from './doc-types';
 import { ValidationError } from '../util/errors';
 
 

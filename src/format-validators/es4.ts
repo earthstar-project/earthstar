@@ -4,10 +4,10 @@ import {
     Base32String,
     Doc,
     Path,
-} from '../types/docTypes';
+} from '../types/doc-types';
 import {
     IDocValidator
-} from '../types/docValidatorTypes';
+} from '../types/format-validator-types';
 import {
     ValidationError
 } from '../util/errors';
@@ -17,14 +17,14 @@ import {
     b32chars,
     pathChars,
     workspaceAddressChars,
-} from '../coreValidators/characters';
+} from '../core-validators/characters';
 import {
     checkInt,
     checkLiteral,
     checkObj,
     CheckObjOpts,
     checkString,
-} from '../coreValidators/checkers';
+} from '../core-validators/checkers';
 
 import { 
     sign,

@@ -1,6 +1,6 @@
 import {
     Cmp
-} from '../types/utilTypes';
+} from '../types/util-types';
 
 import equal from 'fast-deep-equal';
 import clone from 'rfdc';

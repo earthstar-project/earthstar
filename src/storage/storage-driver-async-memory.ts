@@ -1,17 +1,17 @@
 import {
     Cmp
-} from '../types/utilTypes';
+} from '../types/util-types';
 import {
     Doc,
     LocalIndex,
     Path
-} from "../types/docTypes";
+} from "../types/doc-types";
 import {
     Query
-} from "../types/queryTypes";
+} from "../types/query-types";
 import {
     IStorageDriverAsync
-} from "../types/storageTypes";
+} from "../types/storage-types";
 
 import {
     arrayCompare,

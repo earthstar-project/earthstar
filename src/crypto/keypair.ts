@@ -1,7 +1,7 @@
 import {
     AuthorKeypair,
     AuthorShortname,
-} from '../types/docTypes';
+} from '../types/doc-types';
 import {
     ValidationError,
     isErr,
@@ -12,11 +12,11 @@ import {
 } from '../base32';
 import {
     KeypairBuffers,
-} from '../types/cryptoTypes';
+} from '../types/crypto-types';
 import {
     assembleAuthorAddress,
     parseAuthorAddress
-} from '../coreValidators/addresses';
+} from '../core-validators/addresses';
 
 //================================================================================
 

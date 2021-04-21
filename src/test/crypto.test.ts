@@ -3,7 +3,7 @@ import t = require('tap');
 
 import {
     AuthorKeypair
-} from '../types/docTypes';
+} from '../types/doc-types';
 import {
     isErr,
     ValidationError,

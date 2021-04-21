@@ -1,15 +1,15 @@
 import {
     SyncOrAsyncCallback
-} from './types/utilTypes';
+} from './types/util-types';
 import {
     Doc,
-} from './types/docTypes';
-import { HistoryMode } from './types/queryTypes';
+} from './types/doc-types';
+import { HistoryMode } from './types/query-types';
 import {
     FollowerState,
     IFollower,
     IStorageAsync
-} from './types/storageTypes';
+} from './types/storage-types';
 
 //--------------------------------------------------
 

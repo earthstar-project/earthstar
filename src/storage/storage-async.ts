@@ -1,26 +1,26 @@
 import {
     Cmp,
-} from '../types/utilTypes';
+} from '../types/util-types';
 import {
     AuthorKeypair,
     Doc,
     DocToSet,
     LocalIndex,
     Path,
-} from '../types/docTypes';
+} from '../types/doc-types';
 import {
     HistoryMode,
     Query,
-} from '../types/queryTypes';
+} from '../types/query-types';
 import {
     IFollower,
     IngestResult,
     IStorageDriverAsync,
     IStorageAsync,
-} from '../types/storageTypes';
+} from '../types/storage-types';
 import {
     IDocValidator,
-} from '../types/docValidatorTypes';
+} from '../types/format-validator-types';
 
 import {
     isErr,

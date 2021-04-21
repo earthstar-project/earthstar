@@ -5,7 +5,7 @@ import {
     AuthorAddress,
     ParsedAddress,
     WorkspaceAddress,
-} from '../types/docTypes';
+} from '../types/doc-types';
 import {
     isErr,
     notErr,
@@ -17,7 +17,7 @@ import {
     checkWorkspaceIsValid,
     parseAuthorAddress,
     parseWorkspaceAddress
-} from '../coreValidators/addresses';
+} from '../core-validators/addresses';
 
 //================================================================================
 

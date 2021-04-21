@@ -3,7 +3,7 @@ import crypto = require('crypto');
 import {
     ICryptoDriver,
     KeypairBuffers,
-} from '../types/cryptoTypes';
+} from '../types/crypto-types';
 
 const _generateKeypairDerBuffers = (): KeypairBuffers => {
     // Typescript has outdated definitions, doesn't know about ed25519
