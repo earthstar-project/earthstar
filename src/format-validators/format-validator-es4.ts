@@ -6,7 +6,7 @@ import {
     Path,
 } from '../types/doc-types';
 import {
-    IDocValidator
+    IFormatValidator
 } from '../types/format-validator-types';
 import {
     ValidationError
@@ -57,8 +57,8 @@ let ES4_SCHEMA: CheckObjOpts = {
 }
 
 // This is always used as a static class
-// e.g. just `DocValidatorEs4`, not `new DocValidatorEs4()`
-export const DocValidatorEs4: IDocValidator = class {
+// e.g. just `FormatValidatorEs4`, not `new FormatValidatorEs4()`
+export const FormatValidatorEs4: IFormatValidator = class {
     static format: 'es.4';
 
     /** Deterministic hash of this version of the document */

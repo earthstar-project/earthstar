@@ -4,9 +4,7 @@ import {
     Base32String,
     Doc,
     FormatName,
-    ParsedAddress,
     Path,
-    WorkspaceAddress,
 } from './doc-types';
 import { ValidationError } from '../util/errors';
 
@@ -25,7 +23,7 @@ import { ValidationError } from '../util/errors';
  * You won't be making instances of Validators because they have no state.
  * They're just a collection of functions.
  */
-export interface IDocValidator {
+export interface IFormatValidator {
     /** The string name of the format, like "es.4" */
     format: FormatName;
 

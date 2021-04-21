@@ -19,7 +19,7 @@ import {
     IStorageAsync,
 } from '../types/storage-types';
 import {
-    IDocValidator,
+    IFormatValidator,
 } from '../types/format-validator-types';
 
 import {
@@ -57,10 +57,10 @@ export class StorageAsync implements IStorageAsync {
     // Followers
     followers: Set<IFollower> = new Set();
 
-    _validator: IDocValidator;
+    _validator: IFormatValidator;
     _driver: IStorageDriverAsync;
 
-    constructor(validator: IDocValidator, driver: IStorageDriverAsync) {
+    constructor(validator: IFormatValidator, driver: IStorageDriverAsync) {
         debug('constructor, given a storageDriver');
         this._validator = validator;
         this._driver = driver;

@@ -5,8 +5,8 @@ import {
 
 import { sleep } from './util/misc';
 import {
-    DocValidatorEs4
-} from './format-validators/es4';
+    FormatValidatorEs4
+} from './format-validators/format-validator-es4';
 import {
     StorageDriverAsyncMemory
 } from './storage/storage-driver-async-memory';
@@ -52,7 +52,7 @@ let main = async () => {
     log('')
     debugMain('-----------\\')
     debugMain('init storage')
-    let storage = new StorageAsync(DocValidatorEs4, storageDriver);
+    let storage = new StorageAsync(FormatValidatorEs4, storageDriver);
     debugMain('-----------/')
 
     log('')
