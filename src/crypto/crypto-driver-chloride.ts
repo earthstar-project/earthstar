@@ -11,10 +11,6 @@ import {
     stringToBuffer
 } from '../util/bytes';
 
-console.log('-----------------------');
-console.log(sodium);
-console.log('-----------------------');
-
 /**
  * A verison of the ILowLevelCrypto interface backed by Chloride.
  * Works in the browser.

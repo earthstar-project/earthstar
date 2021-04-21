@@ -58,9 +58,4 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
         t.end();
     });
 
-    t.test('blank', (t: any) => {
-        t.ok(true, 'ok');
-        t.end();
-    });
-
 }
