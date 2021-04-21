@@ -81,7 +81,6 @@ t.test('generateAuthorKeypair', (t: any) => {
         t.equal(typeof keypair.secret, 'string', 'keypair has secret');
         t.ok(keypair.address.startsWith('@ok99.'), 'keypair.address starts with @ok99.');
         t.ok(keypair.secret.startsWith('b'), 'keypair.secret starts with "b"');
-
     }
 
     let keypair2 = generateAuthorKeypair('ok99');
