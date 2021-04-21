@@ -25,15 +25,15 @@ const myEncoding = {
 };
 
 /**
- * Encode buffer to base32 string
+ * Encode uint8array bytes to base32 string
  */
-export let bufferToBase32String = (buf: Buffer): Base32String =>
-    'b' + codec.stringify(buf, myEncoding, { pad: false });
+export let base32BytesToString = (bytes: Uint8Array): Base32String =>
+    'b' + codec.stringify(bytes, myEncoding, { pad: false });
 
 /**
-* Decode base32 data to a Buffer.  Throw a ValidationError if the string is bad.
+* Decode base32 string to a uint8array of bytes.  Throw a ValidationError if the string is bad.
 */
-export let base32StringToBuffer = (str: Base32String): Buffer => {
+export let base32StringToBytes = (str: Base32String): Uint8Array => {
     if (!str.startsWith('b')) { throw new ValidationError("can't decode base32 string - it should start with a 'b'. " + str); }
 
     // this library combines padding and looseness settings into a single "loose" option, so
@@ -47,5 +47,5 @@ export let base32StringToBuffer = (str: Base32String): Buffer => {
     if (str[str.length-1] === '=') {
         throw new ValidationError("can't decode base32 string - it contains padding characters ('=')");
     }
-    return codec.parse(str.slice(1), myEncoding, { loose: true, out: Buffer.alloc as any }) as any as Buffer;
+    return codec.parse(str.slice(1), myEncoding, { loose: true });
 };

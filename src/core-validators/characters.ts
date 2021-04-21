@@ -1,3 +1,6 @@
+import {
+    stringToBytes
+} from '../util/bytes';
 
 export let onlyHasChars = (str: string, allowedChars: string): boolean => {
     for (let s of str) {
@@ -7,10 +10,10 @@ export let onlyHasChars = (str: string, allowedChars: string): boolean => {
 }
 
 export let isOnlyPrintableAscii = (s: string) : boolean => {
-    let buf = Buffer.from(s, 'utf8');
-    for (let char of buf) {
+    let bytes = stringToBytes(s);
+    for (let byte of bytes) {
         // char must be between ' ' (space) and '~' inclusive
-        if (char < 32 || char > 126) { return false; }
+        if (byte < 32 || byte > 126) { return false; }
     }
     return true;
 }

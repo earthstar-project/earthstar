@@ -2,12 +2,22 @@ import crypto = require('crypto');
 
 import {
     ICryptoDriver,
-    KeypairBuffers,
+    KeypairBytes,
 } from '../types/crypto-types';
+import {
+    b64StringToBytes,
+    bufferToBytes,
+    bytesToBuffer,
+    concatBytes,
+    stringToBuffer
+} from '../util/bytes';
 
-const _generateKeypairDerBuffers = (): KeypairBuffers => {
-    // Typescript has outdated definitions, doesn't know about ed25519
-    // so fight it with "as any"
+const _generateKeypairDerBytes = (): KeypairBytes => {
+    // Generate a keypair in "der" format, which we will have to process
+    // to remove some prefixes.
+    //
+    // Typescript has outdated definitions, doesn't know about ed25519.
+    // So fight it with "as any".
     let pair = crypto.generateKeyPairSync(
         'ed25519' as any,
         {
@@ -21,23 +31,24 @@ const _generateKeypairDerBuffers = (): KeypairBuffers => {
             },
         } as any
     );
-    // Typescript thinks these are strings, but they're Buffers.
+    // Typescript thinks these are strings, but they're Buffers...
+    // and we need to convert them to bytes (uint8arrays)
     return {
-        pubkey: (pair.publicKey as any as Buffer),
-        secret: (pair.privateKey as any as Buffer),
+        pubkey: bufferToBytes(pair.publicKey as any as Buffer),
+        secret: bufferToBytes(pair.privateKey as any as Buffer),
     };
 };
 
-let _shortenDer = (k: KeypairBuffers): KeypairBuffers => ({
+let _shortenDer = (k: KeypairBytes): KeypairBytes => ({
     pubkey: k.pubkey.slice(-32),
     secret: k.secret.slice(-32),
 });
-let _derPrefixPublic = Buffer.from('MCowBQYDK2VwAyEA', 'base64');
-let _derPrefixSecret = Buffer.from('MC4CAQAwBQYDK2VwBCIEIA==', 'base64');
-let _lengthenDerPublic = (b: Buffer): Buffer =>
-    Buffer.concat([_derPrefixPublic, b]);
-let _lengthenDerSecret = (b: Buffer): Buffer =>
-    Buffer.concat([_derPrefixSecret, b]);
+let _derPrefixPublic = b64StringToBytes('MCowBQYDK2VwAyEA');
+let _derPrefixSecret = b64StringToBytes('MC4CAQAwBQYDK2VwBCIEIA==');
+let _lengthenDerPublic = (b: Uint8Array): Uint8Array =>
+    concatBytes(_derPrefixPublic, b);
+let _lengthenDerSecret = (b: Uint8Array): Uint8Array =>
+    concatBytes(_derPrefixSecret, b);
 
 /**
  * A verison of the ILowLevelCrypto interface backed by native Node crypto functions.
@@ -45,29 +56,30 @@ let _lengthenDerSecret = (b: Buffer): Buffer =>
  * Does not work in the browser.
  */
 export const CryptoDriverNode: ICryptoDriver = class {
-    static sha256(input: string | Buffer): Buffer {
-        return crypto.createHash('sha256').update(input).digest();
+    static sha256(input: string | Uint8Array): Uint8Array {
+        return bufferToBytes(
+            crypto.createHash('sha256').update(input).digest()
+        );
     }
-    static generateKeypairBuffers(): KeypairBuffers {
-        return _shortenDer(_generateKeypairDerBuffers());
+    static generateKeypairBytes(): KeypairBytes {
+        return _shortenDer(_generateKeypairDerBytes());
     };
-    static sign(keypair: KeypairBuffers, msg: string | Buffer): Buffer {
-        if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
-        // prettier-ignore
-        return crypto.sign(
+    static sign(keypair: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+        if (typeof msg === 'string') { msg = stringToBuffer(msg); }
+        return bufferToBytes(crypto.sign(
             null,
             msg,
             {
-                key: _lengthenDerSecret(keypair.secret),
+                key: bytesToBuffer(_lengthenDerSecret(keypair.secret)),
                 format: 'der',
                 type: 'pkcs8',
             }
-        );
+        ));
     }
-    static verify(publicKey: Buffer, sig: Buffer, msg: string | Buffer): boolean {
-        if (typeof msg === 'string') { msg = Buffer.from(msg, 'utf8'); }
+    static verify(publicKey: Uint8Array, sig: Uint8Array, msg: string | Uint8Array): boolean {
+        // TODO: convert uint8arrays to Buffers?
+        if (typeof msg === 'string') { msg = stringToBuffer(msg); }
         try {
-            // prettier-ignore
             return crypto.verify(
                 null,
                 msg,

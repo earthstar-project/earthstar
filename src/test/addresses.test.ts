@@ -22,8 +22,8 @@ import {
 //================================================================================
 
 // use this unicode character for testing
-let snowmanJsString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
-let snowmanBufferUtf8 = Buffer.from([0xe2, 0x98, 0x83]);
+let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 
 //================================================================================
 
@@ -103,9 +103,9 @@ t.test('parseAuthorAddress', (t: any) => {
         { valid: false, address: '@suzy.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'question mark in key' },
         { valid: false, address: '@@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'double @ + 4 letter name' },
         { valid: false, address: '@@uzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'double @ + 3 letter name' },
-        { valid: false, address: `@suz${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 3 letters' },
-        { valid: false, address: `@su${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 2 letters' },
-        { valid: false, address: `@s${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 1 letter' },
+        { valid: false, address: `@suz${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 3 letters' },
+        { valid: false, address: `@su${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 2 letters' },
+        { valid: false, address: `@s${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name + 1 letter' },
         { valid: false, address: 123 as any as string, note: 'a number' },
         { valid: false, address: undefined as any as string, note: 'undefined' },
         { valid: false, address: null as any as string, note: 'null' },
@@ -233,7 +233,7 @@ t.test('parseWorkspaceAddress', (t: any) => {
         { valid: false, address: '+garden.bxx@xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: '@ in middle of key' },
         { valid: false, address: '+gardening.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'question mark in key' },
         { valid: false, address: '++gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', note: 'double +' },
-        { valid: false, address: `+garden${snowmanJsString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name' },
+        { valid: false, address: `+garden${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`, note: 'snowman in name' },
     ];
     for (let v of vectors) {
         if (v.valid) {

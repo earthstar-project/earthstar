@@ -7,18 +7,18 @@ import {
     Base32String,
 } from '../types/doc-types';
 import {
-    KeypairBuffers,
+    KeypairBytes,
 } from '../types/crypto-types';
 import {
     ValidationError,
     isErr,
 } from '../util/errors';
 import {
-    base32StringToBuffer,
-    bufferToBase32String
+    base32StringToBytes,
+    base32BytesToString
 } from '../base32';
 import {
-    decodeAuthorKeypair,
+    decodeAuthorKeypairToBytes,
 } from './keypair';
 import {
     assembleAuthorAddress,
@@ -28,9 +28,9 @@ import {
 
 //================================================================================
 
-/** Do a sha256 hash, then return the output buffer encoded as base32. */
-export let sha256base32 = (input: string | Buffer): Base32String =>
-    bufferToBase32String(CryptoDriver.sha256(input));
+/** Do a sha256 hash, then return the output bytes encoded as base32. */
+export let sha256base32 = (input: string | Uint8Array): Base32String =>
+    base32BytesToString(CryptoDriver.sha256(input));
 
 /**
  * Generate a new author identity -- a keypair of public and private keys.
@@ -43,23 +43,23 @@ export let sha256base32 = (input: string | Buffer): Base32String =>
 export let generateAuthorKeypair = (shortname: string): AuthorKeypair | ValidationError => {
     // This returns a ValidationError if the shortname doesn't follow the rules.
 
-    let bufferPair: KeypairBuffers = CryptoDriver.generateKeypairBuffers();
-    let keypair = {
-        address: assembleAuthorAddress(shortname, bufferToBase32String(bufferPair.pubkey)),
-        secret: bufferToBase32String(bufferPair.secret),
+    let keypairBytes: KeypairBytes = CryptoDriver.generateKeypairBytes();
+    let keypairFormatted = {
+        address: assembleAuthorAddress(shortname, base32BytesToString(keypairBytes.pubkey)),
+        secret: base32BytesToString(keypairBytes.secret),
     };
     // Make sure it's valid (correct length, etc).  return error if invalid.
-    let err = checkAuthorIsValid(keypair.address);
+    let err = checkAuthorIsValid(keypairFormatted.address);
     if (isErr(err)) { return err; }
-    return keypair;
+    return keypairFormatted;
 }
 
 /** Sign a message using an Earthstar keypair.  Return a signature encoded in base32. */
-export let sign = (keypair: AuthorKeypair, msg: string | Buffer): Base32String | ValidationError => {
+export let sign = (keypair: AuthorKeypair, msg: string | Uint8Array): Base32String | ValidationError => {
     try {
-        let keypairBuffers = decodeAuthorKeypair(keypair);
-        if (isErr(keypairBuffers)) { return keypairBuffers; }
-        return bufferToBase32String(CryptoDriver.sign(keypairBuffers, msg));
+        let keypairBytes = decodeAuthorKeypairToBytes(keypair);
+        if (isErr(keypairBytes)) { return keypairBytes; }
+        return base32BytesToString(CryptoDriver.sign(keypairBytes, msg));
     } catch (err) {
         return new ValidationError('unexpected error while signing: ' + err.message);
     }
@@ -75,13 +75,13 @@ export let sign = (keypair: AuthorKeypair, msg: string | Buffer): Base32String |
  * 
  * If an unexpected exception happens, it is re-thrown.
  */
-export let verify = (authorAddress: AuthorAddress, sig: Base32String, msg: string | Buffer): boolean => {
+export let verify = (authorAddress: AuthorAddress, sig: Base32String, msg: string | Uint8Array): boolean => {
     try {
         let authorParsed = parseAuthorAddress(authorAddress);
         if (isErr(authorParsed)) { return false; }
-        return CryptoDriver.verify(base32StringToBuffer(authorParsed.pubkey), base32StringToBuffer(sig), msg);
+        return CryptoDriver.verify(base32StringToBytes(authorParsed.pubkey), base32StringToBytes(sig), msg);
     } catch (err) {
-        // base32StringToBuffer can throw a validation error -- catch that.
+        // base32 conversion can throw a validation error -- catch that.
         // the crypto code might also throw any kind of error.
         return false;
     }
@@ -100,8 +100,8 @@ export let checkAuthorKeypairIsValid = (keypair: AuthorKeypair): true | Validati
     // We check if the secret matches the pubkey by signing something and then validating the signature.
     // However, key generation is deterministic, so it would be more direct to just do this:
     //
-    //     let pubkeyBuffer = LowLevelCrypto.generateKeypairBuffers(base32toBuffer(keypair.secret))
-    //     then check if pubkeyBuffer matches keypair.address
+    //     let pubkeyBytes = LowLevelCrypto.generateKeypairBytes(base32StringtoBytes(keypair.secret))
+    //     then check if pubkeyBytes matches keypair.address
     //
     // ...but this signature trick will work for now.
     try {

@@ -1,6 +1,6 @@
-export interface KeypairBuffers {
-    pubkey: Buffer,
-    secret: Buffer,
+export interface KeypairBytes {
+    pubkey: Uint8Array,
+    secret: Uint8Array,
 }
 
 /**
@@ -9,8 +9,8 @@ export interface KeypairBuffers {
  * e.g. native Node, Chloride, etc.
  */
 export interface ICryptoDriver {
-    sha256(input: string | Buffer): Buffer;
-    generateKeypairBuffers(): KeypairBuffers;
-    sign(keypair: KeypairBuffers, msg: string | Buffer): Buffer;
-    verify(publicKey: Buffer, sig: Buffer, msg: string | Buffer): boolean;
+    sha256(input: string | Uint8Array): Uint8Array;
+    generateKeypairBytes(): KeypairBytes;
+    sign(keypair: KeypairBytes, msg: string | Uint8Array): Uint8Array;
+    verify(publicKey: Uint8Array, sig: Uint8Array, msg: string | Uint8Array): boolean;
 }

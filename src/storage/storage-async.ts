@@ -26,6 +26,9 @@ import {
     isErr,
 } from '../util/errors';
 import {
+    stringLengthInBytes
+} from '../util/bytes';
+import {
     microsecondNow,
 } from '../util/misc';
 import {
@@ -146,7 +149,7 @@ export class StorageAsync implements IStorageAsync {
                 author: keypair.address,
                 content: docToSet.content,
                 contentHash: sha256base32(docToSet.content), // TODO: real hash
-                contentLength: Buffer.byteLength(docToSet.content),
+                contentLength: stringLengthInBytes(docToSet.content),
                 path: docToSet.path,
                 timestamp,
                 workspace: docToSet.workspace,
