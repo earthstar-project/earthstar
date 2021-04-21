@@ -50,9 +50,11 @@ export let concatBytes = (a: Uint8Array, b: Uint8Array): Uint8Array => {
 //--------------------------------------------------
 
 export let b64StringToBytes = (b64string: string): Uint8Array =>
+    // TODO: find a way to do this without using Buffer
     bufferToBytes(Buffer.from(b64string, 'base64'));
 
 export let hexStringToBytes = (hexString: string): Uint8Array =>
+    // TODO: find a way to do this without using Buffer
     bufferToBytes(Buffer.from(hexString, 'hex'));
 
 //--------------------------------------------------
