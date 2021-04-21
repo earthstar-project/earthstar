@@ -1,5 +1,3 @@
-import { Base32String } from './doc-types';
-
 export interface KeypairBuffers {
     pubkey: Buffer,
     secret: Buffer,

@@ -1,7 +1,3 @@
-import {
-    Cmp
-} from '../types/util-types';
-
 import equal from 'fast-deep-equal';
 import clone from 'rfdc';
 

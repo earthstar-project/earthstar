@@ -27,8 +27,6 @@ import {
 } from '../core-validators/checkers';
 
 import { 
-    sign,
-    verify,
     sha256base32,
 } from '../crypto/crypto';
 

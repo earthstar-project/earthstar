@@ -1,17 +1,18 @@
 import {
     AuthorKeypair,
-    Doc
+    Doc,
 } from './types/doc-types';
-
-import { sleep } from './util/misc';
 import {
-    FormatValidatorEs4
+    sleep
+} from './util/misc';
+import {
+    FormatValidatorEs4,
 } from './format-validators/format-validator-es4';
 import {
-    StorageDriverAsyncMemory
+    StorageDriverAsyncMemory,
 } from './storage/storage-driver-async-memory';
 import {
-    StorageAsync as StorageAsync
+    StorageAsync,
 } from './storage/storage-async';
 import {
     addFollower,

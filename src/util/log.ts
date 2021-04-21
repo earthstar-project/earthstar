@@ -1,4 +1,3 @@
-
 export let log = console.log;
 
 export let nop = (...args: any[]): void => {};
@@ -12,4 +11,3 @@ export let makeDebug = (tag: string) => {
         console.log(tag, ...args);
     }
 }
-

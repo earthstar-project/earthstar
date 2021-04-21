@@ -4,7 +4,9 @@ import {
 import {
     Doc,
 } from './types/doc-types';
-import { HistoryMode } from './types/query-types';
+import {
+    HistoryMode,
+ } from './types/query-types';
 import {
     FollowerState,
     IFollower,
