@@ -12,27 +12,26 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster4064547906 {
+    subgraph cluster7168928061 {
         label=<<b>types</b>>;
         style="rounded";
         color=bisque4;
         penwidth=2;
                     
-        "src/types/cryptoTypes.ts" [label="cryptoTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/types/docTypes.ts" [label="docTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/types/docValidatorTypes.ts" [label="docValidatorTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/types/queryTypes.ts" [label="queryTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/types/storageTypes.ts" [label="storageTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        "src/types/utilTypes.ts" [label="utilTypes.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/crypto-types.ts" [label="crypto-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/doc-types.ts" [label="doc-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/query-types.ts" [label="query-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/storage-types.ts" [label="storage-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/types/util-types.ts" [label="util-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
     }
 
     // edges between files
-    "src/types/cryptoTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/docValidatorTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/docValidatorTypes.ts" -> "src/util/errors" [penwidth=2; color=darkslategray4];
-    "src/types/queryTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/storageTypes.ts" -> "src/types/docTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/storageTypes.ts" -> "src/types/queryTypes.ts" [penwidth=2; color=darkslategray4];
-    "src/types/storageTypes.ts" -> "src/lock" [penwidth=2; color=darkslategray4];
+    "src/types/format-validator-types.ts" -> "src/types/doc-types.ts" [penwidth=2; color=darkslategray4];
+    "src/types/format-validator-types.ts" -> "src/util/errors" [penwidth=2; color=darkslategray4];
+    "src/types/query-types.ts" -> "src/types/doc-types.ts" [penwidth=2; color=darkslategray4];
+    "src/types/storage-types.ts" -> "src/types/doc-types.ts" [penwidth=2; color=darkslategray4];
+    "src/types/storage-types.ts" -> "src/types/query-types.ts" [penwidth=2; color=darkslategray4];
+    "src/types/storage-types.ts" -> "src/lock" [penwidth=2; color=darkslategray4];
 
 }
