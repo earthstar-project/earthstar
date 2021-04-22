@@ -11,71 +11,27 @@ digraph G {
     edge [fontname = "helvetica"];
     
     // files in their folder clusters
-
-    subgraph cluster7946223131 {
-        label=<<b>src</b>>;
-        style="rounded";
-        color=bisque4;
-        penwidth=2;
-                    
-        "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-
-        subgraph cluster4639839923 {
-            label=<<b>core-validators</b>>;
-            style="rounded,filled";
-            fillcolor=bisque;
-            color=bisque4;
-            penwidth=2;
-                    
-            "src/core-validators/addresses.ts" [label="addresses.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/core-validators/characters.ts" [label="characters.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        }
-
-        subgraph cluster6798279376 {
-            label=<<b>crypto</b>>;
-            style="rounded,filled";
-            fillcolor=bisque;
-            color=bisque4;
-            penwidth=2;
-                    
-            "src/crypto/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/crypto/crypto-driver-chloride.ts" [label="crypto-driver-chloride.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/crypto/crypto-driver-node.ts" [label="crypto-driver-node.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/crypto/crypto-types.ts" [label="crypto-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/crypto/crypto.ts" [label="crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        }
-
-        subgraph cluster458766014 {
-            label=<<b>format-validators</b>>;
-            style="rounded,filled";
-            fillcolor=bisque;
-            color=bisque4;
-            penwidth=2;
-                    
-            "src/format-validators/format-validator-es4.ts" [label="format-validator-es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        }
-
-        subgraph cluster5135430277 {
-            label=<<b>storage</b>>;
-            style="rounded,filled";
-            fillcolor=bisque;
-            color=bisque4;
-            penwidth=2;
-                    
-            "src/storage/compare.ts" [label="compare.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/follower.ts" [label="follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/query-types.ts" [label="query-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/storage-async.ts" [label="storage-async.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/storage-driver-async-memory.ts" [label="storage-driver-async-memory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/storage-types.ts" [label="storage-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/util-types.ts" [label="util-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-        }
-    }
+        "src/example-app.ts" [label="src/example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/core-validators/addresses.ts" [label="src/core-validators/addresses.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/core-validators/characters.ts" [label="src/core-validators/characters.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/core-validators/checkers.ts" [label="src/core-validators/checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/crypto/base32.ts" [label="src/crypto/base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/crypto-driver-chloride.ts" [label="src/crypto/crypto-driver-chloride.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/crypto-driver-node.ts" [label="src/crypto/crypto-driver-node.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/crypto-types.ts" [label="src/crypto/crypto-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/crypto.ts" [label="src/crypto/crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/keypair.ts" [label="src/crypto/keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/format-validators/format-validator-es4.ts" [label="src/format-validators/format-validator-es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/format-validators/format-validator-types.ts" [label="src/format-validators/format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/storage/compare.ts" [label="src/storage/compare.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/follower.ts" [label="src/storage/follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/lock.ts" [label="src/storage/lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/query-types.ts" [label="src/storage/query-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/query.ts" [label="src/storage/query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storage-async.ts" [label="src/storage/storage-async.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storage-driver-async-memory.ts" [label="src/storage/storage-driver-async-memory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storage-types.ts" [label="src/storage/storage-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/util-types.ts" [label="src/storage/util-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
     // edges between files
     "src/core-validators/addresses.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];

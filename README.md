@@ -11,13 +11,13 @@ Much of Earthstar is just faked here -- signing, document validity checking.
 
 A --> B means "A imports B".
 
-For readability this hides: `/test`, `/types`, `/util`.
+For readability this hides `/test/` and `/util/`.
 
-![](depchart/depchart-notypes.png)
+![](depchart/depchart-main.png)
 
-And here's `/types` by itself
+And again with 3rd party dependencies as brown boxes with dotted lines:
 
-![](depchart/depchart-types.png)
+![](depchart/depchart-deps.png)
 
 Run `yarn depchart` to regenerate this.  You'll need graphviz installed.
 
