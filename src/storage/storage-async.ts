@@ -149,7 +149,7 @@ export class StorageAsync implements IStorageAsync {
                 author: keypair.address,
                 content: docToSet.content,
                 contentHash: sha256base32(docToSet.content), // TODO: real hash
-                contentLength: stringLengthInBytes(docToSet.content),
+                deleteAfter: null,
                 path: docToSet.path,
                 timestamp,
                 workspace: docToSet.workspace,

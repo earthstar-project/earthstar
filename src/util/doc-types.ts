@@ -30,13 +30,15 @@ export interface Doc {
     // TODO: format
     format: string,
     author: AuthorAddress,
-    content: string,
+    content: string,  // TODO: | null, when we have sparse mode
     contentHash: string,
-    contentLength: number,
+    //contentLength: number,  // TODO: add for sparse mode, and enforce in the format validator
+    deleteAfter: number | null,
     path: Path,
     signature: Signature,
     timestamp: Timestamp,
     workspace: WorkspaceAddress,
+    // workspaceSignature: Signature,  // TODO: add for sparse mode
 
     // Local Index:
     // Our docs form a linear sequence with gaps.
@@ -68,4 +70,5 @@ export interface DocToSet {
     workspace: WorkspaceAddress,
     path: Path,
     content: string,
+    deleteAfter?: number | null,
 }

@@ -10,6 +10,7 @@ import {
 import {
     deepEqual,
 } from '../util/misc';
+import { stringLengthInBytes } from '../util/bytes';
 
 //================================================================================ 
 
@@ -113,8 +114,9 @@ export let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
     if (filter.timestamp !== undefined && doc.timestamp !== filter.timestamp) { return false; }
     if (filter.timestampGt !== undefined && !(doc.timestamp > filter.timestampGt)) { return false; }
     if (filter.timestampLt !== undefined && !(doc.timestamp > filter.timestampLt)) { return false; }
-    if (filter.contentLength !== undefined && doc.contentLength !== filter.contentLength) { return false; }
-    if (filter.contentLengthGt !== undefined && !(doc.contentLength > filter.contentLengthGt)) { return false; }
-    if (filter.contentLengthLt !== undefined && !(doc.contentLength > filter.contentLengthLt)) { return false; }
+    let contentLength = stringLengthInBytes(doc.content);
+    if (filter.contentLength !== undefined && contentLength !== filter.contentLength) { return false; }
+    if (filter.contentLengthGt !== undefined && !(contentLength > filter.contentLengthGt)) { return false; }
+    if (filter.contentLengthLt !== undefined && !(contentLength > filter.contentLengthLt)) { return false; }
     return true;
 }
