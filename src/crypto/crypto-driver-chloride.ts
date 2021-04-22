@@ -1,5 +1,5 @@
 import crypto = require('crypto');
-import sodium = require('chloride')
+import sodium = require('chloride/small')
 import {
     ICryptoDriver,
     KeypairBytes,

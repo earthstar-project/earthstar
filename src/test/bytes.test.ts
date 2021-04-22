@@ -91,6 +91,10 @@ t.test('concatBytes', (t: any) =>{
     let concatted = concatBytes(stringToBytes('cold'), snowmanBytes);
     t.same(concatted, coldSnowmanBytes, 'concat bytes');
     t.same(identifyBufOrBytes(concatted), 'bytes', 'returns bytes');
+
+    t.same(concatBytes(Uint8Array.from([]), Uint8Array.from([1, 2, 3])), Uint8Array.from([1, 2, 3]), 'optimization when a is empty');
+    t.same(concatBytes(Uint8Array.from([1, 2, 3]), Uint8Array.from([])), Uint8Array.from([1, 2, 3]), 'optimization when b is empty');
+
     t.end();
 });
 

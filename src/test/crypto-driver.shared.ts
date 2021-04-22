@@ -24,6 +24,7 @@ let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 export let runCryptoDriverTests = (driver: ICryptoDriver) => {
     // Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
     // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
+    /* istanbul ignore next */ 
     if ((t.test as any).onFinish) {
         (t.test as any).onFinish(() => window.onFinish('crypto-driver shared test code -- ' + (driver as any).name));
     }

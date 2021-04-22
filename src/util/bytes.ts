@@ -7,6 +7,7 @@ import { isNode } from "browser-or-node";
 
 let decoder: TextDecoder;
 let encoder: TextEncoder;
+/* istanbul ignore next */ 
 if (isNode) {
     // in node, it's in the 'util' package
     decoder = new TextDecoder();
