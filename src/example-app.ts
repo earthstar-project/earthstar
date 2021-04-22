@@ -25,6 +25,8 @@ import {
     makeDebug,
 } from './util/log';
 import chalk from 'chalk';
+import { Crypto } from './crypto/crypto';
+import { CryptoDriverTweetnacl } from './crypto/crypto-driver-tweetnacl';
 let debugMain = makeDebug(chalk.greenBright('[main]'));
 let debugLazyFollower = makeDebug(chalk.magenta(' [main\'s lazy follower]'));
 let debugBlockingFollower = makeDebug(chalk.magenta(' [main\'s blocking follower]'));
@@ -46,14 +48,26 @@ let main = async () => {
 
     log('')
     debugMain('-----------\\')
-    debugMain('init driver')
+    debugMain('init crypto driver')
+    let crypto = new Crypto(CryptoDriverTweetnacl);
+    debugMain('-----------/')
+
+    log('')
+    debugMain('-----------\\')
+    debugMain('init validator')
+    let validator = new FormatValidatorEs4(crypto);
+    debugMain('-----------/')
+
+    log('')
+    debugMain('-----------\\')
+    debugMain('init storage driver')
     let storageDriver = new StorageDriverAsyncMemory();
     debugMain('-----------/')
 
     log('')
     debugMain('-----------\\')
     debugMain('init storage')
-    let storage = new StorageAsync(FormatValidatorEs4, storageDriver);
+    let storage = new StorageAsync(validator, storageDriver);
     debugMain('-----------/')
 
     log('')

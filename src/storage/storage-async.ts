@@ -31,9 +31,6 @@ import {
 import {
     arrayCompare,
 } from './compare';
-import {
-    sha256base32,
-} from '../crypto/crypto';
 
 //--------------------------------------------------
 
@@ -145,7 +142,8 @@ export class StorageAsync implements IStorageAsync {
                 format: 'es.4',
                 author: keypair.address,
                 content: docToSet.content,
-                contentHash: sha256base32(docToSet.content), // TODO: ask the validator to do this so we don't depend on crypto
+                // to get access to sha256, we have to reach into the validator and get its Crypto instance
+                contentHash: this._validator.crypto.sha256base32(docToSet.content),
                 deleteAfter: null,
                 path: docToSet.path,
                 timestamp,

@@ -12,6 +12,9 @@ import {
 import {
     IFormatValidator
 } from './format-validator-types';
+import { 
+    ICrypto,
+} from '../crypto/crypto-types';
 
 import {
     authorAddressChars,
@@ -27,15 +30,10 @@ import {
     checkString,
 } from '../core-validators/checkers';
 import {
-    parseAuthorAddress,
-    parseWorkspaceAddress
+    checkAuthorIsValid,
+    checkWorkspaceIsValid,
 } from '../core-validators/addresses';
 
-import { 
-    sha256base32,
-    sign,
-    verify,
-} from '../crypto/crypto';
 
 //================================================================================
 
@@ -65,13 +63,16 @@ const ES4_SCHEMA: CheckObjOpts = {
     allowExtraKeys: false,
 }
 
-// This is always used as a static class
-// e.g. just `FormatValidatorEs4`, not `new FormatValidatorEs4()`
-export const FormatValidatorEs4: IFormatValidator = class {
-    static format: 'es.4' = 'es.4';
+export class FormatValidatorEs4 implements IFormatValidator {
+    format: 'es.4' = 'es.4';
+    crypto: ICrypto;
+
+    constructor(crypto: ICrypto) {
+        this.crypto = crypto;
+    }
 
     /** Deterministic hash of this version of the document */
-    static hashDocument(doc: Doc): Base32String | ValidationError {
+    hashDocument(doc: Doc): Base32String | ValidationError {
         // Deterministic hash of the document.
         // Can return a ValidationError, but only checks for very basic document validity.
 
@@ -91,7 +92,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
         //     skip fields with value === null.
         //     result += fieldname + "\t" + convertToString(value) + "\n"
         // return base32encode(sha256(result).binaryDigest())
-        return sha256base32(
+        return this.crypto.sha256base32(
             `author\t${doc.author}\n` +
             `contentHash\t${doc.contentHash}\n` +
             (doc.deleteAfter === null ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
@@ -108,7 +109,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
      * it will be overwritten here, so you may as well just set signature: '' on the input.
      * Return a copy of the original document with the signature field changed, or return a ValidationError.
      */
-    static signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError {
+    signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError {
         if (keypair.address !== doc.author) {
             return new ValidationError('when signing a document, keypair address must match document author');
         }
@@ -116,7 +117,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
         let hash = this.hashDocument(doc);
         if (isErr(hash)) { return hash; }
 
-        let sig = sign(keypair, hash);
+        let sig = this.crypto.sign(keypair, hash);
         if (isErr(sig)) { return sig; }
 
         return { ...doc, signature: sig };
@@ -128,7 +129,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
      * Normally `now` should be omitted so that it defaults to the current time,
      * or you can override it for testing purposes.
      */
-    static checkDocumentIsValid(doc: Doc, now?: number): true | ValidationError {
+    checkDocumentIsValid(doc: Doc, now?: number): true | ValidationError {
         if (now === undefined) { now = Date.now() * 1000; }
         // do this first to ensure we have all the right datatypes in the right fields
         let errBV = this._checkBasicDocumentValidity(doc);
@@ -145,10 +146,10 @@ export const FormatValidatorEs4: IFormatValidator = class {
         let errP = this._checkPathIsValid(doc.path, doc.deleteAfter);
         if (isErr(errP)) { return errP; }
 
-        let errAA = parseAuthorAddress(doc.author);
+        let errAA = checkAuthorIsValid(doc.author);
         if (isErr(errAA)) { return errAA; }
 
-        let errWA = parseWorkspaceAddress(doc.workspace);
+        let errWA = checkWorkspaceIsValid(doc.workspace);
         if (isErr(errWA)) { return errWA; }
 
         // do this after validating that the author address is well-formed
@@ -165,12 +166,12 @@ export const FormatValidatorEs4: IFormatValidator = class {
     // These are broken out for easier unit testing.
     // They will not normally be used directly; use the main assertDocumentIsValid instead.
     // Return true on success.
-    static _checkBasicDocumentValidity(doc: Doc): true | ValidationError {  // check for correct fields and datatypes
+    _checkBasicDocumentValidity(doc: Doc): true | ValidationError {  // check for correct fields and datatypes
         let err = checkObj(ES4_SCHEMA)(doc);
         if (err !== null) { return new ValidationError(err); }
         return true; // TODO: is there more to check?
     }
-    static _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError {
+    _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError {
         // Can the author write to the path?
         // return a ValidationError, or return true on success.
 
@@ -181,7 +182,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
         // else, path contains at least one tilde but not ~@author.  The author can't write here.
         return new ValidationError(`author ${author} can't write to path ${path}`);
     }
-    static _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError {
+    _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError {
         // Check for valid timestamp, and expired ephemeral documents.
         // return a ValidationError, or return true on success.
 
@@ -207,7 +208,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
         }
         return true;
     }
-    static _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError {
+    _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError {
         // Ensure the path matches the spec for allowed path strings.
         //
         // Path validity depends on if the document is ephemeral or not.  To check
@@ -253,25 +254,25 @@ export const FormatValidatorEs4: IFormatValidator = class {
 
         return true;
     }
-    static _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError {
+    _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError {
         // Check if the signature is good.
         // return a ValidationError, or return true on success.
         try {
             let hash = this.hashDocument(doc);
             if (isErr(hash)) { return hash; }
-            let verified = verify(doc.author, doc.signature, hash);
+            let verified = this.crypto.verify(doc.author, doc.signature, hash);
             if (verified !== true) { return new ValidationError('signature is invalid'); }
             return true;
         } catch (err) {
             return new ValidationError('signature is invalid (unexpected exception)');
         }
     }
-    static _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError {
+    _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError {
         // Ensure the contentHash matches the actual content.
         // return a ValidationError, or return true on success.
 
         // TODO: if content is null, skip this check
-        if (sha256base32(content) !== contentHash) {
+        if (this.crypto.sha256base32(content) !== contentHash) {
             return new ValidationError('content does not match contentHash');
         }
         return true;

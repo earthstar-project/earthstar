@@ -33,6 +33,7 @@
     "test-crypto-driver-tweetnacl": "tap -Rspecy --no-bail --jobs=1 build/test/crypto-driver-tweetnacl.test.js",
     "test-crypto-driver-compat": "tap -Rspecy --no-bail --jobs=1 build/test/crypto-driver-compat.test.js",
     "test-crypto-driver": "tap -Rspecy --no-bail --jobs=1 build/test/crypto-driver-*.test.js",
+    "test-crypto-keypair": "tap -Rspecy --no-bail --jobs=1 build/test/crypto-keypair.test.js",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "prepublishOnly": "yarn clean && yarn build",
     "depchart-main": "depchart `find src | grep .ts` --exclude src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-main --node_modules omit",

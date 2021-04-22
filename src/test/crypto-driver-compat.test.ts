@@ -6,13 +6,22 @@ if ((t.test as any).onFinish) {
     (t.test as any).onFinish(() => window.onFinish('crypto-driver-compat'));
 }
 
+import { isNode } from 'browser-or-node';
+
 import { CryptoDriverChloride } from '../crypto/crypto-driver-chloride';
 import { CryptoDriverNode } from '../crypto/crypto-driver-node';
 import { CryptoDriverTweetnacl } from '../crypto/crypto-driver-tweetnacl';
-import { ICryptoDriver, KeypairBytes } from '../crypto/crypto-types';
-import { isNode } from 'browser-or-node';
-import { identifyBufOrBytes } from '../util/bytes';
+import {
+    ICryptoDriver,
+    KeypairBytes
+} from '../crypto/crypto-types';
+import {
+    identifyBufOrBytes
+} from '../util/bytes';
 
+//================================================================================
+
+// get a dynamic list of all cryptodrivers that should work in the current environment
 let drivers: ICryptoDriver[];
 if (isNode) {
     if (process.version >= 'v12') {

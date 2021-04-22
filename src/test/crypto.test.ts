@@ -22,13 +22,11 @@ import {
     encodeAuthorKeypairToStrings,
 } from '../crypto/keypair';
 import {
-    checkAuthorKeypairIsValid,
-    generateAuthorKeypair,
-    sha256base32,
-    sign,
-    verify,
+    Crypto
 } from '../crypto/crypto';
-import { sleep } from '../util/misc';
+import {
+    CryptoDriverTweetnacl
+} from '../crypto/crypto-driver-tweetnacl';
 
 //================================================================================
 
@@ -38,6 +36,8 @@ let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 
 //================================================================================
 
+let crypto = new Crypto(CryptoDriverTweetnacl);
+
 t.test('sha256 of strings', (t: any) => {
     let vectors : [string, string][] = [
         // input, output
@@ -45,8 +45,9 @@ t.test('sha256 of strings', (t: any) => {
         ['abc', 'bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq'],
         [snowmanString, 'bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga'],
     ];
+
     for (let [input, output] of vectors) {
-        t.equal(sha256base32(input), output, `hash of ${JSON.stringify(input)}`);
+        t.equal(crypto.sha256base32(input), output, `hash of ${JSON.stringify(input)}`);
     }
     t.end();
 });
@@ -62,22 +63,22 @@ t.test('sha256 of bytes', (t: any) => {
         [snowmanBytes, 'bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga'],
     ];
     for (let [input, output] of vectors) {
-        t.equal(sha256base32(input), output, `hash of bytes: ${JSON.stringify(input)}`)
+        t.equal(crypto.sha256base32(input), output, `hash of bytes: ${JSON.stringify(input)}`)
     }
     t.end();
 });
 
 t.test('generateAuthorKeypair', (t: any) => {
-    t.ok(isErr(generateAuthorKeypair('abc')), 'error when author shortname is too short');
-    t.ok(isErr(generateAuthorKeypair('abcde')), 'error when author shortname is too long');
-    t.ok(isErr(generateAuthorKeypair('TEST')), 'error when author shortname is uppercase');
-    t.ok(isErr(generateAuthorKeypair('1abc')), 'error when author shortname starts with a number');
-    t.ok(isErr(generateAuthorKeypair('abc-')), 'error when author shortname has dashes');
-    t.ok(isErr(generateAuthorKeypair('abc.')), 'error when author shortname has a dot');
-    t.ok(isErr(generateAuthorKeypair('abc ')), 'error when author shortname has a space');
-    t.ok(isErr(generateAuthorKeypair('')), 'error when author shortname is empty');
+    t.ok(isErr(crypto.generateAuthorKeypair('abc')), 'error when author shortname is too short');
+    t.ok(isErr(crypto.generateAuthorKeypair('abcde')), 'error when author shortname is too long');
+    t.ok(isErr(crypto.generateAuthorKeypair('TEST')), 'error when author shortname is uppercase');
+    t.ok(isErr(crypto.generateAuthorKeypair('1abc')), 'error when author shortname starts with a number');
+    t.ok(isErr(crypto.generateAuthorKeypair('abc-')), 'error when author shortname has dashes');
+    t.ok(isErr(crypto.generateAuthorKeypair('abc.')), 'error when author shortname has a dot');
+    t.ok(isErr(crypto.generateAuthorKeypair('abc ')), 'error when author shortname has a space');
+    t.ok(isErr(crypto.generateAuthorKeypair('')), 'error when author shortname is empty');
 
-    let keypair = generateAuthorKeypair('ok99');
+    let keypair = crypto.generateAuthorKeypair('ok99');
     if (isErr(keypair)) {
         t.ok(false, 'should have succeeded but instead was an error: ' + keypair);
         t.end();
@@ -89,20 +90,20 @@ t.test('generateAuthorKeypair', (t: any) => {
         t.ok(keypair.secret.startsWith('b'), 'keypair.secret starts with "b"');
     }
 
-    let keypair2 = generateAuthorKeypair('ok99');
+    let keypair2 = crypto.generateAuthorKeypair('ok99');
     if (isErr(keypair2)) {
         t.ok(false, 'should have succeeded but instead was an error: ' + keypair2);
     } else {
-        t.notSame(keypair.address, keypair2.address, 'keypair generation is not deterministic (pubkeys differ)');
-        t.notSame(keypair.secret, keypair2.secret, 'keypair generation is not deterministic (secrets differ)');
+        t.notSame(keypair.address, keypair2.address, 'keypair crypto.generation is not deterministic (pubkeys differ)');
+        t.notSame(keypair.secret, keypair2.secret, 'keypair crypto.generation is not deterministic (secrets differ)');
     }
 
     t.end();
 });
 
 t.test('authorKeypairIsValid', (t: any) => {
-    let keypair1 = generateAuthorKeypair('onee');
-    let keypair2 = generateAuthorKeypair('twoo');
+    let keypair1 = crypto.generateAuthorKeypair('onee');
+    let keypair2 = crypto.generateAuthorKeypair('twoo');
     if (isErr(keypair1)) { 
         t.ok(false, 'keypair1 was not generated successfully');
         t.end();
@@ -114,59 +115,59 @@ t.test('authorKeypairIsValid', (t: any) => {
         return;
     }
 
-    t.equal(checkAuthorKeypairIsValid(keypair1), true, 'keypair1 is valid');
+    t.equal(crypto.checkAuthorKeypairIsValid(keypair1), true, 'keypair1 is valid');
     t.notSame(keypair1.secret, keypair2.secret, 'different keypairs have different secrets');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: '',
         secret: keypair1.secret,
     })), 'empty address makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address,
         secret: '',
     })), 'empty secret makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address + 'a',
         secret: keypair1.secret,
     })), 'adding char to pubkey makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address,
         secret: keypair1.secret + 'a'
     })), 'adding char to secret makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address.slice(0, -8) + 'aaaaaaaa',
         secret: keypair1.secret,
     })), 'altering pubkey makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address,
         secret: keypair1.secret.slice(0, -8) + 'aaaaaaaa',
     })), 'altering secret makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address,
         secret: keypair2.secret,
     })), 'mixing address and secret from 2 different keypairs is invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address,
         secret: keypair1.secret.slice(0, -1) + '1',  // 1 is not a valid b32 character
     })), 'invalid b32 char in address makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address,
         secret: keypair1.secret.slice(0, -1) + '1',  // 1 is not a valid b32 character
     })), 'invalid b32 char in secret makes keypair invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         secret: keypair1.secret,
     } as any)), 'missing address is invalid');
 
-    t.ok(isErr(checkAuthorKeypairIsValid({
+    t.ok(isErr(crypto.checkAuthorKeypairIsValid({
         address: keypair1.address,
     } as any)), 'missing secret is invalid');
 
@@ -175,7 +176,7 @@ t.test('authorKeypairIsValid', (t: any) => {
 
 t.test('encode/decode author keypair: from bytes to string and back', (t: any) => {
     let shortname = 'test';
-    let keypair = generateAuthorKeypair(shortname);
+    let keypair = crypto.generateAuthorKeypair(shortname);
     if (isErr(keypair)) {
         t.ok(false, 'keypair 1 is an error');
         t.end();
@@ -219,15 +220,15 @@ t.test('encode/decode author keypair: from bytes to string and back', (t: any) =
 t.test('signatures', (t: any) => {
     let input = 'abc';
 
-    let keypair = generateAuthorKeypair('test') as AuthorKeypair;
-    let keypair2 = generateAuthorKeypair('fooo') as AuthorKeypair;
+    let keypair = crypto.generateAuthorKeypair('test') as AuthorKeypair;
+    let keypair2 = crypto.generateAuthorKeypair('fooo') as AuthorKeypair;
     if (isErr(keypair) || isErr(keypair2)) {
         t.ok(false, 'keypair generation error');
         t.end(); return;
     }
 
-    let sig = sign(keypair, input);
-    let sig2 = sign(keypair2, input);
+    let sig = crypto.sign(keypair, input);
+    let sig2 = crypto.sign(keypair2, input);
     if (isErr(sig)) {
         t.ok(false, 'signature error ' + sig);
         t.end(); return;
@@ -237,24 +238,24 @@ t.test('signatures', (t: any) => {
         t.end(); return;
     }
 
-    t.ok(verify(keypair.address, sig, input), 'real signature is valid');
+    t.ok(crypto.verify(keypair.address, sig, input), 'real signature is valid');
 
     // ways a signature should fail
-    t.notOk(verify(keypair.address, 'bad sig', input), 'garbage signature is not valid');
-    t.notOk(verify(keypair.address, sig2, input), 'signature from another key is not valid');
-    t.notOk(verify(keypair.address, sig, 'different input'), 'signature is not valid with different input');
-    t.notOk(verify('@bad.address', sig, input), 'invalid author address = invalid signature, return false');
+    t.notOk(crypto.verify(keypair.address, 'bad sig', input), 'garbage signature is not valid');
+    t.notOk(crypto.verify(keypair.address, sig2, input), 'signature from another key is not valid');
+    t.notOk(crypto.verify(keypair.address, sig, 'different input'), 'signature is not valid with different input');
+    t.notOk(crypto.verify('@bad.address', sig, input), 'invalid author address = invalid signature, return false');
 
     // determinism
-    t.equal(sign(keypair, 'aaa'), sign(keypair, 'aaa'), 'signatures should be deterministic');
+    t.equal(crypto.sign(keypair, 'aaa'), crypto.sign(keypair, 'aaa'), 'signatures should be deterministic');
 
     // changing input should change signature
-    t.notEqual(sign(keypair, 'aaa'), sign(keypair, 'xxx'), 'different inputs should make different signature');
-    t.notEqual(sign(keypair, 'aaa'), sign(keypair2, 'aaa'), 'different keys should make different signature');
+    t.notEqual(crypto.sign(keypair, 'aaa'), crypto.sign(keypair, 'xxx'), 'different inputs should make different signature');
+    t.notEqual(crypto.sign(keypair, 'aaa'), crypto.sign(keypair2, 'aaa'), 'different keys should make different signature');
 
     // encoding of input msg
-    let snowmanStringSig = sign(keypair, snowmanString);
-    let snowmanBytesSig = sign(keypair, snowmanBytes);
+    let snowmanStringSig = crypto.sign(keypair, snowmanString);
+    let snowmanBytesSig = crypto.sign(keypair, snowmanBytes);
     if (isErr(snowmanStringSig)) {
         t.ok(false, 'signature error ' + snowmanStringSig);
         t.end(); return;
@@ -263,8 +264,8 @@ t.test('signatures', (t: any) => {
         t.ok(false, 'signature error ' + snowmanBytesSig);
         t.end(); return;
     }
-    t.ok(verify(keypair.address, snowmanStringSig, snowmanString), 'signature roundtrip works on snowman utf-8 string');
-    t.ok(verify(keypair.address, snowmanBytesSig, snowmanBytes), 'signature roundtrip works on snowman Uint8Array');
+    t.ok(crypto.verify(keypair.address, snowmanStringSig, snowmanString), 'signature roundtrip works on snowman utf-8 string');
+    t.ok(crypto.verify(keypair.address, snowmanBytesSig, snowmanBytes), 'signature roundtrip works on snowman Uint8Array');
 
     t.end();
 });

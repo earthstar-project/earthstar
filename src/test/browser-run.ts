@@ -12,7 +12,7 @@
 declare let window: any;
 let numFinished = 0;
 
-let numTestFiles = 7;  // <--- set this to the expected number of test files
+let numTestFiles = 8;  // <--- set this to the expected number of test files
 
 window.onFinish = (testName?: string) => {
     numFinished += 1;

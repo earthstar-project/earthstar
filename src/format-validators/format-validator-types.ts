@@ -6,8 +6,12 @@ import {
     FormatName,
     Path,
 } from '../util/doc-types';
-import { ValidationError } from '../util/errors';
-
+import {
+    ValidationError
+} from '../util/errors';
+import {
+    ICrypto
+} from '../crypto/crypto-types';
 
 /**
  * Validators are each responsible for one document format such as "es.4".
@@ -19,13 +23,11 @@ import { ValidationError } from '../util/errors';
  * one document at a time, without knowing about any other documents
  * or what's in the Storage.
  *
- * These are all static methods.
- * You won't be making instances of Validators because they have no state.
- * They're just a collection of functions.
  */
 export interface IFormatValidator {
     /** The string name of the format, like "es.4" */
     format: FormatName;
+    crypto: ICrypto;
 
     /** Deterministic hash of this version of the document */
     hashDocument(doc: Doc): Base32String | ValidationError;
