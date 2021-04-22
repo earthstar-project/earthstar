@@ -1,6 +1,6 @@
 import {
     Cmp,
-} from '../types/util-types';
+} from './util-types';
 import {
     AuthorKeypair,
     Doc,
@@ -11,16 +11,16 @@ import {
 import {
     HistoryMode,
     Query,
-} from '../types/query-types';
+} from './query-types';
 import {
     IFollower,
     IngestResult,
     IStorageDriverAsync,
     IStorageAsync,
-} from '../types/storage-types';
+} from './storage-types';
 import {
     IFormatValidator,
-} from '../types/format-validator-types';
+} from '../format-validators/format-validator-types';
 
 import {
     isErr,
@@ -33,7 +33,7 @@ import {
 } from '../util/misc';
 import {
     arrayCompare,
-} from '../util/compare';
+} from './compare';
 import {
     sha256base32,
 } from '../crypto/crypto';

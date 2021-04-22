@@ -1,6 +1,6 @@
 import {
     Cmp
-} from '../types/util-types';
+} from './util-types';
 import {
     Doc,
     LocalIndex,
@@ -8,22 +8,22 @@ import {
 } from "../types/doc-types";
 import {
     Query
-} from "../types/query-types";
+} from "./query-types";
 import {
     IStorageDriverAsync
-} from "../types/storage-types";
+} from "./storage-types";
 
 import {
     arrayCompare,
     keyComparer,
-} from '../util/compare';
+} from './compare';
 import {
     cleanUpQuery,
     docMatchesFilter
-} from '../query';
+} from './query';
 import {
     Lock
-} from '../lock';
+} from './lock';
 
 //--------------------------------------------------
 

@@ -16,7 +16,7 @@ import {
 } from './storage/storage-async';
 import {
     addFollower,
-} from './follower';
+} from './storage/follower';
 
 //--------------------------------------------------
 

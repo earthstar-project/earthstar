@@ -1,22 +1,22 @@
 import {
     SyncOrAsyncCallback
-} from './types/util-types';
+} from './util-types';
 import {
     Doc,
-} from './types/doc-types';
+} from '../types/doc-types';
 import {
     HistoryMode,
- } from './types/query-types';
+ } from './query-types';
 import {
     FollowerState,
     IFollower,
     IStorageAsync
-} from './types/storage-types';
+} from './storage-types';
 
 //--------------------------------------------------
 
 import chalk from 'chalk';
-import { log } from './util/log';
+import { log } from '../util/log';
 let debug2 = (blocking: boolean, ...args: any[]) => {
     if (blocking) {
         log(chalk.magentaBright('                  [follower (blocking)]'), ...args);

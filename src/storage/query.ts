@@ -1,15 +1,15 @@
 import {
     Doc,
-} from './types/doc-types';
+} from '../types/doc-types';
 import {
     DEFAULT_QUERY,
     Query,
     QueryFilter,
-} from './types/query-types';
+} from './query-types';
 
 import {
     deepEqual,
-} from './util/misc';
+} from '../util/misc';
 
 //================================================================================ 
 

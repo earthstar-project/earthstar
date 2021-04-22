@@ -1,4 +1,4 @@
-import { sleep } from './util/misc';
+import { sleep } from '../util/misc';
 
 export class Lock {
     // TODO: only allow one call to do() to run at once.

@@ -8,10 +8,10 @@ import {
 } from '../util/bytes';
 import {
     base32StringToBytes
-} from '../base32';
+} from '../crypto/base32';
 import {
     ICryptoDriver
-} from '../types/crypto-types';
+} from '../crypto/crypto-types';
 
 //================================================================================
 

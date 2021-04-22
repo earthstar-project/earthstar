@@ -17,7 +17,7 @@ import {
 import {
     ICryptoDriver,
     KeypairBytes,
-} from '../types/crypto-types';
+} from './crypto-types';
 import {
     ValidationError,
     isErr,
@@ -25,7 +25,7 @@ import {
 import {
     base32StringToBytes,
     base32BytesToString
-} from '../base32';
+} from './base32';
 import {
     decodeAuthorKeypairToBytes,
 } from './keypair';

@@ -2,7 +2,7 @@ import sodium = require('chloride/small')
 import {
     ICryptoDriver,
     KeypairBytes,
-} from '../types/crypto-types';
+} from './crypto-types';
 import {
     bufferToBytes,
     bytesToBuffer,

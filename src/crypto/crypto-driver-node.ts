@@ -3,7 +3,7 @@ import crypto = require('crypto');
 import {
     ICryptoDriver,
     KeypairBytes,
-} from '../types/crypto-types';
+} from './crypto-types';
 import {
     b64StringToBytes,
     bufferToBytes,

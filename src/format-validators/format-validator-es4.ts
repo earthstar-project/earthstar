@@ -7,7 +7,7 @@ import {
 } from '../types/doc-types';
 import {
     IFormatValidator
-} from '../types/format-validator-types';
+} from './format-validator-types';
 import {
     ValidationError
 } from '../util/errors';
