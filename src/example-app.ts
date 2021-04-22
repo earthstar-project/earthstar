@@ -27,6 +27,7 @@ import {
 import chalk from 'chalk';
 import { Crypto } from './crypto/crypto';
 import { CryptoDriverTweetnacl } from './crypto/crypto-driver-tweetnacl';
+import { isErr } from './util/errors';
 let debugMain = makeDebug(chalk.greenBright('[main]'));
 let debugLazyFollower = makeDebug(chalk.magenta(' [main\'s lazy follower]'));
 let debugBlockingFollower = makeDebug(chalk.magenta(' [main\'s blocking follower]'));
@@ -35,21 +36,22 @@ let debugBlockingFollower = makeDebug(chalk.magenta(' [main\'s blocking follower
 
 let main = async () => {
 
-    let workspace = '+gardening.abc';
-    let keypair: AuthorKeypair = {
-        address: '@suzy.abc',
-        secret: 'secret:123',
-    };
-    log('')
-    debugMain('-----------\\')
-    debugMain('workspace:', workspace);
-    debugMain('keypair:', keypair);
-    debugMain('-----------/')
-
     log('')
     debugMain('-----------\\')
     debugMain('init crypto driver')
     let crypto = new Crypto(CryptoDriverTweetnacl);
+    debugMain('-----------/')
+
+    let workspace = '+gardening.abc';
+    let keypair = crypto.generateAuthorKeypair('suzy');
+    if (isErr(keypair)) {
+        console.error(keypair);
+        process.exit(1);
+    }
+    log('')
+    debugMain('-----------\\')
+    debugMain('workspace:', workspace);
+    debugMain('keypair:', keypair);
     debugMain('-----------/')
 
     log('')

@@ -36,6 +36,7 @@ import {
 
 import { makeDebug } from '../util/log';
 import chalk from 'chalk';
+import { sign } from 'tweetnacl';
 let debug = makeDebug(chalk.yellow('      [storage]'));
 
 //================================================================================
@@ -154,7 +155,9 @@ export class StorageAsync implements IStorageAsync {
 
             debug('  | signing doc');
             let signedDoc = this._validator.signDocument(keypair, doc);
-            if (isErr(signedDoc)) { return IngestResult.Invalid; }
+            if (isErr(signedDoc)) {
+                return IngestResult.Invalid;
+            }
 
             debug('  | ingesting...');
             let result = await this.ingest(signedDoc, false);  // false meanse don't get lock again

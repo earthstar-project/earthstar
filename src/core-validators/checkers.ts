@@ -39,11 +39,13 @@ export interface CheckStringOpts {
 }
 export let checkString = (opts: CheckStringOpts = {}): Checker =>
     (x: any): null | string => {
-        if (x === undefined && opts.optional === false) { return 'required'; }
+        if (opts.optional !== true && x === undefined) { return 'required'; }
+        if (opts.optional === true && x === undefined) { return null; }  // skip the rest of the checks if it's undefined
+
         if (typeof x !== 'string') { return 'expected a string but got ' + JSON.stringify(x); }
         if (opts.minLen !== undefined && x.length < opts.minLen) { return `string shorter than min length of ${opts.minLen} chars`; }
         if (opts.maxLen !== undefined && x.length > opts.maxLen) { return `string shorter than max length of ${opts.maxLen} chars`; }
-        if (opts.len !== undefined && x.length !== opts.len) { return `string does not have required length of ${opts.len} chars`; }
+        if (opts.len !== undefined && x.length !== opts.len) { return `string does not have required length of ${opts.len} chars: ${x}`; }
         if (opts.allowedChars !== undefined && !onlyHasChars(x, opts.allowedChars)) { return 'contains disallowed characters'; }
         return null;
     }
@@ -52,12 +54,17 @@ export let checkString = (opts: CheckStringOpts = {}): Checker =>
 
 export interface CheckIntOpts {
     optional?: boolean,  // default false
+    nullable?: boolean, // default false
     min?: number,  // inclusive
     max?: number,  // inclusive
 }
 export let checkInt = (opts: CheckIntOpts = {}): Checker =>
     (x: any): null | string => {
-        if (x === undefined && opts.optional === false) { return 'required'; }
+        if (opts.optional !== true && x === undefined) { return 'required'; }
+        if (opts.optional === true && x === undefined) { return null; }  // skip the rest of the checks if it's undefined
+        if (opts.nullable !== true && x === null) { return 'not nullable'; }
+        if (opts.nullable === true && x === null) { return null; } // skip the rest of the checks if it's null
+
         if (typeof x !== 'number') { return 'expected a number but got ' + JSON.stringify(x); }
         if (x !== Math.round(x)) { return 'expected an integer'; }
         if (isNaN(x)) { return 'is NaN'; }
@@ -73,6 +80,7 @@ export interface CheckObjOpts {
     allowUndefined?: boolean, // default false.  allow values in the object to be explicitly set to undefined (rather than omitted)?
     allowExtraKeys?: boolean, // default false.  allow keys not set in objSchema?  to use this, you must also define objSchema
     objSchema?: CheckerSchema,  // an object of validators
+    ignoreFields?: string[],
 }
 export let checkObj = (opts: CheckObjOpts = {}): Checker =>
     (x: any): null | string => {

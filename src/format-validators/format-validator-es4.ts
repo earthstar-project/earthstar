@@ -54,6 +54,7 @@ const ES4_SCHEMA: CheckObjOpts = {
         author: checkString({ allowedChars: authorAddressChars }),
         content: checkString(),
         contentHash: checkString({ allowedChars: b32chars, len: HASH_STR_LEN }),
+        deleteAfter: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP, nullable: true }),
         path: checkString({ allowedChars: pathChars, minLen: 2, maxLen: 512 }),
         signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
         timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
@@ -82,7 +83,14 @@ export class FormatValidatorEs4 implements IFormatValidator {
         // None of these fields are allowed to contain tabs or newlines
         // (except content, but we use contentHash instead).
 
-        let err = this._checkBasicDocumentValidity(doc);
+        // to check the basic validity it needs a signature of the correct length and characters,
+        // but the actual content of the signature is not checked here.
+        // so let's fake it.
+        let docWithFakeSig = {
+            ...doc,
+            signature: 'bthisisafakesignatureusedtofillintheobjectwhenvalidatingitforhashingaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        }
+        let err = this._checkBasicDocumentValidity(docWithFakeSig);
         if (isErr(err)) { return err; }
 
         // Sort fields in lexicographic order by field name.
