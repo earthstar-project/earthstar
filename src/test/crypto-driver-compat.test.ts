@@ -15,15 +15,23 @@ import { identifyBufOrBytes } from '../util/bytes';
 
 let drivers: ICryptoDriver[];
 if (isNode) {
-    drivers = [
-        CryptoDriverChloride,
-        CryptoDriverNode,
-        CryptoDriverTweetnacl,
-    ];
+    if (process.version >= 'v12') {
+        drivers = [
+            CryptoDriverChloride,
+            CryptoDriverNode,
+            CryptoDriverTweetnacl,
+        ];
+    } else {
+        drivers = [
+            CryptoDriverChloride,
+            // CryptoDriverNode,  // not on node 10
+            CryptoDriverTweetnacl,
+        ];
+    }
 } else {
     drivers = [
         CryptoDriverChloride,
-        // CryptoDriverNode,
+        // CryptoDriverNode,  // not in browser
         CryptoDriverTweetnacl,
     ];
 }
