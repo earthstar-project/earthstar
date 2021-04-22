@@ -3,6 +3,7 @@ declare let window: any;
 
 import {
     identifyBufOrBytes,
+    stringLengthInBytes,
     stringToBuffer,
     stringToBytes
 } from '../util/bytes';
@@ -59,6 +60,7 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
         t.same(identifyBufOrBytes(keypair.secret), 'bytes', 'keypair.secret is bytes');
         t.same(keypair.pubkey.length, 32, 'pubkey is 32 bytes long');
         t.same(keypair.secret.length, 32, 'secret is 32 bytes long');
+        t.notSame(keypair.secret, keypair.pubkey, 'secret is !== pubkey');
 
         let keypair2 = driver.generateKeypairBytes();
         t.notSame(keypair.pubkey, keypair2.pubkey, 'generateKeypairBytes is non-deterministic (pubkey)');
@@ -68,14 +70,20 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
     });
 
     t.test('sign and verify', (t: any) => {
-        t.ok(true, 'TODO');
-
         let keypairBytes = driver.generateKeypairBytes();
         let msg = 'hello'
         let sigBytes = driver.sign(keypairBytes, msg);
 
-        t.same(identifyBufOrBytes(sigBytes), 'bytes', 'signature is bytes');
+        t.same(identifyBufOrBytes(sigBytes), 'bytes', 'signature is bytes, not buffer');
         t.same(sigBytes.length, 64, 'sig is 64 bytes long');
+
+        t.ok(driver.verify(keypairBytes.pubkey, sigBytes, msg), 'signature is valid');
+
+        t.notOk(driver.verify(keypairBytes.pubkey, sigBytes, msg+'!'), 'signature is invalid after message is changed');
+
+        // change the sig and see if it's still valid
+        sigBytes[0] = (sigBytes[0] + 1) % 256;
+        t.notOk(driver.verify(keypairBytes.pubkey, sigBytes, msg), 'signature is invalid after signature is changed');
 
         t.end();
     });
