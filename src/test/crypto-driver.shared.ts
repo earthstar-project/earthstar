@@ -3,7 +3,6 @@ declare let window: any;
 
 import {
     identifyBufOrBytes,
-    stringLengthInBytes,
     stringToBuffer,
     stringToBytes
 } from '../util/bytes';
@@ -27,7 +26,7 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
     // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
     /* istanbul ignore next */ 
     if ((t.test as any).onFinish) {
-        (t.test as any).onFinish(() => window.onFinish('crypto-driver shared test code -- ' + (driver as any).name));
+        (t.test as any).onFinish(() => window.onFinish('crypto-driver shared tests -- ' + (driver as any).name));
     }
 
     t.test('sha256(bytes | string) --> bytes', (t: any) => {

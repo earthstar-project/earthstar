@@ -21,7 +21,7 @@ import {
 
 //================================================================================
 
-// get a dynamic list of all cryptodrivers that should work in the current environment
+// get a dynamic list of the CryptoDrivers that should work in the current environment
 let drivers: ICryptoDriver[];
 if (isNode) {
     if (process.version >= 'v12') {

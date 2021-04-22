@@ -29,17 +29,17 @@ import {
 //================================================================================
 
 export class Crypto implements ICrypto {
-    cryptoDriver: ICryptoDriver;
+    driver: ICryptoDriver;
 
-    constructor(cryptoDriver: ICryptoDriver) {
-        this.cryptoDriver = cryptoDriver;
+    constructor(driver: ICryptoDriver) {
+        this.driver = driver;
     }
 
     /**
      * Do a sha256 hash, then return the output bytes encoded as base32.
      */
     sha256base32(input: string | Uint8Array): Base32String {
-        return base32BytesToString(this.cryptoDriver.sha256(input));
+        return base32BytesToString(this.driver.sha256(input));
     }
 
     /**
@@ -53,7 +53,7 @@ export class Crypto implements ICrypto {
      * @param name A 4-character nickname to make the address easier to remember and identify.
      */
     generateAuthorKeypair(name: string): AuthorKeypair | ValidationError {
-        let keypairBytes: KeypairBytes = this.cryptoDriver.generateKeypairBytes();
+        let keypairBytes: KeypairBytes = this.driver.generateKeypairBytes();
         let keypairFormatted = {
             address: assembleAuthorAddress(name, base32BytesToString(keypairBytes.pubkey)),
             secret: base32BytesToString(keypairBytes.secret),
@@ -71,7 +71,7 @@ export class Crypto implements ICrypto {
         try {
             let keypairBytes = decodeAuthorKeypairToBytes(keypair);
             if (isErr(keypairBytes)) { return keypairBytes; }
-            return base32BytesToString(this.cryptoDriver.sign(keypairBytes, msg));
+            return base32BytesToString(this.driver.sign(keypairBytes, msg));
         } catch (err) {
             return new ValidationError('unexpected error while signing: ' + err.message);
         }
@@ -91,7 +91,7 @@ export class Crypto implements ICrypto {
         try {
             let authorParsed = parseAuthorAddress(authorAddress);
             if (isErr(authorParsed)) { return false; }
-            return this.cryptoDriver.verify(base32StringToBytes(authorParsed.pubkey), base32StringToBytes(sig), msg);
+            return this.driver.verify(base32StringToBytes(authorParsed.pubkey), base32StringToBytes(sig), msg);
         } catch (err) {
             // base32 conversion can throw a validation error -- catch that.
             // the crypto code might also throw any kind of error.

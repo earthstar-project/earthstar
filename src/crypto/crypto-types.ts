@@ -17,6 +17,7 @@ export interface KeypairBytes {
  * These all handle base32-encoded strings.
  */
 export interface ICrypto {
+    driver: ICryptoDriver;
     sha256base32(input: string | Uint8Array): Base32String;
     generateAuthorKeypair(name: string): AuthorKeypair | ValidationError;
     sign(keypair: AuthorKeypair, msg: string | Uint8Array): Base32String | ValidationError;
