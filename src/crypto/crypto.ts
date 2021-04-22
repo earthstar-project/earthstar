@@ -1,12 +1,13 @@
 import { CryptoDriverChloride } from './crypto-driver-chloride';
 import { CryptoDriverNode } from './crypto-driver-node';
+import { CryptoDriverTweetnacl } from './crypto-driver-tweetnacl';
 
 import { isNode } from 'browser-or-node';
 let CryptoDriver: ICryptoDriver;
-if (isNode) {
+if (isNode && process.version >= 'v12') {
     CryptoDriver = CryptoDriverNode;
 } else {
-    CryptoDriver = CryptoDriverChloride;
+    CryptoDriver = CryptoDriverTweetnacl;
 }
 
 import {

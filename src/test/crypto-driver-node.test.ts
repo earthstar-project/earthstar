@@ -4,5 +4,8 @@ import { runCryptoDriverTests } from './crypto-driver.shared';
 import { isNode } from 'browser-or-node';
 
 if (isNode) {
-    runCryptoDriverTests(CryptoDriver);
+    if (process.version >= 'v12') {
+        // doesn't work on v10
+        runCryptoDriverTests(CryptoDriver);
+    }
 }
