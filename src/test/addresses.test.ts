@@ -10,7 +10,7 @@ import {
     AuthorAddress,
     ParsedAddress,
     WorkspaceAddress,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     isErr,
     notErr,

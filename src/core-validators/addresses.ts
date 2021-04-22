@@ -5,7 +5,7 @@ import {
     ParsedAddress,
     WorkspaceAddress,
     WorkspaceName,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     ValidationError,
     notErr,

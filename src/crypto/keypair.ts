@@ -1,7 +1,7 @@
 import {
     AuthorKeypair,
     AuthorShortname,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     ValidationError,
     isErr,

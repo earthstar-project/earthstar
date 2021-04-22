@@ -5,7 +5,7 @@ import {
     Doc,
     FormatName,
     Path,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import { ValidationError } from '../util/errors';
 
 

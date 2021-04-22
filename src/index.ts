@@ -21,7 +21,7 @@ export * from './storage/storage-async';
 export * from './storage/storage-driver-async-memory';
 export * from './storage/storage-types';
 export * from './storage/util-types';
-export * from './types/doc-types';
+export * from './util/doc-types';
 export * from './util/bytes';
 export * from './util/errors';
 export * from './util/log';

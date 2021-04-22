@@ -13,7 +13,7 @@ import {
     AuthorAddress,
     AuthorKeypair,
     Base32String,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     ICryptoDriver,
     KeypairBytes,

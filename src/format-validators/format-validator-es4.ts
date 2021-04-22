@@ -4,7 +4,7 @@ import {
     Base32String,
     Doc,
     Path,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     IFormatValidator
 } from './format-validator-types';

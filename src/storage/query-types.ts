@@ -2,7 +2,7 @@ import {
     Path,
     AuthorAddress,
     Timestamp,
-} from '../types/doc-types';
+} from '../util/doc-types';
 
 //================================================================================
 

@@ -3,7 +3,7 @@ import {
 } from './util-types';
 import {
     Doc,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     HistoryMode,
  } from './query-types';

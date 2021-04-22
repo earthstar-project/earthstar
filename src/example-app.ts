@@ -1,7 +1,7 @@
 import {
     AuthorKeypair,
     Doc,
-} from './types/doc-types';
+} from './util/doc-types';
 import {
     sleep
 } from './util/misc';

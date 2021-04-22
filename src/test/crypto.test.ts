@@ -8,7 +8,7 @@ if ((t.test as any).onFinish) {
 
 import {
     AuthorKeypair
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     isErr,
     ValidationError,

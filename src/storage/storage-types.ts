@@ -4,7 +4,7 @@ import {
     DocToSet,
     LocalIndex,
     Path,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     HistoryMode,
     Query,

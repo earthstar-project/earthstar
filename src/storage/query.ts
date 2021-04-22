@@ -1,6 +1,6 @@
 import {
     Doc,
-} from '../types/doc-types';
+} from '../util/doc-types';
 import {
     DEFAULT_QUERY,
     Query,

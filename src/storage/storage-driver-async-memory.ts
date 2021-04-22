@@ -5,7 +5,7 @@ import {
     Doc,
     LocalIndex,
     Path
-} from "../types/doc-types";
+} from "../util/doc-types";
 import {
     Query
 } from "./query-types";
