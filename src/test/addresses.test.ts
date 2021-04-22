@@ -1,5 +1,10 @@
 import t = require('tap');
-//t.runOnly = true;
+// Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
+// When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
+declare let window: any;
+if ((t.test as any).onFinish) {
+    (t.test as any).onFinish(() => window.onFinish('addresses'));
+}
 
 import {
     AuthorAddress,

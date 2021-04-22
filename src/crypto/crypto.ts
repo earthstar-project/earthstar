@@ -1,4 +1,4 @@
-import { CryptoDriverNode as CryptoDriver } from './crypto-driver-node';
+import { CryptoDriverChloride as CryptoDriver } from './crypto-driver-chloride';
 export { CryptoDriver };
 
 import {

@@ -1,7 +1,21 @@
-import { TextDecoder, TextEncoder } from 'util';
+declare let window: any;
 
-let decoder = new TextDecoder();
-let encoder = new TextEncoder();
+// annoying workaround to get TextDecoder from Node or in browsers...
+
+import { TextDecoder, TextEncoder } from 'util';
+import { isNode } from "browser-or-node";
+
+let decoder: TextDecoder;
+let encoder: TextEncoder;
+if (isNode) {
+    // in node, it's in the 'util' package
+    decoder = new TextDecoder();
+    encoder = new TextEncoder();
+} else {
+    // in browser, it's a global on window
+    decoder = new window.TextDecoder();
+    encoder = new window.TextEncoder();
+}
 
 //--------------------------------------------------
 
