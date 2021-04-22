@@ -13,7 +13,7 @@ digraph G {
     // files in their folder clusters
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster7305177396 {
+        subgraph cluster3865972271 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -25,7 +25,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster1749912301 {
+        subgraph cluster4066690945 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -35,12 +35,13 @@ digraph G {
             "src/crypto/base32.ts" [label="base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto-driver-chloride.ts" [label="crypto-driver-chloride.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto-driver-node.ts" [label="crypto-driver-node.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/crypto-driver-tweetnacl.ts" [label="crypto-driver-tweetnacl.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto-types.ts" [label="crypto-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto.ts" [label="crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster4742442288 {
+        subgraph cluster6323728164 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -51,7 +52,7 @@ digraph G {
             "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster6982376458 {
+        subgraph cluster3267087462 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -73,6 +74,8 @@ digraph G {
         "rfc4648" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "chloride/small" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "crypto" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "tweetnacl" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "sha256-uint8array" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "browser-or-node" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "chalk" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
 
@@ -81,8 +84,10 @@ digraph G {
     "src/core-validators/checkers.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto-driver-chloride.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto-driver-node.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto-driver-tweetnacl.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/crypto-driver-chloride.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/crypto-driver-node.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/crypto/crypto-driver-tweetnacl.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/keypair.ts" [penwidth=2; color=darkslategray4];
@@ -97,6 +102,7 @@ digraph G {
     "src/format-validators/format-validator-es4.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/checkers.ts" [penwidth=2; color=darkslategray4];
+    "src/format-validators/format-validator-es4.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
     "src/storage/compare.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/follower.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
@@ -122,6 +128,8 @@ digraph G {
     "src/crypto/base32.ts" -> "rfc4648" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto-driver-chloride.ts" -> "chloride/small" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto-driver-node.ts" -> "crypto" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/crypto/crypto-driver-tweetnacl.ts" -> "tweetnacl" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/crypto/crypto-driver-tweetnacl.ts" -> "sha256-uint8array" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto.ts" -> "browser-or-node" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/example-app.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/storage/follower.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];

@@ -18,6 +18,7 @@ digraph G {
         "src/crypto/base32.ts" [label="src/crypto/base32.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto-driver-chloride.ts" [label="src/crypto/crypto-driver-chloride.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto-driver-node.ts" [label="src/crypto/crypto-driver-node.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/crypto-driver-tweetnacl.ts" [label="src/crypto/crypto-driver-tweetnacl.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto-types.ts" [label="src/crypto/crypto-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto.ts" [label="src/crypto/crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/keypair.ts" [label="src/crypto/keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
@@ -38,8 +39,10 @@ digraph G {
     "src/core-validators/checkers.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto-driver-chloride.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto-driver-node.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto-driver-tweetnacl.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/crypto-driver-chloride.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/crypto-driver-node.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/crypto/crypto-driver-tweetnacl.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/keypair.ts" [penwidth=2; color=darkslategray4];
@@ -54,6 +57,7 @@ digraph G {
     "src/format-validators/format-validator-es4.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/checkers.ts" [penwidth=2; color=darkslategray4];
+    "src/format-validators/format-validator-es4.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
     "src/storage/compare.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/follower.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];

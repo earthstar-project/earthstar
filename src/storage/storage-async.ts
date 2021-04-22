@@ -26,9 +26,6 @@ import {
     isErr,
 } from '../util/errors';
 import {
-    stringLengthInBytes
-} from '../util/bytes';
-import {
     microsecondNow,
 } from '../util/misc';
 import {
@@ -148,7 +145,7 @@ export class StorageAsync implements IStorageAsync {
                 format: 'es.4',
                 author: keypair.address,
                 content: docToSet.content,
-                contentHash: sha256base32(docToSet.content), // TODO: real hash
+                contentHash: sha256base32(docToSet.content), // TODO: ask the validator to do this so we don't depend on crypto
                 deleteAfter: null,
                 path: docToSet.path,
                 timestamp,
