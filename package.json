@@ -41,7 +41,7 @@
   },
   "devDependencies": {
     "@types/browser-or-node": "^1.3.0",
-    "@types/node": "^14.14.39",
+    "@types/node": "^14.14.41",
     "@types/tap": "^14.10.2",
     "@types/tape": "^4.13.0",
     "browser-run": "^10.1.0",
@@ -55,7 +55,7 @@
   },
   "dependencies": {
     "browser-or-node": "^1.3.0",
-    "chalk": "^4.1.0",
+    "chalk": "^4.1.1",
     "chloride": "^2.4.1",
     "fast-deep-equal": "^3.1.3",
     "rfc4648": "^1.4.0",
