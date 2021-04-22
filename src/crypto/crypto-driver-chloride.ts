@@ -1,4 +1,3 @@
-import crypto = require('crypto');
 import sodium = require('chloride/small')
 import {
     ICryptoDriver,
@@ -8,6 +7,7 @@ import {
     bufferToBytes,
     bytesToBuffer,
     concatBytes,
+    identifyBufOrBytes,
     stringToBuffer
 } from '../util/bytes';
 
@@ -17,10 +17,10 @@ import {
  */
 export const CryptoDriverChloride: ICryptoDriver = class {
     static sha256(input: string | Uint8Array): Uint8Array {
-        // TODO: use sodium sha256 instead of node crypto?
-        return bufferToBytes(
-            crypto.createHash('sha256').update(input).digest()
-        );
+        if (typeof input === 'string') { input = stringToBuffer(input); }
+        if (identifyBufOrBytes(input) === 'bytes') { input = bytesToBuffer(input); }
+        let resultBuf = sodium.crypto_hash_sha256(input);
+        return bufferToBytes(resultBuf);
     }
     static generateKeypairBytes(seed?: Uint8Array): KeypairBytes {
         // If provided, the seed is used as the secret key.

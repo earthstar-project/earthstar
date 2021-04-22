@@ -1,5 +1,13 @@
-import { CryptoDriverNode as CryptoDriver } from './crypto-driver-node';
-export { CryptoDriver };
+import { CryptoDriverChloride } from './crypto-driver-chloride';
+import { CryptoDriverNode } from './crypto-driver-node';
+
+import { isNode } from 'browser-or-node';
+let CryptoDriver: ICryptoDriver;
+if (isNode) {
+    CryptoDriver = CryptoDriverNode;
+} else {
+    CryptoDriver = CryptoDriverChloride;
+}
 
 import {
     AuthorAddress,
@@ -7,6 +15,7 @@ import {
     Base32String,
 } from '../types/doc-types';
 import {
+    ICryptoDriver,
     KeypairBytes,
 } from '../types/crypto-types';
 import {

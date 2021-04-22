@@ -3,6 +3,6 @@ import { runCryptoDriverTests } from './crypto-driver.shared';
 
 import { isNode } from 'browser-or-node';
 
-if (!isNode) {
+//if (!isNode) {
     runCryptoDriverTests(CryptoDriver);
-}
+//}
