@@ -45,7 +45,7 @@ const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 1000;
 const MIN_TIMESTAMP = 10000000000000;  // 10^13
 const MAX_TIMESTAMP = 9007199254740990;  // Number.MAX_SAFE_INTEGER - 1
 
-const MAX_CONTENT_LENGTH = 5000000  // 5 million bytes = 5 megabytes
+const MAX_CONTENT_LENGTH = 4000000  // 4 million bytes = 4 megabytes (measured as bytes of utf-8, not normal string length)
 
 const HASH_STR_LEN = 53;  // number of base32 characters including leading 'b', which is 32 raw bytes when decoded
 const SIG_STR_LEN = 104;  // number of base32 characters including leading 'b', which is 64 raw bytes when decoded
