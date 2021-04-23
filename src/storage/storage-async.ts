@@ -36,7 +36,6 @@ import {
 
 import { makeDebug } from '../util/log';
 import chalk from 'chalk';
-import { sign } from 'tweetnacl';
 let debug = makeDebug(chalk.yellow('      [storage]'));
 
 //================================================================================

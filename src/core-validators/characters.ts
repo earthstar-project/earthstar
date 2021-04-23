@@ -18,8 +18,11 @@ export let isOnlyPrintableAscii = (s: string) : boolean => {
     return true;
 }
 
-export let isDigit = (ch: string): boolean =>
-    digits.indexOf(ch) !== -1;
+// is ch exactly one digit?
+export let isDigit = (ch: string): boolean => {
+    if (ch === '') { return false; }
+    return digits.indexOf(ch) !== -1;
+}
 
 export const alphaLower = 'abcdefghijklmnopqrstuvwxyz';
 export const alphaUpper = alphaLower.toUpperCase();
