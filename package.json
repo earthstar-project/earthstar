@@ -4,7 +4,7 @@
   "description": "",
   "repository": "",
   "author": "Cinnamon <cinnamon_bun_github@fastmail.com>",
-  "homepage": "https://github.com/cinnamon-bun/stone-soup",
+  "homepage": "https://github.com/earthstar-project/stone-soup",
   "license": "AGPL-3.0",
   "main": "build/index.js",
   "types": "build/index.d.ts",

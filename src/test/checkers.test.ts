@@ -240,3 +240,5 @@ t.test('checkInt', (t: any) => {
     }
     t.end();
 });
+
+// TODO: add tests for checkObj
