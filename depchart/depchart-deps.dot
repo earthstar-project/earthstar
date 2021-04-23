@@ -13,7 +13,7 @@ digraph G {
     // files in their folder clusters
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster5960694142 {
+        subgraph cluster7045891644 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -25,7 +25,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster2401474559 {
+        subgraph cluster2130603810 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -41,7 +41,7 @@ digraph G {
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster9931129643 {
+        subgraph cluster2237696328 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -52,7 +52,7 @@ digraph G {
             "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster6035582244 {
+        subgraph cluster3678266191 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -131,7 +131,6 @@ digraph G {
     "src/example-app.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/storage/follower.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/storage/storage-async.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
-    "src/storage/storage-async.ts" -> "tweetnacl" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/storage/storage-driver-async-memory.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
 
 }

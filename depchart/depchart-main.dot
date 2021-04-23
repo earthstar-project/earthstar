@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster5972034951 {
+    subgraph cluster2691704624 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -20,7 +20,7 @@ digraph G {
                     
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster8552321407 {
+        subgraph cluster8025855749 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -32,7 +32,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster4592809935 {
+        subgraph cluster6419407341 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -48,7 +48,7 @@ digraph G {
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster8719560430 {
+        subgraph cluster7621744471 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -59,7 +59,7 @@ digraph G {
             "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster9801891222 {
+        subgraph cluster3184927956 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;

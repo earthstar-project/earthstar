@@ -39,7 +39,7 @@
     "depchart-main": "depchart `find src | grep .ts` --exclude src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-main --node_modules omit",
     "depchart-deps": "depchart `find src | grep .ts` --exclude src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-deps --node_modules integrated",
     "depchart-loose": "depchart `find src | grep .ts` --exclude src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --loose --rankdir LR -o depchart/depchart-loose --node_modules omit",
-    "depchart": "yarn depchart-main & yarn depchart-deps & yarn depchart-loose"
+    "depchart": "yarn depchart-main & yarn depchart-deps & yarn depchart-loose && echo 'done'"
   },
   "devDependencies": {
     "@types/browser-or-node": "^1.3.0",
