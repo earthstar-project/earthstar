@@ -30,11 +30,18 @@ import {
     workspaceAddressChars,
     workspaceNameChars,
 } from '../util/characters';
-import { isPlainObject } from '../util/helpers';
+import {
+    isPlainObject
+} from '../util/helpers';
+import {
+    stringLengthInBytes
+} from '../storage/query';
 
 // Tolerance for accepting messages from the future (because of clock skew between peers)
 export const FUTURE_CUTOFF_MINUTES = 10;
 export const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 1000;
+
+export const MAX_CONTENT_LENGTH = 4000000  // 4 million bytes = 4 megabytes (measured as bytes of utf-8, not normal string length)
 
 let isInt = (n : number) : boolean =>
     typeof n === 'number' && !isNaN(n) && n === Math.floor(n);
@@ -160,7 +167,9 @@ export const ValidatorEs4 : IValidatorES4 = class {
             return new ValidationError('doc has extra fields');
         }
 
-        // TODO: string length limits
+        if (stringLengthInBytes(doc.content) > MAX_CONTENT_LENGTH) {
+            return new ValidationError(`doc content is greater than max allowed length (${MAX_CONTENT_LENGTH} bytes when encoded as utf-8)`);
+        }
 
         return true;
     }
