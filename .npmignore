@@ -6,3 +6,4 @@ build/test/
 build/example*
 tsconfig.json
 .vscode/
+depchart/*
