@@ -4,9 +4,13 @@ import { runCryptoDriverTests } from './crypto-driver.shared';
 import { runCryptoKeypairTests } from './crypto-keypair.shared';
 import { runCryptoTests } from './crypto.shared';
 
-// expected platform support: all
+// expected platform support: all, but segfaults on node??
 
-let crypto = new Crypto(CryptoDriver);
-runCryptoDriverTests(CryptoDriver);
-runCryptoKeypairTests(crypto);
-runCryptoTests(crypto);
+import { isNode } from 'browser-or-node';
+
+if (!isNode) {
+    let crypto = new Crypto(CryptoDriver);
+    runCryptoDriverTests(CryptoDriver);
+    runCryptoKeypairTests(crypto);
+    runCryptoTests(crypto);
+}

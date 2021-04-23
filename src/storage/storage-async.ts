@@ -7,6 +7,7 @@ import {
     DocToSet,
     LocalIndex,
     Path,
+    WorkspaceAddress,
 } from '../util/doc-types';
 import {
     HistoryMode,
@@ -50,17 +51,18 @@ export let docCompareForOverwrite = (newDoc: Doc, oldDoc: Doc): Cmp => {
 }
 
 export class StorageAsync implements IStorageAsync {
+    workspace: WorkspaceAddress;
+    formatValidator: IFormatValidator;
+    storageDriver: IStorageDriverAsync;
 
     // Followers
-    followers: Set<IFollower> = new Set();
+    _followers: Set<IFollower> = new Set();
 
-    _validator: IFormatValidator;
-    _driver: IStorageDriverAsync;
-
-    constructor(validator: IFormatValidator, driver: IStorageDriverAsync) {
+    constructor(workspace: WorkspaceAddress, validator: IFormatValidator, driver: IStorageDriverAsync) {
         debug('constructor, given a storageDriver');
-        this._validator = validator;
-        this._driver = driver;
+        this.workspace = workspace;
+        this.formatValidator = validator;
+        this.storageDriver = driver;
     }
 
     async getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]> {
@@ -73,28 +75,28 @@ export class StorageAsync implements IStorageAsync {
             },
             limit,
         };
-        return await this._driver.queryDocs(query);
+        return await this.storageDriver.queryDocs(query);
     }
 
     //--------------------------------------------------
     // GET
     async getAllDocs(): Promise<Doc[]> {
         debug(`getAllDocs()`);
-        return await this._driver.queryDocs({
+        return await this.storageDriver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
         });
     }
     async getLatestDocs(): Promise<Doc[]> {
         debug(`getLatestDocs()`);
-        return await this._driver.queryDocs({
+        return await this.storageDriver.queryDocs({
             historyMode: 'latest',
             orderBy: 'path DESC',
         });
     }
     async getAllDocsAtPath(path: Path): Promise<Doc[]> {
         debug(`getAllDocsAtPath("${path}")`);
-        return await this._driver.queryDocs({
+        return await this.storageDriver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
             filter: { path: path, }
@@ -102,7 +104,7 @@ export class StorageAsync implements IStorageAsync {
     }
     async getLatestDocAtPath(path: Path): Promise<Doc | undefined> {
         debug(`getLatestDocsAtPath("${path}")`);
-        let docs = await this._driver.queryDocs({
+        let docs = await this.storageDriver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
             filter: { path: path, }
@@ -113,7 +115,7 @@ export class StorageAsync implements IStorageAsync {
 
     async queryDocs(query: Query = {}): Promise<Doc[]> {
         debug(`queryDocs`, query);
-        return await this._driver.queryDocs(query);
+        return await this.storageDriver.queryDocs(query);
     }
 
     //queryPaths(query?: Query): Path[];
@@ -143,7 +145,7 @@ export class StorageAsync implements IStorageAsync {
                 author: keypair.address,
                 content: docToSet.content,
                 // to get access to sha256, we have to reach into the validator and get its Crypto instance
-                contentHash: this._validator.crypto.sha256base32(docToSet.content),
+                contentHash: this.formatValidator.crypto.sha256base32(docToSet.content),
                 deleteAfter: null,
                 path: docToSet.path,
                 timestamp,
@@ -153,7 +155,7 @@ export class StorageAsync implements IStorageAsync {
             }
 
             debug('  | signing doc');
-            let signedDoc = this._validator.signDocument(keypair, doc);
+            let signedDoc = this.formatValidator.signDocument(keypair, doc);
             if (isErr(signedDoc)) {
                 return IngestResult.Invalid;
             }
@@ -166,7 +168,7 @@ export class StorageAsync implements IStorageAsync {
         }
 
         debug('    running protected region...');
-        let result = await this._driver.lock.run(protectedCode);
+        let result = await this.storageDriver.lock.run(protectedCode);
         debug('    ...done running protected region', result);
 
         return result;
@@ -177,13 +179,13 @@ export class StorageAsync implements IStorageAsync {
 
         // check basic validity (signature, etc)
         debug('    checking doc validity');
-        let docIsValid = this._validator.checkDocumentIsValid(doc);
+        let docIsValid = this.formatValidator.checkDocumentIsValid(doc);
         if (isErr(docIsValid)) { return IngestResult.Invalid; }
 
         let protectedCode = async (): Promise<IngestResult> => {
             // get other docs at the same path
             debug('  > getting other docs at the same path');
-            let existingDocsSamePath = await this._driver.queryDocs({
+            let existingDocsSamePath = await this.storageDriver.queryDocs({
                 historyMode: 'all',
                 orderBy: 'path DESC', // newest first
                 filter: { path: doc.path }
@@ -209,7 +211,7 @@ export class StorageAsync implements IStorageAsync {
 
             // save it
             debug('  > upserting into storageDriver...');
-            let success = await this._driver.upsert(doc);
+            let success = await this.storageDriver.upsert(doc);
             debug('  > ...done upserting into storageDriver');
 
             if (!success) { return IngestResult.WriteError; }
@@ -221,7 +223,7 @@ export class StorageAsync implements IStorageAsync {
         debug('    running protected region...');
         let result: IngestResult;
         if (_getLock) {
-            result = await this._driver.lock.run(protectedCode);
+            result = await this.storageDriver.lock.run(protectedCode);
         } else {
             // we are already in a lock, just run the code
             result = await protectedCode();
@@ -235,7 +237,7 @@ export class StorageAsync implements IStorageAsync {
         // protected region of ingest for consistency.
         // This also means that follower callbacks will not be allowed to call
         // set() or ingest() or they'll deadlock...
-        for (let follower of this.followers) {
+        for (let follower of this._followers) {
             if (follower.blocking) {
                 // run blocking followers right now
                 debug('    - waking a blocking follower');

@@ -4,7 +4,8 @@ import {
 import {
     Doc,
     LocalIndex,
-    Path
+    Path,
+    WorkspaceAddress
 } from "../util/doc-types";
 import {
     Query
@@ -49,6 +50,7 @@ let docComparePathThenNewestFirst = (a: Doc, b: Doc): Cmp => {
 }
 
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
+    workspace: WorkspaceAddress;
     lock: Lock;
     _highestLocalIndex: LocalIndex = 0;
   
@@ -59,8 +61,9 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     docWithPathAndAuthor: Map<Path, Doc> = new Map(); // path+author --> doc
     docsByPathNewestFirst: Map<Path, Doc[]> = new Map(); // path --> array of docs with that path, sorted newest first
   
-    constructor() {
+    constructor(workspace: WorkspaceAddress) {
         debug('constructor');
+        this.workspace = workspace;
         this.lock = new Lock();
     }
   

@@ -1,5 +1,4 @@
 import {
-    AuthorKeypair,
     Doc,
 } from './util/doc-types';
 import {
@@ -17,6 +16,9 @@ import {
 import {
     addFollower,
 } from './storage/follower';
+import { Crypto } from './crypto/crypto';
+import { CryptoDriverTweetnacl } from './crypto/crypto-driver-tweetnacl';
+import { isErr } from './util/errors';
 
 //--------------------------------------------------
 
@@ -25,9 +27,6 @@ import {
     makeDebug,
 } from './util/log';
 import chalk from 'chalk';
-import { Crypto } from './crypto/crypto';
-import { CryptoDriverTweetnacl } from './crypto/crypto-driver-tweetnacl';
-import { isErr } from './util/errors';
 let debugMain = makeDebug(chalk.greenBright('[main]'));
 let debugLazyFollower = makeDebug(chalk.magenta(' [main\'s lazy follower]'));
 let debugBlockingFollower = makeDebug(chalk.magenta(' [main\'s blocking follower]'));
@@ -63,13 +62,13 @@ let main = async () => {
     log('')
     debugMain('-----------\\')
     debugMain('init storage driver')
-    let storageDriver = new StorageDriverAsyncMemory();
+    let storageDriver = new StorageDriverAsyncMemory(workspace);
     debugMain('-----------/')
 
     log('')
     debugMain('-----------\\')
     debugMain('init storage')
-    let storage = new StorageAsync(validator, storageDriver);
+    let storage = new StorageAsync(workspace, validator, storageDriver);
     debugMain('-----------/')
 
     log('')
@@ -80,6 +79,7 @@ let main = async () => {
         log('')
         debugMain(`setting #${ii}`);
         let result = await storage.set(keypair, {
+            format: 'es.4',
             workspace,
             path: `/posts/post-${(''+ii).padStart(4, '0')}.txt`,
             content: `Hello ${ii}`,

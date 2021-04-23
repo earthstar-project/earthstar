@@ -91,7 +91,7 @@ export class Follower implements IFollower {
 
         // Register with the storage.  it will wake us when there's new docs to process.
         debug2(this.blocking, 'constructor: registering with storage');
-        this._storage.followers.add(this);
+        this._storage._followers.add(this);
 
         // TODO: when adding a follower, it needs to wake up by default
         // so it can catch up, in case it started at zero.
@@ -183,7 +183,7 @@ export class Follower implements IFollower {
         this._state = 'closed';
         // unregister from the storage
         debug2(this.blocking, '    unregistering from storage');
-        this._storage.followers.delete(this);
+        this._storage._followers.delete(this);
         // TODO: don't tell our callback that we're idle, I guess?
     }
 }

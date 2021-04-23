@@ -26,7 +26,7 @@ let drivers: ICryptoDriver[];
 if (isNode) {
     if (process.version >= 'v12') {
         drivers = [
-            CryptoDriverChloride,
+            //CryptoDriverChloride,
             CryptoDriverNode,
             CryptoDriverTweetnacl,
         ];

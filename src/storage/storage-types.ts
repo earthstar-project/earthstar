@@ -4,11 +4,15 @@ import {
     DocToSet,
     LocalIndex,
     Path,
+    WorkspaceAddress,
 } from '../util/doc-types';
 import {
     HistoryMode,
     Query,
 } from './query-types';
+import {
+    IFormatValidator
+} from '../format-validators/format-validator-types';
 
 import {
     Lock,
@@ -25,11 +29,15 @@ export interface IFollower {
 }
 
 export interface IStorageAsync {
+    workspace: WorkspaceAddress;
+    formatValidator: IFormatValidator;
+    storageDriver: IStorageDriverAsync;
+
     //--------------------------------------------------
     // CALLBACKS AND FOLLOWERS
 
     // TODO: does this belong on the main storage or the driver?
-    followers: Set<IFollower>;
+    _followers: Set<IFollower>;
 
     getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
 //    //--------------------------------------------------
@@ -49,6 +57,7 @@ export interface IStorageAsync {
 }
 
 export interface IStorageDriverAsync {
+    workspace: WorkspaceAddress;
     lock: Lock;
     // The max local index used so far.  the first doc will increment this and get index 1.
     //highestLocalIndex: LocalIndex;
