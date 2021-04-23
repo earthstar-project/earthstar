@@ -8,7 +8,6 @@ export * from './crypto/crypto-driver-tweetnacl';
 export * from './crypto/crypto-types';
 export * from './crypto/crypto';
 export * from './crypto/keypair';
-export * from './example-app';
 export * from './format-validators/format-validator-es4';
 export * from './format-validators/format-validator-types';
 export * from './index.browser';
