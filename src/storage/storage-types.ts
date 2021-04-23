@@ -40,8 +40,10 @@ export interface IStorageAsync {
     _followers: Set<IFollower>;
 
     getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
-//    //--------------------------------------------------
-//    // GET
+    //--------------------------------------------------
+    // GET
+
+    // these should all return frozen docs
     getAllDocs(): Promise<Doc[]>;
     getLatestDocs(): Promise<Doc[]>;
     getAllDocsAtPath(path: Path): Promise<Doc[]>;
@@ -50,9 +52,12 @@ export interface IStorageAsync {
     queryDocs(query?: Query): Promise<Doc[]>;
 //    queryPaths(query?: Query): Path[];
 //    queryAuthors(query?: Query): AuthorAddress[];
-//    //--------------------------------------------------
-//    // SET
+
+    //--------------------------------------------------
+    // SET
     set(keypair: AuthorKeypair, doc: DocToSet): Promise<IngestResult>;
+
+    // this should freeze the incoming doc if needed
     ingest(doc: Doc): Promise<IngestResult>;
 }
 
@@ -62,14 +67,18 @@ export interface IStorageDriverAsync {
     // The max local index used so far.  the first doc will increment this and get index 1.
     //highestLocalIndex: LocalIndex;
     getHighestLocalIndex(): number;
-//    // indexes
-//    //--------------------------------------------------
-//    // GET
+
+    //--------------------------------------------------
+    // GET
+    // this should return frozen docs
     queryDocs(query: Query): Promise<Doc[]>;
 //    queryPaths(query: Query): Doc[];
-//    //--------------------------------------------------
-//    // SET
-    upsert(doc: Doc): Promise<boolean>;  // do no checks of any kind, just save it to the indexes
+
+    //--------------------------------------------------
+    // SET
+    // do no checks of any kind, just save it to the indexes
+    // this should freeze the doc if needed
+    upsert(doc: Doc): Promise<boolean>;
 }
 
 //================================================================================ 

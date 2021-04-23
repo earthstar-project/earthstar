@@ -1,6 +1,11 @@
 import {
+    stringLengthInBytes
+} from '../util/bytes';
+import {
     onlyHasChars,
 } from './characters';
+
+//================================================================================
 
 // Similar to JSON schema, these functions help check if
 // data is in the expected format.
@@ -38,8 +43,8 @@ export let checkLiteral = (val: any): Checker =>
 
 export interface CheckStringOpts {
     optional?: boolean,  // default false
-    minLen?: number, // minimum allowable length (inclusive)
-    maxLen?: number, // maximum allowable length (inclusive)
+    minLen?: number, // minimum allowable length (inclusive) (counting utf-8 bytes)
+    maxLen?: number, // maximum allowable length (inclusive) (counting utf-8 bytes)
     len?: number, // same as setting minLen and maxLen to the same number
     allowedChars?: string,  // all the characters that our checked string is allowed to have
 }
@@ -48,10 +53,12 @@ export let checkString = (opts: CheckStringOpts = {}): Checker =>
         if (opts.optional !== true && x === undefined) { return 'required'; }
         if (opts.optional === true && x === undefined) { return null; }  // skip the rest of the checks if it's undefined
 
+        //let len = x.length;  // TODO: string length or byte length?
+        let len = stringLengthInBytes(x);
         if (typeof x !== 'string') { return 'expected a string but got ' + JSON.stringify(x); }
-        if (opts.minLen !== undefined && x.length < opts.minLen) { return `string shorter than min length of ${opts.minLen} chars`; }
-        if (opts.maxLen !== undefined && x.length > opts.maxLen) { return `string shorter than max length of ${opts.maxLen} chars`; }
-        if (opts.len !== undefined && x.length !== opts.len) { return `string does not have required length of ${opts.len} chars: ${x}`; }
+        if (opts.minLen !== undefined && len < opts.minLen) { return `string shorter than min length of ${opts.minLen} chars`; }
+        if (opts.maxLen !== undefined && len > opts.maxLen) { return `string shorter than max length of ${opts.maxLen} chars`; }
+        if (opts.len !== undefined && len !== opts.len) { return `string does not have required length of ${opts.len} chars: ${x}`; }
         if (opts.allowedChars !== undefined && !onlyHasChars(x, opts.allowedChars)) { return 'contains disallowed characters'; }
         return null;
     }
@@ -83,24 +90,26 @@ export let checkInt = (opts: CheckIntOpts = {}): Checker =>
 //================================================================================
 
 export interface CheckObjOpts {
-    allowUndefined?: boolean, // default false.  allow values in the object to be explicitly set to undefined (rather than omitted)?
+    allowLiteralUndefined?: boolean, // default false.  allow values in the object to be explicitly set to undefined (rather than omitted)?
     allowExtraKeys?: boolean, // default false.  allow keys not set in objSchema?  to use this, you must also define objSchema
     objSchema?: CheckerSchema,  // an object of validators
-    ignoreFields?: string[],
 }
-export let checkObj = (opts: CheckObjOpts = {}): Checker =>
-    (x: any): null | string => {
+export let checkObj = (opts: CheckObjOpts = {}): Checker => {
+    // set defaults
+    opts.allowLiteralUndefined = opts.allowLiteralUndefined ?? false;
+    opts.allowExtraKeys = opts.allowExtraKeys ?? false;
+    return (x: any): null | string => {
         if (!isPlainObject(x)) { return 'expected an object'; }
-        if (opts.allowUndefined === false || opts.allowUndefined === undefined) {
-            // look for explicit undefined
-            // this doesn't check if they should be optional or not, it just disallows anything to be literally undefined
+        if (opts.allowLiteralUndefined === false) {
+            // don't allow any keys to be literally undefined, e.g. exiting but set to undefined.
+            // when this is false, optional keys have to be omitted instead of set to undefined.
             for (let [k, v] of Object.entries(x)) {
                 if (v === undefined) { return `${k} is explicitly set to undefined but should be missing instead` }
             }
         }
         if (opts.objSchema !== undefined) {
             // look for extra keys
-            if (opts.allowExtraKeys === false || opts.allowExtraKeys === undefined) {
+            if (opts.allowExtraKeys === false) {
                 let objKeys = Object.keys(x);
                 let schemaKeys = Object.keys(opts.objSchema);
                 let extraObjKeys = objKeys.filter(k => schemaKeys.indexOf(k) === -1);
@@ -114,3 +123,4 @@ export let checkObj = (opts: CheckObjOpts = {}): Checker =>
         }
         return null;
     }
+}

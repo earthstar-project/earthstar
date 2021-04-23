@@ -23,10 +23,10 @@ import {
     workspaceAddressChars,
 } from '../core-validators/characters';
 import {
+    CheckObjOpts,
     checkInt,
     checkLiteral,
     checkObj,
-    CheckObjOpts,
     checkString,
 } from '../core-validators/checkers';
 import {
@@ -45,6 +45,8 @@ const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 1000;
 const MIN_TIMESTAMP = 10000000000000;  // 10^13
 const MAX_TIMESTAMP = 9007199254740990;  // Number.MAX_SAFE_INTEGER - 1
 
+const MAX_CONTENT_LENGTH = 5000000  // 5 million bytes = 5 megabytes
+
 const HASH_STR_LEN = 53;  // number of base32 characters including leading 'b', which is 32 raw bytes when decoded
 const SIG_STR_LEN = 104;  // number of base32 characters including leading 'b', which is 64 raw bytes when decoded
 
@@ -52,15 +54,16 @@ const ES4_SCHEMA: CheckObjOpts = {
     objSchema: {
         format: checkLiteral('es.4'),
         author: checkString({ allowedChars: authorAddressChars }),
-        content: checkString(),
+        content: checkString({ maxLen: MAX_CONTENT_LENGTH }),
         contentHash: checkString({ allowedChars: b32chars, len: HASH_STR_LEN }),
         deleteAfter: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP, nullable: true }),
         path: checkString({ allowedChars: pathChars, minLen: 2, maxLen: 512 }),
         signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
         timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
         workspace: checkString({ allowedChars: workspaceAddressChars }),
+        _localIndex: checkInt({ min: 0, optional: true }),
     },
-    allowUndefined: false,
+    allowLiteralUndefined: false,
     allowExtraKeys: false,
 }
 

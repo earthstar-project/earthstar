@@ -149,6 +149,9 @@ t.test('checkString', (t: any) => {
         [true, undefined, { optional: true, allowedChars: 'abcd', len: 3 }],
         [false, undefined, { optional: false, allowedChars: 'abcd', len: 3 }],
         [false, undefined, { allowedChars: 'abcd', len: 3 }],
+
+        [true, snowmanString, { len: 3 }], // length is utf-8 bytes, not regular string length (number of codepoints)
+        [true, snowmanString, { minLen: 3, maxLen: 3 }],
     ];
     for (let [expectedValid, str, opts, note] of vectors) {
         note = note ? `   (${note})` : '';

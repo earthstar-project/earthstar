@@ -182,6 +182,11 @@ export class StorageAsync implements IStorageAsync {
         let docIsValid = this.formatValidator.checkDocumentIsValid(doc);
         if (isErr(docIsValid)) { return IngestResult.Invalid; }
 
+        // remove the _localIndex (from the other peer) and keep it around
+        let remoteIndex = doc._localIndex;
+        debug('    deleting metadata from doc; remoteIndex = ', remoteIndex);
+        delete doc._localIndex;
+
         let protectedCode = async (): Promise<IngestResult> => {
             // get other docs at the same path
             debug('  > getting other docs at the same path');

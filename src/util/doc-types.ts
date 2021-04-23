@@ -27,7 +27,6 @@ export type ParsedAddress = {
 // DOCUMENTS
 
 export interface Doc {
-    // TODO: format
     format: string,
     author: AuthorAddress,
     content: string,  // TODO: | null, when we have sparse mode
