@@ -15,8 +15,14 @@ export type CheckerSchema = {
 
 //================================================================================
 
-export let isPlainObject = (obj: any): obj is Ob =>
-    Object.prototype.toString.call(obj) === '[object Object]'
+export let isPlainObject = (obj: any): obj is Ob => {
+    if (Object.prototype.toString.call(obj) !== '[object Object]') {
+        return false;
+    }
+    // reject class instances
+    if (('' + obj.constructor).startsWith('class')) { return false; }
+    return true;
+}
 export let checkIsPlainObject: Checker = (x: any): null | string =>
     isPlainObject(x) ? null: 'expected plain object but got ' + x;
 

@@ -7,7 +7,12 @@ if ((t.test as any).onFinish) {
     (t.test as any).onFinish(() => window.onFinish('characters'));
 }
 
-import { alphaLower, isDigit, isOnlyPrintableAscii, onlyHasChars } from '../core-validators/characters';
+import {
+    alphaLower,
+    isDigit,
+    isOnlyPrintableAscii,
+    onlyHasChars,
+} from '../core-validators/characters';
 import { bytesToString } from '../util/bytes';
 
 //================================================================================

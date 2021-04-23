@@ -28,6 +28,7 @@
     "test-base32": "tap -Rspecy --no-bail --jobs=1 build/test/base32.test.js",
     "test-bytes": "tap -Rspecy --no-bail --jobs=1 build/test/bytes.test.js",
     "test-characters": "tap -Rspecy --no-bail --jobs=1 build/test/characters.test.js",
+    "test-checkers": "tap -Rspecy --no-bail --jobs=1 build/test/checkers.test.js",
     "test-crypto-driver-chloride": "tap -Rspecy --no-bail --jobs=1 build/test/crypto-driver-chloride.test.js",
     "test-crypto-driver-node": "tap -Rspecy --no-bail --jobs=1 build/test/crypto-driver-node.test.js",
     "test-crypto-driver-tweetnacl": "tap -Rspecy --no-bail --jobs=1 build/test/crypto-driver-tweetnacl.test.js",
