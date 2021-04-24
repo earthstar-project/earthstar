@@ -1,5 +1,5 @@
-import fs = require('fs');
 import t = require('tap');
+//t.runOnly = true;
 
 import {
     AuthorKeypair,
@@ -260,6 +260,21 @@ export let runStorageTestsForScenario = (scenario: Scenario) => {
         t.same(await storage.ingestDocument(signedDoc, ''), WriteResult.Accepted, "successful ingestion");
         await sleep(150);
         t.equal(await storage.getContent('/k1'), 'v1', "latestContent worked");
+
+        // try ingesting with extra properties, which should be discarded inside ingest()
+        let doc2: Document = {
+            ...doc1,
+            path: '/k1-extra',
+        };
+        let signedDoc2 = ValidatorEs4.signDocument(keypair1, doc2) as Document;
+        t.ok(notErr(signedDoc2), 'signature succeeded');
+        // add extra properties
+        (signedDoc2 as any)._localIndex = 123;
+        (signedDoc2 as any)._fromStorageId ='abc';
+        t.same(await storage.ingestDocument(signedDoc2, ''), WriteResult.Accepted, "successful ingestion with extra properties");
+        await sleep(150);
+        t.equal(await storage.getContent('/k1-extra'), 'v1', "latestContent worked with extra properties");
+        t.equal(await (storage.getDocument('/k1-extra') as any)._localIndex, undefined, "extra properties were not stored in storage");
 
         t.ok(isErr(await storage.ingestDocument(doc1, '')), "don't ingest: bad signature");
         t.ok(isErr(await storage.ingestDocument({...signedDoc, format: 'xxx'}, '')), "don't ingest: unknown format");
@@ -1393,7 +1408,7 @@ export let runStorageTestsForScenario = (scenario: Scenario) => {
         let inputDoc = {...doc};
         t.false(Object.isFrozen(inputDoc), 'input doc is not frozen');
         await storage2.ingestDocument(inputDoc, '');
-        t.true(Object.isFrozen(inputDoc), 'input doc is now frozen after being ingested');
+        t.false(Object.isFrozen(inputDoc), 'input doc is still not frozen after being ingested');
 
         await storage.close();
         await storage2.close();

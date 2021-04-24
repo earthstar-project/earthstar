@@ -144,6 +144,42 @@ t.test('signDocument and _checkAuthorSignatureIsValid', (t: any) => {
     t.end();
 });
 
+t.test('removeExtraFields', (t: any) => {
+    let doc1: Document = {
+        format: 'es.4',
+        workspace: '+gardenclub.xxxxxxxxxxxxxxxxxxxx',
+        path: '/k1!',
+        contentHash: sha256base32('content1'),
+        content: 'content1',
+        timestamp: NOW - 10,
+        deleteAfter: NOW + 10,
+        author: author1,
+        signature: '',
+    };
+    let r1 = Val.removeExtraFields(doc1);
+    if (isErr(r1)) {
+        t.ok(false, 'unexpected error' + r1);
+    } else {
+        t.same(r1.doc, doc1, 'does not alter a normal valid doc');
+        t.false(r1.doc === doc1, 'makes a copy of doc');
+        t.same(r1.extras, {}, 'a normal valid doc does not have any extra fields');
+    }
+    let doc2 = {
+        ...doc1,
+        _localIndex: 123,
+        _fromStorageId: 'foobar',
+    } as Document;
+    let r2 = Val.removeExtraFields(doc2);
+    if (isErr(r2)) {
+        t.ok(false, 'unexpected error' + r2);
+    } else {
+        t.same(r2.doc, doc1, 'removes extra fields from doc');
+        t.same(r2.extras, { _localIndex: 123, _fromStorageId: 'foobar' }, 'collects extra fields into separate object');
+    }
+    t.ok(isErr(Val.removeExtraFields(123 as any)), 'fails on a non-object');
+    t.end();
+});
+
 t.test('checkDocumentIsValid', (t: any) => {
     let ephDoc: Document = {
         format: 'es.4',

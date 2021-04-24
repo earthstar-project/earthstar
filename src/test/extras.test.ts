@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import t = require('tap');
 //t.runOnly = true;
 

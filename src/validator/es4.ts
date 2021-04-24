@@ -101,6 +101,33 @@ export const ValidatorEs4 : IValidatorES4 = class {
 
         return { ...doc, signature: sig };
     }
+    /**
+     * Return a copy of the doc without extra fields, plus the extra fields
+     * as a separate object.
+     * If the input is not a plain javascript object, return a ValidationError.
+     * This should be run before checkDocumentIsValid.  The output doc will be
+     * more likely to be valid once the extra fields have been removed.
+     */
+    static removeExtraFields(doc: Document): {doc: Document, extras: Record<string, any> } | ValidationError {
+        if (!isPlainObject(doc)) {
+            return new ValidationError('doc is not a plain javascript object');
+        }
+        let validKeys = new Set('format workspace path contentHash content author timestamp deleteAfter signature'.split(' '));
+
+        let doc2: Record<string, any> = {};
+        let extras: Record<string, any> = {};
+        for (let [key, val] of Object.entries(doc)) {
+            if (validKeys.has(key)) {
+                doc2[key] = val;
+            } else {
+                extras[key] = val;
+            }
+        }
+        return {
+            doc: doc2 as Document,
+            extras,
+        }
+    }
     static checkDocumentIsValid(doc: Document, now?: number): true | ValidationError {
         // Return a ValidationError if anything is wrong with the document, or true if it's ok.
         // Normally `now` should be omitted so that it defaults to the current time,

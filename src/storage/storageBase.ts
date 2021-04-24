@@ -16,7 +16,11 @@ import {
     IStorage,
     WriteEvent,
 } from './storageTypes';
-import { Query, QueryForForget, QueryNoLimitBytes } from './query';
+import {
+    Query,
+    QueryForForget,
+    QueryNoLimitBytes,
+} from './query';
 import { Emitter } from '../util/emitter';
 import { uniq, sorted } from '../util/helpers';
 import { sha256base32 } from '../crypto/crypto';
@@ -166,12 +170,22 @@ export abstract class StorageBase implements IStorage {
 
         let now = this._now || (Date.now() * 1000);
 
-        // validate doc
+        // prepare to validate doc
         let validator = this._validatorMap[doc.format];
         if (validator === undefined) {
             return new ValidationError(`ingestDocument: unrecognized format ${doc.format}`);
         }
 
+        // remove extra fields
+        let removeResults = validator.removeExtraFields(doc);
+        if (isErr(removeResults)) { return removeResults; }
+        doc = removeResults.doc; // doc is now a copy without the extra fields
+        let extras = removeResults.extras; // this would contain _localIndex and _fromStorageId, if they were present
+        if (Object.keys(extras).length > 0) {
+            logger.log(`ingest: extra keys found and ignored: ${JSON.stringify(extras)}`);
+        }
+
+        // actually validate doc now that extra fields are removed
         let err = validator.checkDocumentIsValid(doc, now);
         if (isErr(err)) { return err; }
 
