@@ -94,7 +94,7 @@ export class Syncer1 {
         }
         // when each one finishes (not necessarily in the same order), report its results
         for (let {prom, pub} of syncPromises) {
-            let resultStats = await prom;
+            let resultStats: SyncResultsLocalAndHttp = await prom;
             syncer1Logger.log('finished pub');
             syncer1Logger.log(JSON.stringify(resultStats, null, 2));
             if (resultStats.pull === null && resultStats.push === null) {
@@ -128,9 +128,19 @@ let urlToGetDocuments = (domain : string, workspace : WorkspaceAddress) =>
     `${domain}earthstar-api/v1/${workspace}/documents`;
 let urlToPostDocuments = urlToGetDocuments;
 
-export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain : string) => {
+interface ResultsLocalAndHttp {
+    numIngested: number,
+    numIgnored: number,
+    numTotal: number,
+};
+interface SyncResultsLocalAndHttp {
+    pull: ResultsLocalAndHttp | null,
+    push: ResultsLocalAndHttp | null,
+};
+
+export let syncLocalAndHttp = async (storage: IStorage | IStorageAsync, domain: string): Promise<SyncResultsLocalAndHttp> => {
     syncerHttpLogger.log('existing database workspace:', storage.workspace);
-    let resultStats : any = {
+    let resultStats: SyncResultsLocalAndHttp = {
         pull: null,
         push: null,
     };
@@ -186,8 +196,8 @@ export let syncLocalAndHttp = async (storage : IStorage | IStorageAsync, domain 
     } else if (resp2.status === 403) {
         syncerHttpLogger.warn('    server 403: server is in readonly mode');
     } else {
-        resultStats.pushStats = await resp2.json();
-        syncerHttpLogger.log(JSON.stringify(resultStats.pushStats, null, 2));
+        resultStats.push = await resp2.json() as ResultsLocalAndHttp;
+        syncerHttpLogger.log(JSON.stringify(resultStats.push, null, 2));
     }
 
     return resultStats;
