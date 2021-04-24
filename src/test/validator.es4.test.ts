@@ -173,9 +173,17 @@ t.test('removeExtraFields', (t: any) => {
     if (isErr(r2)) {
         t.ok(false, 'unexpected error' + r2);
     } else {
-        t.same(r2.doc, doc1, 'removes extra fields from doc');
+        t.same(r2.doc, doc1, 'removes extra fields from doc (starting with underscores)');
         t.same(r2.extras, { _localIndex: 123, _fromStorageId: 'foobar' }, 'collects extra fields into separate object');
     }
+
+    let doc3 = {
+        ...doc1,
+        somethingNotStartingWithAnUnderscore: 123,
+    } as Document;
+    let r3 = Val.removeExtraFields(doc3);
+    t.same(isErr(r3), true, 'should be a validation error when extra fields do not start with underscore');
+
     t.ok(isErr(Val.removeExtraFields(123 as any)), 'fails on a non-object');
     t.end();
 });

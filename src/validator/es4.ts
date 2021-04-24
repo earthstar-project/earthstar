@@ -120,6 +120,9 @@ export const ValidatorEs4 : IValidatorES4 = class {
             if (validKeys.has(key)) {
                 doc2[key] = val;
             } else {
+                if (!key.startsWith('_')) {
+                    return new ValidationError('extra document fields must have names starting with an underscore');
+                }
                 extras[key] = val;
             }
         }
