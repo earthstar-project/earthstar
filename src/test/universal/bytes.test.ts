@@ -18,7 +18,7 @@ import {
     stringLengthInBytes,
     stringToBuffer,
     stringToBytes,
-} from '../util/bytes';
+} from '../../util/bytes';
 
 //================================================================================
 

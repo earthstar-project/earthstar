@@ -9,10 +9,10 @@ if ((t.test as any).onFinish) {
 import {
     base32StringToBytes,
     base32BytesToString,
-} from '../crypto/base32';
+} from '../../crypto/base32';
 import {
     hexStringToBytes
-} from '../util/bytes';
+} from '../../util/bytes';
 
 //================================================================================ 
 
