@@ -7,16 +7,12 @@ if ((t.test as any).onFinish) {
 }
 
 import {
-    bufferToBytes,
-    bufferToString,
-    bytesToBuffer,
     bytesToString,
     concatBytes,
     identifyBufOrBytes,
-    isBuffer,
     isBytes,
+    isBuffer,
     stringLengthInBytes,
-    stringToBuffer,
     stringToBytes,
 } from '../../util/bytes';
 
@@ -49,36 +45,6 @@ t.test('stringToBytes', (t: any) => {
 
 //--------------------------------------------------
 
-t.test('bytesToBuffer', (t: any) => {
-    t.same(bytesToBuffer(snowmanBytes), snowmanBuffer, 'snowman bytes to buffer')
-    t.same(identifyBufOrBytes(bytesToBuffer(snowmanBytes)), 'buffer', 'returns buffer');
-    t.end();
-});
-
-t.test('bufferToBytes', (t: any) => {
-    t.same(bufferToBytes(snowmanBuffer), snowmanBytes, 'snowman buffer to bytes')
-    t.same(identifyBufOrBytes(bufferToBytes(snowmanBuffer)), 'bytes', 'returns bytes');
-    t.end();
-});
-
-//--------------------------------------------------
-
-t.test('bufferToString', (t: any) => {
-    t.same(bufferToString(simpleBuffer), simpleString, 'simple buffer to string');
-    t.same(bufferToString(snowmanBuffer), snowmanString, 'snowman buffer to string');
-    t.ok(typeof bufferToString(snowmanBuffer) === 'string', 'returns a string');
-    t.end();
-});
-
-t.test('stringToBuffer', (t: any) => {
-    t.same(stringToBuffer(simpleString), simpleBuffer, 'simple string to buffer');
-    t.same(stringToBuffer(snowmanString), snowmanBuffer, 'snowman string to buffer');
-    t.same(identifyBufOrBytes(stringToBuffer(snowmanString)), 'buffer', 'returns buffer');
-    t.end();
-});
-
-//--------------------------------------------------
-
 t.test('stringLengthInBytes', (t: any) =>{
     t.same(stringLengthInBytes(simpleString), 2, 'simple string');
     t.same(stringLengthInBytes(snowmanString), 3, 'snowman string');
@@ -106,17 +72,17 @@ t.test('concatBytes', (t: any) =>{
 
 //--------------------------------------------------
 
-t.test('identifyBufOrBytes, isBuffer, isBytes', (t: any) =>{
-    let buf = Buffer.from([1]);
+t.test('bytes: identifyBufOrBytes, isBuffer, isBytes', (t: any) =>{
     let bytes = Uint8Array.from([1]);
+    let other = [1, 2, 3];
 
-    t.same(identifyBufOrBytes(buf), 'buffer', 'can identify Buffer');
-    t.same(identifyBufOrBytes(bytes), 'bytes', 'can identify Buffer');
-
-    t.same(isBuffer(buf), true, 'isBuffer true');
+    t.same(identifyBufOrBytes(bytes), 'bytes', 'can identify bytes');
     t.same(isBuffer(bytes), false, 'isBuffer false');
-    t.same(isBytes(buf), false, 'isBytes false');
     t.same(isBytes(bytes), true, 'isBytes true');
+
+    t.same(identifyBufOrBytes(other as any), '?', 'is not tricked by other kinds of object');
+    t.same(isBuffer(other), false, 'isBuffer false on other');
+    t.same(isBytes(other), false, 'isBytes false on other');
 
     t.end();
 });

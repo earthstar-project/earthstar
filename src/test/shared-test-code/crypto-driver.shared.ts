@@ -3,9 +3,11 @@ declare let window: any;
 
 import {
     identifyBufOrBytes,
-    stringToBuffer,
     stringToBytes
 } from '../../util/bytes';
+import {
+    stringToBuffer,
+} from '../../util/buffers';
 import {
     base32StringToBytes
 } from '../../crypto/base32';
