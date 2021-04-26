@@ -14,7 +14,7 @@ import {
     checkLiteral,
     checkString,
     isPlainObject
-} from '../core-validators/checkers';
+} from '../../core-validators/checkers';
 
 //================================================================================
 

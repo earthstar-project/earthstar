@@ -1,15 +1,113 @@
 # Stone Soup
 
-
 **WIP** April 2021
 
-This is a sketch of ideas for improving the way [Earthstar](https://github.com/earthstar-project/earthstar) is split into classes.
+This is a reimplmenetation of [Earthstar](https://github.com/earthstar-project/earthstar), either an experiment or a fresh rewrite.
 
-Much of Earthstar is just faked here -- signing, document validity checking.
+## Multi-platform support
 
-## Dependency chart
+We aim to support:
+* browser
+* node 10, 12, 14, 16
+* deno (⏳ eventually, not started yet)
 
-A --> B means "A imports B".
+### Buffers and Uint8Arrays
+
+We use Uint8Arrays throughout the code to maximize platform support.  Some of the node-specific drivers use Buffers internally but the Buffers are converted to Uint8Arrays before leaving those drivers.
+
+For convenience, variables that hold Uint8Arrays are called "bytes", like `bytesToHash` instead of `uint8ArrayToHash`.
+
+`util/bytes.ts` has a bunch of helper code to do common operations on Uint8Arrays and to convert them back and forth to strings and to Buffers.
+
+### Platform-specific drivers
+
+There are two parts of stone-soup which are swappable to support different platforms or backends: `ICryptoDriver` and `IStorageDriverAsync`.  Everything else should work on all platforms.
+
+Crypto drivers:
+* `CryptoDriverChloride` -- only in browser
+* `CryptoDriverNode` -- only in node 12+
+* `CryptoDriverTweetnacl` -- universal
+
+Storage drivers:
+* `StorageDriverAsyncMemory` -- univeral
+* `StorageDriverLocalStorage` -- browser (⏳ coming soon)
+* `StorageDriverSqlite` -- node (⏳ coming soon)
+
+Users of this library have to decide which of these drivers to import and use in their app.  Hopefully your app is using some build system that does tree-shaking and will discard the unused drivers.
+
+### Platform-specific tests
+
+The tests are split into folders:
+* `test/universal/*.test.ts` -- tests that run everywhere
+* `test/browser/*.test.ts` -- tests that only run in browsers
+* `test/node/*.test.ts` -- tests that only run in node
+
+And also
+* `test/shared-test/code/*.shared.ts` -- collections of tests that are imported and run by the actual test files, mostly used to test drivers and invoked by the platform-specific tests
+
+The platform-specific tests import these files to get access to the appropriate drivers:
+* `test/browser/platform.browser.ts` -- exports an array of drivers that work in browsers
+* `test/node/platform.node.ts` -- drivers that work in node
+* `test/universal/platform.universal.ts` -- drivers that work everywhere
+
+When we run tests in different platforms, we do this (except the `run-tests-somehow` command is actually different on each platform):
+
+* In node: `run-tests-somehow build/test/universal/*.test.js build/test/node/*.test.js`
+* In browser: `run-tests-somehow build/test/universal/*.test.js build/test/browser/*.test.js`
+
+### To see an up-to-date list of drivers for different platforms
+
+This data comes from `platform.*.ts`.
+
+```sh
+yarn print-platform-support
+```
+
+```
+CRYPTO DRIVERS
+  UNIVERSAL:
+    CryptoDriverTweetnacl
+  BROWSER ONLY:
+    CryptoDriverChloride
+  NODE ONLY:
+    CryptoDriverNode
+
+  BROWSER + UNIVERSAL:
+    CryptoDriverChloride
+    CryptoDriverTweetnacl
+  NODE + UNIVERSAL:
+    CryptoDriverNode
+    CryptoDriverTweetnacl
+
+STORAGE DRIVERS
+  UNIVERSAL:
+    StorageDriverAsyncMemory
+  BROWSER ONLY:
+  NODE ONLY:
+
+  BROWSER + UNIVERSAL:
+    StorageDriverAsyncMemory
+  NODE + UNIVERSAL:
+    StorageDriverAsyncMemory
+```
+
+### Building the library for multiple platforms
+
+Currently we use `tsc` to build typescript from `/src/*` into javascript in `/build/*`.  This may change to esbuild in the future.
+
+Right now everything is in a single package, `stone-soup`.
+
+⏳ Soon we will have subpackages, and your app will do this:
+
+```ts
+// soon...
+import { MostThings } from 'stone-soup';
+import { NodeStuff } from 'stone-soup/node';
+```
+
+## Source code dependency chart
+
+A --> B means "file A imports file B".
 
 For readability this hides `/test/` and `/util/`.
 

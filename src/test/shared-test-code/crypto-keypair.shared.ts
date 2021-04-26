@@ -2,29 +2,32 @@ import t = require('tap');
 
 import {
     AuthorKeypair
-} from '../util/doc-types';
+} from '../../util/doc-types';
 import {
     isErr,
     ValidationError,
-} from '../util/errors';
+} from '../../util/errors';
 
 import {
     decodeAuthorKeypairToBytes,
     encodeAuthorKeypairToStrings,
-} from '../crypto/keypair';
-import { ICrypto } from '../crypto/crypto-types';
+} from '../../crypto/keypair';
+import { ICrypto } from '../../crypto/crypto-types';
 
 //================================================================================
 
 export let runCryptoKeypairTests = (crypto: ICrypto) => {
     // Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
     // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
+    let driverName = (crypto.driver as any).name;
+    let nameOfRun = driverName;
+
     /* istanbul ignore next */ 
     if ((t.test as any).onFinish) {
-        (t.test as any).onFinish(() => window.onFinish(`crypto-keypair shared tests -- Crypto(${(crypto.driver as any).name})`));
+        (t.test as any).onFinish(() => window.onFinish(`crypto-keypair shared tests -- Crypto(${driverName})`));
     }
 
-    t.test('encode/decode author keypair: from bytes to string and back', (t: any) => {
+    t.test(nameOfRun + ': encode/decode author keypair: from bytes to string and back', (t: any) => {
         let shortname = 'test';
         let keypair = crypto.generateAuthorKeypair(shortname);
         if (isErr(keypair)) {
@@ -67,7 +70,7 @@ export let runCryptoKeypairTests = (crypto: ICrypto) => {
         t.end();
     });
 
-    t.test('decodeAuthorKeypairToBytes checks Uint8Array length', (t: any) => {
+    t.test(nameOfRun + ': decodeAuthorKeypairToBytes checks Uint8Array length', (t: any) => {
         interface Vector {
             valid: Boolean,
             keypair: AuthorKeypair,

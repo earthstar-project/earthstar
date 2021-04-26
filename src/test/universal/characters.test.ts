@@ -12,8 +12,8 @@ import {
     isDigit,
     isOnlyPrintableAscii,
     onlyHasChars,
-} from '../core-validators/characters';
-import { bytesToString } from '../util/bytes';
+} from '../../core-validators/characters';
+import { bytesToString } from '../../util/bytes';
 
 //================================================================================
 

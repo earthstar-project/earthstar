@@ -5,13 +5,13 @@ import {
     identifyBufOrBytes,
     stringToBuffer,
     stringToBytes
-} from '../util/bytes';
+} from '../../util/bytes';
 import {
     base32StringToBytes
-} from '../crypto/base32';
+} from '../../crypto/base32';
 import {
     ICryptoDriver
-} from '../crypto/crypto-types';
+} from '../../crypto/crypto-types';
 
 //================================================================================
 
@@ -24,12 +24,15 @@ let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 export let runCryptoDriverTests = (driver: ICryptoDriver) => {
     // Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
     // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
+    let driverName = (driver as any).name;
+    let nameOfRun = driverName;
+
     /* istanbul ignore next */ 
     if ((t.test as any).onFinish) {
-        (t.test as any).onFinish(() => window.onFinish('crypto-driver shared tests -- ' + (driver as any).name));
+        (t.test as any).onFinish(() => window.onFinish('crypto-driver shared tests -- ' + driverName));
     }
 
-    t.test('sha256(bytes | string) --> bytes', (t: any) => {
+    t.test(nameOfRun + ': sha256(bytes | string) --> bytes', (t: any) => {
         let vectors : [Uint8Array | string | Buffer, Uint8Array][] = [
             // input, output
             ['', base32StringToBytes('b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq')],
@@ -53,7 +56,7 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
         t.end();
     });
 
-    t.test('generateKeypairBytes', (t: any) => {
+    t.test(nameOfRun + ': generateKeypairBytes', (t: any) => {
         let keypair = driver.generateKeypairBytes();
         t.same(identifyBufOrBytes(keypair.pubkey), 'bytes', 'keypair.pubkey is bytes');
         t.same(identifyBufOrBytes(keypair.secret), 'bytes', 'keypair.secret is bytes');
@@ -68,7 +71,7 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
         t.end();
     });
 
-    t.test('sign and verify', (t: any) => {
+    t.test(nameOfRun + ': sign and verify', (t: any) => {
         let keypairBytes = driver.generateKeypairBytes();
         let msg = 'hello'
         let sigBytes = driver.sign(keypairBytes, msg);

@@ -10,11 +10,11 @@ import {
     AuthorAddress,
     ParsedAddress,
     WorkspaceAddress,
-} from '../util/doc-types';
+} from '../../util/doc-types';
 import {
     isErr,
     notErr,
-} from '../util/errors';
+} from '../../util/errors';
 import {
     assembleAuthorAddress,
     assembleWorkspaceAddress,
@@ -22,7 +22,7 @@ import {
     checkWorkspaceIsValid,
     parseAuthorAddress,
     parseWorkspaceAddress
-} from '../core-validators/addresses';
+} from '../../core-validators/addresses';
 
 //================================================================================
 
