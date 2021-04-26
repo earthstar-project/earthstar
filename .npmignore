@@ -7,3 +7,4 @@ build/example*
 tsconfig.json
 .vscode/
 depchart/*
+browserify-tests/*

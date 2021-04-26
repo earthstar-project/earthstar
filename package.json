@@ -14,7 +14,7 @@
     "tap": "tape"
   },
   "scripts": {
-    "clean": "rm -rf build coverage .nyc_output",
+    "clean": "rm -rf build coverage .nyc_output browserify-tests",
     "build": "tsc",
     "clean-build-test": "yarn clean && yarn build && yarn test",
     "print-platform-support": "yarn clean && yarn build && node build/print-platform-support.js",
