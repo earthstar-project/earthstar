@@ -40,6 +40,15 @@ export interface IFormatValidator {
     signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError;
 
     /**
+     * Return a copy of the doc without extra fields, plus the extra fields
+     * as a separate object.
+     * If the input is not a plain javascript object, return a ValidationError.
+     * This should be run before checkDocumentIsValid.  The output doc will be
+     * more likely to be valid once the extra fields have been removed.
+     */
+    removeExtraFields(doc: Doc): {doc: Doc, extras: Record<string, any> } | ValidationError;
+
+    /**
      * This calls all the more detailed functions which start with underscores.
      * Returns true if the document is ok.
      */

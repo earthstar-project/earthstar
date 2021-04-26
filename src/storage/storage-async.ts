@@ -161,7 +161,7 @@ export class StorageAsync implements IStorageAsync {
             }
 
             debug('  | ingesting...');
-            let result = await this.ingest(signedDoc, false);  // false meanse don't get lock again
+            let result = await this.ingest(signedDoc, false);  // false means don't get lock again since we're already in the lock
             debug('  | ...done ingesting', result);
             debug('  +');
             return result;
@@ -177,15 +177,18 @@ export class StorageAsync implements IStorageAsync {
     async ingest(doc: Doc, _getLock: boolean = true): Promise<IngestResult> {
         debug(`ingest`, doc);
 
-        // check basic validity (signature, etc)
-        debug('    checking doc validity');
+        debug('    removing extra fields');
+        let removeResultsOrErr = this.formatValidator.removeExtraFields(doc);
+        if (isErr(removeResultsOrErr)) { return IngestResult.Invalid; }
+        doc = removeResultsOrErr.doc;  // a copy of doc without extra fields
+        let extraFields = removeResultsOrErr.extras;  // any extra fields starting with underscores
+        if (Object.keys(extraFields).length > 0) {
+            debug(`        extra fields: ${JSON.stringify(extraFields)}`);
+        }
+
+        // now actually check doc validity against core schema
         let docIsValid = this.formatValidator.checkDocumentIsValid(doc);
         if (isErr(docIsValid)) { return IngestResult.Invalid; }
-
-        // remove the _localIndex (from the other peer) and keep it around
-        let remoteIndex = doc._localIndex;
-        debug('    deleting metadata from doc; remoteIndex = ', remoteIndex);
-        delete doc._localIndex;
 
         let protectedCode = async (): Promise<IngestResult> => {
             // get other docs at the same path

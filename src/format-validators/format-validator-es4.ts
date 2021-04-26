@@ -28,6 +28,7 @@ import {
     checkLiteral,
     checkObj,
     checkString,
+    isPlainObject,
 } from '../core-validators/checkers';
 import {
     checkAuthorIsValid,
@@ -50,7 +51,7 @@ const MAX_CONTENT_LENGTH = 4000000  // 4 million bytes = 4 megabytes (measured a
 const HASH_STR_LEN = 53;  // number of base32 characters including leading 'b', which is 32 raw bytes when decoded
 const SIG_STR_LEN = 104;  // number of base32 characters including leading 'b', which is 64 raw bytes when decoded
 
-const ES4_SCHEMA: CheckObjOpts = {
+const ES4_CORE_SCHEMA: CheckObjOpts = {
     objSchema: {
         format: checkLiteral('es.4'),
         author: checkString({ allowedChars: authorAddressChars }),
@@ -61,7 +62,6 @@ const ES4_SCHEMA: CheckObjOpts = {
         signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
         timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
         workspace: checkString({ allowedChars: workspaceAddressChars }),
-        _localIndex: checkInt({ min: 0, optional: true }),
     },
     allowLiteralUndefined: false,
     allowExtraKeys: false,
@@ -135,6 +135,37 @@ export class FormatValidatorEs4 implements IFormatValidator {
     }
 
     /**
+     * Return a copy of the doc without extra fields, plus the extra fields
+     * as a separate object.
+     * If the input is not a plain javascript object, return a ValidationError.
+     * This should be run before checkDocumentIsValid.  The output doc will be
+     * more likely to be valid once the extra fields have been removed.
+     */
+     removeExtraFields(doc: Doc): {doc: Doc, extras: Record<string, any> } | ValidationError {
+        if (!isPlainObject(doc)) {
+            return new ValidationError('doc is not a plain javascript object');
+        }
+        let validKeys = new Set(Object.keys(ES4_CORE_SCHEMA.objSchema || {}));
+
+        let doc2: Record<string, any> = {};
+        let extras: Record<string, any> = {};
+        for (let [key, val] of Object.entries(doc)) {
+            if (validKeys.has(key)) {
+                doc2[key] = val;
+            } else {
+                if (!key.startsWith('_')) {
+                    return new ValidationError('extra document fields must have names starting with an underscore');
+                }
+                extras[key] = val;
+            }
+        }
+        return {
+            doc: doc2 as Doc,
+            extras,
+        }
+    }
+
+    /**
      * This calls all the more detailed functions which start with underscores.
      * Returns true if the document is ok, or returns a ValidationError if anything is wrong.
      * Normally `now` should be omitted so that it defaults to the current time,
@@ -178,7 +209,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
     // They will not normally be used directly; use the main assertDocumentIsValid instead.
     // Return true on success.
     _checkBasicDocumentValidity(doc: Doc): true | ValidationError {  // check for correct fields and datatypes
-        let err = checkObj(ES4_SCHEMA)(doc);
+        let err = checkObj(ES4_CORE_SCHEMA)(doc);
         if (err !== null) { return new ValidationError(err); }
         return true; // TODO: is there more to check?
     }
