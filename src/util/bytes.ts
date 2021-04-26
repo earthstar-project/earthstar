@@ -1,7 +1,17 @@
+/**
+ * This file provides common operations on Uint8Arrays.
+ * It should not use any Buffers to do so.
+ * Any function that uses Buffer should be in buffers.ts.
+ * This helps us avoid bringing in the heavy polyfill for Buffer
+ * when bundling for the browser.
+ */
+
 declare let window: any;
 
-// annoying workaround to get TextDecoder from Node or in browsers...
+// TODO: remove this import after fixing b64String and hexString...
+import { bufferToBytes } from './buffers';
 
+// annoying workaround to get TextDecoder from Node or in browsers...
 import { TextDecoder, TextEncoder } from 'util';
 import { isNode } from "browser-or-node";
 
@@ -28,24 +38,9 @@ export let stringToBytes = (str: string): Uint8Array =>
 
 //--------------------------------------------------
 
-export let bytesToBuffer = (bytes: Uint8Array): Buffer =>
-    Buffer.from(bytes);
-
-export let bufferToBytes = (buf: Buffer): Uint8Array =>
-    new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength / Uint8Array.BYTES_PER_ELEMENT);
-
-//--------------------------------------------------
-
-export let stringToBuffer = (str: string): Buffer =>
-    Buffer.from(str, 'utf-8');
-
-export let bufferToString = (buf: Buffer): string =>
-    buf.toString('utf-8');
-
-//--------------------------------------------------
-
 export let stringLengthInBytes = (str: string): number =>
     // TODO: is there a more efficient way to do this?
+    // If we had a Buffer we could just do Buffer.byteLength(str, 'utf-8');
     stringToBytes(str).length;
 
 export let concatBytes = (a: Uint8Array, b: Uint8Array): Uint8Array => {
@@ -74,15 +69,19 @@ export let hexStringToBytes = (hexString: string): Uint8Array =>
 
 //--------------------------------------------------
 
-export let isBuffer = (buf: any): boolean =>
-    buf instanceof Buffer;
+export let isBytes = (bytes: any): bytes is Uint8Array  =>
+    bytes?.constructor?.name === 'Uint8Array';
+    //return bytes.writeUInt8 === undefined && bytes instanceof Uint8Array;
 
-export let isBytes = (bytes: any): boolean => {
-    return bytes.writeUInt8 === undefined && bytes instanceof Uint8Array;
-}
+export let isBuffer = (buf: any): boolean =>
+    // do this without any official reference to Buffer
+    // to avoid bringing in the Buffer polyfill
+    buf?.constructor?.name === 'Buffer';
+    //buf instanceof Buffer;
 
 export let identifyBufOrBytes = (bufOrBytes: Buffer | Uint8Array): string => {
     if (isBytes(bufOrBytes)) { return 'bytes'; }
-    return 'buffer';
+    if (isBuffer(bufOrBytes)) { return 'buffer'; }
+    return '?';
 }
 

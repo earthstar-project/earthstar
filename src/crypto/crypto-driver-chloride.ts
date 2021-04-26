@@ -4,12 +4,14 @@ import {
     KeypairBytes,
 } from './crypto-types';
 import {
-    bufferToBytes,
-    bytesToBuffer,
     concatBytes,
     identifyBufOrBytes,
-    stringToBuffer
 } from '../util/bytes';
+import {
+    bufferToBytes,
+    bytesToBuffer,
+    stringToBuffer
+} from '../util/buffers';
 
 /**
  * A verison of the ILowLevelCrypto interface backed by Chloride.

@@ -6,11 +6,13 @@ import {
 } from './crypto-types';
 import {
     b64StringToBytes,
+    concatBytes,
+} from '../util/bytes';
+import {
     bufferToBytes,
     bytesToBuffer,
-    concatBytes,
     stringToBuffer
-} from '../util/bytes';
+} from '../util/buffers';
 
 const _generateKeypairDerBytes = (): KeypairBytes => {
     // Generate a keypair in "der" format, which we will have to process

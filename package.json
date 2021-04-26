@@ -26,6 +26,7 @@
     "test2": "tap -Rspecy --no-bail --jobs=1 build/test/universal/*.test.js build/test/node/*.test.js",
     "test-coverage": "yarn test --coverage-report=lcov",
     "test-addresses": "tap -Rspecy --no-bail --jobs=1 build/test/universal/addresses.test.js",
+    "test-bytes-and-buffers": "tap -Rspecy --no-bail --jobs=1 build/test/universal/bytes.test.js build/test/universal/buffers.test.js",
     "test-crypto": "tap -Rspecy --no-bail --jobs=1 build/test/node/crypto.node.test.js",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
     "prepublishOnly": "yarn clean && yarn build",
