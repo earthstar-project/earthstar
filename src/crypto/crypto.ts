@@ -26,12 +26,18 @@ import {
     parseAuthorAddress
 } from '../core-validators/addresses';
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log2';
+let logger = new Logger('crypto', 'cyanBright');
+
 //================================================================================
 
 export class Crypto implements ICrypto {
     driver: ICryptoDriver;
 
     constructor(driver: ICryptoDriver) {
+        logger.debug('Crypto constructor with driver:', (driver as any).name);
         this.driver = driver;
     }
 
@@ -53,6 +59,7 @@ export class Crypto implements ICrypto {
      * @param name A 4-character nickname to make the address easier to remember and identify.
      */
     generateAuthorKeypair(name: string): AuthorKeypair | ValidationError {
+        logger.debug(`generateAuthorKeypair("${name}")`);
         let keypairBytes: KeypairBytes = this.driver.generateKeypairBytes();
         let keypairFormatted = {
             address: assembleAuthorAddress(name, base32BytesToString(keypairBytes.pubkey)),
@@ -68,6 +75,7 @@ export class Crypto implements ICrypto {
      * Sign a message using an Earthstar keypair.  Return a signature as base32 string.
      */
     sign(keypair: AuthorKeypair, msg: string | Uint8Array): Base32String | ValidationError {
+        logger.debug(`sign`);
         try {
             let keypairBytes = decodeAuthorKeypairToBytes(keypair);
             if (isErr(keypairBytes)) { return keypairBytes; }
@@ -88,6 +96,7 @@ export class Crypto implements ICrypto {
      * If an unexpected exception happens, it is re-thrown.
      */
     verify(authorAddress: AuthorAddress, sig: Base32String, msg: string | Uint8Array): boolean {
+        logger.debug(`verify`);
         try {
             let authorParsed = parseAuthorAddress(authorAddress);
             if (isErr(authorParsed)) { return false; }
@@ -117,6 +126,7 @@ export class Crypto implements ICrypto {
         //
         // ...but only some of the cryptodrivers let you give a seed for keypair generation.
         // ...so this signature trick will work for now.
+        logger.debug(`checkAuthorKeypairIsValid`);
         try {
             if (typeof keypair.address !== 'string' || typeof keypair.secret !== 'string') {
                 return new ValidationError('address and secret must be strings');

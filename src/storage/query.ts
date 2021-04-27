@@ -12,6 +12,11 @@ import {
 } from '../util/misc';
 import { stringLengthInBytes } from '../util/bytes';
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log2';
+let logger = new Logger('query', 'greenBright');
+
 //================================================================================ 
 
 export type WillMatch = 'all' | 'all-latest' | 'some' | 'nothing';
@@ -40,17 +45,30 @@ export let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
     // TODO: check if contentLength and timestamp are reasonable numbers
 
     // limit should be a reasonable number
-    if (query.limit !== undefined && query.limit < 0) { return invalidResponse; }
+    if (query.limit !== undefined && query.limit < 0) {
+        logger.debug('cleanUpQuery: unreasonable limit - returning empty invalid query', invalidResponse);
+        return invalidResponse;
+    }
 
     // if orderBy is path, startAt should contain path or nothing, not localIndex
     // if orderBy is localIndex, startAt should contain localIndex or nothing, not path
-    if (query.orderBy?.startsWith('path') && query.startAt?.localIndex !== undefined) { return invalidResponse; }
-    if (query.orderBy?.startsWith('localIndex') && query.startAt?.path !== undefined) { return invalidResponse; }
+    if (query.orderBy?.startsWith('path') && query.startAt?.localIndex !== undefined) {
+        logger.debug('cleanUpQuery: orderBy is "path" but startAt is not compatible - returning empty invalid query', invalidResponse);
+        return invalidResponse;
+    }
+    if (query.orderBy?.startsWith('localIndex') && query.startAt?.path !== undefined) {
+        logger.debug('cleanUpQuery: orderBy is "localIndex" but startAt is not compatible - returning empty invalid query', invalidResponse);
+        return invalidResponse
+    };
 
     // valid enum values
-    if (query.historyMode !== undefined && query.historyMode !== 'all' && query.historyMode !== 'latest') { return invalidResponse; }
+    if (query.historyMode !== undefined && query.historyMode !== 'all' && query.historyMode !== 'latest') {
+        logger.debug(`cleanUpQuery: unknown historyMode ${JSON.stringify(query.historyMode)} - returning empty invalid query`, invalidResponse);
+        return invalidResponse;
+    }
     if (query.orderBy !== undefined) {
         if (['path ASC', 'path DESC', 'localIndex ASC', 'localIndex DESC'].indexOf(query.orderBy) === -1) {
+            logger.debug(`cleanUpQuery: unrecognized orderBy value ${JSON.stringify(query.orderBy)} - returning empty invalid query`, invalidResponse);
             return invalidResponse;
         }
     }
@@ -91,13 +109,18 @@ export let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
     }
 
     if (willMatch === 'nothing') {
-        return {
+        // if the query won't match anything, return a simpler stubbed out version
+        // that also returns nothing
+        let nopQuery: CleanUpQueryResult = {
             query: { limit: 0 },
             isValid: true,
             willMatch: 'nothing',
         };
+        logger.debug(`cleanUpQuery - this query will match nothing, so returning a simpler query that also matches nothing`, nopQuery);
+        return nopQuery;
     }
 
+    logger.debug(`cleanUpQuery - query is ok!  willMatch = ${willMatch}`);
     return {
         query,
         isValid: true,

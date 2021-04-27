@@ -13,6 +13,13 @@ import {
     stringToBuffer
 } from '../util/buffers';
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log2';
+let logger = new Logger('crypto-driver-tweetnacl', 'cyan');
+
+//================================================================================
+
 /**
  * A verison of the ILowLevelCrypto interface backed by Chloride.
  * Works in the browser.
@@ -27,6 +34,7 @@ export const CryptoDriverChloride: ICryptoDriver = class {
     static generateKeypairBytes(seed?: Uint8Array): KeypairBytes {
         // If provided, the seed is used as the secret key.
         // If omitted, a random secret key is generated.
+        logger.debug('generateKeypairBytes');
         let seedBuf = seed === undefined ? undefined : bytesToBuffer(seed);
         if (!seedBuf) {
             seedBuf = Buffer.alloc(32);
@@ -41,6 +49,7 @@ export const CryptoDriverChloride: ICryptoDriver = class {
         };
     };
     static sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+        logger.debug('sign');
         let secretBuf = bytesToBuffer(concatBytes(keypairBytes.secret, keypairBytes.pubkey));
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }
         if (msg instanceof Uint8Array) { msg = bytesToBuffer(msg); }
@@ -50,6 +59,7 @@ export const CryptoDriverChloride: ICryptoDriver = class {
         );
     }
     static verify(publicKey: Buffer, sig: Uint8Array, msg: string | Uint8Array): boolean {
+        logger.debug('verify');
         try {
             if (typeof msg === 'string') { msg = stringToBuffer(msg); }
             if (msg instanceof Uint8Array) { msg = bytesToBuffer(msg); }

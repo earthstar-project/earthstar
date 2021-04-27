@@ -9,8 +9,14 @@ import {
 } from '../util/bytes';
 import { createHash } from 'sha256-uint8array';
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log2';
+let logger = new Logger('crypto-driver-tweetnacl', 'cyan');
+
+//================================================================================
 /**
- * A verison of the ILowLevelCrypto interface backed by Chloride.
+ * A verison of the ILowLevelCrypto interface backed by TweetNaCl.
  * Works in the browser.
  */
 export const CryptoDriverTweetnacl: ICryptoDriver = class {
@@ -22,6 +28,7 @@ export const CryptoDriverTweetnacl: ICryptoDriver = class {
         }
     }
     static generateKeypairBytes(): KeypairBytes {
+        logger.debug('generateKeypairBytes');
         let keys = tweetnacl.sign.keyPair();
         return {
             pubkey: keys.publicKey,
@@ -29,11 +36,13 @@ export const CryptoDriverTweetnacl: ICryptoDriver = class {
         };
     };
     static sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+        logger.debug('sign');
         let secret = concatBytes(keypairBytes.secret, keypairBytes.pubkey);
         if (typeof msg === 'string') { msg = stringToBytes(msg); }
         return tweetnacl.sign.detached(msg, secret);
     }
     static verify(publicKey: Buffer, sig: Uint8Array, msg: string | Uint8Array): boolean {
+        logger.debug('verify');
         try {
             if (typeof msg === 'string') { msg = stringToBytes(msg); }
             return tweetnacl.sign.detached.verify(msg, sig, publicKey);

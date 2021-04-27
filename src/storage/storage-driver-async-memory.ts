@@ -28,9 +28,8 @@ import {
 
 //--------------------------------------------------
 
-import { makeDebug } from '../util/log';
-import chalk from 'chalk';
-let debug = makeDebug(chalk.cyan('            [driver]'));
+import { Logger } from '../util/log2';
+let logger = new Logger('storage driver async memory', 'yellow');
 
 //================================================================================
 
@@ -62,13 +61,13 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     docsByPathNewestFirst: Map<Path, Doc[]> = new Map(); // path --> array of docs with that path, sorted newest first
   
     constructor(workspace: WorkspaceAddress) {
-        debug('constructor');
+        logger.debug('constructor');
         this.workspace = workspace;
         this.lock = new Lock();
     }
   
     getHighestLocalIndex() {
-        debug(`getHighestLocalIndex() === ${this._highestLocalIndex}`);
+        logger.debug(`getHighestLocalIndex(): it's ${this._highestLocalIndex}`);
         return this._highestLocalIndex;
     }
   
@@ -86,21 +85,24 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         return docs;
     }
 
-    async queryDocs(query2: Query): Promise<Doc[]> {
-        debug('queryDocs', query2);
+    async queryDocs(queryToClean: Query): Promise<Doc[]> {
         // Query the documents.
 
+        logger.debug('queryDocs', queryToClean);
+
         // clean up the query and exit early if possible.
-        let { query, willMatch } = cleanUpQuery(query2);
-        debug(`    cleanUpQuery.  willMatch = ${willMatch}`);
+        let { query, willMatch } = cleanUpQuery(queryToClean);
+        logger.debug(`    cleanUpQuery.  willMatch = ${willMatch}`);
         if (willMatch === 'nothing') { return []; }
 
         // get history docs or all docs
+        logger.debug(`    getting docs; historyMode = ${query.historyMode}`);
         let docs = query.historyMode === 'all'
             ? await this._getAllDocs()   // don't sort it here,
             : await this._getLatestDocs();  // we'll sort it below
 
         // orderBy
+        logger.debug(`    ordering docs: ${query.orderBy}`);
         if (query.orderBy?.startsWith('path')) {
             docs.sort(docComparePathThenNewestFirst);
         } else if (query.orderBy?.startsWith('localIndex')) {
@@ -111,6 +113,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         }
 
         let filteredDocs: Doc[] = [];
+        logger.debug(`    filtering docs`);
         for (let doc of docs) {
             // skip ahead until we pass continueAfter
             if (query.orderBy === 'path ASC') {
@@ -145,10 +148,13 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
             filteredDocs.push(doc);
 
             // stop when hitting limit
-            if (query.limit !== undefined && filteredDocs.length >= query.limit) { break; }
+            if (query.limit !== undefined && filteredDocs.length >= query.limit) {
+                logger.debug(`    ....hit limit of ${query.limit}`);
+                break;
+            }
         }
 
-        debug(`    ....found ${filteredDocs.length} docs`);
+        logger.debug(`    queryDocs is done: found ${filteredDocs.length} docs`);
         return filteredDocs;
     }
   
@@ -157,9 +163,12 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         doc._localIndex = this._highestLocalIndex;
         Object.freeze(doc);
 
-        debug('upsert', doc);
+        logger.debug('upsert', doc);
   
+        // save into our various indexes and data structures
+
         this.docWithLocalIndex.set(doc._localIndex, doc);
+
         this.docWithPathAndAuthor.set(combinePathAndAuthor(doc), doc);
   
         let docsByPath = this.docsByPathNewestFirst.get(doc.path) || [];

@@ -35,9 +35,10 @@ import {
 
 //--------------------------------------------------
 
-import { makeDebug } from '../util/log';
-import chalk from 'chalk';
-let debug = makeDebug(chalk.yellow('      [storage]'));
+import { Logger } from '../util/log2';
+let logger = new Logger('storage async', 'yellowBright');
+let loggerSet = new Logger('storage async set', 'yellowBright');
+let loggerIngest = new Logger('storage async ingest', 'yellowBright');
 
 //================================================================================
 
@@ -59,14 +60,14 @@ export class StorageAsync implements IStorageAsync {
     _followers: Set<IFollower> = new Set();
 
     constructor(workspace: WorkspaceAddress, validator: IFormatValidator, driver: IStorageDriverAsync) {
-        debug('constructor, given a storageDriver');
+        logger.debug(`constructor.  driver = ${(driver as any)?.constructor?.name}`);
         this.workspace = workspace;
         this.formatValidator = validator;
         this.storageDriver = driver;
     }
 
     async getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]> {
-        debug(`getDocsSinceLocalIndex(${historyMode}, ${startAt}, ${limit})`);
+        logger.debug(`getDocsSinceLocalIndex(${historyMode}, ${startAt}, ${limit})`);
         let query: Query = {
             historyMode: historyMode,
             orderBy: 'localIndex ASC',
@@ -81,21 +82,21 @@ export class StorageAsync implements IStorageAsync {
     //--------------------------------------------------
     // GET
     async getAllDocs(): Promise<Doc[]> {
-        debug(`getAllDocs()`);
+        logger.debug(`getAllDocs()`);
         return await this.storageDriver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
         });
     }
     async getLatestDocs(): Promise<Doc[]> {
-        debug(`getLatestDocs()`);
+        logger.debug(`getLatestDocs()`);
         return await this.storageDriver.queryDocs({
             historyMode: 'latest',
             orderBy: 'path DESC',
         });
     }
     async getAllDocsAtPath(path: Path): Promise<Doc[]> {
-        debug(`getAllDocsAtPath("${path}")`);
+        logger.debug(`getAllDocsAtPath("${path}")`);
         return await this.storageDriver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
@@ -103,7 +104,7 @@ export class StorageAsync implements IStorageAsync {
         });
     }
     async getLatestDocAtPath(path: Path): Promise<Doc | undefined> {
-        debug(`getLatestDocsAtPath("${path}")`);
+        logger.debug(`getLatestDocsAtPath("${path}")`);
         let docs = await this.storageDriver.queryDocs({
             historyMode: 'all',
             orderBy: 'path DESC',
@@ -114,7 +115,7 @@ export class StorageAsync implements IStorageAsync {
     }
 
     async queryDocs(query: Query = {}): Promise<Doc[]> {
-        debug(`queryDocs`, query);
+        logger.debug(`queryDocs`, query);
         return await this.storageDriver.queryDocs(query);
     }
 
@@ -125,26 +126,25 @@ export class StorageAsync implements IStorageAsync {
     // SET
 
     async set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestResult> {
-        debug(`set`, docToSet);
+        loggerSet.debug(`set`, docToSet);
         let protectedCode = async (): Promise<IngestResult> => {
-            debug('  +');
-            debug('  | deciding timestamp: getting latest doc at the same path (from any author)');
+            loggerSet.debug('  + set: start of protected region');
+            loggerSet.debug('  | deciding timestamp: getting latest doc at the same path (from any author)');
             // bump timestamp if needed to win over existing latest doc at same path
-            let existingDocSamePath = await this.getLatestDocAtPath(docToSet.path);
+            let latestDocSamePath = await this.getLatestDocAtPath(docToSet.path);
             let timestamp: number;
-            if (existingDocSamePath === undefined) {
-                debug('  |     no existing doc, setting timestamp to now()');
+            if (latestDocSamePath === undefined) {
                 timestamp = microsecondNow();
+                loggerSet.debug('  |     no existing latest doc, setting timestamp to now() =', timestamp);
             } else {
-                debug('  |     existing doc found, bumping timestamp to win if needed');
-                timestamp = Math.max(microsecondNow(), existingDocSamePath.timestamp + 1);
+                timestamp = Math.max(microsecondNow(), latestDocSamePath.timestamp + 1);
+                loggerSet.debug('  |     existing latest doc found, bumping timestamp to win if needed =', timestamp);
             }
 
             let doc: Doc = {
                 format: 'es.4',
                 author: keypair.address,
                 content: docToSet.content,
-                // to get access to sha256, we have to reach into the validator and get its Crypto instance
                 contentHash: this.formatValidator.crypto.sha256base32(docToSet.content),
                 deleteAfter: null,
                 path: docToSet.path,
@@ -154,36 +154,38 @@ export class StorageAsync implements IStorageAsync {
                 // _localIndex will be added during upsert.  it's not needed for the signature.
             }
 
-            debug('  | signing doc');
+            loggerSet.debug('  | signing doc');
             let signedDoc = this.formatValidator.signDocument(keypair, doc);
             if (isErr(signedDoc)) {
                 return IngestResult.Invalid;
             }
+            loggerSet.debug('  | signature =', signedDoc.signature);
 
-            debug('  | ingesting...');
+            loggerSet.debug('  | ingesting...');
             let result = await this.ingest(signedDoc, false);  // false means don't get lock again since we're already in the lock
-            debug('  | ...done ingesting', result);
-            debug('  +');
+            loggerSet.debug('  | ...done ingesting', result);
+            loggerSet.debug('  + set: end of protected region');
             return result;
         }
 
-        debug('    running protected region...');
+        loggerSet.debug('  + set: running protected region...');
         let result = await this.storageDriver.lock.run(protectedCode);
-        debug('    ...done running protected region', result);
+        loggerSet.debug('  + set: ...done running protected region.  result =', result);
+        loggerSet.debug('set is done.');
 
         return result;
     }
 
     async ingest(doc: Doc, _getLock: boolean = true): Promise<IngestResult> {
-        debug(`ingest`, doc);
+        loggerIngest.debug(`ingest`, doc);
 
-        debug('    removing extra fields');
+        loggerIngest.debug('    removing extra fields');
         let removeResultsOrErr = this.formatValidator.removeExtraFields(doc);
         if (isErr(removeResultsOrErr)) { return IngestResult.Invalid; }
         doc = removeResultsOrErr.doc;  // a copy of doc without extra fields
         let extraFields = removeResultsOrErr.extras;  // any extra fields starting with underscores
         if (Object.keys(extraFields).length > 0) {
-            debug(`        extra fields: ${JSON.stringify(extraFields)}`);
+            loggerIngest.debug(`    ....extra fields found: ${JSON.stringify(extraFields)}`);
         }
 
         // now actually check doc validity against core schema
@@ -192,15 +194,12 @@ export class StorageAsync implements IStorageAsync {
 
         let protectedCode = async (): Promise<IngestResult> => {
             // get other docs at the same path
-            debug('  > getting other docs at the same path');
-            let existingDocsSamePath = await this.storageDriver.queryDocs({
-                historyMode: 'all',
-                orderBy: 'path DESC', // newest first
-                filter: { path: doc.path }
-            });
+            loggerIngest.debug(' >> ingest: start of protected region');
+            loggerIngest.debug('  > getting other docs at the same path');
+            let existingDocsSamePath = await this.getAllDocsAtPath(doc.path);
 
             // check if this is obsolete or redudant from the same other
-            debug('  > checking if obsolete from same author');
+            loggerIngest.debug('  > checking if obsolete from same author');
             let existingDocSameAuthor = existingDocsSamePath.filter(d =>
                 d.author === doc.author)[0];
             if (existingDocSameAuthor !== undefined) {
@@ -210,7 +209,7 @@ export class StorageAsync implements IStorageAsync {
             }
         
             // check if latest
-            debug('  > checking if latest');
+            loggerIngest.debug('  > checking if latest');
             let isLatest = true;
             for (let d of existingDocsSamePath) {
                 // TODO: use docCompareForOverwrite or something
@@ -218,9 +217,10 @@ export class StorageAsync implements IStorageAsync {
             }
 
             // save it
-            debug('  > upserting into storageDriver...');
+            loggerIngest.debug('  > upserting into storageDriver...');
             let success = await this.storageDriver.upsert(doc);
-            debug('  > ...done upserting into storageDriver');
+            loggerIngest.debug('  > ...done upserting into storageDriver');
+            loggerIngest.debug(' >> ingest: end of protected region');
 
             if (!success) { return IngestResult.WriteError; }
             return isLatest
@@ -228,7 +228,7 @@ export class StorageAsync implements IStorageAsync {
                 : IngestResult.AcceptedButNotLatest;
         };
 
-        debug('    running protected region...');
+        loggerIngest.debug(' >> ingest: running protected region...');
         let result: IngestResult;
         if (_getLock) {
             result = await this.storageDriver.lock.run(protectedCode);
@@ -236,9 +236,9 @@ export class StorageAsync implements IStorageAsync {
             // we are already in a lock, just run the code
             result = await protectedCode();
         }
-        debug('    ...done running protected region', result);
+        loggerIngest.debug(' >> ingest: ...done running protected region', result);
 
-        debug('    waking followers...');
+        loggerIngest.debug('  - ingest: waking followers...');
         // Note: this section of code is outside of the protected region
         // for ingest, but if we get here from set(), we're inside the protected
         // region of set().  We should probably move the code inside the
@@ -248,21 +248,21 @@ export class StorageAsync implements IStorageAsync {
         for (let follower of this._followers) {
             if (follower.blocking) {
                 // run blocking followers right now
-                debug('    - waking a blocking follower');
+                loggerIngest.debug('    - blocking follower: await follower.wake()');
                 // TODO: optimization: if the blocking follower is already up to date,
                 // we only need to feed it this one new doc and then it won't
                 // have to do a whole query
                 await follower.wake();
-                debug('    - ...that blocking follower is now done');
+                loggerIngest.debug('    - ...blocking follower is now done');
             } else {
                 // lazy followers can be woken up later
-                debug('    - setTimeout for a lazy follower to run later');
+                loggerIngest.debug('    - lazy follower: waking it with a setTimeout to wake later');
                 setTimeout(() => {
                     follower.wake();
                 }, 0);
             }
         }
-        debug('    ...done waking followers');
+        loggerIngest.debug('  - ingest: ...done waking followers');
 
         return result;
     }

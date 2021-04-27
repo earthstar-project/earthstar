@@ -14,6 +14,13 @@ import {
     stringToBuffer
 } from '../util/buffers';
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log2';
+let logger = new Logger('crypto-driver-node', 'cyan');
+
+//================================================================================
+
 const _generateKeypairDerBytes = (): KeypairBytes => {
     // Generate a keypair in "der" format, which we will have to process
     // to remove some prefixes.
@@ -64,9 +71,11 @@ export const CryptoDriverNode: ICryptoDriver = class {
         );
     }
     static generateKeypairBytes(): KeypairBytes {
+        logger.debug('generateKeypairBytes');
         return _shortenDer(_generateKeypairDerBytes());
     };
     static sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+        logger.debug('sign');
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }
         return bufferToBytes(crypto.sign(
             null,
@@ -79,6 +88,7 @@ export const CryptoDriverNode: ICryptoDriver = class {
         ));
     }
     static verify(publicKey: Uint8Array, sig: Uint8Array, msg: string | Uint8Array): boolean {
+        logger.debug('verif');
         // TODO: convert uint8arrays to Buffers?
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }
         try {

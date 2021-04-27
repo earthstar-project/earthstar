@@ -35,6 +35,10 @@ import {
     checkWorkspaceIsValid,
 } from '../core-validators/addresses';
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log2';
+let logger = new Logger('validator es.4', 'red');
 
 //================================================================================
 
@@ -72,6 +76,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
     crypto: ICrypto;
 
     constructor(crypto: ICrypto) {
+        logger.debug(`constructor.  format="${this.format}".  crypto is using ${(crypto.driver as any).name}`);
         this.crypto = crypto;
     }
 
