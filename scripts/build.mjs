@@ -8,7 +8,6 @@ const externals = [
   "chloride",
   "sha256-uint8array",
   "tweetnacl",
-  "browser-or-node",
   "util"
 ];
 
@@ -38,6 +37,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/universal.ts"],
     outfile: "dist/earthstar.js",
+    target: ['es2017'],
     format: "esm",
     conditions: ["browser"],
   },
@@ -45,6 +45,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/universal.ts"],
     outfile: "dist/earthstar.cjs",
+    target: ['es2017'],
     platform: "node",
     conditions: ["node"],
   },
@@ -52,6 +53,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/universal.ts"],
     outfile: "dist/earthstar.mjs",
+    target: ['es2017'],
     platform: "node",
     format: "esm",
     conditions: ["node"],
@@ -60,6 +62,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/node.ts"],
     outfile: "dist/node/node.cjs",
+    target: ['es2017'],
     platform: "node",
     conditions: ["node"],
   },
@@ -67,6 +70,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/node.ts"],
     outfile: "dist/node/node.mjs",
+    target: ['es2017'],
     platform: "node",
     format: "esm",
     conditions: ["node"],
@@ -75,6 +79,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/browser.ts"],
     outfile: "dist/browser/browser.js",
+    target: ['es2017'],
     format: "esm",
     conditions: ["browser"],
   },
@@ -82,6 +87,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/legacy-node.ts"],
     outfile: "dist/node/node-legacy.cjs",
+    target: ['es2017'],
     platform: "node",
     conditions: ["node"],
   },
@@ -90,6 +96,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/browser.ts"],
     outfile: "browser/index.js",
+    target: ['es2017'],
     format: "esm",
     conditions: ["browser"],
   },
@@ -97,6 +104,7 @@ const configs = [
   {
     entryPoints: ["./src/entries/node.ts"],
     outfile: "node/index.cjs",
+    target: ['es2017'],
     platform: "node",
     conditions: ["node"],
   },
