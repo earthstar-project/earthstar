@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster2691704624 {
+    subgraph cluster7226582756 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -20,7 +20,7 @@ digraph G {
                     
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster8025855749 {
+        subgraph cluster9578056515 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -32,7 +32,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster6419407341 {
+        subgraph cluster5374325241 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -48,7 +48,7 @@ digraph G {
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster7621744471 {
+        subgraph cluster7245130267 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -59,7 +59,7 @@ digraph G {
             "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster3184927956 {
+        subgraph cluster9110593617 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -120,6 +120,7 @@ digraph G {
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/lock.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-types.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-types.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-types.ts" -> "src/storage/lock.ts" [penwidth=2; color=darkslategray4];
 
 }

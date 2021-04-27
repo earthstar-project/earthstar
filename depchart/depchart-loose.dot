@@ -76,6 +76,7 @@ digraph G {
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/lock.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-types.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-types.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-types.ts" -> "src/storage/lock.ts" [penwidth=2; color=darkslategray4];
 
 }

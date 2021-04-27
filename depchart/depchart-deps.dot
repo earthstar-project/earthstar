@@ -13,7 +13,7 @@ digraph G {
     // files in their folder clusters
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster7045891644 {
+        subgraph cluster9858099127 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -25,7 +25,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster2130603810 {
+        subgraph cluster5951500733 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -41,7 +41,7 @@ digraph G {
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster2237696328 {
+        subgraph cluster7496942113 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -52,7 +52,7 @@ digraph G {
             "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster3678266191 {
+        subgraph cluster1777299692 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -76,7 +76,6 @@ digraph G {
         "crypto" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "tweetnacl" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "sha256-uint8array" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
-        "chalk" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
 
     // edges between files
     "src/core-validators/addresses.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
@@ -120,6 +119,7 @@ digraph G {
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/lock.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-types.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-types.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-types.ts" -> "src/storage/lock.ts" [penwidth=2; color=darkslategray4];
 
     // edges from files to packages
@@ -128,9 +128,5 @@ digraph G {
     "src/crypto/crypto-driver-node.ts" -> "crypto" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto-driver-tweetnacl.ts" -> "tweetnacl" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto-driver-tweetnacl.ts" -> "sha256-uint8array" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
-    "src/example-app.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
-    "src/storage/follower.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
-    "src/storage/storage-async.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
-    "src/storage/storage-driver-async-memory.ts" -> "chalk" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
 
 }
