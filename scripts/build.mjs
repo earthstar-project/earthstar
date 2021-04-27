@@ -73,11 +73,35 @@ const configs = [
   },
   // browser
   {
-    entryPoints: ["./src/entries/browser.js"],
+    entryPoints: ["./src/entries/browser.ts"],
     outfile: "dist/browser/browser.js",
     format: "esm",
     conditions: ["browser"],
   },
+  // node, legacy
+  {
+    entryPoints: ["./src/entries/legacy-node.ts"],
+    outfile: "dist/node/node-legacy.cjs",
+    platform: "node",
+    conditions: ["node"],
+  },
+  // Entries for tools which don't support the exports field
+  // browser
+  {
+    entryPoints: ["./src/entries/browser.ts"],
+    outfile: "browser/index.js",
+    format: "esm",
+    conditions: ["browser"],
+  },
+  // node
+  {
+    entryPoints: ["./src/entries/node.ts"],
+    outfile: "node/index.cjs",
+    platform: "node",
+    conditions: ["node"],
+  },
 ];
+
+
 
 configs.forEach(build);

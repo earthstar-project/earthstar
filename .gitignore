@@ -9,3 +9,5 @@ coverage/
 yarn-error.log
 browserify-tests
 dist/
+browser
+node
