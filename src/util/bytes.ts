@@ -13,12 +13,11 @@ import { bufferToBytes } from './buffers';
 
 // annoying workaround to get TextDecoder from Node or in browsers...
 import { TextDecoder, TextEncoder } from 'util';
-import { isNode } from "browser-or-node";
 
 let decoder: TextDecoder;
 let encoder: TextEncoder;
 /* istanbul ignore next */ 
-if (isNode) {
+if (TextDecoder !== undefined && TextEncoder !== undefined) {
     // in node, it's in the 'util' package
     decoder = new TextDecoder();
     encoder = new TextEncoder();
