@@ -6,7 +6,7 @@ This is a reimplmenetation of [Earthstar](https://github.com/earthstar-project/e
 
 ## Log control
 
-Or with this global setting:
+Use this global setting in your app code:
 
 ```ts
 import {
@@ -16,7 +16,7 @@ import {
 } from './util/log';
 
 setDefaultLogLevel(LogLevel.None);  // set overall log amount
-setLogLevel('main', LogLevel.Info);  // customize a certain part of the logs
+setLogLevel('main', LogLevel.Info);  // or customize a certain part of the logs
 ```
 
 The available levels are:
@@ -36,7 +36,6 @@ enum LogLevel {
 ```
 EARTHSTAR_LOG_LEVEL=3 yarn start
 ```
-
 
 ## Multi-platform support
 
