@@ -37,7 +37,7 @@ import {
 
 //--------------------------------------------------
 
-import { Logger } from '../util/log2';
+import { Logger } from '../util/log';
 let logger = new Logger('validator es.4', 'red');
 
 //================================================================================

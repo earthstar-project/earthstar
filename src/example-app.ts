@@ -27,7 +27,7 @@ import {
     Logger,
     setDefaultLogLevel,
     setLogLevel
-} from './util/log2';
+} from './util/log';
 
 let loggerMain = new Logger('main', 'whiteBright');
 let loggerLazyFollower = new Logger("main's lazy follower", 'magentaBright');

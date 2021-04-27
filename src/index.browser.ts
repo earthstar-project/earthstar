@@ -22,5 +22,5 @@ export * from './storage/util-types';
 export * from './util/bytes';
 export * from './util/doc-types';
 export * from './util/errors';
-export * from './util/log2';
+export * from './util/log';
 export * from './util/misc';

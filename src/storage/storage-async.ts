@@ -35,7 +35,7 @@ import {
 
 //--------------------------------------------------
 
-import { Logger } from '../util/log2';
+import { Logger } from '../util/log';
 let logger = new Logger('storage async', 'yellowBright');
 let loggerSet = new Logger('storage async set', 'yellowBright');
 let loggerIngest = new Logger('storage async ingest', 'yellowBright');

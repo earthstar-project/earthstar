@@ -14,7 +14,7 @@ import { stringLengthInBytes } from '../util/bytes';
 
 //--------------------------------------------------
 
-import { Logger } from '../util/log2';
+import { Logger } from '../util/log';
 let logger = new Logger('query', 'greenBright');
 
 //================================================================================ 
