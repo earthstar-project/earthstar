@@ -24,7 +24,7 @@
  * The environment variable wins over the numbers set by setLogLevels.
  */
 
-import chalk, { Chalk } from 'chalk';
+import chalk from 'chalk';
 
 //================================================================================
 // TYPES
@@ -37,46 +37,16 @@ export enum LogLevel {
     Warn = 1,
     Log = 2,
     Info = 3,
-    Debug = 4,
+    Debug = 4,  // most verbose
 };
 export const DEFAULT_LOG_LEVEL = LogLevel.Error;
 
 type LogLevels = Record<LogSource, LogLevel>;
 
 //================================================================================
-// GLOBAL SETTINGS
-
-// make global singleton to hold log levels
-let globalLogLevels: LogLevels = {
-    _default: DEFAULT_LOG_LEVEL,
-};
-
-export const updateLogLevels = (newLogLevels: LogLevels): void => {
-    globalLogLevels = {
-        ...globalLogLevels,
-        ...newLogLevels
-    };
-};
-
-export const setLogLevel = (source: LogSource, level: LogLevel) => {
-    globalLogLevels[source] = level;
-}
-
-export const setDefaultLogLevel = (level: LogLevel) => {
-    globalLogLevels._default = level;
-}
-
-export const getLogLevel = (source: LogSource): LogLevel => {
-    if (source in globalLogLevels) {
-        return globalLogLevels[source];
-    } else {
-        return globalLogLevels._default;
-    }
-}
-
-//================================================================================
 // ENV VAR
 
+/*
 // get the single log level number from the environment, or undefined if not set
 const readEnvLogLevel = (): LogLevel | undefined => {
     if (process?.env?.EARTHSTAR_LOG_LEVEL) {
@@ -89,9 +59,39 @@ const readEnvLogLevel = (): LogLevel | undefined => {
 }
 
 // apply env var setting
-const envLogLevel = readEnvLogLevel();
-if (envLogLevel !== undefined) {
-    setLogLevel('_default', envLogLevel);
+const ENV_LOG_LEVEL = readEnvLogLevel();
+*/
+
+//================================================================================
+// GLOBAL SETTINGS
+
+// make global singleton to hold log levels
+let globalLogLevels: LogLevels = {
+    // result is the min of (_env) and anything else
+    _default: DEFAULT_LOG_LEVEL,
+};
+
+export const updateLogLevels = (newLogLevels: LogLevels): void => {
+    globalLogLevels = {
+        ...globalLogLevels,
+        ...newLogLevels
+    };
+};
+
+export const setLogLevel = (source: LogSource, level: LogLevel) => {
+    setDefaultLogLevel(level);
+}
+
+export const setDefaultLogLevel = (level: LogLevel) => {
+    globalLogLevels._default = level;
+}
+
+export const getLogLevel = (source: LogSource): LogLevel => {
+    if (source in globalLogLevels) {
+        return globalLogLevels[source];
+    } else {
+        return globalLogLevels._default;
+    }
 }
 
 //================================================================================
@@ -131,5 +131,5 @@ export class Logger {
     info( ...args: any[]) { this._print(LogLevel.Info,  true, '    ', ...args); }
     debug(...args: any[]) { this._print(LogLevel.Debug, true, '      ', ...args); }
 
-    blank(...args: any[]) { this._print(LogLevel.Info,  false, ''); }
+    blank() { this._print(LogLevel.Info,  false, ''); }
 };

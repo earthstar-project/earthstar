@@ -4,6 +4,40 @@
 
 This is a reimplmenetation of [Earthstar](https://github.com/earthstar-project/earthstar), either an experiment or a fresh rewrite.
 
+## Log control
+
+Or with this global setting:
+
+```ts
+import {
+    LogLevel,
+    setDefaultLogLevel,
+    setLogLevel
+} from './util/log';
+
+setDefaultLogLevel(LogLevel.None);  // set overall log amount
+setLogLevel('main', LogLevel.Info);  // customize a certain part of the logs
+```
+
+The available levels are:
+```ts
+enum LogLevel {
+    None = -1,
+    Error = 0,  // default
+    Warn = 1,
+    Log = 2,
+    Info = 3,
+    Debug = 4,  // most verbose
+};
+```
+
+⏳ Soon you will also be able to use this environment variable, but we're not sure how it will interact with the above settings.
+
+```
+EARTHSTAR_LOG_LEVEL=3 yarn start
+```
+
+
 ## Multi-platform support
 
 We aim to support:
