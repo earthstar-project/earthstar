@@ -95,7 +95,7 @@ let main = async () => {
     }
     loggerMain.info('-----------/')
 
-    if (Math.random() < 10) { process.exit(0); } // hack
+    //if (Math.random() < 10) { process.exit(0); } // hack
 
     // add lazy follower
     loggerMain.blank()
@@ -144,13 +144,26 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.info('sleep 100');
-    loggerMain.info('-------------------------------------------')
-    loggerMain.info('-------------------------------------------')
+    loggerMain.info('---------------------------------------')
+    loggerMain.info('-----------------------------------------')
     loggerMain.info('-------------------------------------------')
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
     await sleep(100);
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.info('-------------------------------------------')
+    loggerMain.info('-----------------------------------------')
+    loggerMain.info('---------------------------------------')
+    loggerMain.info('done sleeping 100');
+
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.info('closing storage');
+    storage.close();
 
     //debug('closing follower');
     //lazyFollower.close();

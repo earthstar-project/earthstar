@@ -29,6 +29,7 @@ import {
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
+import { StorageIsClosedError } from '../util/errors';
 let logger = new Logger('storage driver async memory', 'yellow');
 
 //================================================================================
@@ -52,6 +53,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
     lock: Lock;
     _highestLocalIndex: LocalIndex = 0;
+    _isClosed: boolean = false;
   
     // Our indexes.
     // These maps all share the same Doc objects, so memory usage is not bad.
@@ -67,15 +69,18 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
   
     getHighestLocalIndex() {
         logger.debug(`getHighestLocalIndex(): it's ${this._highestLocalIndex}`);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return this._highestLocalIndex;
     }
   
     async _getAllDocs(): Promise<Doc[]> {
         // return in unsorted order
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return [...this.docByPathAndAuthor.values()];
     }
     async _getLatestDocs(): Promise<Doc[]> {
         // return in unsorted order
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         let docs: Doc[] = [];
         for (let docArray of this.docsByPathNewestFirst.values()) {
             // this array is kept sorted newest-first
@@ -88,6 +93,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         // Query the documents.
 
         logger.debug('queryDocs', queryToClean);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
 
         // clean up the query and exit early if possible.
         let { query, willMatch } = cleanUpQuery(queryToClean);
@@ -158,6 +164,11 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     }
   
     async upsert(doc: Doc): Promise<boolean> {
+        // add a doc.  don't enforce any rules on it.
+        // overwrite existing doc even if this doc is older.
+
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+
         doc = {...doc};
         this._highestLocalIndex += 1;
         doc._localIndex = this._highestLocalIndex;
@@ -181,5 +192,13 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         this.docsByPathNewestFirst.set(doc.path, docsByPath);
   
         return true;
+    }
+
+    isClosed(): boolean {
+        return this._isClosed;
+    }
+    async close(): Promise<void> {
+        logger.debug('closing');
+        this._isClosed = true;
     }
 }

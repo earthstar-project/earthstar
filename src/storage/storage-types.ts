@@ -25,7 +25,8 @@ export interface IFollower {
     blocking: boolean;
     wake(): Promise<void>;
     hatch(): Promise<void>;
-    close(): void;
+    isClosed(): boolean;
+    close(): Promise<void>;
 }
 
 export interface IStorageAsync {
@@ -59,6 +60,23 @@ export interface IStorageAsync {
 
     // this should freeze the incoming doc if needed
     ingest(doc: Doc): Promise<IngestResult>;
+
+    isClosed(): boolean;
+    /**
+     * close()
+     *   * send StorageWillClose events and wait for event receivers to finish blocking.
+     *   * close the IStorage
+     *   * close all its Followers
+     *   * close the IStorageDriver
+     *   * send StorageDidClose events and do not wait for event receivers.
+     * 
+     * Any function called after the storage is closed will throw a StorageIsClosedError,
+     *  except isClosed() is always allowed, and close() can be called multiple times.
+     * 
+     * close() can happen while set() or ingest() are waiting for locks or have pending transactions.
+     * In that case, the pending operations will fail and throw a storageIsClosed.
+     */
+    close(): Promise<void>;
 }
 
 export interface IStorageDriverAsync {
@@ -79,6 +97,10 @@ export interface IStorageDriverAsync {
     // do no checks of any kind, just save it to the indexes
     // this should freeze the doc if needed
     upsert(doc: Doc): Promise<boolean>;
+
+    isClosed(): boolean;
+    // the IStorage will call this
+    close(): Promise<void>;
 }
 
 //================================================================================ 

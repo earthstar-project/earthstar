@@ -16,6 +16,7 @@ import {
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
+import { FollowerIsClosedError } from '../util/errors';
 let logger = new Logger('follower', 'magenta');
 
 //================================================================================ 
@@ -32,9 +33,15 @@ state diagram:
           go to sleep when no
           more docs to process
    
+     (any state) --> close() --> [closed]
 
 Any state can transition to [closed] when follower.close()
 is called, and it stays there forever.
+
+Important/TODO: do not call storage.set() or storage.ingest() from the onDoc callback
+or you'll deadlock on the storageDriver write lock, because a previous write might
+still be in flight.
+
 */
 
 export interface FollowerOpts {
@@ -97,6 +104,7 @@ export class Follower implements IFollower {
 
     async hatch(): Promise<void> {
         logger.debug(this._debugTag, 'hatching...');
+        if (this._state === 'closed') { throw new FollowerIsClosedError(); }
         // Wake up the follower for the first time.
         // This should be called just after instantiating it.
         if (this.blocking) {
@@ -106,26 +114,33 @@ export class Follower implements IFollower {
             //  is caught up.
             logger.debug(this._debugTag, '    waking up follower now and waiting for it to catch up:');
             logger.debug(this._debugTag, '    TODO: this needs to put a hold on the Storage until it\'s done');
-            await this.wake();
+            if (!this.isClosed()) {
+                await this.wake();
+            }
             logger.debug(this._debugTag, '    ...done waking up follower');
         } else {
             // lazy followers wake up later
             logger.debug(this._debugTag, '    scheduled to wake up later.');
-            setTimeout(this.wake.bind(this), 0);
+            setTimeout(() => {
+                if (!this.isClosed()) {
+                    this.wake();
+                }
+            }, 0);
         }
         logger.debug(this._debugTag, '    ...done hatching');
         logger.debug(this._debugTag, '    ...resolving hatchPromise');
     }
 
     async wake(): Promise<void> {
-
         // TODO: for blocking followers, this whole function needs to block
         // until the follower is completely caught up.
         // instead, right now it only runs one batch and then schedules another one recursively
         // which works but can hit a stack overflow.
 
         logger.debug(this._debugTag, 'wake()');
-        if (this._state === 'closed')  { logger.debug(this._debugTag, '...closed');  return; }  // never run again, if closed
+        if (this._state === 'closed') { throw new FollowerIsClosedError(); }
+
+        //if (this._state === 'closed')  { logger.debug(this._debugTag, '...closed');  return; }  // never run again, if closed
         if (this._state === 'running') { logger.debug(this._debugTag, '...running'); return; }  // don't run twice at the same time
 
         // try to get some docs
@@ -166,20 +181,31 @@ export class Follower implements IFollower {
             if (this.blocking) {
                 // TODO: this is a stack overflow waiting to happen, need to do this without recursion
                 logger.debug(this._debugTag, '    blocking mode: recursing into next batch and not returning until that one is done.');
-                await this.wake();
+                if (!this.isClosed()) {
+                    await this.wake();
+                }
                 logger.debug(this._debugTag, '    ...unwinding call stack');
             } else {
                 logger.debug(this._debugTag, '    follower is lazy.  setTimeout for next wake() to get next batch.  done for now.');
-                setTimeout(this.wake.bind(this), 0);
+                setTimeout(() => {
+                    if (!this.isClosed()) {
+                        this.wake();
+                    }
+                }, 0);
             }
         }
     }
-    close(): void {
-        logger.debug(this._debugTag, 'close()');
-        this._state = 'closed';
-        // unregister from the storage
-        logger.debug(this._debugTag, '    unregistering from storage');
-        this._storage._followers.delete(this);
-        // TODO: don't tell our callback that we're idle, I guess?
+    isClosed(): boolean {
+        return this._state === 'closed';
+    }
+    async close(): Promise<void> {
+        logger.debug(this._debugTag, 'closing');
+        if (this._state !== 'closed') {
+            this._state = 'closed';
+            // unregister from the storage
+            logger.debug(this._debugTag, '    unregistering from storage');
+            this._storage._followers.delete(this);
+            // TODO: don't tell our callback that we're idle, I guess?
+        }
     }
 }

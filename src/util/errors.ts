@@ -16,14 +16,24 @@ export class ValidationError extends EarthstarError {
     }
 }
 
-/** An IStorage instance was used after close() was called on it. */
+/** An IStorageAsync or IStorageDriverAsync was used after close() was called on it. */
 /* istanbul ignore next */
 export class StorageIsClosedError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'a Storage instance was used after being closed');
+        super(message || 'a Storage or StorageDriver was used after being closed');
         this.name = 'StorageIsClosedError';
     }
 }
+
+/** A Follower was used after close() was called on it. */
+/* istanbul ignore next */
+export class FollowerIsClosedError extends EarthstarError {
+    constructor(message?: string) {
+        super(message || 'a Follower was used after being closed');
+        this.name = 'FollowerIsClosedError';
+    }
+}
+
 /* istanbul ignore next */
 export class NotFoundError extends EarthstarError {
     constructor(message?: string) {
@@ -31,6 +41,7 @@ export class NotFoundError extends EarthstarError {
         this.name = 'NotFoundError';
     }
 }
+
 /** A pub URL is bad or the network is down */
 /* istanbul ignore next */
 export class NetworkError extends EarthstarError {
