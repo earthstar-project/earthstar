@@ -304,6 +304,10 @@ export class StorageAsync implements IStorageAsync {
     }
     async close(): Promise<void> {
         logger.debug('closing...');
+        if (this._isClosed) {
+            logger.debug('...already closed.');
+            return;
+        }
         // TODO: do this all in a lock?
         logger.debug('    sending willClose blockingly...');
         await this.bus.sendAndWait('willClose');

@@ -8,7 +8,7 @@ import {
     Query,
 } from '../../storage/query-types';
 import {
-    IStorageDriverAsync
+    IStorageDriverAsync,
 } from '../../storage/storage-types';
 
 //================================================================================

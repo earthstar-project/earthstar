@@ -1,6 +1,6 @@
 import { WorkspaceAddress } from '../../util/doc-types';
 
-import { runStorageDriverTests } from '../shared-test-code/storage-driver.shared';
+import { runStorageDriverTests } from '../shared-test-code/storage-driver-async.shared';
 
 import { storageDriversAsync_browserAndUniversal } from './platform.browser';
 
