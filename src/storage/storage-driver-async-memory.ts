@@ -56,8 +56,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     // Our indexes.
     // These maps all share the same Doc objects, so memory usage is not bad.
     // The Doc objects are frozen.
-    docWithLocalIndex: Map<LocalIndex, Doc> = new Map(); // localIndex --> doc
-    docWithPathAndAuthor: Map<Path, Doc> = new Map(); // path+author --> doc
+    docByPathAndAuthor: Map<string, Doc> = new Map(); // path+author --> doc
     docsByPathNewestFirst: Map<Path, Doc[]> = new Map(); // path --> array of docs with that path, sorted newest first
   
     constructor(workspace: WorkspaceAddress) {
@@ -72,11 +71,11 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     }
   
     async _getAllDocs(): Promise<Doc[]> {
-        // unsorted
-        return [...this.docWithLocalIndex.values()];
+        // return in unsorted order
+        return [...this.docByPathAndAuthor.values()];
     }
     async _getLatestDocs(): Promise<Doc[]> {
-        // unsorted
+        // return in unsorted order
         let docs: Doc[] = [];
         for (let docArray of this.docsByPathNewestFirst.values()) {
             // this array is kept sorted newest-first
@@ -159,6 +158,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     }
   
     async upsert(doc: Doc): Promise<boolean> {
+        doc = {...doc};
         this._highestLocalIndex += 1;
         doc._localIndex = this._highestLocalIndex;
         Object.freeze(doc);
@@ -167,13 +167,17 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
   
         // save into our various indexes and data structures
 
-        this.docWithLocalIndex.set(doc._localIndex, doc);
+        this.docByPathAndAuthor.set(combinePathAndAuthor(doc), doc);
 
-        this.docWithPathAndAuthor.set(combinePathAndAuthor(doc), doc);
-  
+        // get list of history docs at this path
         let docsByPath = this.docsByPathNewestFirst.get(doc.path) || [];
+        // remove existing doc from same author same path
+        docsByPath = docsByPath.filter(d => d.author !== doc.author);
+        // add this new doc
         docsByPath.push(doc);
+        // sort newest first within this path
         docsByPath.sort(docComparePathThenNewestFirst);
+        // save the list back to the index
         this.docsByPathNewestFirst.set(doc.path, docsByPath);
   
         return true;

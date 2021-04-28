@@ -2,6 +2,8 @@ import {
     Cmp
 } from './util-types';
 
+//================================================================================
+
 export let baseCompare = (a: any, b: any): Cmp => {
     if (a === b) { return Cmp.EQ; }
     return (a < b) ? Cmp.LT : Cmp.GT;
