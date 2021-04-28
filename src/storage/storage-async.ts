@@ -1,4 +1,8 @@
 import {
+    Superbus
+} from 'superbus';
+
+import {
     Cmp,
 } from './util-types';
 import {
@@ -15,9 +19,10 @@ import {
 } from './query-types';
 import {
     IFollower,
-    IngestResult,
-    IStorageDriverAsync,
     IStorageAsync,
+    IStorageDriverAsync,
+    IngestResult,
+    StorageEvent,
 } from './storage-types';
 import {
     IFormatValidator,
@@ -55,6 +60,7 @@ export class StorageAsync implements IStorageAsync {
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
+    bus: Superbus<StorageEvent>;
 
     _isClosed: boolean = false;
 
@@ -66,6 +72,7 @@ export class StorageAsync implements IStorageAsync {
         this.workspace = workspace;
         this.formatValidator = validator;
         this.storageDriver = driver;
+        this.bus = new Superbus<StorageEvent>();
     }
 
     async getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]> {
@@ -297,14 +304,19 @@ export class StorageAsync implements IStorageAsync {
     }
     async close(): Promise<void> {
         logger.debug('closing...');
-        // TODO: emit "storageWillClose" event, blockingly
-        // TODO: do this in a lock?
+        // TODO: do this all in a lock?
+        logger.debug('    sending willClose blockingly...');
+        await this.bus.sendAndWait('willClose');
+        logger.debug('    marking self as closed...');
         this._isClosed = true;
+        logger.debug('    closing followers...');
         for (let follower of this._followers.values()) {
             await follower.close();
         }
+        logger.debug('    closing storageDriver...');
         await this.storageDriver.close();
-        // TODO: emit "storageDidClose" event, non-blockingly
+        logger.debug('    sending didClose nonblockingly...');
+        this.bus.sendLater('didClose');
         logger.debug('...closing done');
     }
 }

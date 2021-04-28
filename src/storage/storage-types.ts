@@ -1,4 +1,8 @@
 import {
+    Superbus
+} from 'superbus';
+
+import {
     AuthorKeypair,
     Doc,
     DocToSet,
@@ -29,10 +33,13 @@ export interface IFollower {
     close(): Promise<void>;
 }
 
+export type StorageEvent = 'willClose' | 'didClose';
+
 export interface IStorageAsync {
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
+    bus: Superbus<StorageEvent>;
 
     //--------------------------------------------------
     // CALLBACKS AND FOLLOWERS

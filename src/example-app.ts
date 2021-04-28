@@ -32,6 +32,7 @@ import {
 let loggerMain = new Logger('main', 'whiteBright');
 let loggerLazyFollower = new Logger("main's lazy follower", 'magentaBright');
 let loggerBlockingFollower = new Logger("main's blocking follower", 'magentaBright');
+let loggerBusEvents = new Logger('main storage bus events', 'white');
 
 setDefaultLogLevel(LogLevel.Debug);
 setLogLevel('main', LogLevel.Debug);
@@ -159,11 +160,29 @@ let main = async () => {
     loggerMain.info('---------------------------------------')
     loggerMain.info('done sleeping 100');
 
+
+    storage.bus.on('willClose', async () => {
+        loggerBusEvents.debug('storage willClose... sleeping 1 second...');
+        await sleep(1000);
+        loggerBusEvents.debug('...storage willClose done.');
+    }, { mode: 'blocking' });
+
+    storage.bus.on('didClose', async () => {
+        loggerBusEvents.debug('storage didClose... sleeping 1 second...');
+        await sleep(1000);
+        loggerBusEvents.debug('...storage didClose done.');
+    }, { mode: 'nonblocking' });
+
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.info('closing storage');
-    storage.close();
+    loggerMain.info('-------------------------------------------')
+    await storage.close();
+    loggerMain.info('-------------------------------------------')
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.blank()
 
     //debug('closing follower');
     //lazyFollower.close();
