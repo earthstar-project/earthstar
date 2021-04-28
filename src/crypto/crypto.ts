@@ -72,7 +72,11 @@ export class Crypto implements ICrypto {
     }
 
     /**
-     * Sign a message using an Earthstar keypair.  Return a signature as base32 string.
+     * Sign a message using an Earthstar keypair.
+     * Return a signature as base32 string.
+     * 
+     * Can return a ValidationError if the keypair is bad
+     * or something goes unexpectedly wrong with signing.
      */
     sign(keypair: AuthorKeypair, msg: string | Uint8Array): Base32String | ValidationError {
         logger.debug(`sign`);
@@ -81,6 +85,7 @@ export class Crypto implements ICrypto {
             if (isErr(keypairBytes)) { return keypairBytes; }
             return base32BytesToString(this.driver.sign(keypairBytes, msg));
         } catch (err) {
+            /* istanbul ignore next */
             return new ValidationError('unexpected error while signing: ' + err.message);
         }
     }
@@ -88,12 +93,11 @@ export class Crypto implements ICrypto {
     /**
      * Check if an author signature is valid.
      * 
-     * This returns false on any expected kind of failure:
+     * This returns false on any kind of failure:
      *   * bad author address format
-     *   * bad signature format (TODO: test this)
-     *   * signature format is valid but signature itself is invalid
-     * 
-     * If an unexpected exception happens, it is re-thrown.
+     *   * bad signature base32 format
+     *   * signature base32 format is valid but signature itself is invalid
+     *   * unexpected failure from crypto library
      */
     verify(authorAddress: AuthorAddress, sig: Base32String, msg: string | Uint8Array): boolean {
         logger.debug(`verify`);
@@ -102,8 +106,8 @@ export class Crypto implements ICrypto {
             if (isErr(authorParsed)) { return false; }
             return this.driver.verify(base32StringToBytes(authorParsed.pubkey), base32StringToBytes(sig), msg);
         } catch (err) {
-            // base32 conversion can throw a validation error -- catch that.
-            // the crypto code might also throw any kind of error.
+            // catch any unexpected errors
+            /* istanbul ignore next */
             return false;
         }
     }
@@ -143,6 +147,7 @@ export class Crypto implements ICrypto {
 
             return true;
         } catch (err) {
+            /* istanbul ignore next */
             return new ValidationError('unexpected error in checkAuthorKeypairIsValid: ' + err.message);
         }
     };

@@ -93,7 +93,7 @@ t.test('checkLiteral', (t: any) => {
 });
 
 t.test('checkString', (t: any) => {
-    type Vector = [result: boolean, str: any, opts: CheckStringOpts, note?: string];
+    type Vector = [result: boolean, str: any, opts: CheckStringOpts | undefined, note?: string];
     let vectors: Vector[] = [
         [false, 123, {}],
         [false, NaN, {}],
@@ -152,6 +152,9 @@ t.test('checkString', (t: any) => {
 
         [true, snowmanString, { len: 3 }], // length is utf-8 bytes, not regular string length (number of codepoints)
         [true, snowmanString, { minLen: 3, maxLen: 3 }],
+
+        [true, 'abc', undefined],  // no opts
+        [false, 123, undefined],  // no opts
     ];
     for (let [expectedValid, str, opts, note] of vectors) {
         note = note ? `   (${note})` : '';
@@ -163,11 +166,12 @@ t.test('checkString', (t: any) => {
             t.ok(typeof result === 'string', msg);
         }
     }
+
     t.end();
 });
 
 t.test('checkInt', (t: any) => {
-    type Vector = [result: boolean, int: any, opts: CheckIntOpts, note?: string];
+    type Vector = [result: boolean, int: any, opts: CheckIntOpts | undefined, note?: string];
     let vectors: Vector[] = [
         [false, 'a', {}],
         [false, null, {}],
@@ -229,7 +233,10 @@ t.test('checkInt', (t: any) => {
         [false, 1.2345, {}, 'not an integer'],
 
         // TODO: it's allowed to be larger than max_safe_integer -- is this a good idea?
-        [true, Number.MAX_SAFE_INTEGER + 1, {}, 'larger than MAX_SAFE_INTEGER'],
+        [true, Number.MAX_SAFE_INTEGER + 1, {}, 'larger than MAX_SAFE_INTEGER is ok'],
+
+        [true, 123, undefined],  // no opts
+        [false, 'abc', undefined],  // no opts
     ];
     for (let [expectedValid, int, opts, note] of vectors) {
         note = note ? `   (${note})` : '';

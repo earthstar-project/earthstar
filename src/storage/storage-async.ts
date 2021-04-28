@@ -30,7 +30,7 @@ import {
     microsecondNow,
 } from '../util/misc';
 import {
-    arrayCompare,
+    compareArrays,
 } from './compare';
 
 //--------------------------------------------------
@@ -45,7 +45,7 @@ let loggerIngest = new Logger('storage async ingest', 'yellowBright');
 export let docCompareForOverwrite = (newDoc: Doc, oldDoc: Doc): Cmp => {
     // A doc can overwrite another doc if the timestamp is higher, or
     // if the timestamp is tied, if the signature is higher.
-    return arrayCompare(
+    return compareArrays(
         [newDoc.timestamp, newDoc.signature],
         [oldDoc.timestamp, oldDoc.signature],
     );

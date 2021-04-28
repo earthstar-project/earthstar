@@ -69,6 +69,7 @@ export const CryptoDriverChloride: ICryptoDriver = class {
                 publicKey,
             );
         } catch (e) {
+            /* istanbul ignore next */
             return false;
         }
     }

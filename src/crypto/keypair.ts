@@ -35,7 +35,10 @@ export let decodeAuthorKeypairToBytes = (pair: AuthorKeypair): KeypairBytes | Va
             pubkey: base32StringToBytes(authorParsed.pubkey),
             secret: base32StringToBytes(pair.secret),
         };
+        /* istanbul ignore next */
         if (bytes.pubkey.length !== 32) {
+            // this is already checked by parseAuthorAddress so we can't test it here
+            // but we'll test it again just to make sure.
             return new ValidationError(`pubkey bytes should be 32 bytes long, not ${bytes.pubkey.length} after base32 decoding.  ${pair.address}`);
         }
         if (bytes.secret.length !== 32) {

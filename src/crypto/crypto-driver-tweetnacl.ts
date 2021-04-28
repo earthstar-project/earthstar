@@ -47,6 +47,7 @@ export const CryptoDriverTweetnacl: ICryptoDriver = class {
             if (typeof msg === 'string') { msg = stringToBytes(msg); }
             return tweetnacl.sign.detached.verify(msg, sig, publicKey);
         } catch (e) {
+            /* istanbul ignore next */
             return false;
         }
     }

@@ -15,8 +15,8 @@ import {
 } from "./storage-types";
 
 import {
-    arrayCompare,
-    keyComparer,
+    compareArrays,
+    compareByObjKey,
 } from './compare';
 import {
     cleanUpQuery,
@@ -42,7 +42,7 @@ let combinePathAndAuthor = (doc: Doc) => {
 let docComparePathThenNewestFirst = (a: Doc, b: Doc): Cmp => {
     // Sorts docs by path ASC, then breaks ties by timestamp DESC (newest first)
     if (a.signature === b.signature) { return Cmp.EQ; }
-    return arrayCompare(
+    return compareArrays(
         [a.path, -a.timestamp],
         [b.path, -b.timestamp],
     );
@@ -105,7 +105,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         if (query.orderBy?.startsWith('path')) {
             docs.sort(docComparePathThenNewestFirst);
         } else if (query.orderBy?.startsWith('localIndex')) {
-            docs.sort(keyComparer('_localIndex'));
+            docs.sort(compareByObjKey('_localIndex'));
         }
         if (query.orderBy?.endsWith(' DESC')) {
             docs.reverse();

@@ -103,6 +103,7 @@ export const CryptoDriverNode: ICryptoDriver = class {
                 sig,
             );
         } catch (e) {
+            /* istanbul ignore next */
             return false;
         }
     }

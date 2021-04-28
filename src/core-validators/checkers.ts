@@ -79,9 +79,9 @@ export let checkInt = (opts: CheckIntOpts = {}): Checker =>
         if (opts.nullable === true && x === null) { return null; } // skip the rest of the checks if it's null
 
         if (typeof x !== 'number') { return 'expected a number but got ' + JSON.stringify(x); }
-        if (x !== Math.round(x)) { return 'expected an integer'; }
         if (isNaN(x)) { return 'is NaN'; }
         if (!isFinite(x)) { return 'is Infinity'; }
+        if (x !== Math.round(x)) { return 'expected an integer'; }
         if (opts.min !== undefined && x < opts.min) { return `integer too small (must be >= ${opts.min})`; }
         if (opts.max !== undefined && x > opts.max) { return `integer too large (must be <= ${opts.max})`; }
         return null;

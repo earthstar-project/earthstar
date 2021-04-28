@@ -1,4 +1,5 @@
 /** Generic top-level error class that other Earthstar errors inherit from. */
+/* istanbul ignore next */
 export class EarthstarError extends Error {
     constructor(message?: string) {
         super(message || '');
@@ -7,6 +8,7 @@ export class EarthstarError extends Error {
 }
 
 /** Validation failed on a document, workspace address, author address, etc. */
+/* istanbul ignore next */
 export class ValidationError extends EarthstarError {
     constructor(message?: string) {
         super(message || 'Validation error');
@@ -15,12 +17,14 @@ export class ValidationError extends EarthstarError {
 }
 
 /** An IStorage instance was used after close() was called on it. */
+/* istanbul ignore next */
 export class StorageIsClosedError extends EarthstarError {
     constructor(message?: string) {
         super(message || 'a Storage instance was used after being closed');
         this.name = 'StorageIsClosedError';
     }
 }
+/* istanbul ignore next */
 export class NotFoundError extends EarthstarError {
     constructor(message?: string) {
         super(message || 'not found');
@@ -28,6 +32,7 @@ export class NotFoundError extends EarthstarError {
     }
 }
 /** A pub URL is bad or the network is down */
+/* istanbul ignore next */
 export class NetworkError extends EarthstarError {
     constructor(message?: string) {
         super(message || 'network error');
@@ -35,6 +40,7 @@ export class NetworkError extends EarthstarError {
     }
 }
 
+/* istanbul ignore next */
 export class TimeoutError extends EarthstarError {
     constructor(message?: string) {
         super(message || 'timeout error');
@@ -43,6 +49,7 @@ export class TimeoutError extends EarthstarError {
 }
 
 /** A pub won't accept writes */
+/* istanbul ignore next */
 export class ConnectionRefusedError extends EarthstarError {
     constructor(message?: string) {
         super(message || 'connection refused');
@@ -50,6 +57,7 @@ export class ConnectionRefusedError extends EarthstarError {
     }
 }
 
+/* istanbul ignore next */
 export class NotImplementedError extends EarthstarError {
     constructor(message?: string) {
         super(message || 'not implemented yet');

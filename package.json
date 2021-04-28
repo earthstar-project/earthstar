@@ -13,6 +13,11 @@
     "./build/crypto-driver-node.js": false,
     "tap": "tape"
   },
+  "tap": {
+    "nyc-arg": [
+      "--exclude=build/test/*/*.js"
+    ]
+  },
   "scripts": {
     "clean": "rm -rf build coverage .nyc_output browserify-tests",
     "build": "tsc",
