@@ -8,3 +8,4 @@ coverage/
 .vscode/
 yarn-error.log
 browserify-tests
+dist/
