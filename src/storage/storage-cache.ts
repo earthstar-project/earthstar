@@ -7,6 +7,7 @@ import { Query } from "./query-types";
 import { StorageAsync } from "./storage-async";
 import { IngestResult, IngestResultAndDoc } from "./storage-types";
 import isEqual from "fast-deep-equal";
+import stringify from 'fast-json-stable-stringify'
 
 // A synchronous, limited version of a storage.
 
@@ -138,7 +139,7 @@ export class StorageCache {
       return [];
     }
 
-    let queryString = JSON.stringify(cleanUpQueryResult.query);
+    let queryString = stringify(cleanUpQueryResult.query);
 
     // Check if the cache has anything from this
     // and if so, return it.
