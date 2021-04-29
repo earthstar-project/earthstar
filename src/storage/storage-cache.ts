@@ -261,7 +261,7 @@ export class StorageCache {
       const appendDoc = () => {
         console.log("🥞");
         let nextDocs = [...entry.docs, doc];
-        this._docCache.set(key, { ...entry, docs: nextDocs });
+        this._docCache.set(key, { ...entry, docs: sortAndLimit(query, nextDocs) });
         this._fireOnStales();
       };
 
@@ -281,7 +281,7 @@ export class StorageCache {
           return existingDoc;
         });
 
-        this._docCache.set(key, { ...entry, docs: nextDocs });
+        this._docCache.set(key, { ...entry, docs: sortAndLimit(query,nextDocs) });
         this._fireOnStales();
       };
 
