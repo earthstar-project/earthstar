@@ -1,10 +1,6 @@
 import {
-    Doc,
-} from './util/doc-types';
-import {
     isErr,
 } from './util/errors';
-
 import {
     sleep
 } from './util/misc';
