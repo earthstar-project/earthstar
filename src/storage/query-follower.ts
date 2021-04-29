@@ -1,25 +1,37 @@
 import {
+    Thunk,
+} from './util-types';
+import {
+    Doc,
+} from '../util/doc-types';
+import {
     Query,
- } from './query-types';
+} from './query-types';
+import {
+    NotImplementedError,
+} from '../util/errors';
 import {
     IStorageAsync,
 } from './storage-types';
+import {
+    docMatchesFilter,
+} from './query';
+import {
+    IQueryFollower,
+} from './query-follower-types';
 
 //================================================================================
 
 import { Logger } from '../util/log';
-import { Thunk } from './util-types';
-import { Doc } from '../util/doc-types';
-import { NotImplementedError } from '../util/errors';
 let logger = new Logger('QueryFollower', 'redBright');
 
 //================================================================================
 
-export class QueryFollower {
+export class QueryFollower implements IQueryFollower {
     storage: IStorageAsync;
-    query: Query;
-    cb: (doc: Doc) => Promise<void>;
 
+    _query: Query;
+    _cb: (doc: Doc) => Promise<void>;
     _highestLocalIndex: number = -1;
     _isClosed: boolean = false;
 
@@ -39,19 +51,20 @@ export class QueryFollower {
      *      { limit: number }  // this doesn't make sense; we process all docs until the end of time (or close())
      */
     // TODO: starting index is... included in the query?
-    // TODO: event for becomimg idle or caught up
+    // TODO: event for becomimg idle or caught up (how do we know?  the storage has to tell us, I think)
     // TODO: event for closing
+    // TODO: can catchUp run at the same time as incoming events?  that would be bad
     constructor(storage: IStorageAsync, query: Query, cb: (doc: Doc) => Promise<void>) {
         logger.debug('constructor', query);
 
         this.storage = storage;
-        this.query = query;
-        this.cb = cb;
+        this._query = query;
+        this._cb = cb;
 
         // enforce rules on supported queries
-        if (this.query.historyMode !== 'all') { throw new NotImplementedError(`query  historyMode must be 'all'`); }
-        if (this.query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`query orderBy must be 'localIndexASC'`); }
-        if (this.query.limit !== undefined) { throw new NotImplementedError(`query must not have a limit`); }
+        if (this._query.historyMode !== 'all') { throw new NotImplementedError(`query  historyMode must be 'all'`); }
+        if (this._query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`query orderBy must be 'localIndexASC'`); }
+        if (this._query.limit !== undefined) { throw new NotImplementedError(`query must not have a limit`); }
 
         if (query.startAt?.localIndex !== undefined) {
             this._highestLocalIndex = query.startAt?.localIndex - 1;
@@ -60,13 +73,19 @@ export class QueryFollower {
 
         // subscribe to storage events
         this._unsubIngest = this.storage.bus.on('ingest', async (channel: string, docIngested: Doc) => {
+            // TODO: stop this when closed
             logger.debug('on ingest doc with _localIndex:', docIngested._localIndex);
             if (docIngested._localIndex === this._highestLocalIndex + 1) {
                 // we've gotten the next doc in the localIndex sequence
-                logger.debug('this follower is still caught up.  running callback blockingly...');
+                logger.debug('this follower is on the leading edge.  running callback blockingly...');
                 this._highestLocalIndex += 1;
-                await this.cb(docIngested);
-                logger.debug('...done with callback.');
+                if (docMatchesFilter(docIngested, this._query.filter ?? {})) {
+                    logger.debug('...doc matches query filter.  running callback blockingly...');
+                    await this._cb(docIngested);
+                    logger.debug('...done with callback.');
+                } else {
+                    logger.debug('...doc does not match filter; skipping callback.');
+                }
             } else {
                 // we've skipped some; get a batch to catch up
                 await this._catchUp();
@@ -82,6 +101,7 @@ export class QueryFollower {
     }
 
     async _catchUp(): Promise<void> {
+        // TODO: stop this when closed
         if (this._highestLocalIndex >= this.storage.storageDriver.getHighestLocalIndex()) {
             logger.debug('_catchUp(): no catch-up needed, we match or exceed the storageDriver\'s local index');
             return;
@@ -89,7 +109,7 @@ export class QueryFollower {
         logger.debug('_catchUp(): this follower fell behind');
         logger.debug('...querying for docs we missed...');
         let catchUpDocs = await this.storage.queryDocs({
-            ...this.query,
+            ...this._query,
             startAt: { localIndex: this._highestLocalIndex + 1 },
         });
         logger.debug(`...running callbacks to catch up on ${catchUpDocs.length} docs, blockingly...`);
@@ -97,7 +117,7 @@ export class QueryFollower {
             if (d._localIndex !== undefined) {
                 this._highestLocalIndex = d._localIndex;
             }
-            await this.cb(d);
+            await this._cb(d);
         }
         logger.debug('...done with batch of callbacks.  caught up.');
     }
@@ -106,6 +126,10 @@ export class QueryFollower {
         logger.debug('hatching...');
         await this._catchUp();
         logger.debug('...done hatching.');
+    }
+
+    isClosed(): boolean {
+        return this._isClosed;
     }
 
     /**

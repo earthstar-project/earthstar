@@ -77,15 +77,19 @@ let main = async () => {
     loggerMain.info('-----------\\')
     loggerMain.info('adding a queryFollower');
     // add a QueryFollower
-    let qf = new QueryFollower(
+    let qf1 = new QueryFollower(
         storage,
-        { historyMode: 'all', orderBy: 'localIndex ASC' },
+        {
+            historyMode: 'all', orderBy: 'localIndex ASC',
+            //startAt: { localIndex: 1 },
+            //filter: { path: '/posts/post-0001.txt' },
+        },
         async (doc): Promise<void> => {
             loggerQueryFollowerCallbacks1.debug('got a doc', doc);
         }
     );
     loggerMain.info('hatching it');
-    await qf.hatch();
+    await qf1.hatch();
     loggerMain.info('-----------/')
 
     // write some docs
@@ -129,7 +133,11 @@ let main = async () => {
     loggerMain.info('adding a queryFollower');
     let qf2 = new QueryFollower(
         storage,
-        { historyMode: 'all', orderBy: 'localIndex ASC' }, //, startAt: { localIndex: 1 } },
+        {
+            historyMode: 'all', orderBy: 'localIndex ASC',
+            //startAt: { localIndex: 1 },
+            //filter: { path: '/posts/post-0000.txt' },
+        },
         async (doc): Promise<void> => {
             loggerQueryFollowerCallbacks2.debug('got a doc', doc);
         }
