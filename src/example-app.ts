@@ -84,6 +84,8 @@ let main = async () => {
             loggerQueryFollowerCallbacks1.debug('got a doc', doc);
         }
     );
+    qf1.bus.on('caught-up', () => loggerQueryFollowerCallbacks1.debug('caught-up'));
+    qf1.bus.on('close', () => loggerQueryFollowerCallbacks1.debug('close'));
     loggerMain.info('hatching it');
     await qf1.hatch();
     loggerMain.info('-----------/')
@@ -138,6 +140,8 @@ let main = async () => {
             loggerQueryFollowerCallbacks2.debug('got a doc', doc);
         }
     );
+    qf2.bus.on('caught-up', () => loggerQueryFollowerCallbacks2.debug('caught-up'));
+    qf2.bus.on('close', () => loggerQueryFollowerCallbacks2.debug('close'));
     loggerMain.info('hatching it');
     await qf2.hatch();
     loggerMain.info('-----------/')

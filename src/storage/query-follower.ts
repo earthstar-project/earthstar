@@ -1,4 +1,8 @@
 import {
+    Superbus
+} from 'superbus';
+
+import {
     Thunk,
 } from './util-types';
 import {
@@ -18,6 +22,7 @@ import {
 } from './query';
 import {
     IQueryFollower,
+    QueryFollowerEvent,
 } from './query-follower-types';
 
 //================================================================================
@@ -29,6 +34,7 @@ let logger = new Logger('QueryFollower', 'redBright');
 
 export class QueryFollower implements IQueryFollower {
     storage: IStorageAsync;
+    bus: Superbus<QueryFollowerEvent>;
 
     _query: Query;
     _cb: (doc: Doc) => Promise<void>;
@@ -45,15 +51,12 @@ export class QueryFollower implements IQueryFollower {
      * queries must have these specific settings:
      *      { historyMode: 'all', orderBy: 'localIndexASC' }
      * queries may have:
-     *      { startAt: { localIndex: number }}  // to start partway through the sequence
+     *      { startAt: { localIndex: number }}  // to start the follower partway through the sequence
      *      { filter: { ... any filters ... }}  // to filter the docs
      * queries may not have:
-     *      { limit: number }  // this doesn't make sense; we process all docs until the end of time (or close())
+     *      { limit: number }  // TODO: allow this, and stop after processing this many docs
      */
-    // TODO: starting index is... included in the query?
-    // TODO: event for becomimg idle or caught up (how do we know?  the storage has to tell us, I think)
-    // TODO: event for closing
-    // TODO: can catchUp run at the same time as incoming events?  that would be bad
+    // TODO: event for becoming busy, the opposite of catch-up
     constructor(storage: IStorageAsync, query: Query, cb: (doc: Doc) => Promise<void>) {
         logger.debug('constructor', query);
 
@@ -61,71 +64,166 @@ export class QueryFollower implements IQueryFollower {
         this._query = query;
         this._cb = cb;
 
+        this.bus = new Superbus<QueryFollowerEvent>();
+
         // enforce rules on supported queries
         if (this._query.historyMode !== 'all') { throw new NotImplementedError(`query  historyMode must be 'all'`); }
         if (this._query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`query orderBy must be 'localIndexASC'`); }
         if (this._query.limit !== undefined) { throw new NotImplementedError(`query must not have a limit`); }
 
+        // off by one:
+        // query.startAt.localIndex points to the next thing we want.
+        // our highestLocalIndex points to the max things we've seen, which is one lower than the next thing we want.
         if (query.startAt?.localIndex !== undefined) {
             this._highestLocalIndex = query.startAt?.localIndex - 1;
         }
         logger.debug('my _highestLocalIndex is starting at', this._highestLocalIndex);
 
-        // subscribe to storage events
+        // when storage closes, close this QueryFollower too.
+        this._unsubClose = this.storage.bus.once('willClose', async () => {
+            logger.debug('on storage willClose, closing blockingly...');
+            await this.close();
+            logger.debug('...done closing');
+        }, { mode: 'blocking' });
+
+        // subscribe to storage events.
+        // we process docs in two ways:
+        // 1. this subscription, when we get one doc at a time as they are sent to us by the storage
+        //     if we're still caught up
+        // 2. our _catchUp method, which is used when we've fallen behind and need to query for
+        //     batches of docs to process
+        // We don't want these to both run at the same time.
+        // TODO: what happens when this event fires and we're in the middle of a long _catchUp process?
+        //  We need to lock the storage so that can't happen, or maintain a variable of our catching-up state
+        //  so we can skip this event handler when we're catching-up.
+        //  Or it might not happen because all these events are blocking events so maybe the storage won't
+        //  accept any docs until our catchUp process is all done.
         this._unsubIngest = this.storage.bus.on('ingest', async (channel: string, docIngested: Doc) => {
-            // TODO: stop this when closed
-            logger.debug('on ingest doc with _localIndex:', docIngested._localIndex);
+
+            logger.debug('on storage.ingest doc with _localIndex:', docIngested._localIndex);
+            if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
+
+            let docIsInteresting = docMatchesFilter(docIngested, this._query.filter ?? {});
+            logger.debug('the doc matches our filters:', docIsInteresting);
+
             if (docIngested._localIndex === this._highestLocalIndex + 1) {
-                // we've gotten the next doc in the localIndex sequence
-                logger.debug('this follower is on the leading edge.  running callback blockingly...');
+                // We've gotten the next doc in the localIndex sequence without any gaps,
+                // so we know we can process it right away and we don't need to catch up.
+                logger.debug('this follower is on the leading edge.  looking at this doc...');
+
+                // Update our pointer, even if we're not going to process this document because of our query filter.
                 this._highestLocalIndex += 1;
-                if (docMatchesFilter(docIngested, this._query.filter ?? {})) {
+
+                if (docIsInteresting) {
                     logger.debug('...doc matches query filter.  running callback blockingly...');
                     await this._cb(docIngested);
                     logger.debug('...done with callback.');
+
+                    logger.debug('...sending caught-up event');
+                    await this.bus.sendAndWait('caught-up');
+                    logger.debug('...done sending caught-up event');
                 } else {
-                    logger.debug('...doc does not match filter; skipping callback.');
+                    logger.debug('...doc does not match filter; skipping callback; we are still caught up.');
                 }
             } else {
-                // we've skipped some; get a batch to catch up
+                // There was a gap in the sequence since we last heard from the storage.
+                // This can happen from normal gaps in the sequence (from document edits)
+                // or possibly if we have a flaky network connection between us and the storage.
+                // We have to call catchUp() whether or not the doc is interesting, because we
+                // don't know what happened in the gap.
+                logger.debug('this follower needs to catch up.  calling catchUp()');
                 await this._catchUp();
             }
         }, { mode: 'blocking' });
 
-        // when storage closes, close this QueryFollower too.
-        this._unsubClose = this.storage.bus.on('willClose', async () => {
-            logger.debug('on willClose, closing blockingly...');
-            await this.close();
-            logger.debug('...done closing');
-        }, { mode: 'blocking' });
     }
 
-    async _catchUp(): Promise<void> {
-        // TODO: stop this when closed
-        if (this._highestLocalIndex >= this.storage.storageDriver.getHighestLocalIndex()) {
-            logger.debug('_catchUp(): no catch-up needed, we match or exceed the storageDriver\'s local index');
-            return;
-        }
-        logger.debug('_catchUp(): this follower fell behind');
-        logger.debug('...querying for docs we missed...');
-        let catchUpDocs = await this.storage.queryDocs({
-            ...this._query,
-            startAt: { localIndex: this._highestLocalIndex + 1 },
-        });
-        logger.debug(`...running callbacks to catch up on ${catchUpDocs.length} docs, blockingly...`);
-        for (let d of catchUpDocs) {
-            if (d._localIndex !== undefined) {
-                this._highestLocalIndex = d._localIndex;
-            }
-            await this._cb(d);
-        }
-        logger.debug('...done with batch of callbacks.  caught up.');
-    }
-
+    /**
+     * Call this function and await it when you create a QueryFollower.
+     * It gives it time to catch up with the Storage.
+     */
     async hatch(): Promise<void> {
         logger.debug('hatching...');
         await this._catchUp();
         logger.debug('...done hatching.');
+    }
+
+    /**
+     * Is this query follower all caught up with the latest
+     * changes from the Storage?
+     */
+    isCaughtUp(): boolean {
+        return this._highestLocalIndex >= this.storage.storageDriver.getHighestLocalIndex();
+    }
+
+    async _catchUp(): Promise<void> {
+        // Process everything until we're caught up with the storage.
+        // This blocks until we're caught up.
+
+        if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
+
+        if (this.isCaughtUp()) {
+            logger.debug('_catchUp(): no catch-up needed, we match or exceed the storageDriver\'s local index');
+            logger.debug('...sending caught-up event');
+            await this.bus.sendAndWait('caught-up');
+            logger.debug('...done sending caught-up event');
+            return;
+        }
+
+        if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
+
+        // get a batch of docs to process
+        logger.debug('_catchUp(): this follower fell behind');
+        logger.debug('...querying for a batch of docs we missed...');
+        // TODO: this will include our query filters, and we won't see docs filtered out by the query.
+        // That means we won't naturally update our highestLocalIndex as high as it might go.
+        // So let's get the storage's localIndex now, and remember it (just before doing the query,
+        // so we won't have any gaps...)
+        let storageHighestLocalIndex = this.storage.storageDriver.getHighestLocalIndex();
+
+        // Do the query...
+        let catchUpDocs = await this.storage.queryDocs({
+            ...this._query,
+            startAt: { localIndex: this._highestLocalIndex + 1 },
+            limit: 400,  // TODO: what's the right batch size to use?
+        });
+
+        // If we got zero docs, we're caught up for now
+        if (catchUpDocs.length === 0) {
+            // Batch of docs was empty, which means we're caught up.
+            // Note that if there are new docs we've filtered out, we will still
+            //  be caught up but this.isCaughtUp() will return false because it's comparing
+            //  localIndex numbers between us and the storage.
+
+            logger.debug(`...got zero docs, so we're done now`);
+
+            // Update our localIndex to match the saved number from the storage
+            // in case the query filter made us skip over a bunch of docs
+            this._highestLocalIndex = Math.max(this._highestLocalIndex, storageHighestLocalIndex);
+
+            logger.debug('...sending caught-up event');
+            await this.bus.sendAndWait('caught-up');
+            logger.debug('...done sending caught-up event');
+            return;
+        }
+
+        // Process the docs we got...
+        logger.debug(`...running callbacks to catch up on ${catchUpDocs.length} docs, blockingly...`);
+        for (let d of catchUpDocs) {
+            // check frequently if we're closed so we can skip out of a long batch of docs to process
+            if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
+            if (d._localIndex !== undefined) { this._highestLocalIndex = d._localIndex; }
+            await this._cb(d);
+        }
+
+        // Update our localIndex to match the saved number from the storage
+        // in case the query filter made us skip over a bunch of docs
+        this._highestLocalIndex = Math.max(this._highestLocalIndex, storageHighestLocalIndex);
+
+        // Run _catchUp again in case more docs appeared in the meantime, or our batch size was not big enough.
+        if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
+        logger.debug('...done with batch of callbacks.  scheduling another query for the next batch, in case there are more.');
+        await this._catchUp(); // TODO: should this be setTimeout to give other things a chance to run? But then we can't await it...
     }
 
     isClosed(): boolean {
@@ -135,10 +233,14 @@ export class QueryFollower implements IQueryFollower {
     /**
      * Shut down the QueryFollower; unhook from the Storage; process no more events.
      * This is permanent.
+     * This happens when the storage closes (we've subscribed to storage willClose)
+     * and it can also be called manually if you just want to destroy this queryFollower.
      */
     async close(): Promise<void> {
         logger.debug('close()');
         this._isClosed = true;
+        await this.bus.sendAndWait('close');
+        this.bus.removeAllSubscriptions();
         if (this._unsubIngest !== undefined) { this._unsubIngest(); }
         if (this._unsubClose !== undefined) { this._unsubClose(); }
     }
