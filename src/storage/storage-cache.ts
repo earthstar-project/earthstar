@@ -9,6 +9,13 @@ import { IngestResult, IngestResultAndDoc } from "./storage-types";
 import isEqual from "fast-deep-equal";
 import stringify from 'fast-json-stable-stringify'
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log';
+let logger = new Logger('storage cache', 'cyan');
+
+//================================================================================
+
 // A synchronous, limited version of a storage.
 
 // Lifted from StorageDriverAsyncMemory
@@ -154,7 +161,7 @@ export class StorageCache {
       if (Date.now() > cachedResult.expires) {
         this._storage.queryDocs(query).then((docs) => {
           this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
-          console.log("⌛️");
+          logger.debug("⌛️");
           this._fireOnCacheUpdateds();
         });
       }
@@ -167,7 +174,7 @@ export class StorageCache {
       { ...query, historyMode: "all", orderBy: "localIndex ASC" },
       (doc) => {
         return new Promise((resolve) => {
-          console.log("🐣");
+          logger.debug("🐣");
           this._updateCacheOptimistically(doc);
           return resolve();
         });
@@ -186,7 +193,7 @@ export class StorageCache {
     
     this._storage.queryDocs(query).then((docs) => {
       this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
-      console.log("👹");
+      logger.debug("👹");
       this._fireOnCacheUpdateds();
     });
 
@@ -223,7 +230,7 @@ export class StorageCache {
     }
 
     // Update the cache optimistically
-    console.log("🚂");
+    logger.debug("🚂");
     this._updateCacheOptimistically(signedDoc);
 
     // Set with actual storage.
@@ -271,14 +278,14 @@ export class StorageCache {
      */
 
       const appendDoc = () => {
-        console.log("🥞");
+        logger.debug("🥞");
         let nextDocs = [...entry.docs, doc];
         this._docCache.set(key, { ...entry, docs: sortAndLimit(query, nextDocs) });
         this._fireOnCacheUpdateds();
       };
 
       const replaceDoc = ({ exact }: { exact: boolean }) => {
-        console.log("🔄");
+        logger.debug("🔄");
         const nextDocs = entry.docs.map((existingDoc) => {
           if (
             exact &&
@@ -323,7 +330,7 @@ export class StorageCache {
           return;
         }
 
-        console.log('🕰')
+        logger.debug('🕰')
         replaceDoc({ exact: true });
         return;
       }
@@ -334,7 +341,7 @@ export class StorageCache {
         doc.author !== latestDoc?.author || isEqual(doc, latestDoc);
 
       if (docIsDifferent) {
-        console.log('⌚️')
+        logger.debug('⌚️')
         replaceDoc({ exact: false });
         return;
       }

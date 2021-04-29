@@ -12,13 +12,14 @@
 declare let window: any;
 let numFinished = 0;
 
-let numTestFiles = 16;  // <--- set this to the expected number of test files
+let numTestFiles = 17;  // <--- set this to the expected number of test files
 
 window.onFinish = (testName?: string) => {
     numFinished += 1;
     if (numFinished === 1) { console.log(' '); }
     console.log(`onFinish handler ${numFinished} / ${numTestFiles} ${testName ?? ''}`);
     if (numFinished === numTestFiles) {
+        console.log('    if the number of tests is not as expected, change the number in browser-run-exit.ts');
         console.log('    closing browser in a moment...');
         setTimeout(() => {
             console.log('    closing browser now');
