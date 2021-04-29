@@ -70,7 +70,7 @@
   },
   "devDependencies": {
     "@types/browser-or-node": "^1.3.0",
-    "@types/node": "^14.14.41",
+    "@types/node": "^14.14.43",
     "@types/tap": "^14.10.2",
     "@types/tape": "^4.13.0",
     "browser-run": "^10.1.0",
