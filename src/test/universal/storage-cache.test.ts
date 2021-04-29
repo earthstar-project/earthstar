@@ -3,7 +3,7 @@ import t from "tap";
 // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
 declare let window: any;
 if ((t.test as any).onFinish) {
-  (t.test as any).onFinish(() => window.onFinish("base32"));
+  (t.test as any).onFinish(() => window.onFinish("storage-cache"));
 }
 
 import { StorageCache } from "../../storage/storage-cache";
@@ -15,6 +15,17 @@ import { CryptoDriverTweetnacl } from "../../crypto/crypto-driver-tweetnacl";
 import { AuthorKeypair } from "../../util/doc-types";
 
 // No types for tap...? Bit of a drag.
+
+//-------------------
+
+import {
+    LogLevel,
+    setDefaultLogLevel,
+} from '../../util/log';
+
+//setDefaultLogLevel(LogLevel.Debug);
+
+//================================================================================
 
 const WORKSPACE_ADDR = "+test.a123";
 
