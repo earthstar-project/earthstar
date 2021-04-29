@@ -9,7 +9,6 @@
   "main": "dist/earthstar.cjs",
   "module": "dist/earthstar.js",
   "types": "dist/types/universal.d.ts",
-  "type": "module",
   "browser": {
     "./build/index.js": "./build/index.browser.js",
     "./build/crypto/crypto-driver-node.js": false,
