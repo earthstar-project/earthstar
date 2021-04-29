@@ -162,8 +162,8 @@ The Storage does:
 * the complex annoying stuff we only want to write once
 * `set():` sign and add a document
 * `ingest():` validate and accept a document from the outside
-* followers and events
 * user-friendly helper functions, getters, setters
+* an event bus that other things can subscribe to, like QueryFollowers
 
 The StorageDriver does:
 * simple stuff, so we can make lots of drivers
@@ -207,31 +207,25 @@ storage.getDocsSinceLocalIndex(
 
 (You can also still look up documents by path in the usual old way.)
 
-### Followers: Reliable streaming locally, to subscribers or indexes
+### QueryFollowers: Reliable streaming locally, to subscribers or indexes
 
-The old `onWrite` events are gone.  Now, there's now a new way to subscribe to a Storage: with a `Follower`.  A follower is like a pointer that moves along the sequence of documents, in order by `localIndex`, running a callback on each one.
+The old `onWrite` events are gone.  Now, there's now a new way to subscribe to a Storage: with a `QueryFollower`.  A query follower is like a pointer that moves along the sequence of documents, in order by `localIndex`, running a callback on each one, if it matches the given query.
 
 This is a Kafka or Kappa-db style architecture.
 
 You could use this to build an index or Layer that incrementally digests the content of an IStorage without ever missing anything, even if it only runs occasionally.  It just resumes from the last `localIndex` it saw, and proceeds from there.
 
-There are 2 kinds of followers:
+Currently QueryFollowers are always blocking -- they hold up the entire Storage until they catch up, and when a new doc is ingested everything waits until the QueryFollowers have finished running.
 
-* Blocking followers must run before a write to the storage will complete.
+A QueryFollower has one async callback that it runs on each doc in sequence.  It never allows that callback to overlap with itself, e.g. it waits to finish one doc before moving along to the next.
 
-* Lazy followers run async'ly.  Writing to a storage will wake up a lazy follower, but it might not start running for a little while, and it will catch up to the end at its own speed.
+An IStorage may have many QueryFollowers.  They will run in parallel with each other, while the IStorage waits for them all to finish.
 
-A follower has one callback (sync or async) that it runs on each doc in sequence.  It never allows that callback to overlap with itself, e.g. it waits to finish one doc before moving along to the next.  Both blocking and lazy followers work this way.  The difference between blocking and lazy is if the **IStorage** waits for them or not.
+### Starting query followers at the beginning or the end
 
-An IStorage may have many followers of both/either blocking and lazy types.
+You can start a QueryFollower anywhere in the sequence: at the beginning (good for indexes and Layers), or at the current most recent document (good for live syncing new changes).
 
-### Starting followers at the beginning or the end
-
-You can start a Follower anywhere in the sequence: at the beginning (good for indexes and Layers), or at the current most recent document (good for live syncing new changes).
-
-* Blocking followers hold up the entire IStorage until they catch up to the end
-
-* Lazy followers just crawl along on their own.
+You do this by setting the `startAt: {localIndex: 123}` property of the query.
 
 ### Reliable streaming over the network, when syncing
 
@@ -242,10 +236,6 @@ When we send docs over the network we will send the `localIndex` to help the oth
 Peers will remember, for each other peer, which is the latest `localIndex` they've seen from that peer, so they can resume syncing from there.
 
 This is similar to how append-only logs are synced in Scuttlebutt and Hyper, except our logs have gaps.
-
-## More informative `onWrite` events
-
-TODO: this is being moved into Followers.
 
 ## Slightly different querying
 
