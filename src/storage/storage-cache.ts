@@ -71,12 +71,15 @@ function sortAndLimit(query: Query, docs: Doc[]) {
 export class StorageCache {
   _storage: StorageAsync;
 
-  _docCache = new Map<string, { docs: Doc[]; follower: QueryFollower }>();
+  _docCache = new Map<string, { docs: Doc[]; follower: QueryFollower, expires: number }>();
+  
+  _timeToLive: number;
 
   _onStaleCallbacks = new Set<() => void | (() => Promise<void>)>();
 
-  constructor(storage: StorageAsync) {
+  constructor(storage: StorageAsync, timeToLive?: number) {
     this._storage = storage;
+    this._timeToLive = timeToLive || 1000
   }
 
   // GET
@@ -146,6 +149,14 @@ export class StorageCache {
       this._storage.queryDocs(query).then((docs) => {
         this._docCache.set(queryString, { ...cachedResult, docs });
       });
+      
+      if (Date.now() > cachedResult.expires) {
+        this._storage.queryDocs(query).then((docs) => {
+          this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
+          console.log("⌛️");
+          this._fireOnStales();
+        });
+      }
 
       return cachedResult.docs;
     }
@@ -166,14 +177,14 @@ export class StorageCache {
     this._docCache.set(queryString, {
       docs: [],
       follower,
+      expires: Date.now() + this._timeToLive
     });
 
     // Hatch the follower.
     follower.hatch();
-
-    // Query the storage, set the eventual result in the cache.
+    
     this._storage.queryDocs(query).then((docs) => {
-      this._docCache.set(queryString, { follower, docs });
+      this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
       console.log("👹");
       this._fireOnStales();
     });
