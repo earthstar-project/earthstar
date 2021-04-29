@@ -189,13 +189,46 @@ Events also don't tell you what was overwritten, which you might need to know to
 
 Each Storage keeps track of the order that it receives documents, and assignes each doc a `localIndex` value which starts at 1 and increments from there with every newly written doc.
 
-This puts the documents in a nice linear order that can be used to reliably stream, and resume streaming, from the Storage.
+This puts the documents in a nice stable linear order that can be used to reliably stream, and resume streaming, from the Storage.
 
 When we get a new version of a document, it gets a new `localIndex` and goes at the end of the sequence, and the old version vanishes, leaving a gap in the sequence.  It's ok that there are gaps.
 
-The `localIndex` is particular to a certain IStorage.  It's kept in the `Doc` object but it's not really part of it; it's not included in the signature.  It's this IStorage's metadata about that document.
+The `localIndex` is particular to a certain IStorage.  It's kept in the `Doc` object but it's not really part of it; it's not included in the signature.  It's this IStorage's metadata about that document.  When syncing, it's sent as one of the "extra fields" [(newly added to the specification)](https://earthstar-docs.netlify.app/docs/reference/earthstar-specification/#extra-fields-for-syncing), observed by the receiving peer, then discarded and overwritten with the receiving peer's own latest `localIndex` number.
 
-### Querying by localIndex
+### Use cases
+
+1. Streaming sync between peers, which can be interrupted and resumed
+1. Layers and indexes that use a QueryFollower to subscribe to changes in a Storage.  These might store their indexes in localStorage, for example, and would therefore want to resume indexing instead of starting over from scratch.
+1. React components that need to know when to re-render
+
+For use cases where the listener will never have any downtime, they don't really need to be able to resume, they can just listen for events from the Storage instead and it may be more efficient.  For example a React component could listen for events about a particular document instead of making a whole QueryFollower that has to go through every single change to find changes to that particular document.
+
+### Properties of the `localIndex` sequence
+
+The docs, sorted by `localIndex` on a particular peer, have these properties:
+
+**Properties**
+
+1. The docs are in a stable order that does not change, except:
+1. Newly added or changed docs go at the end, increasing the highest `localIndex` by 1.
+1. When a doc is updated (same author and same path, but newer timestamp), we discard the old version.  So we leave a gap in the sequence where the old verison used to be, and the new version goes on the end of the sequence.
+1. The first doc has a `localIndex` of zero, unless it was later changed, in which case there will be a gap at zero.
+
+Why do all this?  The goal is to be able to catch up to changes since the last time we looked at a Storage.  We can do that by remembering the highest `localIndex` we saw last time, and now getting all the docs later than that in the sequence.  We always read this sequence from old to new (in increasing order of `localIndex`.
+
+There are not really any other nice properties about this sequence:
+
+**Downsides**
+
+1. The `localIndex` order is not sorted by `path`, `timestamp`, `author`, or any other useful property.  The order is jumbled because docs can be received in any order during a sync, perhaps with multiple other peers simultaneously, perhaps some using Sync Filters to only get some docs...
+1. The order is different on every peer (that's why it's "local").
+1. The history docs for a certain path will be in a jumbled order in the `localIndex` sequence.  The Latest doc for a path can be before or after the other history docs.  User of QueryFollowers will need some bookeeping to remember which version is the Latest for each path, if they care (e.g. if it's being used as an index and not just a sync mechanism between peers).
+1. When a doc is modified and the old one is deleted, leaving a gap, you do not get notified about the gap.  There is no pointer back to the gap, or anything.  Users of QueryFollowers are expected to have some kind of index so they can notice that the new doc overwrites the old one, and delete the old one.
+1. When an ephemeral doc expires, it leaves a gap in the sequence but nothing is added to the end of the sequence.  Users of QueryFollowers are expected to pay attention to expiration dates and delete ephemeral docs themselves.  We may also add an event on the Storage when a doc expires, but you could miss this event if you were not listening at that moment, so you'll still have to check for your own expired docs from time to time.
+1. QueryFollowers should always progress in the direction of increasing `localIndex`.  (They can start at 0, or the latest number, or anywhere in between).  This makes it simple to keep track of where to resume next time.  However this means we always process the oldest-received docs first, but the user probably cares more about the recently-received docs.
+    * It would be possible with fancier bookeeping to make QueryFollowers that track which intervals of the sequence they've visited, so they can work from newest-to-oldest.  But sometimes the oldest-received docs are the most important (like usernames)...
+
+### Querying by `localIndex`
 
 This lets you easily resume where you left off.  You can get batches of N docs at a time if you want, using the `limit` option.
 
@@ -204,6 +237,8 @@ storage.getDocsSinceLocalIndex(
     startAt: LocalIndex,
     limit?: number): Doc[];
 ```
+
+This is also how you tell a QueryFollower where to start in the sequence.  QueryFollowers ignore the `limit` property though.
 
 (You can also still look up documents by path in the usual old way.)
 

@@ -58,7 +58,7 @@
     "test-crypto": "tap -Rspecy --no-bail --jobs=1 build/test/node/crypto.node.test.js",
     "test-storage-driver": "tap -Rspecy --no-bail --jobs=1 build/test/node/storage-driver-async.node.test.js",
     "test-storage": "tap -Rspecy --no-bail --jobs=1 build/test/node/storage-async.node.test.js",
-    "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn build-and-test",
+    "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn clean-build-and-test",
     "prepublishOnly": "yarn clean && yarn esbuild",
     "depchart-main": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-main --node_modules omit",
     "depchart-deps": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-deps --node_modules integrated",
@@ -85,10 +85,11 @@
     "chalk": "^4.1.1",
     "chloride": "^2.4.1",
     "fast-deep-equal": "^3.1.3",
+    "fast-json-stable-stringify": "^2.1.0",
     "rfc4648": "^1.4.0",
     "rfdc": "^1.2.0",
     "sha256-uint8array": "^0.10.0",
-    "superbus": "^1.1.0",
+    "superbus": "^1.2.0",
     "tslib": "^2.2.0",
     "tweetnacl": "^1.0.3"
   }

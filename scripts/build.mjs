@@ -9,7 +9,8 @@ const externals = [
   "sha256-uint8array",
   "tweetnacl",
   "superbus",
-  "util"
+  "util",
+  "fast-json-stable-stringify"
 ];
 
 const baseConfig = {

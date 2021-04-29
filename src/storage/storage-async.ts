@@ -117,7 +117,7 @@ export class StorageAsync implements IStorageAsync {
         logger.debug(`getLatestDocsAtPath("${path}")`);
         if (this._isClosed) { throw new StorageIsClosedError(); }
         let docs = await this.storageDriver.queryDocs({
-            historyMode: 'all',
+            historyMode: 'latest',
             orderBy: 'path DESC',
             filter: { path: path, }
         });
