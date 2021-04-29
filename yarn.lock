@@ -4189,10 +4189,10 @@ sumchecker@^3.0.1:
   dependencies:
     debug "^4.1.0"
 
-superbus@^1.1.0:
-  version "1.1.0"
-  resolved "https://registry.yarnpkg.com/superbus/-/superbus-1.1.0.tgz#3b521e9e08d053802922658c58edb73ae3af582d"
-  integrity sha512-nfXaDgMmf9i0F5O5i3uP7Brzy5uJ9IbFxrgi/rEsBgX/HAN41pvrAQujG9w9f85ToQpDKXYactRPCcnTdhXV8Q==
+superbus@^1.2.0:
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/superbus/-/superbus-1.2.0.tgz#7d4c2b964215a78791996897e6509f652423853f"
+  integrity sha512-hDZanGnIZ7g4ZrqKnjG6kOuV4e+UTc12GjWu348Ex6bTRvoTksPwzWPsr+E8zVRsSnihoj9/aNNP9APCOBF22g==
 
 supports-color@^2.0.0:
   version "2.0.0"
