@@ -13,9 +13,6 @@ import {
 import {
     StorageAsync,
 } from './storage/storage-async';
-import {
-    addFollower,
-} from './storage/follower';
 import { Crypto } from './crypto/crypto';
 import { CryptoDriverTweetnacl } from './crypto/crypto-driver-tweetnacl';
 import { isErr } from './util/errors';
@@ -30,8 +27,6 @@ import {
 } from './util/log';
 
 let loggerMain = new Logger('main', 'whiteBright');
-let loggerLazyFollower = new Logger("main's lazy follower", 'magentaBright');
-let loggerBlockingFollower = new Logger("main's blocking follower", 'magentaBright');
 let loggerBusEvents = new Logger('main storage bus events', 'white');
 
 setDefaultLogLevel(LogLevel.Debug);
@@ -96,50 +91,6 @@ let main = async () => {
     }
     loggerMain.info('-----------/')
 
-    //if (Math.random() < 10) { process.exit(0); } // hack
-
-    // add lazy follower
-    loggerMain.blank()
-    loggerMain.blank()
-    loggerMain.blank()
-    loggerMain.info('-----------\\')
-    loggerMain.info('adding lazy follower');
-    let lazyFollower = await addFollower({
-        storage: storage,
-        onDoc: (doc: Doc | null) => {
-            if (doc === null) {
-                loggerLazyFollower.debug('null -- I have become idle');
-            } else {
-                loggerLazyFollower.debug('got a doc:', doc);
-            }
-        },
-        historyMode: 'latest',
-        blocking: false,
-        batchSize: 2,
-    });
-    loggerMain.info('-----------/')
-
-    // add blocking follower
-    loggerMain.blank()
-    loggerMain.blank()
-    loggerMain.blank()
-    loggerMain.info('-----------\\')
-    loggerMain.info('adding blocking follower');
-    let blockingFollower = await addFollower({
-        storage: storage,
-        onDoc: (doc: Doc | null) => {
-            if (doc === null) {
-                loggerBlockingFollower.debug('null -- I have become idle');
-            } else {
-                loggerBlockingFollower.debug('got a doc:', doc);
-            }
-        },
-        historyMode: 'latest',
-        blocking: true,
-        batchSize: 2,
-    });
-    loggerMain.info('-----------/')
-
     // sleep
     loggerMain.blank()
     loggerMain.blank()
@@ -184,8 +135,6 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.blank()
 
-    //debug('closing follower');
-    //lazyFollower.close();
 }
 main();
 

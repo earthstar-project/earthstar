@@ -18,7 +18,6 @@ import {
     Query,
 } from './query-types';
 import {
-    IFollower,
     IStorageAsync,
     IStorageDriverAsync,
     IngestResult,
@@ -63,9 +62,6 @@ export class StorageAsync implements IStorageAsync {
     bus: Superbus<StorageEvent>;
 
     _isClosed: boolean = false;
-
-    // Followers
-    _followers: Set<IFollower> = new Set();
 
     constructor(workspace: WorkspaceAddress, validator: IFormatValidator, driver: IStorageDriverAsync) {
         logger.debug(`constructor.  driver = ${(driver as any)?.constructor?.name}`);
@@ -258,7 +254,7 @@ export class StorageAsync implements IStorageAsync {
         if (this._isClosed) { throw new StorageIsClosedError(); }
         loggerIngest.debug(' >> ingest: ...done running protected region', result);
 
-        loggerIngest.debug('  - ingest: waking followers...');
+        loggerIngest.debug('  - ingest: TODO: send events');
         // Note: this section of code is outside of the protected region
         // for ingest, but if we get here from set(), we're inside the protected
         // region of set().  We should probably move the code inside the
@@ -269,32 +265,7 @@ export class StorageAsync implements IStorageAsync {
         // it will fail to reach this point because of the check a few lines above.
         // The followers will be left behind.
         // That's ok because followers are designed to catch up in scenarios like that.
-        for (let follower of this._followers) {
-            if (follower.blocking) {
-                // run blocking followers right now
-                loggerIngest.debug('    - blocking follower: await follower.wake()');
-                // TODO: optimization: if the blocking follower is already up to date,
-                // we only need to feed it this one new doc and then it won't
-                // have to do a whole query
-                if (!follower.isClosed()) {
-                    await follower.wake();
-                }
-                loggerIngest.debug('    - ...blocking follower is now done');
-            } else {
-                // lazy followers can be woken up later
-                loggerIngest.debug('    - lazy follower: waking it with a setTimeout to wake later');
-                setTimeout(() => {
-                    if (!follower.isClosed()) {
-                        follower.wake();
-                    }
-                }, 0);
-            }
-            // remove closed followers
-            if (follower.isClosed()) {
-                this._followers.delete(follower);
-            }
-        }
-        loggerIngest.debug('  - ingest: ...done waking followers');
+        loggerIngest.debug('  - ingest: TODO: ...done sending events');
 
         return result;
     }
@@ -313,10 +284,6 @@ export class StorageAsync implements IStorageAsync {
         await this.bus.sendAndWait('willClose');
         logger.debug('    marking self as closed...');
         this._isClosed = true;
-        logger.debug('    closing followers...');
-        for (let follower of this._followers.values()) {
-            await follower.close();
-        }
         logger.debug('    closing storageDriver...');
         await this.storageDriver.close();
         logger.debug('    sending didClose nonblockingly...');

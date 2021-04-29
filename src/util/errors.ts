@@ -25,12 +25,12 @@ export class StorageIsClosedError extends EarthstarError {
     }
 }
 
-/** A Follower was used after close() was called on it. */
+/** A QueryFollower was used after close() was called on it. */
 /* istanbul ignore next */
-export class FollowerIsClosedError extends EarthstarError {
+export class QueryFollowerIsClosedError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'a Follower was used after being closed');
-        this.name = 'FollowerIsClosedError';
+        super(message || 'a QueryFollower was used after being closed');
+        this.name = 'QueryFollowerIsClosedError';
     }
 }
 

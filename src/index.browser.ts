@@ -11,7 +11,6 @@ export * from './crypto/keypair';
 export * from './format-validators/format-validator-es4';
 export * from './format-validators/format-validator-types';
 export * from './storage/compare';
-export * from './storage/follower';
 export * from './storage/lock';
 export * from './storage/query-types';
 export * from './storage/query';

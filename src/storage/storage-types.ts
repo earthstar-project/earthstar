@@ -24,15 +24,6 @@ import {
 
 //================================================================================
 
-export type FollowerState = 'running' | 'sleeping' | 'closed';
-export interface IFollower {
-    blocking: boolean;
-    wake(): Promise<void>;
-    hatch(): Promise<void>;
-    isClosed(): boolean;
-    close(): Promise<void>;
-}
-
 export type StorageEvent = 'willClose' | 'didClose';
 
 export interface IStorageAsync {
@@ -42,16 +33,10 @@ export interface IStorageAsync {
     bus: Superbus<StorageEvent>;
 
     //--------------------------------------------------
-    // CALLBACKS AND FOLLOWERS
-
-    // TODO: does this belong on the main storage or the driver?
-    _followers: Set<IFollower>;
-
-    getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
-    //--------------------------------------------------
     // GET
 
     // these should all return frozen docs
+    getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
     getAllDocs(): Promise<Doc[]>;
     getLatestDocs(): Promise<Doc[]>;
     getAllDocsAtPath(path: Path): Promise<Doc[]>;
@@ -73,7 +58,6 @@ export interface IStorageAsync {
      * close()
      *   * send StorageWillClose events and wait for event receivers to finish blocking.
      *   * close the IStorage
-     *   * close all its Followers
      *   * close the IStorageDriver
      *   * send StorageDidClose events and do not wait for event receivers.
      * 
@@ -111,7 +95,7 @@ export interface IStorageDriverAsync {
 }
 
 //================================================================================ 
-// EVENTS AND FOLLOWERS
+// EVENTS
 
 export enum IngestResult {
     // doc was not saved: negative numbers
