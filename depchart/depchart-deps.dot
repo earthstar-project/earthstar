@@ -13,7 +13,7 @@ digraph G {
     // files in their folder clusters
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster9858099127 {
+        subgraph cluster2936914699 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -25,7 +25,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster5951500733 {
+        subgraph cluster6872782039 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -41,7 +41,7 @@ digraph G {
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster7496942113 {
+        subgraph cluster5607067845 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -52,7 +52,7 @@ digraph G {
             "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster1777299692 {
+        subgraph cluster8524025651 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -60,8 +60,9 @@ digraph G {
             penwidth=2;
                     
             "src/storage/compare.ts" [label="compare.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/follower.ts" [label="follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/lock.ts" [label="lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/query-follower-types.ts" [label="query-follower-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/query-follower.ts" [label="query-follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/query-types.ts" [label="query-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/storage-async.ts" [label="storage-async.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
@@ -76,6 +77,7 @@ digraph G {
         "crypto" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "tweetnacl" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "sha256-uint8array" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "superbus" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
 
     // edges between files
     "src/core-validators/addresses.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
@@ -93,9 +95,9 @@ digraph G {
     "src/example-app.ts" -> "src/format-validators/format-validator-es4.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/storage/storage-driver-async-memory.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/storage/storage-async.ts" [penwidth=2; color=darkslategray4];
-    "src/example-app.ts" -> "src/storage/follower.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/crypto/crypto-driver-tweetnacl.ts" [penwidth=2; color=darkslategray4];
+    "src/example-app.ts" -> "src/storage/query-follower.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
@@ -103,9 +105,12 @@ digraph G {
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-types.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/compare.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/follower.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/follower.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/follower.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower-types.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/query-follower-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/query.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-async.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-async.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
@@ -128,5 +133,7 @@ digraph G {
     "src/crypto/crypto-driver-node.ts" -> "crypto" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto-driver-tweetnacl.ts" -> "tweetnacl" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto-driver-tweetnacl.ts" -> "sha256-uint8array" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/storage/storage-async.ts" -> "superbus" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/storage/storage-types.ts" -> "superbus" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
 
 }

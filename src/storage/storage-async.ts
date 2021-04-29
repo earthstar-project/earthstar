@@ -18,10 +18,10 @@ import {
     Query,
 } from './query-types';
 import {
-    IFollower,
     IStorageAsync,
     IStorageDriverAsync,
     IngestResult,
+    IngestResultAndDoc,
     StorageEvent,
 } from './storage-types';
 import {
@@ -63,9 +63,6 @@ export class StorageAsync implements IStorageAsync {
     bus: Superbus<StorageEvent>;
 
     _isClosed: boolean = false;
-
-    // Followers
-    _followers: Set<IFollower> = new Set();
 
     constructor(workspace: WorkspaceAddress, validator: IFormatValidator, driver: IStorageDriverAsync) {
         logger.debug(`constructor.  driver = ${(driver as any)?.constructor?.name}`);
@@ -139,10 +136,10 @@ export class StorageAsync implements IStorageAsync {
     //--------------------------------------------------
     // SET
 
-    async set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestResult> {
+    async set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestResultAndDoc> {
         loggerSet.debug(`set`, docToSet);
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        let protectedCode = async (): Promise<IngestResult> => {
+        let protectedCode = async (): Promise<IngestResultAndDoc> => {
             loggerSet.debug('  + set: start of protected region');
             loggerSet.debug('  | deciding timestamp: getting latest doc at the same path (from any author)');
             if (this._isClosed) { throw new StorageIsClosedError(); }
@@ -173,13 +170,13 @@ export class StorageAsync implements IStorageAsync {
             loggerSet.debug('  | signing doc');
             let signedDoc = this.formatValidator.signDocument(keypair, doc);
             if (isErr(signedDoc)) {
-                return IngestResult.Invalid;
+                return { ingestResult: IngestResult.Invalid, docIngested: null };
             }
             loggerSet.debug('  | signature =', signedDoc.signature);
 
             loggerSet.debug('  | ingesting...');
-            let result = await this.ingest(signedDoc, false);  // false means don't get lock again since we're already in the lock
-            loggerSet.debug('  | ...done ingesting', result);
+            let result: IngestResultAndDoc = await this.ingest(signedDoc, false);  // false means don't get lock again since we're already in the lock
+            loggerSet.debug('  | ...done ingesting');
             loggerSet.debug('  + set: end of protected region');
             return result;
         }
@@ -193,38 +190,38 @@ export class StorageAsync implements IStorageAsync {
         return result;
     }
 
-    async ingest(doc: Doc, _getLock: boolean = true): Promise<IngestResult> {
-        loggerIngest.debug(`ingest`, doc);
+    async ingest(docToIngest: Doc, _getLock: boolean = true): Promise<IngestResultAndDoc> {
+        loggerIngest.debug(`ingest`, docToIngest);
         if (this._isClosed) { throw new StorageIsClosedError(); }
 
         loggerIngest.debug('    removing extra fields');
-        let removeResultsOrErr = this.formatValidator.removeExtraFields(doc);
-        if (isErr(removeResultsOrErr)) { return IngestResult.Invalid; }
-        doc = removeResultsOrErr.doc;  // a copy of doc without extra fields
+        let removeResultsOrErr = this.formatValidator.removeExtraFields(docToIngest);
+        if (isErr(removeResultsOrErr)) { return { ingestResult: IngestResult.Invalid, docIngested: null }; }
+        docToIngest = removeResultsOrErr.doc;  // a copy of doc without extra fields
         let extraFields = removeResultsOrErr.extras;  // any extra fields starting with underscores
         if (Object.keys(extraFields).length > 0) {
             loggerIngest.debug(`    ....extra fields found: ${JSON.stringify(extraFields)}`);
         }
 
         // now actually check doc validity against core schema
-        let docIsValid = this.formatValidator.checkDocumentIsValid(doc);
-        if (isErr(docIsValid)) { return IngestResult.Invalid; }
+        let docIsValid = this.formatValidator.checkDocumentIsValid(docToIngest);
+        if (isErr(docIsValid)) { return { ingestResult: IngestResult.Invalid, docIngested: null }; }
 
-        let protectedCode = async (): Promise<IngestResult> => {
+        let protectedCode = async (): Promise<IngestResultAndDoc> => {
             // get other docs at the same path
             loggerIngest.debug(' >> ingest: start of protected region');
             loggerIngest.debug('  > getting other docs at the same path');
             if (this._isClosed) { throw new StorageIsClosedError(); }
-            let existingDocsSamePath = await this.getAllDocsAtPath(doc.path);
+            let existingDocsSamePath = await this.getAllDocsAtPath(docToIngest.path);
 
             // check if this is obsolete or redudant from the same other
             loggerIngest.debug('  > checking if obsolete from same author');
             let existingDocSameAuthor = existingDocsSamePath.filter(d =>
-                d.author === doc.author)[0];
+                d.author === docToIngest.author)[0];
             if (existingDocSameAuthor !== undefined) {
-                let docComp = docCompareForOverwrite(doc, existingDocSameAuthor);
-                if (docComp === Cmp.LT) { return IngestResult.ObsoleteFromSameAuthor; }
-                if (docComp === Cmp.EQ) { return IngestResult.AlreadyHadIt; }
+                let docComp = docCompareForOverwrite(docToIngest, existingDocSameAuthor);
+                if (docComp === Cmp.LT) { return { ingestResult: IngestResult.ObsoleteFromSameAuthor, docIngested: null }; }
+                if (docComp === Cmp.EQ) { return { ingestResult: IngestResult.AlreadyHadIt, docIngested: null }; }
             }
         
             // check if latest
@@ -232,69 +229,39 @@ export class StorageAsync implements IStorageAsync {
             let isLatest = true;
             for (let d of existingDocsSamePath) {
                 // TODO: use docCompareForOverwrite or something
-                if (doc.timestamp < d.timestamp) { isLatest = false; break; }
+                if (docToIngest.timestamp < d.timestamp) { isLatest = false; break; }
             }
 
             // save it
             loggerIngest.debug('  > upserting into storageDriver...');
-            let success = await this.storageDriver.upsert(doc);
+            let docResult = await this.storageDriver.upsert(docToIngest);
             loggerIngest.debug('  > ...done upserting into storageDriver');
             loggerIngest.debug(' >> ingest: end of protected region');
 
-            if (!success) { return IngestResult.WriteError; }
+            if (!docResult) { return { ingestResult: IngestResult.WriteError, docIngested: null}; }
             return isLatest
-                ? IngestResult.AcceptedAndLatest
-                : IngestResult.AcceptedButNotLatest;
+                ? { ingestResult: IngestResult.AcceptedAndLatest, docIngested: docResult }
+                : { ingestResult: IngestResult.AcceptedButNotLatest, docIngested: docResult }
         };
 
         loggerIngest.debug(' >> ingest: running protected region...');
-        let result: IngestResult;
+        let result: IngestResultAndDoc;
         if (_getLock) {
             result = await this.storageDriver.lock.run(protectedCode);
         } else {
             // we are already in a lock, just run the code
             result = await protectedCode();
         }
+        let { ingestResult, docIngested } = result;
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        loggerIngest.debug(' >> ingest: ...done running protected region', result);
+        loggerIngest.debug(' >> ingest: ...done running protected region', ingestResult);
 
-        loggerIngest.debug('  - ingest: waking followers...');
-        // Note: this section of code is outside of the protected region
-        // for ingest, but if we get here from set(), we're inside the protected
-        // region of set().  We should probably move the code inside the
-        // protected region of ingest for consistency.
-        // This also means that follower callbacks will not be allowed to call
-        // set() or ingest() or they'll deadlock...
-        // Also if the storage is closed during the protected region of ingest(),
-        // it will fail to reach this point because of the check a few lines above.
-        // The followers will be left behind.
-        // That's ok because followers are designed to catch up in scenarios like that.
-        for (let follower of this._followers) {
-            if (follower.blocking) {
-                // run blocking followers right now
-                loggerIngest.debug('    - blocking follower: await follower.wake()');
-                // TODO: optimization: if the blocking follower is already up to date,
-                // we only need to feed it this one new doc and then it won't
-                // have to do a whole query
-                if (!follower.isClosed()) {
-                    await follower.wake();
-                }
-                loggerIngest.debug('    - ...blocking follower is now done');
-            } else {
-                // lazy followers can be woken up later
-                loggerIngest.debug('    - lazy follower: waking it with a setTimeout to wake later');
-                setTimeout(() => {
-                    if (!follower.isClosed()) {
-                        follower.wake();
-                    }
-                }, 0);
-            }
-            // remove closed followers
-            if (follower.isClosed()) {
-                this._followers.delete(follower);
-            }
+        // only send events if we successfully ingested a doc
+        if (docIngested !== null) {
+            loggerIngest.debug('  - ingest: send ingest event blockingly...');
+            await this.bus.sendAndWait('ingest', docIngested);
+            loggerIngest.debug('  - ingest: ...done sending ingest event');
         }
-        loggerIngest.debug('  - ingest: ...done waking followers');
 
         return result;
     }
@@ -313,10 +280,6 @@ export class StorageAsync implements IStorageAsync {
         await this.bus.sendAndWait('willClose');
         logger.debug('    marking self as closed...');
         this._isClosed = true;
-        logger.debug('    closing followers...');
-        for (let follower of this._followers.values()) {
-            await follower.close();
-        }
         logger.debug('    closing storageDriver...');
         await this.storageDriver.close();
         logger.debug('    sending didClose nonblockingly...');

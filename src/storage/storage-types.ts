@@ -24,16 +24,9 @@ import {
 
 //================================================================================
 
-export type FollowerState = 'running' | 'sleeping' | 'closed';
-export interface IFollower {
-    blocking: boolean;
-    wake(): Promise<void>;
-    hatch(): Promise<void>;
-    isClosed(): boolean;
-    close(): Promise<void>;
-}
-
-export type StorageEvent = 'willClose' | 'didClose';
+export type StorageEvent =
+    'ingest' |
+    'willClose' | 'didClose';
 
 export interface IStorageAsync {
     workspace: WorkspaceAddress;
@@ -42,16 +35,10 @@ export interface IStorageAsync {
     bus: Superbus<StorageEvent>;
 
     //--------------------------------------------------
-    // CALLBACKS AND FOLLOWERS
-
-    // TODO: does this belong on the main storage or the driver?
-    _followers: Set<IFollower>;
-
-    getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
-    //--------------------------------------------------
     // GET
 
     // these should all return frozen docs
+    getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
     getAllDocs(): Promise<Doc[]>;
     getLatestDocs(): Promise<Doc[]>;
     getAllDocsAtPath(path: Path): Promise<Doc[]>;
@@ -63,17 +50,16 @@ export interface IStorageAsync {
 
     //--------------------------------------------------
     // SET
-    set(keypair: AuthorKeypair, doc: DocToSet): Promise<IngestResult>;
+    set(keypair: AuthorKeypair, doc: DocToSet): Promise<IngestResultAndDoc>;
 
     // this should freeze the incoming doc if needed
-    ingest(doc: Doc): Promise<IngestResult>;
+    ingest(doc: Doc): Promise<IngestResultAndDoc>;
 
     isClosed(): boolean;
     /**
      * close()
      *   * send StorageWillClose events and wait for event receivers to finish blocking.
      *   * close the IStorage
-     *   * close all its Followers
      *   * close the IStorageDriver
      *   * send StorageDidClose events and do not wait for event receivers.
      * 
@@ -102,8 +88,10 @@ export interface IStorageDriverAsync {
     //--------------------------------------------------
     // SET
     // do no checks of any kind, just save it to the indexes
-    // this should freeze the doc if needed
-    upsert(doc: Doc): Promise<boolean>;
+    // add a doc.  don't enforce any rules on it.
+    // overwrite existing doc even if this doc is older.
+    // return a copy of the doc, frozen, with _localIndex set.
+    upsert(doc: Doc): Promise<Doc>;
 
     isClosed(): boolean;
     // the IStorage will call this
@@ -111,7 +99,7 @@ export interface IStorageDriverAsync {
 }
 
 //================================================================================ 
-// EVENTS AND FOLLOWERS
+// EVENTS
 
 export enum IngestResult {
     // doc was not saved: negative numbers
@@ -123,6 +111,11 @@ export enum IngestResult {
     // doc was saved: positive numbers
     AcceptedButNotLatest = 'ACCEPTED_BUT_NOT_LATEST',
     AcceptedAndLatest = 'ACCEPTED_AND_LATEST',
+}
+
+export interface IngestResultAndDoc {
+    ingestResult: IngestResult,
+    docIngested: Doc | null,
 }
 
 /*

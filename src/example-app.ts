@@ -1,6 +1,6 @@
 import {
-    Doc,
-} from './util/doc-types';
+    isErr,
+} from './util/errors';
 import {
     sleep
 } from './util/misc';
@@ -14,11 +14,14 @@ import {
     StorageAsync,
 } from './storage/storage-async';
 import {
-    addFollower,
-} from './storage/follower';
-import { Crypto } from './crypto/crypto';
-import { CryptoDriverTweetnacl } from './crypto/crypto-driver-tweetnacl';
-import { isErr } from './util/errors';
+    Crypto,
+} from './crypto/crypto';
+import {
+    CryptoDriverTweetnacl,
+} from './crypto/crypto-driver-tweetnacl';
+import {
+    QueryFollower,
+} from './storage/query-follower';
 
 //--------------------------------------------------
 
@@ -30,9 +33,9 @@ import {
 } from './util/log';
 
 let loggerMain = new Logger('main', 'whiteBright');
-let loggerLazyFollower = new Logger("main's lazy follower", 'magentaBright');
-let loggerBlockingFollower = new Logger("main's blocking follower", 'magentaBright');
 let loggerBusEvents = new Logger('main storage bus events', 'white');
+let loggerQueryFollowerCallbacks1 = new Logger('main query follower 1 callback', 'red');
+let loggerQueryFollowerCallbacks2 = new Logger('main query follower 2 callback', 'red');
 
 setDefaultLogLevel(LogLevel.Debug);
 setLogLevel('main', LogLevel.Debug);
@@ -64,12 +67,33 @@ let main = async () => {
     loggerMain.info('    keypair =', keypair);
     loggerMain.info('-----------/')
 
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.info('-----------\\')
+    loggerMain.info('adding a queryFollower');
+    // add a QueryFollower
+    let qf1 = new QueryFollower(
+        storage,
+        {
+            historyMode: 'all', orderBy: 'localIndex ASC',
+            //startAt: { localIndex: 1 },
+            //filter: { path: '/posts/post-0001.txt' },
+        },
+        async (doc): Promise<void> => {
+            loggerQueryFollowerCallbacks1.debug('got a doc', doc);
+        }
+    );
+    loggerMain.info('hatching it');
+    await qf1.hatch();
+    loggerMain.info('-----------/')
+
     // write some docs
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.info('-----------\\')
-    let numDocsToWrite = 1;
+    let numDocsToWrite = 2;
     loggerMain.info(`setting ${numDocsToWrite} docs`)
     for (let ii = 0; ii < numDocsToWrite; ii++) {
         loggerMain.blank()
@@ -96,58 +120,36 @@ let main = async () => {
     }
     loggerMain.info('-----------/')
 
-    //if (Math.random() < 10) { process.exit(0); } // hack
-
-    // add lazy follower
+    // add another QueryFollower
+    // now that we have some docs, this will have to catch up
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.info('-----------\\')
-    loggerMain.info('adding lazy follower');
-    let lazyFollower = await addFollower({
-        storage: storage,
-        onDoc: (doc: Doc | null) => {
-            if (doc === null) {
-                loggerLazyFollower.debug('null -- I have become idle');
-            } else {
-                loggerLazyFollower.debug('got a doc:', doc);
-            }
+    loggerMain.info('adding a queryFollower');
+    let qf2 = new QueryFollower(
+        storage,
+        {
+            historyMode: 'all', orderBy: 'localIndex ASC',
+            //startAt: { localIndex: 1 },
+            //filter: { path: '/posts/post-0000.txt' },
         },
-        historyMode: 'latest',
-        blocking: false,
-        batchSize: 2,
-    });
-    loggerMain.info('-----------/')
-
-    // add blocking follower
-    loggerMain.blank()
-    loggerMain.blank()
-    loggerMain.blank()
-    loggerMain.info('-----------\\')
-    loggerMain.info('adding blocking follower');
-    let blockingFollower = await addFollower({
-        storage: storage,
-        onDoc: (doc: Doc | null) => {
-            if (doc === null) {
-                loggerBlockingFollower.debug('null -- I have become idle');
-            } else {
-                loggerBlockingFollower.debug('got a doc:', doc);
-            }
-        },
-        historyMode: 'latest',
-        blocking: true,
-        batchSize: 2,
-    });
+        async (doc): Promise<void> => {
+            loggerQueryFollowerCallbacks2.debug('got a doc', doc);
+        }
+    );
+    loggerMain.info('hatching it');
+    await qf2.hatch();
     loggerMain.info('-----------/')
 
     // sleep
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
-    loggerMain.info('sleep 100');
     loggerMain.info('---------------------------------------')
     loggerMain.info('-----------------------------------------')
     loggerMain.info('-------------------------------------------')
+    loggerMain.info('sleep 100');
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
@@ -155,11 +157,10 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
+    loggerMain.info('done sleeping 100');
     loggerMain.info('-------------------------------------------')
     loggerMain.info('-----------------------------------------')
     loggerMain.info('---------------------------------------')
-    loggerMain.info('done sleeping 100');
-
 
     storage.bus.on('willClose', async () => {
         loggerBusEvents.debug('storage willClose... sleeping 1 second...');
@@ -184,8 +185,6 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.blank()
 
-    //debug('closing follower');
-    //lazyFollower.close();
 }
 main();
 
