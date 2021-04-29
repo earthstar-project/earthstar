@@ -8,6 +8,7 @@ const externals = [
   "chloride",
   "sha256-uint8array",
   "tweetnacl",
+  "superbus",
   "util"
 ];
 

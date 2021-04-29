@@ -6,7 +6,8 @@ export * from "../crypto/crypto";
 export * from "../format-validators/format-validator-es4";
 export * from "../format-validators/format-validator-types";
 
-export * from "../storage/follower";
+export * from "../storage/query-follower-types";
+export * from "../storage/query-follower";
 
 export * from "../storage/query-types";
 export * from "../storage/query";
