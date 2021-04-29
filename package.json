@@ -6,11 +6,12 @@
   "author": "Cinnamon <cinnamon_bun_github@fastmail.com>",
   "homepage": "https://github.com/earthstar-project/stone-soup",
   "license": "AGPL-3.0",
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "dist/earthstar.cjs",
+  "module": "dist/earthstar.js",
+  "types": "dist/types/universal.d.ts",
   "browser": {
     "./build/index.js": "./build/index.browser.js",
-    "./build/crypto-driver-node.js": false,
+    "./build/crypto/crypto-driver-node.js": false,
     "tap": "tape"
   },
   "tap": {
@@ -18,15 +19,36 @@
       "--exclude=build/test/*/*.js"
     ]
   },
+  "exports": {
+    ".": {
+      "types": "./dist/types/universal.d.ts",
+      "node": {
+        "require": "./dist/earthstar.cjs",
+        "import": "./dist/earthstar.mjs"
+      },
+      "default": "./dist/earthstar.js"
+    },
+    "./browser": {
+      "types": "./dist/types/browser.d.ts",
+      "default": "./dist/browser/browser.js"
+    },
+    "./node": {
+      "types": "./dist/types/node.d.ts",
+      "require": "./dist/node/node.cjs",
+      "default": "./dist/node/node.mjs"
+    }
+  },
   "scripts": {
-    "clean": "rm -rf build coverage .nyc_output browserify-tests",
-    "build": "tsc",
-    "clean-build-test": "yarn clean && yarn build && yarn test",
-    "print-platform-support": "yarn clean && yarn build && node build/print-platform-support.js",
+    "clean": "rm -rf build coverage .nyc_output browserify-tests node browser dist",
+    "esbuild": "rm -rf dist && node ./scripts/build.mjs && yarn build-types",
+    "build-tsc": "tsc",
+    "build-types": "dts-bundle-generator --config dts-bundle.config.json",
+    "clean-build-test": "yarn clean && yarn build-tsc && yarn test",
+    "print-platform-support": "yarn clean && yarn build-tsc && node build/print-platform-support.js",
     "start": "node build/example-app.js",
     "browserify": "mkdir -p browserify-tests && browserify build/test/universal/*.test.js build/test/browser/*.test.js build/test/browser-run-exit.js > browserify-tests/bundle.js",
     "browser-run": "cat browserify-tests/bundle.js | browser-run | tap-spec",
-    "test-in-browser": "yarn clean && yarn build && yarn browserify && yarn browser-run",
+    "test-in-browser": "yarn clean && yarn build-tsc && yarn browserify && yarn browser-run",
     "test": "tap --timeout=120 --no-bail build/test/universal/*.test.js build/test/node/*.test.js",
     "test2": "tap -Rspecy --no-bail --jobs=1 build/test/universal/*.test.js build/test/node/*.test.js",
     "test-coverage": "yarn test --coverage-report=lcov",
@@ -36,8 +58,8 @@
     "test-crypto": "tap -Rspecy --no-bail --jobs=1 build/test/node/crypto.node.test.js",
     "test-storage-driver": "tap -Rspecy --no-bail --jobs=1 build/test/node/storage-driver-async.node.test.js",
     "test-storage": "tap -Rspecy --no-bail --jobs=1 build/test/node/storage-async.node.test.js",
-    "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn clean-build-test",
-    "prepublishOnly": "yarn clean && yarn build",
+    "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn clean-build-and-test",
+    "prepublishOnly": "yarn clean && yarn esbuild",
     "depchart-main": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-main --node_modules omit",
     "depchart-deps": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-deps --node_modules integrated",
     "depchart-loose": "depchart `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --loose --rankdir LR -o depchart/depchart-loose --node_modules omit",
@@ -51,6 +73,8 @@
     "browser-run": "^10.1.0",
     "browserify": "^17.0.0",
     "depchart": "^1.2.0",
+    "dts-bundle-generator": "^5.9.0",
+    "esbuild": "^0.11.13",
     "onchange": "^7.1.0",
     "tap": "^14.11.0",
     "tap-spec": "^5.0.0",
