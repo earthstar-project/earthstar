@@ -3,7 +3,7 @@ import { isErr, StorageIsClosedError } from "../util/errors";
 import { microsecondNow } from "../util/misc";
 import { docMatchesFilter, cleanUpQuery } from "./query";
 import { QueryFollower } from "./query-follower";
-import { HistoryMode, Query } from "./query-types";
+import { Query } from "./query-types";
 import { StorageAsync } from "./storage-async";
 import { IngestResult, IngestResultAndDoc } from "./storage-types";
 import isEqual from "fast-deep-equal";
@@ -75,7 +75,7 @@ export class StorageCache {
   
   _timeToLive: number;
 
-  _onStaleCallbacks = new Set<() => void | (() => Promise<void>)>();
+  _onCacheUpdatedCallbacks = new Set<() => void | (() => Promise<void>)>();
 
   constructor(storage: StorageAsync, timeToLive?: number) {
     this._storage = storage;
@@ -154,7 +154,7 @@ export class StorageCache {
         this._storage.queryDocs(query).then((docs) => {
           this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
           console.log("⌛️");
-          this._fireOnStales();
+          this._fireOnCacheUpdateds();
         });
       }
 
@@ -186,7 +186,7 @@ export class StorageCache {
     this._storage.queryDocs(query).then((docs) => {
       this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
       console.log("👹");
-      this._fireOnStales();
+      this._fireOnCacheUpdateds();
     });
 
     // Return an empty result for the moment.
@@ -273,7 +273,7 @@ export class StorageCache {
         console.log("🥞");
         let nextDocs = [...entry.docs, doc];
         this._docCache.set(key, { ...entry, docs: sortAndLimit(query, nextDocs) });
-        this._fireOnStales();
+        this._fireOnCacheUpdateds();
       };
 
       const replaceDoc = ({ exact }: { exact: boolean }) => {
@@ -293,7 +293,7 @@ export class StorageCache {
         });
 
         this._docCache.set(key, { ...entry, docs: sortAndLimit(query,nextDocs) });
-        this._fireOnStales();
+        this._fireOnCacheUpdateds();
       };
 
       const documentsWithSamePath = entry.docs.filter(
@@ -342,20 +342,20 @@ export class StorageCache {
 
   // SUBSCRIBE
 
-  _fireOnStales() {
+  _fireOnCacheUpdateds() {
     return Promise.all(
-      Array.from(this._onStaleCallbacks.values()).map((callback) => {
+      Array.from(this._onCacheUpdatedCallbacks.values()).map((callback) => {
         return callback();
       })
     );
   }
 
   // Provide a function to be called when the storage cache knows its caller has stale results.
-  onStale(callback: () => void | (() => Promise<void>)): () => void {
-    this._onStaleCallbacks.add(callback);
+  onCacheUpdated(callback: () => void | (() => Promise<void>)): () => void {
+    this._onCacheUpdatedCallbacks.add(callback);
 
     return () => {
-      this._onStaleCallbacks.delete(callback);
+      this._onCacheUpdatedCallbacks.delete(callback);
     };
   }
 }

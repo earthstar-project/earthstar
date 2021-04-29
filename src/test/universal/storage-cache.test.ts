@@ -12,7 +12,7 @@ import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-mem
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4";
 import { Crypto } from "../../crypto/crypto";
 import { CryptoDriverTweetnacl } from "../../crypto/crypto-driver-tweetnacl";
-import { AuthorKeypair, Doc } from "../../util/doc-types";
+import { AuthorKeypair } from "../../util/doc-types";
 
 // No types for tap...? Bit of a drag.
 
@@ -38,7 +38,7 @@ t.test("works", (t: any) => {
     orangesDoc: cache.getLatestDocAtPath("/test/oranges.txt"),
   };
 
-  cache.onStale(() => {
+  cache.onCacheUpdated(() => {
     values.allDocs = cache.getAllDocs();
     values.latestDocs = cache.getLatestDocs();
     values.orangesDoc = cache.getLatestDocAtPath("/test/oranges.txt");
