@@ -25,8 +25,9 @@ digraph G {
         "src/format-validators/format-validator-es4.ts" [label="src/format-validators/format-validator-es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/format-validators/format-validator-types.ts" [label="src/format-validators/format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/storage/compare.ts" [label="src/storage/compare.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
-            "src/storage/follower.ts" [label="src/storage/follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/lock.ts" [label="src/storage/lock.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/query-follower-types.ts" [label="src/storage/query-follower-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/query-follower.ts" [label="src/storage/query-follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/query-types.ts" [label="src/storage/query-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/query.ts" [label="src/storage/query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/storage-async.ts" [label="src/storage/storage-async.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
@@ -50,9 +51,9 @@ digraph G {
     "src/example-app.ts" -> "src/format-validators/format-validator-es4.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/storage/storage-driver-async-memory.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/storage/storage-async.ts" [penwidth=2; color=darkslategray4];
-    "src/example-app.ts" -> "src/storage/follower.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/crypto/crypto.ts" [penwidth=2; color=darkslategray4];
     "src/example-app.ts" -> "src/crypto/crypto-driver-tweetnacl.ts" [penwidth=2; color=darkslategray4];
+    "src/example-app.ts" -> "src/storage/query-follower.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
@@ -60,9 +61,12 @@ digraph G {
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-types.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/compare.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/follower.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/follower.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
-    "src/storage/follower.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower-types.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/query-follower.ts" -> "src/storage/query-follower-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/query.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-async.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-async.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
