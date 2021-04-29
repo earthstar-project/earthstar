@@ -52,7 +52,7 @@ let docComparePathThenNewestFirst = (a: Doc, b: Doc): Cmp => {
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
     lock: Lock;
-    _highestLocalIndex: LocalIndex = 0;
+    _highestLocalIndex: LocalIndex = -1;
     _isClosed: boolean = false;
   
     // Our indexes.
@@ -163,9 +163,10 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         return filteredDocs;
     }
   
-    async upsert(doc: Doc): Promise<boolean> {
+    async upsert(doc: Doc): Promise<Doc> {
         // add a doc.  don't enforce any rules on it.
         // overwrite existing doc even if this doc is older.
+        // return a copy of the doc, frozen, with _localIndex set.
 
         if (this._isClosed) { throw new StorageIsClosedError(); }
 
@@ -191,7 +192,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         // save the list back to the index
         this.docsByPathNewestFirst.set(doc.path, docsByPath);
   
-        return true;
+        return doc;
     }
 
     isClosed(): boolean {

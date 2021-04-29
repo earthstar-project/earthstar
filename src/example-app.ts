@@ -2,6 +2,10 @@ import {
     Doc,
 } from './util/doc-types';
 import {
+    isErr,
+} from './util/errors';
+
+import {
     sleep
 } from './util/misc';
 import {
@@ -13,9 +17,15 @@ import {
 import {
     StorageAsync,
 } from './storage/storage-async';
-import { Crypto } from './crypto/crypto';
-import { CryptoDriverTweetnacl } from './crypto/crypto-driver-tweetnacl';
-import { isErr } from './util/errors';
+import {
+    Crypto,
+} from './crypto/crypto';
+import {
+    CryptoDriverTweetnacl,
+} from './crypto/crypto-driver-tweetnacl';
+import {
+    QueryFollower,
+} from './storage/query-follower';
 
 //--------------------------------------------------
 
@@ -28,6 +38,8 @@ import {
 
 let loggerMain = new Logger('main', 'whiteBright');
 let loggerBusEvents = new Logger('main storage bus events', 'white');
+let loggerQueryFollowerCallbacks1 = new Logger('main query follower 1 callback', 'red');
+let loggerQueryFollowerCallbacks2 = new Logger('main query follower 2 callback', 'red');
 
 setDefaultLogLevel(LogLevel.Debug);
 setLogLevel('main', LogLevel.Debug);
@@ -59,12 +71,29 @@ let main = async () => {
     loggerMain.info('    keypair =', keypair);
     loggerMain.info('-----------/')
 
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.info('-----------\\')
+    loggerMain.info('adding a queryFollower');
+    // add a QueryFollower
+    let qf = new QueryFollower(
+        storage,
+        { historyMode: 'all', orderBy: 'localIndex ASC' },
+        async (doc): Promise<void> => {
+            loggerQueryFollowerCallbacks1.debug('got a doc', doc);
+        }
+    );
+    loggerMain.info('hatching it');
+    await qf.hatch();
+    loggerMain.info('-----------/')
+
     // write some docs
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.info('-----------\\')
-    let numDocsToWrite = 1;
+    let numDocsToWrite = 2;
     loggerMain.info(`setting ${numDocsToWrite} docs`)
     for (let ii = 0; ii < numDocsToWrite; ii++) {
         loggerMain.blank()
@@ -91,14 +120,32 @@ let main = async () => {
     }
     loggerMain.info('-----------/')
 
+    // add another QueryFollower
+    // now that we have some docs, this will have to catch up
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.blank()
+    loggerMain.info('-----------\\')
+    loggerMain.info('adding a queryFollower');
+    let qf2 = new QueryFollower(
+        storage,
+        { historyMode: 'all', orderBy: 'localIndex ASC' }, //, startAt: { localIndex: 1 } },
+        async (doc): Promise<void> => {
+            loggerQueryFollowerCallbacks2.debug('got a doc', doc);
+        }
+    );
+    loggerMain.info('hatching it');
+    await qf2.hatch();
+    loggerMain.info('-----------/')
+
     // sleep
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
-    loggerMain.info('sleep 100');
     loggerMain.info('---------------------------------------')
     loggerMain.info('-----------------------------------------')
     loggerMain.info('-------------------------------------------')
+    loggerMain.info('sleep 100');
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
@@ -106,11 +153,10 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.blank()
     loggerMain.blank()
+    loggerMain.info('done sleeping 100');
     loggerMain.info('-------------------------------------------')
     loggerMain.info('-----------------------------------------')
     loggerMain.info('---------------------------------------')
-    loggerMain.info('done sleeping 100');
-
 
     storage.bus.on('willClose', async () => {
         loggerBusEvents.debug('storage willClose... sleeping 1 second...');
