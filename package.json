@@ -63,7 +63,8 @@
     "depchart-main": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-main --node_modules omit",
     "depchart-deps": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-deps --node_modules integrated",
     "depchart-loose": "depchart `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --loose --rankdir LR -o depchart/depchart-loose --node_modules omit",
-    "depchart": "yarn depchart-main & yarn depchart-deps & yarn depchart-loose && echo 'done'"
+    "depchart": "yarn depchart-main & yarn depchart-deps & yarn depchart-loose && echo 'done'",
+    "benchmark": "yarn clean && yarn build-tsc && mkdir -p benchmark-results && node --expose-gc build/test/benchmark.js | tee benchmark-results/benchmark.txt"
   },
   "resolutions": {
     "minimist": "^1.2.5"
