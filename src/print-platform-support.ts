@@ -1,15 +1,11 @@
-
+import chalk from 'chalk';
 import {
     cryptoDrivers_browserOnly,
-    cryptoDrivers_browserAndUniversal,
     storageDriversAsync_browserOnly,
-    storageDriversAsync_browserAndUniversal
 } from './test/browser/platform.browser';
 import {
     cryptoDrivers_nodeOnly,
-    cryptoDrivers_nodeAndUniversal,
     storageDriversAsync_nodeOnly,
-    storageDriversAsync_nodeAndUniversal
 } from './test/node/platform.node';
 import {
     cryptoDrivers_universal,
@@ -18,40 +14,56 @@ import {
 
 //================================================================================
 
-let logDriverNames = (drivers: any[]) => {
-    for (let driver of drivers) {
-        console.log(`    ${driver.name}`);
-    }
+
+type Platform = 'universal' | 'browser' | 'node' | '?';
+let logDriverAndPlatform = (driver: any, platform: Platform) => {
+    let driverName: string = driver.name;
+    let platformPadded = platform.padStart(10, ' ');
+
+    let platformColor = chalk.visible;
+    let driverColor = chalk.visible;
+    if      (platform === 'universal') { platformColor = chalk.green; }
+    else if (platform === 'browser'  ) { platformColor = chalk.magentaBright; }
+    else if (platform === 'node'     ) { platformColor = chalk.yellowBright; }
+    if      (driverName.startsWith('Crypto') ) { driverColor = chalk.blueBright; }
+    else if (driverName.startsWith('Storage')) { driverColor = chalk.cyanBright; }
+
+    console.log(`    ${platformColor(platformPadded)} - ${driverColor(driverName)}`);
 }
+let log = (msg: string = '') => console.log(chalk.white(msg));
 
-console.log();
+log();
 
-console.log('CRYPTO DRIVERS');
-console.log('  UNIVERSAL:');
-logDriverNames(cryptoDrivers_universal);
-console.log('  BROWSER ONLY:');
-logDriverNames(cryptoDrivers_browserOnly);
-console.log('  NODE ONLY:');
-logDriverNames(cryptoDrivers_nodeOnly);
-console.log();
-console.log('  BROWSER + UNIVERSAL:');
-logDriverNames(cryptoDrivers_browserAndUniversal);
-console.log('  NODE + UNIVERSAL:');
-logDriverNames(cryptoDrivers_nodeAndUniversal);
+log('BY DRIVER TYPE');
+log();
 
-console.log();
+log('  CRYPTO');
+cryptoDrivers_universal.forEach(driver => logDriverAndPlatform(driver, 'universal'));
+cryptoDrivers_browserOnly.forEach(driver => logDriverAndPlatform(driver, 'browser'));
+cryptoDrivers_nodeOnly.forEach(driver => logDriverAndPlatform(driver, 'node'));
+log();
 
-console.log('STORAGE DRIVERS');
-console.log('  UNIVERSAL:');
-logDriverNames(storageDriversAsync_universal);
-console.log('  BROWSER ONLY:');
-logDriverNames(storageDriversAsync_browserOnly);
-console.log('  NODE ONLY:');
-logDriverNames(storageDriversAsync_nodeOnly);
-console.log();
-console.log('  BROWSER + UNIVERSAL:');
-logDriverNames(storageDriversAsync_browserAndUniversal);
-console.log('  NODE + UNIVERSAL:');
-logDriverNames(storageDriversAsync_nodeAndUniversal);
+log('  STORAGE');
+storageDriversAsync_universal.forEach(driver => logDriverAndPlatform(driver, 'universal'));
+storageDriversAsync_browserOnly.forEach(driver => logDriverAndPlatform(driver, 'browser'));
+storageDriversAsync_nodeOnly.forEach(driver => logDriverAndPlatform(driver, 'node'));
+log();
 
-console.log();
+log();
+
+log('EVERYTHING AVAILABLE IN...');
+log();
+
+log('  BROWSER');
+cryptoDrivers_universal.forEach(driver => logDriverAndPlatform(driver, 'universal'));
+cryptoDrivers_browserOnly.forEach(driver => logDriverAndPlatform(driver, 'browser'));
+storageDriversAsync_universal.forEach(driver => logDriverAndPlatform(driver, 'universal'));
+storageDriversAsync_browserOnly.forEach(driver => logDriverAndPlatform(driver, 'browser'));
+log();
+
+log('  NODE');
+cryptoDrivers_universal.forEach(driver => logDriverAndPlatform(driver, 'universal'));
+cryptoDrivers_nodeOnly.forEach(driver => logDriverAndPlatform(driver, 'node'));
+storageDriversAsync_universal.forEach(driver => logDriverAndPlatform(driver, 'universal'));
+storageDriversAsync_nodeOnly.forEach(driver => logDriverAndPlatform(driver, 'node'));
+log();

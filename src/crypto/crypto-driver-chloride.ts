@@ -1,4 +1,4 @@
-import sodium = require('chloride/small')
+import sodium = require('chloride')
 import {
     ICryptoDriver,
     KeypairBytes,
@@ -15,10 +15,21 @@ import {
 
 //--------------------------------------------------
 
-import { Logger } from '../util/log';
-let logger = new Logger('crypto-driver-tweetnacl', 'cyan');
+import { Logger, LogLevel, setLogLevel } from '../util/log';
+let logger = new Logger('crypto-driver-chloride', 'cyan');
+
+setLogLevel('crypto-driver-chloride', LogLevel.Info);
 
 //================================================================================
+
+/*
+export let waitUntilChlorideIsReady = async () => {
+    logger.info('waiting for chloride to become ready...');
+    // TODO: how to do this properly?
+    // https://github.com/jedisct1/libsodium.js#usage-as-a-module
+    await sleep(2000);
+}
+*/
 
 /**
  * A verison of the ILowLevelCrypto interface backed by Chloride.

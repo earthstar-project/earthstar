@@ -3,7 +3,7 @@
 // prepare for test scenarios
 
 import { Crypto } from '../crypto/crypto';
-import { CryptoDriverChloride } from '../crypto/crypto-driver-chloride';
+import { CryptoDriverChloride, waitUntilChlorideIsReady } from '../crypto/crypto-driver-chloride';
 import { CryptoDriverNode } from '../crypto/crypto-driver-node';
 import { CryptoDriverTweetnacl } from '../crypto/crypto-driver-tweetnacl';
 import { ICrypto, ICryptoDriver } from '../crypto/crypto-types';
@@ -34,18 +34,6 @@ let syncLocal = async (storage1: IStorageAsync, storage2: IStorageAsync): Promis
 }
 
 //================================================================================
-
-interface PartsInput {
-    cryptoDriver: ICryptoDriver;
-    storageDriverClass: ClassThatImplements<IStorageDriverAsync>;
-}
-interface Parts {
-    description: string,
-    cryptoDriver: ICryptoDriver;
-    crypto: ICrypto;
-    validator: IFormatValidator;
-    makeStorage: (workspace: WorkspaceAddress) => IStorageAsync;
-}
 
 let makeParts = ({ cryptoDriver, storageDriverClass }: PartsInput): Parts => {
     let description = `${(cryptoDriver as any).name} & ${(storageDriverClass as any).name}`;
@@ -105,12 +93,12 @@ let scenarios : Scenario[] = [
             storageDriverClass: StorageDriverAsyncMemory,
         },
     },
-    {
-        partsInput: {
-            cryptoDriver: CryptoDriverNode,
-            storageDriverClass: StorageDriverAsyncMemory,
-        },
-    },
+    //{
+    //    partsInput: {
+    //        cryptoDriver: CryptoDriverNode,
+    //        storageDriverClass: StorageDriverAsyncMemory,
+    //    },
+    //},
 ];
 
 //================================================================================
@@ -186,6 +174,11 @@ class Runner {
 let gc = global.gc || (() => {});
 
 let main = async () => {
+
+    if (CryptoDriverChloride !== undefined) {
+        await waitUntilChlorideIsReady();
+    }
+
     let runner = new Runner();
     for (let scenario of scenarios) {
 
@@ -200,29 +193,9 @@ let main = async () => {
         let storageAdd = parts.makeStorage(WORKSPACE);
         gc();
 
-        await runner.runMany('crypto: sha256', {minDuration: 1234}, async () => {
-            parts.crypto.driver.sha256('' + Math.random() + Math.random() + Math.random() + Math.random());
-        });
-
-        await runner.runMany('crypto: generateAuthorKeypair', {minDuration: 1234}, async () => {
-            parts.crypto.generateAuthorKeypair('abcd');
-        });
-
-        let msg = 'hello';
-        await runner.runMany('crypto: sign', {minDuration: 1234}, async () => {
-            parts.crypto.sign(authors.keypair1, msg);
-        });
-
-        let sig = parts.crypto.sign(authors.keypair1, 'hello');
-        await runner.runMany('crypto: validate', {minDuration: 1234}, async () => {
-            parts.crypto.verify(authors.author1, sig as string, msg);
-        });
-
-        runner.note('');
-
         for (let n of [100]){ // , 101, 102, 103, 1000, 1001, 10000]) {
             await runner.runOnce(`storage: add ${n} docs (each)`, {actualIters: n}, async () => {
-            for (let ii = 0; ii < n; ii++) {
+                for (let ii = 0; ii < n; ii++) {
                     await storageAdd.set(authors.keypair1, {
                         format: 'es.4',
                         workspace: WORKSPACE,
