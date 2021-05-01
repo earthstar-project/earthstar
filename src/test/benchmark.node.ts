@@ -218,9 +218,11 @@ let main = async () => {
             parts.crypto.verify(authors.author1, sig as string, msg);
         });
 
+        runner.note('');
+
         for (let n of [100]){ // , 101, 102, 103, 1000, 1001, 10000]) {
             await runner.runOnce(`storage: add ${n} docs (each)`, {actualIters: n}, async () => {
-                for (let ii = 0; ii < n; ii++) {
+            for (let ii = 0; ii < n; ii++) {
                     await storageAdd.set(authors.keypair1, {
                         format: 'es.4',
                         workspace: WORKSPACE,

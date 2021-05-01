@@ -1,0 +1,35 @@
+2021-05-01T04:15:20.607Z
+(using chloride/small)
+
+CryptoDriverTweetnacl & StorageDriverAsyncMemory
+      258870 ops / sec: crypto: sha256
+         225 ops / sec: crypto: generateAuthorKeypair
+         227 ops / sec: crypto: sign
+         115 ops / sec: crypto: validate
+
+          74 ops / sec: storage: add 100 docs (each)
+          56 ops / sec: storage: sync 100 docs to empty storage (each)
+          58 ops / sec: storage: sync 100 docs to full storage (each)
+             
+
+CryptoDriverChloride & StorageDriverAsyncMemory
+      217470 ops / sec: crypto: sha256
+       28814 ops / sec: crypto: generateAuthorKeypair
+       32576 ops / sec: crypto: sign
+       13488 ops / sec: crypto: validate
+
+        2439 ops / sec: storage: add 100 docs (each)
+        2174 ops / sec: storage: sync 100 docs to empty storage (each)
+        2381 ops / sec: storage: sync 100 docs to full storage (each)
+             
+
+CryptoDriverNode & StorageDriverAsyncMemory
+      175273 ops / sec: crypto: sha256
+       16147 ops / sec: crypto: generateAuthorKeypair
+        9749 ops / sec: crypto: sign
+        7442 ops / sec: crypto: validate
+
+        1923 ops / sec: storage: add 100 docs (each)
+        1786 ops / sec: storage: sync 100 docs to empty storage (each)
+        1786 ops / sec: storage: sync 100 docs to full storage (each)
+             
