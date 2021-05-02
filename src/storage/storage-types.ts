@@ -17,6 +17,9 @@ import {
 import {
     IFormatValidator
 } from '../format-validators/format-validator-types';
+import {
+    ValidationError
+} from '../util/errors';
 
 import {
     Lock,
@@ -54,6 +57,16 @@ export interface IStorageAsync {
 
     // this should freeze the incoming doc if needed
     ingest(doc: Doc): Promise<IngestResultAndDoc>;
+
+    // Overwrite every doc from this author, including history versions, with an empty doc.
+    // The new docs will have a timestamp of (oldDoc.timestamp + 1) to prevent them from
+    //  jumping to the front of the history and becoming Latest.
+    // Return the number of docs changed, or a ValidationError.
+    // Already-empty docs will not be overwritten.
+    // If an error occurs this will stop early.
+    overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError>;
+
+    //--------------------------------------------------
 
     isClosed(): boolean;
     /**

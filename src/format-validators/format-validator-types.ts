@@ -36,6 +36,7 @@ export interface IFormatValidator {
      * Add an author signature to the document.
      * The input document needs a signature field to satisfy Typescript, but
      * it will be overwritten here, so you may as well just set signature: '' on the input.
+     * Return a copy of the original document with the signature field changed, or return a ValidationError.
      */
     signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError;
 

@@ -70,5 +70,6 @@ export interface DocToSet {
     workspace: WorkspaceAddress,
     path: Path,
     content: string,
+    timestamp?: number,
     deleteAfter?: number | null,
 }
