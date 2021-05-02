@@ -50,7 +50,6 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
             for (let ii = 0; ii < n; ii++) {
                 await storageAdd.set(keypair1, {
                     format: 'es.4',
-                    workspace: workspace,
                     path: '/test/' + ii,
                     content: 'hello' + ii,
                 });

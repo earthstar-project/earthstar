@@ -63,21 +63,18 @@ t.test("works", (t: any) => {
     content: "Hello!",
     path: "/test/hello.txt",
     format: "es.4",
-    workspace: WORKSPACE_ADDR,
   });
 
   cache.set(keypair, {
     content: "Apples!",
     path: "/test/apples.txt",
     format: "es.4",
-    workspace: WORKSPACE_ADDR,
   });
 
   cache.set(keypair, {
     content: "Oranges!",
     path: "/test/oranges.txt",
     format: "es.4",
-    workspace: WORKSPACE_ADDR,
   });
 
   t.equals(values.allDocs.length, 3);
@@ -89,7 +86,6 @@ t.test("works", (t: any) => {
     content: "Suzy's Oranges!",
     path: "/test/oranges.txt",
     format: "es.4",
-    workspace: WORKSPACE_ADDR,
   });
 
   t.equals(values.allDocs.length, 4);

@@ -102,7 +102,6 @@ let main = async () => {
         loggerMain.info(`setting #${ii}`);
         let result = await storage.set(keypair, {
             format: 'es.4',
-            workspace,
             path: `/posts/post-${(''+ii).padStart(4, '0')}.txt`,
             content: `Hello ${ii}`,
         });

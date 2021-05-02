@@ -67,7 +67,6 @@ export interface Doc {
 // The rest of the properties will be filled in by storage.write().
 export interface DocToSet {
     format: string,
-    workspace: WorkspaceAddress,
     path: Path,
     content: string,
     timestamp?: number,

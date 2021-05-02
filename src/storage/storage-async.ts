@@ -170,7 +170,7 @@ export class StorageAsync implements IStorageAsync {
                 deleteAfter: null,
                 path: docToSet.path,
                 timestamp,
-                workspace: docToSet.workspace,
+                workspace: this.workspace,
                 signature: '?',  // signature will be added in just a moment
                 // _localIndex will be added during upsert.  it's not needed for the signature.
             }

@@ -106,14 +106,12 @@ export let runStorageTests = (description: string, makeStorage: (ws: WorkspaceAd
         let now = microsecondNow();
         await storage.set(keypair1, {
             format: 'es.4',
-            workspace,
             path: '/pathA',
             content: 'content1',
             timestamp: now,
         });
         await storage.set(keypair2, {
             format: 'es.4',
-            workspace,
             path: '/pathA',
             content: 'content2',
             timestamp: now + 3, // latest
@@ -121,14 +119,12 @@ export let runStorageTests = (description: string, makeStorage: (ws: WorkspaceAd
 
         await storage.set(keypair2, {
             format: 'es.4',
-            workspace,
             path: '/pathB',
             content: 'content2',
             timestamp: now,
         });
         await storage.set(keypair1, {
             format: 'es.4',
-            workspace,
             path: '/pathB',
             content: 'content1',
             timestamp: now + 3, // latest

@@ -220,7 +220,7 @@ export class StorageCache {
       deleteAfter: null,
       path: docToSet.path,
       timestamp: microsecondNow(),
-      workspace: docToSet.workspace,
+      workspace: this._storage.workspace,
       signature: "?",
     };
 
