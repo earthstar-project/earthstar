@@ -1,15 +1,17 @@
 import t = require('tap');
 
 import {
-    Doc,
     WorkspaceAddress,
 } from '../../util/doc-types';
 import {
-    Query,
-} from '../../storage/query-types';
-import {
     IStorageAsync,
 } from '../../storage/storage-types';
+import {
+    isErr,
+} from '../../util/errors';
+import {
+    microsecondNow,
+} from '../../util/misc';
 
 //================================================================================
 
@@ -89,5 +91,112 @@ export let runStorageTests = (description: string, makeStorage: (ws: WorkspaceAd
         t.end();
     });
 
-    // TODO: more Storage tests
+    t.test(nameOfRun + ': storage overwriteAllDocsByAuthor', async (t: any) => {
+        let workspace = '+gardening.abcde';
+        let storage = makeStorage(workspace);
+
+        let keypair1 = storage.formatValidator.crypto.generateAuthorKeypair('aaaa');
+        let keypair2 = storage.formatValidator.crypto.generateAuthorKeypair('aaaa');
+        if (isErr(keypair1) || isErr(keypair2)) {
+            t.ok(false, 'error making keypair');
+            t.end();
+            return;
+        }
+
+        let now = microsecondNow();
+        await storage.set(keypair1, {
+            format: 'es.4',
+            workspace,
+            path: '/pathA',
+            content: 'content1',
+            timestamp: now,
+        });
+        await storage.set(keypair2, {
+            format: 'es.4',
+            workspace,
+            path: '/pathA',
+            content: 'content2',
+            timestamp: now + 3, // latest
+        });
+
+        await storage.set(keypair2, {
+            format: 'es.4',
+            workspace,
+            path: '/pathB',
+            content: 'content2',
+            timestamp: now,
+        });
+        await storage.set(keypair1, {
+            format: 'es.4',
+            workspace,
+            path: '/pathB',
+            content: 'content1',
+            timestamp: now + 3, // latest
+        });
+
+        // history of each path, latest doc first:
+        //   /pathA: keypair2, keypair1
+        //   /pathB: keypair1, keypair2
+
+        //--------------------------------------------
+        // check everything is as expected before we do the overwriteAll
+
+        t.same((await storage.getAllDocs()).length, 4, 'should have 4 docs including history');
+        t.same((await storage.getLatestDocs()).length, 2, 'should have 2 latest-docs');
+
+        let docsA = await storage.getAllDocsAtPath('/pathA');  // latest first
+        let docsA_actualAuthorAndContent = docsA.map(doc => [doc.author, doc.content]);
+        let docsA_expectedAuthorAndContent: [string, string][] = [
+            [keypair2.address, 'content2'],  // latest first
+            [keypair1.address, 'content1'],
+        ];
+        t.same(docsA.length, 2, 'two docs found at /pathA (including history)');
+        t.ok(docsA[0].timestamp > docsA[1].timestamp, 'docs are ordered latest first within this path');
+        t.same(docsA_actualAuthorAndContent, docsA_expectedAuthorAndContent, '/pathA docs are as expected');
+
+        let docsB = await storage.getAllDocsAtPath('/pathB');  // latest first
+        let docsB_actualAuthorAndContent = docsB.map(doc => [doc.author, doc.content]);
+        let docsB_expectedAuthorAndContent: [string, string][] = [
+            [keypair1.address, 'content1'],  // latest first
+            [keypair2.address, 'content2'],
+        ];
+        t.same(docsB.length, 2, 'two docs found at /pathB (including history)');
+        t.ok(docsB[0].timestamp > docsB[1].timestamp, 'docs are ordered latest first within this path');
+        t.same(docsB_actualAuthorAndContent, docsB_expectedAuthorAndContent, '/pathB docs are as expected');
+
+        //--------------------------------------------
+        // overwrite
+        let result = await storage.overwriteAllDocsByAuthor(keypair1);
+        t.same(result, 2, 'two docs were overwritten');
+
+        //--------------------------------------------
+        // look for results
+
+        t.same((await storage.getAllDocs()).length, 4, 'after overwriting, should still have 4 docs including history');
+        t.same((await storage.getLatestDocs()).length, 2, 'after overwriting, should still have 2 latest-docs');
+
+        docsA = await storage.getAllDocsAtPath('/pathA');  // latest first
+        docsA_actualAuthorAndContent = docsA.map(doc => [doc.author, doc.content]);
+        docsA_expectedAuthorAndContent = [
+            [keypair2.address, 'content2'],  // latest first
+            [keypair1.address, ''],
+        ];
+        t.same(docsA.length, 2, 'two docs found at /pathA (including history)');
+        t.ok(docsA[0].timestamp > docsA[1].timestamp, 'docs are ordered latest first within this path');
+        t.same(docsA_actualAuthorAndContent, docsA_expectedAuthorAndContent, '/pathA docs are as expected');
+
+        docsB = await storage.getAllDocsAtPath('/pathB');  // latest first
+        docsB_actualAuthorAndContent = docsB.map(doc => [doc.author, doc.content]);
+        docsB_expectedAuthorAndContent = [
+            [keypair1.address, ''],  // latest first
+            [keypair2.address, 'content2'],
+        ];
+        t.same(docsB.length, 2, 'two docs found at /pathB (including history)');
+        t.ok(docsB[0].timestamp > docsB[1].timestamp, 'docs are ordered latest first within this path');
+        t.same(docsB_actualAuthorAndContent, docsB_expectedAuthorAndContent, '/pathB docs are as expected');
+
+        t.end();
+    });
+
+    // TODO: more StorageAsync tests
 };

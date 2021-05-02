@@ -29,7 +29,9 @@ import {
 } from '../format-validators/format-validator-types';
 
 import {
-    isErr, StorageIsClosedError,
+    isErr,
+    StorageIsClosedError,
+    ValidationError,
 } from '../util/errors';
 import {
     microsecondNow,
@@ -93,7 +95,7 @@ export class StorageAsync implements IStorageAsync {
         if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.queryDocs({
             historyMode: 'all',
-            orderBy: 'path DESC',
+            orderBy: 'path ASC',
         });
     }
     async getLatestDocs(): Promise<Doc[]> {
@@ -101,7 +103,7 @@ export class StorageAsync implements IStorageAsync {
         if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.queryDocs({
             historyMode: 'latest',
-            orderBy: 'path DESC',
+            orderBy: 'path ASC',
         });
     }
     async getAllDocsAtPath(path: Path): Promise<Doc[]> {
@@ -109,7 +111,7 @@ export class StorageAsync implements IStorageAsync {
         if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.queryDocs({
             historyMode: 'all',
-            orderBy: 'path DESC',
+            orderBy: 'path ASC',
             filter: { path: path, }
         });
     }
@@ -118,7 +120,7 @@ export class StorageAsync implements IStorageAsync {
         if (this._isClosed) { throw new StorageIsClosedError(); }
         let docs = await this.storageDriver.queryDocs({
             historyMode: 'latest',
-            orderBy: 'path DESC',
+            orderBy: 'path ASC',
             filter: { path: path, }
         });
         if (docs.length === 0) { return undefined; }
@@ -143,15 +145,21 @@ export class StorageAsync implements IStorageAsync {
             loggerSet.debug('  + set: start of protected region');
             loggerSet.debug('  | deciding timestamp: getting latest doc at the same path (from any author)');
             if (this._isClosed) { throw new StorageIsClosedError(); }
-            // bump timestamp if needed to win over existing latest doc at same path
-            let latestDocSamePath = await this.getLatestDocAtPath(docToSet.path);
+
             let timestamp: number;
-            if (latestDocSamePath === undefined) {
-                timestamp = microsecondNow();
-                loggerSet.debug('  |     no existing latest doc, setting timestamp to now() =', timestamp);
+            if (typeof docToSet.timestamp === 'number') {
+                timestamp = docToSet.timestamp;
+                loggerSet.debug('  |     docToSet already has a timestamp; not changing it from ', timestamp);
             } else {
-                timestamp = Math.max(microsecondNow(), latestDocSamePath.timestamp + 1);
-                loggerSet.debug('  |     existing latest doc found, bumping timestamp to win if needed =', timestamp);
+                // bump timestamp if needed to win over existing latest doc at same path
+                let latestDocSamePath = await this.getLatestDocAtPath(docToSet.path);
+                if (latestDocSamePath === undefined) {
+                    timestamp = microsecondNow();
+                    loggerSet.debug('  |     no existing latest doc, setting timestamp to now() =', timestamp);
+                } else {
+                    timestamp = Math.max(microsecondNow(), latestDocSamePath.timestamp + 1);
+                    loggerSet.debug('  |     existing latest doc found, bumping timestamp to win if needed =', timestamp);
+                }
             }
 
             let doc: Doc = {
@@ -264,6 +272,53 @@ export class StorageAsync implements IStorageAsync {
         }
 
         return result;
+    }
+
+    // overwrite every doc with an empty one, from this author:
+    // return the number of docs changed, or -1 if error.
+    async overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError> {
+        logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
+        // TODO: do this in batches
+        let docsToOverwrite = await this.queryDocs({
+            filter: { author: keypair.address, },
+            historyMode: 'all',
+        });
+        logger.debug(`    ...found ${docsToOverwrite.length} docs to overwrite`);
+        let numOverwritten = 0;
+        let numAlreadyEmpty = 0;
+        for (let doc of docsToOverwrite) {
+            if (doc.content.length === 0) {
+                numAlreadyEmpty += 1;
+                continue;
+            }
+
+            // remove extra fields
+            let cleanedResult = this.formatValidator.removeExtraFields(doc);
+            if (isErr(cleanedResult)) { return cleanedResult; }
+            let cleanedDoc = cleanedResult.doc;
+
+            // make new doc which is empty and just barely newer than the original
+            let emptyDoc: Doc = {
+                ...cleanedDoc,
+                content: '',
+                contentHash: this.formatValidator.crypto.sha256base32(''),
+                timestamp: doc.timestamp + 1,
+                signature: '?',
+            }
+
+            // sign and ingest it
+            let signedDoc = this.formatValidator.signDocument(keypair, emptyDoc)
+            if (isErr(signedDoc)) { return signedDoc }
+
+            let { ingestResult, docIngested } = await this.ingest(signedDoc);
+            if (ingestResult !== IngestResult.AcceptedAndLatest && ingestResult !== IngestResult.AcceptedButNotLatest) {
+                return new ValidationError('ingestion error during overwriteAllDocsBySameAuthor: ' + ingestResult);
+            }
+
+            numOverwritten += 1;
+        }
+        logger.debug(`    ...done; ${numOverwritten} overwritten to be empty; ${numAlreadyEmpty} were already empty; out of total ${docsToOverwrite.length} docs`);
+        return numOverwritten;
     }
 
     isClosed(): boolean {
