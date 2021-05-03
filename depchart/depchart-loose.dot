@@ -22,6 +22,10 @@ digraph G {
             "src/crypto/crypto-types.ts" [label="src/crypto/crypto-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto.ts" [label="src/crypto/crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/keypair.ts" [label="src/crypto/keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        "src/entries/browser.ts" [label="src/entries/browser.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/entries/legacy-node.ts" [label="src/entries/legacy-node.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/entries/node.ts" [label="src/entries/node.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/entries/universal.ts" [label="src/entries/universal.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/format-validators/format-validator-es4.ts" [label="src/format-validators/format-validator-es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/format-validators/format-validator-types.ts" [label="src/format-validators/format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/storage/compare.ts" [label="src/storage/compare.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
@@ -31,6 +35,7 @@ digraph G {
             "src/storage/query-types.ts" [label="src/storage/query-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/query.ts" [label="src/storage/query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/storage-async.ts" [label="src/storage/storage-async.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/storage/storage-cache.ts" [label="src/storage/storage-cache.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/storage-driver-async-memory.ts" [label="src/storage/storage-driver-async-memory.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/storage-types.ts" [label="src/storage/storage-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/storage/util-types.ts" [label="src/storage/util-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
@@ -73,6 +78,11 @@ digraph G {
     "src/storage/storage-async.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-async.ts" -> "src/format-validators/format-validator-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-async.ts" -> "src/storage/compare.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-cache.ts" -> "src/storage/query.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-cache.ts" -> "src/storage/query-follower.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-cache.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-cache.ts" -> "src/storage/storage-async.ts" [penwidth=2; color=darkslategray4];
+    "src/storage/storage-cache.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/util-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/query-types.ts" [penwidth=2; color=darkslategray4];
     "src/storage/storage-driver-async-memory.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];

@@ -10,3 +10,4 @@ depchart/*
 browserify-tests/*
 dts-bundle.config.json
 benchmark-results/*
+classes.png

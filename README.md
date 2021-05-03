@@ -41,7 +41,7 @@ EARTHSTAR_LOG_LEVEL=3 yarn start
 
 We aim to support:
 * browser
-* node 10, 12, 14, 16
+* node 12, 14, 16
 * deno (⏳ eventually, not started yet)
 
 ### Buffers and Uint8Arrays
@@ -138,6 +138,79 @@ import { MostThings } from 'stone-soup';
 import { NodeStuff } from 'stone-soup/node';
 ```
 
+## Classes
+
+The `IStorageAsync` is the main star of the show.  Classes to the right are used internally for its implementation.  Classes to the left stack on top of an `IStorageAsync` to do extra things to it (subscribe to changes, cache data, etc).
+
+Each `IStorageAsync` holds the Docs for one Workspace.
+
+![](classes.png)
+
+Names starting with `I` are interfaces; there are one or multiple actual classes that implement those interfaces.
+
+The orange classes are "drivers" which have multiple implementations to choose from, for different platforms (node, browser, etc).
+
+Blue arrows show which functions call each other.
+
+Thick black arrows show which classes have pointers to other classes when they're running.
+
+**TODO** -- we have not added any networking or synchronization code yet.  Some of that is in [`stone-soup-pub`](https://github.com/earthstar-project/stone-soup-pub) using the old style of a REST API serving JSON, always sending every doc during a sync.  We have a more efficient sync algorithm planned, and also might set up RPC calls using [mini-rpc](https://github.com/earthstar-project/mini-rpc) to make it easier to sync over different transports than just HTTP.
+
+## How to plug the classes together
+
+The classes are small and modular, so it takes a bit of work to put them all together:
+
+```ts
+let workspace = '+gardening.foafhq2o8fh';
+
+// choose a cryptoDriver based on your platform: node or browser
+let cryptoDriver = CryptoDriverTweetnacl;
+
+// choose a storageDriver based on your platform and your
+// specific needs (speed, max storage, etc):
+let storageDriver = new StorageDriverAsyncMemory(workspace);
+
+let crypto = new Crypto(cryptoDriver);
+let validator = new FormatValidatorEs4(crypto);
+let storage = new StorageAsync(workspace, validator, storageDriver);
+
+// now you have a storage for a specific workspace.
+// make sure to close it when you're done with it:
+await storage.close();
+```
+
+## Platform support of crypto and storage drivers
+
+To get an up-to-date version of this list, run:
+
+```sh
+yarn print-platform-support
+```
+
+```
+BY DRIVER TYPE
+
+  CRYPTO
+     universal - CryptoDriverTweetnacl
+       browser - CryptoDriverChloride
+          node - CryptoDriverNode
+
+  STORAGE
+     universal - StorageDriverAsyncMemory
+
+
+EVERYTHING AVAILABLE IN...
+
+  BROWSER
+     universal - CryptoDriverTweetnacl
+       browser - CryptoDriverChloride
+     universal - StorageDriverAsyncMemory
+
+  NODE
+     universal - CryptoDriverTweetnacl
+          node - CryptoDriverNode
+     universal - StorageDriverAsyncMemory
+```
 ## Source code dependency chart
 
 A --> B means "file A imports file B".
