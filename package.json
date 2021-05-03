@@ -82,7 +82,7 @@
     "browserify": "^17.0.0",
     "depchart": "^1.2.0",
     "dts-bundle-generator": "^5.9.0",
-    "esbuild": "^0.11.16",
+    "esbuild": "^0.11.18",
     "onchange": "^7.1.0",
     "tap": "^14.11.0",
     "tap-spec": "^5.0.0",
