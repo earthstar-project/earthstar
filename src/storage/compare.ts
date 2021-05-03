@@ -77,10 +77,10 @@ export let compareArrays = (a: any[], b: any[], sortOrders?: SortOrder[]): Cmp =
     return compareBasic(a.length, b.length, sortOrder);
 }
 
-// myArray.sort(compareByObjKey('signature'));
-export let compareByObjKey = (key: string) =>
+// myArray.sort(compareByObjKey('signature', 'ASC'));
+export let compareByObjKey = (key: string, sortOrder: SortOrder = 'ASC') =>
     (a: Record<string, any>, b: Record<string, any>): Cmp =>
-        compareBasic(a[key], b[key]);
+        compareBasic(a[key], b[key], sortOrder);
 
 // myArray.sort(compareByFn((x) => x.signature + x.path));
 export let compareByFn = (fn: (x: any) => any) =>

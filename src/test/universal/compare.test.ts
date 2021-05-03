@@ -24,7 +24,7 @@ let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 //================================================================================
 
 t.test('compareBasic', (t: any) => {
-    type Vector = [a: any, result: any, b: any, order: SortOrder | undefined, note?: string];
+    type Vector = [a: any, result: any, b: any, sortOrder: SortOrder | undefined, note?: string];
     let vectors: Vector[] = [
         [1, Cmp.LT, 2, undefined],
         [2, Cmp.EQ, 2, undefined],
@@ -37,11 +37,12 @@ t.test('compareBasic', (t: any) => {
         [2, Cmp.EQ, 2, 'DESC'],
         [2, Cmp.LT, 1, 'DESC'],
     ];
-    for (let [a, expectedResult, b, order, note] of vectors) {
+    for (let [a, expectedResult, b, sortOrder, note] of vectors) {
         note = note ? `   (${note})` : '';
-        let actualResult = compareBasic(a, b, order);
+        let actualResult = compareBasic(a, b, sortOrder);
         t.same(actualResult, expectedResult, `baseCompare(${a}, ${b}) should === ${expectedResult} ${note}`);
     }
+    t.same(compareBasic(1, 2), Cmp.LT, 'works with omitted sortOrder');
 
     let x = [1, 2, 5, 3, 4, 2];
     x.sort(compareBasic);
@@ -115,6 +116,7 @@ t.test('compareArrays', (t: any) => {
         let actualResult = compareArrays(a, b, sortOrders);
         t.same(actualResult, expectedResult, `arrayCompare(${a}, ${b}) should === ${expectedResult} ${note}`);
     }
+    t.same(compareArrays([1], [2]), Cmp.LT, 'works with omitted sortOrders');
 
     let arrToSort = [
         [1, 1],
@@ -169,19 +171,28 @@ t.test('compareArrays', (t: any) => {
 });
 
 t.test('compareByObjKey', (t: any) => {
-    type Vector = [a: Record<string, any>, result: any, b: Record<string, any>, note?: string];
+    type Vector = [a: Record<string, any>, result: any, b: Record<string, any>, sortOrder: SortOrder | undefined, note?: string];
     let vectors: Vector[] = [
-        [ { foo: 1 }, Cmp.LT, { foo: 2 } ],
-        [ { foo: 2 }, Cmp.EQ, { foo: 2 } ],
-        [ { foo: 3 }, Cmp.GT, { foo: 2 } ],
+        [ { foo: 1 }, Cmp.LT, { foo: 2 }, undefined ],
+        [ { foo: 2 }, Cmp.EQ, { foo: 2 }, undefined ],
+        [ { foo: 3 }, Cmp.GT, { foo: 2 }, undefined ],
 
-        [ { foo: ['a'] }, Cmp.EQ, { foo: ['a'] }, 'deep equal' ],
+        [ { foo: 1 }, Cmp.LT, { foo: 2 }, 'ASC' ],
+        [ { foo: 2 }, Cmp.EQ, { foo: 2 }, 'ASC' ],
+        [ { foo: 3 }, Cmp.GT, { foo: 2 }, 'ASC' ],
+
+        [ { foo: 1 }, Cmp.GT, { foo: 2 }, 'DESC' ],
+        [ { foo: 2 }, Cmp.EQ, { foo: 2 }, 'DESC' ],
+        [ { foo: 3 }, Cmp.LT, { foo: 2 }, 'DESC' ],
+
+        [ { foo: ['a'] }, Cmp.EQ, { foo: ['a'] }, undefined, 'deep equal' ],
     ];
-    for (let [a, expectedResult, b, note] of vectors) {
+    for (let [a, expectedResult, b, sortOrder, note] of vectors) {
         note = note ? `   (${note})` : '';
-        let actualResult = compareByObjKey('foo')(a, b);
+        let actualResult = compareByObjKey('foo', sortOrder)(a, b);
         t.same(actualResult, expectedResult, `keyComparer('foo')(${a}, ${b}) should === ${expectedResult} ${note}`);
     }
+    t.same(compareByObjKey('foo')({ foo: 1 }, { foo: 2}), Cmp.LT, 'works with omitted sortOrder');
 
     t.end();
 });

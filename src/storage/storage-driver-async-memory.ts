@@ -29,7 +29,7 @@ import {
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
-import { StorageIsClosedError } from '../util/errors';
+import { StorageIsClosedError, ValidationError } from '../util/errors';
 let logger = new Logger('storage driver async memory', 'yellow');
 
 //================================================================================
@@ -40,12 +40,23 @@ let combinePathAndAuthor = (doc: Doc) => {
     return `${doc.path}|${doc.author}`;
 }
 
-let docComparePathThenNewestFirst = (a: Doc, b: Doc): Cmp => {
-    // Sorts docs by path ASC, then breaks ties by timestamp DESC (newest first)
-    if (a.signature === b.signature) { return Cmp.EQ; }
+let docComparePathASCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
+    // Sorts docs by path ASC.
+    // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
     return compareArrays(
-        [a.path, -a.timestamp],
-        [b.path, -b.timestamp],
+        [a.path, a.timestamp, a.signature],
+        [b.path, b.timestamp, a.signature],
+        ['ASC', 'DESC', 'ASC'],
+    );
+}
+
+let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
+    // Sorts docs by path DESC.
+    // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
+    return compareArrays(
+        [a.path, a.timestamp, a.signature],
+        [b.path, b.timestamp, a.signature],
+        ['DESC', 'DESC', 'ASC'],
     );
 }
 
@@ -108,13 +119,16 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
 
         // orderBy
         logger.debug(`    ordering docs: ${query.orderBy}`);
-        if (query.orderBy?.startsWith('path')) {
-            docs.sort(docComparePathThenNewestFirst);
-        } else if (query.orderBy?.startsWith('localIndex')) {
-            docs.sort(compareByObjKey('_localIndex'));
-        }
-        if (query.orderBy?.endsWith(' DESC')) {
-            docs.reverse();
+        if (query.orderBy === 'path ASC') {
+            docs.sort(docComparePathASCthenNewestFirst);
+        } else if (query.orderBy === 'path DESC') {
+            docs.sort(docComparePathDESCthenNewestFirst);
+        } else if (query.orderBy === 'localIndex ASC') {
+            docs.sort(compareByObjKey('_localIndex', 'ASC'));
+        } else if (query.orderBy === 'localIndex DESC') {
+            docs.sort(compareByObjKey('_localIndex', 'DESC'));
+        } else {
+            throw new ValidationError('unrecognized query orderBy: ' + JSON.stringify(query.orderBy));
         }
 
         let filteredDocs: Doc[] = [];
@@ -188,7 +202,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         // add this new doc
         docsByPath.push(doc);
         // sort newest first within this path
-        docsByPath.sort(docComparePathThenNewestFirst);
+        docsByPath.sort(docComparePathASCthenNewestFirst);
         // save the list back to the index
         this.docsByPathNewestFirst.set(doc.path, docsByPath);
   
