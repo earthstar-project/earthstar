@@ -3824,10 +3824,10 @@ sha.js@^2.4.0, sha.js@^2.4.8:
     inherits "^2.0.1"
     safe-buffer "^5.0.1"
 
-sha256-uint8array@^0.10.0:
-  version "0.10.0"
-  resolved "https://registry.yarnpkg.com/sha256-uint8array/-/sha256-uint8array-0.10.0.tgz#a30afd566020039ec4ecc792d0ab997b9bc6c873"
-  integrity sha512-AalrcjuqWl0nIwzu8DAqwbrdxzNsKN2myxOqspDBRz1npmTSXUThldaWx7dSNQ6/lNeWVB/nRIj/6HHkV84www==
+sha256-uint8array@^0.10.1:
+  version "0.10.1"
+  resolved "https://registry.yarnpkg.com/sha256-uint8array/-/sha256-uint8array-0.10.1.tgz#bb3f785d4bceb87dceb975c98f858bc051d06305"
+  integrity sha512-0cBzinlE3dNwss4v0x5zu/ngKSIxS7Uta3ibb0tv4wTtvKFEuFmcuKtWmU4jdHPuMUBg0r1cCGaILMlqLYuWjQ==
 
 shasum-object@^1.0.0:
   version "1.0.0"
