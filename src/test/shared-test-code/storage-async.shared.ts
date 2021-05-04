@@ -22,6 +22,7 @@ import {
 
 let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
+let J = JSON.stringify;
 
 //================================================================================
 
@@ -30,8 +31,6 @@ let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 
 //================================================================================
-
-let J = JSON.stringify;
 
 let throws = async (t: any, fn: () => Promise<any>, msg: string) => {
     try {

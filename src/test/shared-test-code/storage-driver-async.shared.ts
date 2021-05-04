@@ -20,6 +20,7 @@ import {
 } from '../../util/log';
 
 //setDefaultLogLevel(LogLevel.Debug);
+let J = JSON.stringify;
 
 //================================================================================
 
@@ -28,8 +29,6 @@ let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 
 //================================================================================
-
-let J = JSON.stringify;
 
 export let runStorageDriverTests = (driverName: string, makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync) => {
 

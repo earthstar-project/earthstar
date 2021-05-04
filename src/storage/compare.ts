@@ -9,6 +9,11 @@ import {
 
 export type SortOrder = 'ASC' | 'DESC';
 
+export let sortedInPlace = <T>(array: T[]): T[] => {
+    array.sort();
+    return array;
+}
+
 // myStrings.sort(baseCompare)
 export let compareBasic = (a: any, b: any, order: SortOrder = 'ASC'): Cmp => {
     if (deepEqual(a, b)) { return Cmp.EQ; }

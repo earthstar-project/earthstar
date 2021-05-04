@@ -28,7 +28,7 @@ import {
 //================================================================================
 
 export type StorageEvent =
-    'ingest' |
+    'ingest' |  // 'ingest|/some/path.txt'
     'willClose' | 'didClose';
 
 export interface IStorageAsync {

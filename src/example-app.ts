@@ -22,6 +22,9 @@ import {
 import {
     QueryFollower,
 } from './storage/query-follower';
+import {
+    Peer
+} from './peer/peer';
 
 //--------------------------------------------------
 
@@ -36,6 +39,7 @@ let loggerMain = new Logger('main', 'whiteBright');
 let loggerBusEvents = new Logger('main storage bus events', 'white');
 let loggerQueryFollowerCallbacks1 = new Logger('main query follower 1 callback', 'red');
 let loggerQueryFollowerCallbacks2 = new Logger('main query follower 2 callback', 'red');
+let loggerPeerMapEvents = new Logger('peer map event', 'redBright');
 
 setDefaultLogLevel(LogLevel.Debug);
 setLogLevel('main', LogLevel.Debug);
@@ -58,6 +62,13 @@ let main = async () => {
     let validator = new FormatValidatorEs4(crypto);
     let storageDriver = new StorageDriverAsyncMemory(workspace);
     let storage = new StorageAsync(workspace, validator, storageDriver);
+
+    let peer = new Peer();
+    peer.storageMap.bus.on('*', (channel, data) => {
+        loggerPeerMapEvents.debug(`${channel}`);
+    });
+    peer.addStorage(storage);
+
     loggerMain.info('generate a keypair')
     let keypair = crypto.generateAuthorKeypair('suzy');
     if (isErr(keypair)) {
