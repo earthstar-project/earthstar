@@ -9,7 +9,6 @@ const externals = [
   "sha256-uint8array",
   "tweetnacl",
   "superbus",
-  "util",
   "fast-json-stable-stringify"
 ];
 
@@ -49,6 +48,7 @@ const configs = [
     outfile: "dist/earthstar.cjs",
     target: ['es2017'],
     platform: "node",
+    inject: ["./src/shims/node.ts"],
     conditions: ["node"],
   },
   // universal, node, ESM
@@ -58,6 +58,7 @@ const configs = [
     target: ['es2017'],
     platform: "node",
     format: "esm",
+    inject: ["./src/shims/node.ts"],
     conditions: ["node"],
   },
   // node, CommonJS
