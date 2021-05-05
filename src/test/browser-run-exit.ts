@@ -9,12 +9,12 @@
     When the expected number of files are finished, we quit.
 */
 
-declare let window: any;
+
 let numFinished = 0;
 
 let numTestFiles = 17;  // <--- set this to the expected number of test files
 
-window.onFinish = (testName?: string) => {
+var onFinish = (testName?: string) => {
     numFinished += 1;
     if (numFinished === 1) { console.log(' '); }
     console.log(`onFinish handler ${numFinished} / ${numTestFiles} ${testName ?? ''}`);
