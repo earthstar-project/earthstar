@@ -4238,10 +4238,10 @@ sumchecker@^3.0.1:
   dependencies:
     debug "^4.1.0"
 
-superbus@^1.2.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/superbus/-/superbus-1.2.0.tgz#7d4c2b964215a78791996897e6509f652423853f"
-  integrity sha512-hDZanGnIZ7g4ZrqKnjG6kOuV4e+UTc12GjWu348Ex6bTRvoTksPwzWPsr+E8zVRsSnihoj9/aNNP9APCOBF22g==
+superbus@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/superbus/-/superbus-2.0.2.tgz#fc8104cddbd4916ab9fdfd167a5e50b3e90e8a2f"
+  integrity sha512-5JZJKxTEd/WWjShXpmRkZzJio7Gw4V1vWL0VTWZ+r5QVvZP6cwSc8nbW0akprX3WTeFOANmYfinQPDGpoKac7A==
 
 supports-color@^2.0.0:
   version "2.0.0"

@@ -10,17 +10,17 @@ import {
     isErr,
 } from '../../util/errors';
 import {
-    microsecondNow,
+    microsecondNow, sleep,
 } from '../../util/misc';
 
 //================================================================================
 
 import {
-    LogLevel,
-    setDefaultLogLevel,
+    Logger,
 } from '../../util/log';
 
-//setDefaultLogLevel(LogLevel.Debug);
+let loggerTest = new Logger('test', 'whiteBright');
+let loggerTestCb = new Logger('test cb', 'white');
 
 //================================================================================
 
@@ -62,19 +62,46 @@ export let runStorageTests = (description: string, makeStorage: (ws: WorkspaceAd
     t.test(nameOfRun + ': storage close() and throwing when closed', async (t: any) => {
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
+        let events: string[] = [];
+
+        // subscribe in a different order than they will normally happen,
+        // to make sure they really happen in the right order when they happen for real
+        storage.bus.on('didClose', (channel, data) => {
+            loggerTestCb.debug('>> didClose event handler');
+            events.push(channel);
+        });
+        storage.bus.on('willClose', (channel, data) => {
+            loggerTestCb.debug('>> willClose event handler');
+            events.push(channel);
+        });
 
         t.same(storage.isClosed(), false, 'is not initially closed');
         await doesNotThrow(t, async () => storage.isClosed(), 'isClosed does not throw');
-        await doesNotThrow(t, async () => await storage.getDocsSinceLocalIndex('all', 0, 1), 'throws after closed');
-        await doesNotThrow(t, async () => await storage.getAllDocs(), 'throws after closed');
-        await doesNotThrow(t, async () => await storage.getLatestDocs(), 'throws after closed');
-        await doesNotThrow(t, async () => await storage.getAllDocsAtPath('/a'), 'throws after closed');
-        await doesNotThrow(t, async () => await storage.getLatestDocAtPath('/a'), 'throws after closed');
-        await doesNotThrow(t, async () => await storage.queryDocs(), 'throws after closed');
+        await doesNotThrow(t, async () => await storage.getDocsSinceLocalIndex('all', 0, 1), 'does not throw because not closed');
+        await doesNotThrow(t, async () => await storage.getAllDocs(), 'does not throw because not closed');
+        await doesNotThrow(t, async () => await storage.getLatestDocs(), 'does not throw because not closed');
+        await doesNotThrow(t, async () => await storage.getAllDocsAtPath('/a'), 'does not throw because not closed');
+        await doesNotThrow(t, async () => await storage.getLatestDocAtPath('/a'), 'does not throw because not closed');
+        await doesNotThrow(t, async () => await storage.queryDocs(), 'does not throw because not closed');
+        t.same(events, [], 'no events yet');
 
+        loggerTest.debug('launching microtask, nextTick, setTimeout, and setImmediate');
+        queueMicrotask(() => loggerTestCb.debug('--- microtask ---'));
+        process.nextTick(() => loggerTestCb.debug('--- nextTick ---'));
+        setTimeout(() => loggerTestCb.debug('--- setTimeout 0 ---'), 0);
+        setImmediate(() => loggerTestCb.debug('--- setImmediate ---'));
+
+        loggerTest.debug('closing...');
         await storage.close();
+        loggerTest.debug('...done closing');
+
+        // wait for didClose to happen on setTimeout
+        await sleep(20);
+
+        t.same(events, ['willClose', 'didClose'], 'closing events happened');
 
         t.same(storage.isClosed(), true, 'is closed after close()');
+
         await doesNotThrow(t, async () => storage.isClosed(), 'isClosed does not throw');
         await throws(t, async () => await storage.getDocsSinceLocalIndex('all', 0, 1), 'throws after closed');
         await throws(t, async () => await storage.getAllDocs(), 'throws after closed');
@@ -87,6 +114,12 @@ export let runStorageTests = (description: string, makeStorage: (ws: WorkspaceAd
 
         await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
         t.same(storage.isClosed(), true, 'still closed after calling close() twice');
+
+        t.same(events, ['willClose', 'didClose'], 'no more closing events on second call to close()');
+
+        loggerTest.debug('sleeping 50...');
+        await sleep(50);
+        loggerTest.debug('...done sleeping 50');
 
         t.end();
     });

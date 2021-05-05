@@ -97,7 +97,7 @@
     "rfc4648": "^1.4.0",
     "rfdc": "^1.2.0",
     "sha256-uint8array": "^0.10.1",
-    "superbus": "^1.2.0",
+    "superbus": "^2.0.2",
     "tslib": "^2.2.0",
     "tweetnacl": "^1.0.3"
   }
