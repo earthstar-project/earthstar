@@ -1,10 +1,12 @@
 import t = require('tap');
-// Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
-// When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
-declare let window: any;
-if ((t.test as any).onFinish) {
-    (t.test as any).onFinish(() => window.onFinish('addresses'));
-}
+import { onFinishOneTest } from '../browser-run-exit';
+
+let TEST_NAME = 'addresses';
+
+// Boilerplate to help browser-run know when this test is completed.
+// When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
+/* istanbul ignore next */ 
+(t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME));
 
 import {
     AuthorAddress,
@@ -23,6 +25,7 @@ import {
     parseAuthorAddress,
     parseWorkspaceAddress
 } from '../../core-validators/addresses';
+
 
 //================================================================================
 

@@ -1,4 +1,5 @@
 import t = require('tap');
+import { onFinishOneTest } from '../browser-run-exit';
 
 import {
     WorkspaceAddress,
@@ -49,17 +50,17 @@ let doesNotThrow = async (t: any, fn: () => Promise<any>, msg: string) => {
     }
 }
 
-export let runStorageTests = (description: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
-    // Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
-    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
-    let nameOfRun = description;
+export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
 
+    let TEST_NAME = 'storage shared tests';
+    let SUBTEST_NAME = subtestName;
+
+    // Boilerplate to help browser-run know when this test is completed.
+    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
     /* istanbul ignore next */ 
-    if ((t.test as any).onFinish) {
-        (t.test as any).onFinish(() => window.onFinish(`storage shared tests -- ${description}`));
-    }
+    (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    t.test(nameOfRun + ': storage close() and throwing when closed', async (t: any) => {
+    t.test(SUBTEST_NAME + ': storage close() and throwing when closed', async (t: any) => {
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
         let events: string[] = [];
@@ -124,7 +125,7 @@ export let runStorageTests = (description: string, makeStorage: (ws: WorkspaceAd
         t.end();
     });
 
-    t.test(nameOfRun + ': storage overwriteAllDocsByAuthor', async (t: any) => {
+    t.test(SUBTEST_NAME + ': storage overwriteAllDocsByAuthor', async (t: any) => {
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
 

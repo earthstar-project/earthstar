@@ -1,29 +1,23 @@
 /*
     browser-run doesn't exit automatically when the scripts are done.
 
-    So we have to track when each test finishes, and then call window.close().
+    So each test fil needs to use tape's t.onFinish callback to call
+    this function, below.
 
-    We do this by exposing a global window.onFinish() function and having each
-    test file call it when it's done, using tape's onFinish callback.
-
-    When the expected number of files are finished, we quit.
+    This ensure that the browser window closes eventually, which
+    lets the program exit.
 */
 
+let firstTime: boolean = true;
+export let onFinishOneTest = (testName?: string, subtestName?: string) => {
+    if (firstTime) { console.log('----------- tests run: -----------'); }
+    firstTime = false;
 
-let numFinished = 0;
+    console.log(testName + (subtestName ? ' -- '+ subtestName : ''));
 
-let numTestFiles = 17;  // <--- set this to the expected number of test files
-
-var onFinish = (testName?: string) => {
-    numFinished += 1;
-    if (numFinished === 1) { console.log(' '); }
-    console.log(`onFinish handler ${numFinished} / ${numTestFiles} ${testName ?? ''}`);
-    if (numFinished === numTestFiles) {
-        console.log('    if the number of tests is not as expected, change the number in browser-run-exit.ts');
-        console.log('    closing browser in a moment...');
-        setTimeout(() => {
-            console.log('    closing browser now');
-            window.close();
-        }, 100);
-    }
+    setTimeout(() => {
+        console.log('----------------------------------');
+        console.log('    closing browser now');
+        window?.close();
+    }, 50);
 }

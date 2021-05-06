@@ -2,14 +2,15 @@ import esbuild from "esbuild";
 
 const externals = [
   "chalk",
+  "chloride",
   "fast-deep-equal",
+  "fast-json-stable-stringify",
   "rfc4648",
   "rfdc",
-  "chloride",
   "sha256-uint8array",
-  "tweetnacl",
   "superbus",
-  "fast-json-stable-stringify"
+  // tslib?
+  "tweetnacl",
 ];
 
 const baseConfig = {

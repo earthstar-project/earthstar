@@ -1,5 +1,5 @@
 import t = require('tap');
-declare let window: any;
+import { onFinishOneTest } from '../browser-run-exit';
 
 import {
     ICryptoDriver,
@@ -8,21 +8,21 @@ import {
 import {
     identifyBufOrBytes
 } from '../../util/bytes';
+import { sleep } from '../../util/misc';
 
 //================================================================================
 
 export let runCryptoDriverInteropTests = (drivers: ICryptoDriver[]) => {
-    // Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
-    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
-    let driverNames = drivers.map(driver => (driver as any).name).join(' + ');
-    let nameOfRun = driverNames;
 
+    let TEST_NAME = 'crypto-driver-interop shared tests';
+    let SUBTEST_NAME = drivers.map(driver => (driver as any).name).join(' + ');
+
+    // Boilerplate to help browser-run know when this test is completed.
+    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
     /* istanbul ignore next */ 
-    if ((t.test as any).onFinish) {
-        (t.test as any).onFinish(() => window.onFinish('crypto-driver-interop shared tests -- ' + driverNames));
-    }
+    (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    t.test(nameOfRun + ': compare sigs from each driver', (t: any) => {
+    t.test(SUBTEST_NAME + ': compare sigs from each driver', (t: any) => {
         let msg = 'hello';
         let keypairBytes: KeypairBytes = drivers[0].generateKeypairBytes();
         let keypairName = (drivers[0] as any).name;
@@ -40,7 +40,7 @@ export let runCryptoDriverInteropTests = (drivers: ICryptoDriver[]) => {
         t.end();
     });
 
-    t.test(nameOfRun + ': sign with one driver, verify with another', (t: any) => {
+    t.test(SUBTEST_NAME + ': sign with one driver, verify with another', (t: any) => {
         let msg = 'hello';
         for (let signer of drivers) {
             let keypairBytes: KeypairBytes = drivers[0].generateKeypairBytes();

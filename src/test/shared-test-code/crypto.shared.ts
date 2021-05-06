@@ -1,4 +1,5 @@
 import t = require('tap');
+import { onFinishOneTest } from '../browser-run-exit';
 
 import {
     AuthorKeypair
@@ -28,17 +29,16 @@ let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 //================================================================================
 
 export let runCryptoTests = (crypto: ICrypto) => {
-    // Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
-    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
-    let driverName = (crypto.driver as any).name;
-    let nameOfRun = driverName;
 
+    let TEST_NAME = 'crypto shared tests';
+    let SUBTEST_NAME = (crypto.driver as any).name;
+
+    // Boilerplate to help browser-run know when this test is completed.
+    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
     /* istanbul ignore next */ 
-    if ((t.test as any).onFinish) {
-        (t.test as any).onFinish(() => window.onFinish(`crypto shared tests -- Crypto(${driverName})`));
-    }
+    (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    t.test(nameOfRun + ': sha256 of strings', (t: any) => {
+    t.test(SUBTEST_NAME + ': sha256 of strings', (t: any) => {
         let vectors : [string, string][] = [
             // input, output
             ['', 'b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq'],
@@ -52,7 +52,7 @@ export let runCryptoTests = (crypto: ICrypto) => {
         t.end();
     });
 
-    t.test(nameOfRun + ': sha256 of bytes', (t: any) => {
+    t.test(SUBTEST_NAME + ': sha256 of bytes', (t: any) => {
         let vectors : [Uint8Array, string][] = [
             // input, output
             [stringToBytes(''), 'b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq'],
@@ -68,7 +68,7 @@ export let runCryptoTests = (crypto: ICrypto) => {
         t.end();
     });
 
-    t.test(nameOfRun + ': generateAuthorKeypair', (t: any) => {
+    t.test(SUBTEST_NAME + ': generateAuthorKeypair', (t: any) => {
         t.ok(isErr(crypto.generateAuthorKeypair('abc')), 'error when author shortname is too short');
         t.ok(isErr(crypto.generateAuthorKeypair('abcde')), 'error when author shortname is too long');
         t.ok(isErr(crypto.generateAuthorKeypair('TEST')), 'error when author shortname is uppercase');
@@ -101,7 +101,7 @@ export let runCryptoTests = (crypto: ICrypto) => {
         t.end();
     });
 
-    t.test(nameOfRun + ': authorKeypairIsValid', (t: any) => {
+    t.test(SUBTEST_NAME + ': authorKeypairIsValid', (t: any) => {
         let keypair1 = crypto.generateAuthorKeypair('onee');
         let keypair2 = crypto.generateAuthorKeypair('twoo');
         if (isErr(keypair1)) { 
@@ -174,7 +174,7 @@ export let runCryptoTests = (crypto: ICrypto) => {
         t.end();
     });
 
-    t.test(nameOfRun + ': encode/decode author keypair: from bytes to string and back', (t: any) => {
+    t.test(SUBTEST_NAME + ': encode/decode author keypair: from bytes to string and back', (t: any) => {
         let shortname = 'test';
         let keypair = crypto.generateAuthorKeypair(shortname);
         if (isErr(keypair)) {
@@ -217,7 +217,7 @@ export let runCryptoTests = (crypto: ICrypto) => {
         t.end();
     });
 
-    t.test(nameOfRun + ': signatures', (t: any) => {
+    t.test(SUBTEST_NAME + ': signatures', (t: any) => {
         let input = 'abc';
 
         let keypair = crypto.generateAuthorKeypair('test') as AuthorKeypair;
@@ -270,7 +270,7 @@ export let runCryptoTests = (crypto: ICrypto) => {
         t.end();
     });
 
-    t.test(nameOfRun + ': decodeAuthorKeypairToBytes checks Uint8Array length', (t: any) => {
+    t.test(SUBTEST_NAME + ': decodeAuthorKeypairToBytes checks Uint8Array length', (t: any) => {
         interface Vector {
             valid: Boolean,
             keypair: AuthorKeypair,

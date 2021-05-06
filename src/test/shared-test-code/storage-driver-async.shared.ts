@@ -1,4 +1,5 @@
 import t = require('tap');
+import { onFinishOneTest } from '../browser-run-exit';
 
 import {
     Doc,
@@ -31,16 +32,16 @@ let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 let J = JSON.stringify;
 
 export let runStorageDriverTests = (driverName: string, makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync) => {
-    // Boilerplate to help browser-run know when this test is completed (see browser-run.ts)
-    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function..
-    let nameOfRun = driverName;
 
+    let TEST_NAME = 'storage-driver shared tests';
+    let SUBTEST_NAME = driverName;
+
+    // Boilerplate to help browser-run know when this test is completed.
+    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
     /* istanbul ignore next */ 
-    if ((t.test as any).onFinish) {
-        (t.test as any).onFinish(() => window.onFinish(`storage driver shared tests -- ${driverName}`));
-    }
+    (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    t.test(nameOfRun + ': empty storage', async (t: any) => {
+    t.test(SUBTEST_NAME + ': empty storage', async (t: any) => {
         let workspace = '+gardening.abcde';
         let driver = makeDriver(workspace);
 
@@ -50,7 +51,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.end();
     });
 
-    t.test(nameOfRun + ': upsert and basic querying with one path', async (t: any) => {
+    t.test(SUBTEST_NAME + ': upsert and basic querying with one path', async (t: any) => {
         let workspace = '+gardening.abcde';
         let driver = makeDriver(workspace);
 
