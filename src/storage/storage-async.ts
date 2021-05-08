@@ -71,7 +71,7 @@ export class StorageAsync implements IStorageAsync {
         this.workspace = workspace;
         this.formatValidator = validator;
         this.storageDriver = driver;
-        this.bus = new Superbus<StorageEvent>();
+        this.bus = new Superbus<StorageEvent>('|');
     }
 
     async getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]> {
@@ -267,7 +267,7 @@ export class StorageAsync implements IStorageAsync {
         // only send events if we successfully ingested a doc
         if (docIngested !== null) {
             loggerIngest.debug('  - ingest: send ingest event blockingly...');
-            await this.bus.sendAndWait('ingest', docIngested);
+            await this.bus.sendAndWait(('ingest|' + docIngested.path) as 'ingest', docIngested);
             loggerIngest.debug('  - ingest: ...done sending ingest event');
         }
 

@@ -58,6 +58,7 @@
     "test-verbose": "tap -Rspecy --no-bail --jobs=1 build/test/universal/*.test.js build/test/node/*.test.js",
     "test-coverage": "yarn test --coverage-report=lcov",
     "test-crypto": "tap -Rspecy --no-bail --jobs=1 build/test/node/crypto.node.test.js",
+    "test-peer-client-server": "tap -Rspecy --no-bail --jobs=1 build/test/node/peer-client-server.node.test.js",
     "test-storage": "tap -Rspecy --no-bail --jobs=1 build/test/node/storage-async.node.test.js",
     "test-storage-driver": "tap -Rspecy --no-bail --jobs=1 build/test/node/storage-driver-async.node.test.js",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn clean-build-and-test",
@@ -95,6 +96,7 @@
     "rfdc": "^1.2.0",
     "sha256-uint8array": "^0.10.1",
     "superbus": "^2.0.2",
+    "superbus-map": "^2.0.3",
     "tslib": "^2.2.0",
     "tweetnacl": "^1.0.3"
   }

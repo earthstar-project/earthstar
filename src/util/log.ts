@@ -79,7 +79,7 @@ export const updateLogLevels = (newLogLevels: LogLevels): void => {
 };
 
 export const setLogLevel = (source: LogSource, level: LogLevel) => {
-    setDefaultLogLevel(level);
+    globalLogLevels[source] = level;
 }
 
 export const setDefaultLogLevel = (level: LogLevel) => {
@@ -93,6 +93,9 @@ export const getLogLevel = (source: LogSource): LogLevel => {
         return globalLogLevels._default;
     }
 }
+
+export const getLogLevels = (): LogLevels =>
+    globalLogLevels;
 
 //================================================================================
 // Logger class
