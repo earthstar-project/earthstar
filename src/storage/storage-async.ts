@@ -16,7 +16,7 @@ import {
 import {
     HistoryMode,
     Query,
-} from './query-types';
+} from '../query/query-types';
 import {
     IStorageAsync,
     IStorageDriverAsync,

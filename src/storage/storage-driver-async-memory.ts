@@ -9,7 +9,7 @@ import {
 } from "../util/doc-types";
 import {
     Query
-} from "./query-types";
+} from "../query/query-types";
 import {
     IStorageDriverAsync
 } from "./storage-types";
@@ -26,7 +26,7 @@ import {
 import {
     cleanUpQuery,
     docMatchesFilter
-} from './query';
+} from '../query/query';
 import {
     Lock
 } from './lock';

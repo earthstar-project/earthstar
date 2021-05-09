@@ -1,9 +1,9 @@
 import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types";
 import { isErr, StorageIsClosedError } from "../util/errors";
 import { microsecondNow } from "../util/misc";
-import { docMatchesFilter, cleanUpQuery } from "./query";
-import { QueryFollower } from "./query-follower";
-import { Query } from "./query-types";
+import { docMatchesFilter, cleanUpQuery } from "../query/query";
+import { QueryFollower } from "../query-follower/query-follower";
+import { Query } from "../query/query-types";
 import { StorageAsync } from "./storage-async";
 import { IngestResult, IngestResultAndDoc } from "./storage-types";
 import isEqual from "fast-deep-equal";

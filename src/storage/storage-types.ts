@@ -13,7 +13,7 @@ import {
 import {
     HistoryMode,
     Query,
-} from './query-types';
+} from '../query/query-types';
 import {
     IFormatValidator
 } from '../format-validators/format-validator-types';

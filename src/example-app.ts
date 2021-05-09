@@ -21,7 +21,7 @@ import {
 } from './crypto/crypto-driver-tweetnacl';
 import {
     QueryFollower,
-} from './storage/query-follower';
+} from './query-follower/query-follower';
 import {
     Peer
 } from './peer/peer';

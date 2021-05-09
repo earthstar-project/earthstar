@@ -7,7 +7,7 @@ import {
 } from '../../util/doc-types';
 import {
     Query,
-} from '../../storage/query-types';
+} from '../../query/query-types';
 import {
     IStorageDriverAsync,
 } from '../../storage/storage-types';

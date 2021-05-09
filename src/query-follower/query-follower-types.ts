@@ -4,7 +4,7 @@ import {
 
 import {
     IStorageAsync
-} from './storage-types';
+} from '../storage/storage-types';
 
 //================================================================================
 

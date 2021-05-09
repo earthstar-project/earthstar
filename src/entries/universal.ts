@@ -6,11 +6,11 @@ export * from "../crypto/crypto";
 export * from "../format-validators/format-validator-es4";
 export * from "../format-validators/format-validator-types";
 
-export * from "../storage/query-follower-types";
-export * from "../storage/query-follower";
+export * from "../query-follower/query-follower-types";
+export * from "../query-follower/query-follower";
 
-export * from "../storage/query-types";
-export * from "../storage/query";
+export * from "../query/query-types";
+export * from "../query/query";
 
 export * from "../storage/storage-async";
 export * from "../storage/storage-cache";

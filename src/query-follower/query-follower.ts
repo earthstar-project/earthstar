@@ -4,22 +4,22 @@ import {
 
 import {
     Thunk,
-} from './util-types';
+} from '../storage/util-types';
 import {
     Doc,
 } from '../util/doc-types';
 import {
     Query,
-} from './query-types';
+} from '../query/query-types';
 import {
     NotImplementedError,
 } from '../util/errors';
 import {
     IStorageAsync,
-} from './storage-types';
+} from '../storage/storage-types';
 import {
     docMatchesFilter,
-} from './query';
+} from '../query/query';
 import {
     IQueryFollower,
     QueryFollowerEvent,

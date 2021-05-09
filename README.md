@@ -215,11 +215,11 @@ EVERYTHING AVAILABLE IN...
 
 A --> B means "file A imports file B".
 
-For readability this hides `/test/` and `/util/`.
+For readability this hides `/test/` and `/util/` and `*-types.ts`.
 
-![](depchart/depchart-main.png)
+![](depchart/depchart-no-types.png)
 
-And again with 3rd party dependencies as brown boxes with dotted lines:
+And again with 3rd party dependencies as brown boxes with dotted lines, and including `*-types.ts`
 
 ![](depchart/depchart-deps.png)
 
