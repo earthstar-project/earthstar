@@ -64,9 +64,9 @@
     "test-storage-driver": "tap -Rspecy --no-bail --jobs=1 build/test/node/storage-driver-async.node.test.js",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn clean-build-test",
     "prepublishOnly": "yarn clean && yarn esbuild",
-    "depchart-main": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-main --node_modules omit",
-    "depchart-deps": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-deps --node_modules integrated",
-    "depchart-loose": "depchart `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts `find src | grep '/test/'` `find src | grep '/util/'` --loose --rankdir LR -o depchart/depchart-loose --node_modules omit",
+    "depchart-main": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts src/shims/*.ts src/entries/*.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-main --node_modules omit",
+    "depchart-deps": "depchart  `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts src/shims/*.ts src/entries/*.ts `find src | grep '/test/'` `find src | grep '/util/'` --rankdir LR -o depchart/depchart-deps --node_modules integrated",
+    "depchart-loose": "depchart `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts src/shims/*.ts src/entries/*.ts `find src | grep '/test/'` `find src | grep '/util/'` --loose --rankdir LR -o depchart/depchart-loose --node_modules omit",
     "depchart": "yarn depchart-main & yarn depchart-deps & yarn depchart-loose && echo 'done'"
   },
   "resolutions": {
