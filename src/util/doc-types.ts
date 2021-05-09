@@ -51,7 +51,7 @@ export interface Doc {
     //
     // This is sent over the wire as part of a Doc so the receiver knows what to ask for next time,
     // but it's then moved into a separate data structure like:
-    //    knownPeerHighestLocalIndexes:
+    //    knownPeerMaxLocalIndexes:
     //        peer111: 77
     //        peer222: 140
     // ...which helps us continue syncing with that specific peer next time.

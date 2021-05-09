@@ -34,8 +34,8 @@ export interface Query {
     //   "path DESC" is the reverse of that
     orderBy?: 'path ASC' | 'path DESC' | 'localIndex ASC' | 'localIndex DESC';
 
-    // start iterating at this item
-    startAt?: {
+    // start iterating immediately after this item (e.g. get items which are > startAfter)
+    startAfter?: {
         // only when ordering by localIndex
         localIndex?: number,
         // only when ordering by path
@@ -53,7 +53,7 @@ export interface Query {
 export let DEFAULT_QUERY: Query = {
     historyMode: 'latest',
     orderBy: 'path ASC',
-    startAt: undefined,
+    startAfter: undefined,
     limit: undefined,
     filter: undefined,
 }

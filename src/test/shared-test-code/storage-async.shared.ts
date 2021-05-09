@@ -104,7 +104,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
 
         t.same(storage.isClosed(), false, 'is not initially closed');
         await doesNotThrow(t, async () => storage.isClosed(), 'isClosed does not throw');
-        await doesNotThrow(t, async () => await storage.getDocsSinceLocalIndex('all', 0, 1), 'does not throw because not closed');
+        await doesNotThrow(t, async () => await storage.getDocsAfterLocalIndex('all', 0, 1), 'does not throw because not closed');
         await doesNotThrow(t, async () => await storage.getAllDocs(), 'does not throw because not closed');
         await doesNotThrow(t, async () => await storage.getLatestDocs(), 'does not throw because not closed');
         await doesNotThrow(t, async () => await storage.getAllDocsAtPath('/a'), 'does not throw because not closed');
@@ -130,7 +130,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.same(storage.isClosed(), true, 'is closed after close()');
 
         await doesNotThrow(t, async () => storage.isClosed(), 'isClosed does not throw');
-        await throws(t, async () => await storage.getDocsSinceLocalIndex('all', 0, 1), 'throws after closed');
+        await throws(t, async () => await storage.getDocsAfterLocalIndex('all', 0, 1), 'throws after closed');
         await throws(t, async () => await storage.getAllDocs(), 'throws after closed');
         await throws(t, async () => await storage.getLatestDocs(), 'throws after closed');
         await throws(t, async () => await storage.getAllDocsAtPath('/a'), 'throws after closed');

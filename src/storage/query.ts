@@ -50,14 +50,14 @@ export let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
         return invalidResponse;
     }
 
-    // if orderBy is path, startAt should contain path or nothing, not localIndex
-    // if orderBy is localIndex, startAt should contain localIndex or nothing, not path
-    if (query.orderBy?.startsWith('path') && query.startAt?.localIndex !== undefined) {
-        logger.debug('cleanUpQuery: orderBy is "path" but startAt is not compatible - returning empty invalid query', invalidResponse);
+    // if orderBy is path, startAfter should contain path or nothing, not localIndex
+    // if orderBy is localIndex, startAfter should contain localIndex or nothing, not path
+    if (query.orderBy?.startsWith('path') && query.startAfter?.localIndex !== undefined) {
+        logger.debug('cleanUpQuery: orderBy is "path" but startAfter is not compatible - returning empty invalid query', invalidResponse);
         return invalidResponse;
     }
-    if (query.orderBy?.startsWith('localIndex') && query.startAt?.path !== undefined) {
-        logger.debug('cleanUpQuery: orderBy is "localIndex" but startAt is not compatible - returning empty invalid query', invalidResponse);
+    if (query.orderBy?.startsWith('localIndex') && query.startAfter?.path !== undefined) {
+        logger.debug('cleanUpQuery: orderBy is "localIndex" but startAfter is not compatible - returning empty invalid query', invalidResponse);
         return invalidResponse
     };
 
@@ -84,8 +84,8 @@ export let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
         willMatch = 'some';
     }
 
-    // a startAt makes us match some
-    if (query.startAt !== undefined && !deepEqual(query.startAt, {})) {
+    // a startAfter makes us match some
+    if (query.startAfter !== undefined && !deepEqual(query.startAfter, {})) {
         willMatch = 'some';
     }
 

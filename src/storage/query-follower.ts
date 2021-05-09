@@ -38,7 +38,7 @@ export class QueryFollower implements IQueryFollower {
 
     _query: Query;
     _cb: (doc: Doc) => Promise<void>;
-    _highestLocalIndex: number = -1;
+    _maxLocalIndex: number = -1;
     _isClosed: boolean = false;
 
     _unsubIngest: Thunk;
@@ -51,7 +51,7 @@ export class QueryFollower implements IQueryFollower {
      * queries must have these specific settings:
      *      { historyMode: 'all', orderBy: 'localIndexASC' }
      * queries may have:
-     *      { startAt: { localIndex: number }}  // to start the follower partway through the sequence
+     *      { startAfter: { localIndex: number }}  // to start the follower partway through the sequence
      *      { filter: { ... any filters ... }}  // to filter the docs
      * queries may not have:
      *      { limit: number }  // TODO: allow this, and stop after processing this many docs
@@ -71,13 +71,11 @@ export class QueryFollower implements IQueryFollower {
         if (this._query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`query orderBy must be 'localIndexASC'`); }
         if (this._query.limit !== undefined) { throw new NotImplementedError(`query must not have a limit`); }
 
-        // off by one:
-        // query.startAt.localIndex points to the next thing we want.
-        // our highestLocalIndex points to the max things we've seen, which is one lower than the next thing we want.
-        if (query.startAt?.localIndex !== undefined) {
-            this._highestLocalIndex = query.startAt?.localIndex - 1;
+        // startAfter is equivalent to maxLocalIndex -- both are the max known value, not the next one that we want (+1)
+        if (query.startAfter?.localIndex !== undefined) {
+            this._maxLocalIndex = query.startAfter?.localIndex;
         }
-        logger.debug('my _highestLocalIndex is starting at', this._highestLocalIndex);
+        logger.debug('my _maxLocalIndex is starting at', this._maxLocalIndex);
 
         // when storage closes, close this QueryFollower too.
         this._unsubClose = this.storage.bus.once('willClose', async () => {
@@ -106,13 +104,13 @@ export class QueryFollower implements IQueryFollower {
             let docIsInteresting = docMatchesFilter(docIngested, this._query.filter ?? {});
             logger.debug('the doc matches our filters:', docIsInteresting);
 
-            if (docIngested._localIndex === this._highestLocalIndex + 1) {
+            if (docIngested._localIndex === this._maxLocalIndex + 1) {
                 // We've gotten the next doc in the localIndex sequence without any gaps,
                 // so we know we can process it right away and we don't need to catch up.
                 logger.debug('this follower is on the leading edge.  looking at this doc...');
 
                 // Update our pointer, even if we're not going to process this document because of our query filter.
-                this._highestLocalIndex += 1;
+                this._maxLocalIndex += 1;
 
                 if (docIsInteresting) {
                     logger.debug('...doc matches query filter.  running callback blockingly...');
@@ -153,7 +151,7 @@ export class QueryFollower implements IQueryFollower {
      * changes from the Storage?
      */
     isCaughtUp(): boolean {
-        return this._highestLocalIndex >= this.storage.storageDriver.getHighestLocalIndex();
+        return this._maxLocalIndex >= this.storage.storageDriver.getMaxLocalIndex();
     }
 
     async _catchUp(): Promise<void> {
@@ -176,15 +174,15 @@ export class QueryFollower implements IQueryFollower {
         logger.debug('_catchUp(): this follower fell behind');
         logger.debug('...querying for a batch of docs we missed...');
         // TODO: this will include our query filters, and we won't see docs filtered out by the query.
-        // That means we won't naturally update our highestLocalIndex as high as it might go.
+        // That means we won't naturally update our maxLocalIndex as high as it might go.
         // So let's get the storage's localIndex now, and remember it (just before doing the query,
         // so we won't have any gaps...)
-        let storageHighestLocalIndex = this.storage.storageDriver.getHighestLocalIndex();
+        let storageMaxLocalIndex = this.storage.storageDriver.getMaxLocalIndex();
 
         // Do the query...
         let catchUpDocs = await this.storage.queryDocs({
             ...this._query,
-            startAt: { localIndex: this._highestLocalIndex + 1 },
+            startAfter: { localIndex: this._maxLocalIndex },
             limit: 400,  // TODO: what's the right batch size to use?
         });
 
@@ -199,7 +197,7 @@ export class QueryFollower implements IQueryFollower {
 
             // Update our localIndex to match the saved number from the storage
             // in case the query filter made us skip over a bunch of docs
-            this._highestLocalIndex = Math.max(this._highestLocalIndex, storageHighestLocalIndex);
+            this._maxLocalIndex = Math.max(this._maxLocalIndex, storageMaxLocalIndex);
 
             logger.debug('...sending caught-up event');
             await this.bus.sendAndWait('caught-up');
@@ -212,13 +210,13 @@ export class QueryFollower implements IQueryFollower {
         for (let d of catchUpDocs) {
             // check frequently if we're closed so we can skip out of a long batch of docs to process
             if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
-            if (d._localIndex !== undefined) { this._highestLocalIndex = d._localIndex; }
+            if (d._localIndex !== undefined) { this._maxLocalIndex = d._localIndex; }
             await this._cb(d);
         }
 
         // Update our localIndex to match the saved number from the storage
         // in case the query filter made us skip over a bunch of docs
-        this._highestLocalIndex = Math.max(this._highestLocalIndex, storageHighestLocalIndex);
+        this._maxLocalIndex = Math.max(this._maxLocalIndex, storageMaxLocalIndex);
 
         // Run _catchUp again in case more docs appeared in the meantime, or our batch size was not big enough.
         if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }

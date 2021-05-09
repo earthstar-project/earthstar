@@ -52,35 +52,7 @@ export interface IStorageAsync extends IStorageAsyncConfig {
     bus: Superbus<StorageEvent>;
 
     //--------------------------------------------------
-    // GET
-
-    // these should all return frozen docs
-    getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]>;
-    getAllDocs(): Promise<Doc[]>;
-    getLatestDocs(): Promise<Doc[]>;
-    getAllDocsAtPath(path: Path): Promise<Doc[]>;
-    getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
-
-    queryDocs(query?: Query): Promise<Doc[]>;
-//    queryPaths(query?: Query): Path[];
-//    queryAuthors(query?: Query): AuthorAddress[];
-
-    //--------------------------------------------------
-    // SET
-    set(keypair: AuthorKeypair, doc: DocToSet): Promise<IngestResultAndDoc>;
-
-    // this should freeze the incoming doc if needed
-    ingest(doc: Doc): Promise<IngestResultAndDoc>;
-
-    // Overwrite every doc from this author, including history versions, with an empty doc.
-    // The new docs will have a timestamp of (oldDoc.timestamp + 1) to prevent them from
-    //  jumping to the front of the history and becoming Latest.
-    // Return the number of docs changed, or a ValidationError.
-    // Already-empty docs will not be overwritten.
-    // If an error occurs this will stop early.
-    overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError>;
-
-    //--------------------------------------------------
+    // LIFECYCLE
 
     isClosed(): boolean;
     /**
@@ -97,17 +69,55 @@ export interface IStorageAsync extends IStorageAsyncConfig {
      * In that case, the pending operations will fail and throw a storageIsClosed.
      */
     close(): Promise<void>;
+
+    //--------------------------------------------------
+    // GET
+
+    // these should all return frozen docs
+    getDocsAfterLocalIndex(historyMode: HistoryMode, startAfter: LocalIndex, limit?: number): Promise<Doc[]>;
+    getAllDocs(): Promise<Doc[]>;
+    getLatestDocs(): Promise<Doc[]>;
+    getAllDocsAtPath(path: Path): Promise<Doc[]>;
+    getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
+
+    queryDocs(query?: Query): Promise<Doc[]>;
+//    queryPaths(query?: Query): Path[];
+//    queryAuthors(query?: Query): AuthorAddress[];
+
+    //--------------------------------------------------
+    // SET
+
+    set(keypair: AuthorKeypair, doc: DocToSet): Promise<IngestResultAndDoc>;
+
+    // this should freeze the incoming doc if needed
+    ingest(doc: Doc): Promise<IngestResultAndDoc>;
+
+    // Overwrite every doc from this author, including history versions, with an empty doc.
+    // The new docs will have a timestamp of (oldDoc.timestamp + 1) to prevent them from
+    //  jumping to the front of the history and becoming Latest.
+    // Return the number of docs changed, or a ValidationError.
+    // Already-empty docs will not be overwritten.
+    // If an error occurs this will stop early.
+    overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError>;
 }
 
 export interface IStorageDriverAsync extends IStorageAsyncConfig {
     workspace: WorkspaceAddress;
     lock: Lock;
-    // The max local index used so far.  the first doc will increment this and get index 1.
-    //highestLocalIndex: LocalIndex;
-    getHighestLocalIndex(): number;
+
+    //--------------------------------------------------
+    // LIFECYCLE
+
+    isClosed(): boolean;
+    // the IStorage will call this
+    close(): Promise<void>;
 
     //--------------------------------------------------
     // GET
+
+    // The max local index used so far.  the first doc will increment this and get index 1.
+    getMaxLocalIndex(): number;
+
     // this should return frozen docs
     queryDocs(query: Query): Promise<Doc[]>;
 //    queryPaths(query: Query): Doc[];
@@ -119,10 +129,6 @@ export interface IStorageDriverAsync extends IStorageAsyncConfig {
     // overwrite existing doc even if this doc is older.
     // return a copy of the doc, frozen, with _localIndex set.
     upsert(doc: Doc): Promise<Doc>;
-
-    isClosed(): boolean;
-    // the IStorage will call this
-    close(): Promise<void>;
 }
 
 //================================================================================ 

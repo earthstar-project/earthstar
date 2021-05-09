@@ -77,6 +77,33 @@ export class StorageAsync implements IStorageAsync {
         this.bus = new Superbus<StorageEvent>('|');
     }
 
+    //--------------------------------------------------
+    // LIFECYCLE
+
+    isClosed(): boolean {
+        return this._isClosed;
+    }
+    async close(): Promise<void> {
+        logger.debug('closing...');
+        if (this._isClosed) {
+            logger.debug('...already closed.');
+            return;
+        }
+        // TODO: do this all in a lock?
+        logger.debug('    sending willClose blockingly...');
+        await this.bus.sendAndWait('willClose');
+        logger.debug('    marking self as closed...');
+        this._isClosed = true;
+        logger.debug('    closing storageDriver...');
+        await this.storageDriver.close();
+        logger.debug('    sending didClose nonblockingly...');
+        this.bus.sendLater('didClose');
+        logger.debug('...closing done');
+    }
+
+    //--------------------------------------------------
+    // CONFIG
+
     async getConfig(key: string): Promise<string | undefined> {
         return await this.storageDriver.getConfig(key);
     }
@@ -90,22 +117,23 @@ export class StorageAsync implements IStorageAsync {
         return await this.storageDriver.deleteConfig(key);
     }
 
-    async getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]> {
-        logger.debug(`getDocsSinceLocalIndex(${historyMode}, ${startAt}, ${limit})`);
+    //--------------------------------------------------
+    // GET
+
+    async getDocsAfterLocalIndex(historyMode: HistoryMode, startAfter: LocalIndex, limit?: number): Promise<Doc[]> {
+        logger.debug(`getDocsAfterLocalIndex(${historyMode}, ${startAfter}, ${limit})`);
         if (this._isClosed) { throw new StorageIsClosedError(); }
         let query: Query = {
             historyMode: historyMode,
             orderBy: 'localIndex ASC',
-            startAt: {
-                localIndex: startAt,
+            startAfter: {
+                localIndex: startAfter,
             },
             limit,
         };
         return await this.storageDriver.queryDocs(query);
     }
 
-    //--------------------------------------------------
-    // GET
     async getAllDocs(): Promise<Doc[]> {
         logger.debug(`getAllDocs()`);
         if (this._isClosed) { throw new StorageIsClosedError(); }
@@ -335,26 +363,5 @@ export class StorageAsync implements IStorageAsync {
         }
         logger.debug(`    ...done; ${numOverwritten} overwritten to be empty; ${numAlreadyEmpty} were already empty; out of total ${docsToOverwrite.length} docs`);
         return numOverwritten;
-    }
-
-    isClosed(): boolean {
-        return this._isClosed;
-    }
-    async close(): Promise<void> {
-        logger.debug('closing...');
-        if (this._isClosed) {
-            logger.debug('...already closed.');
-            return;
-        }
-        // TODO: do this all in a lock?
-        logger.debug('    sending willClose blockingly...');
-        await this.bus.sendAndWait('willClose');
-        logger.debug('    marking self as closed...');
-        this._isClosed = true;
-        logger.debug('    closing storageDriver...');
-        await this.storageDriver.close();
-        logger.debug('    sending didClose nonblockingly...');
-        this.bus.sendLater('didClose');
-        logger.debug('...closing done');
     }
 }

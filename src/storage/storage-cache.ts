@@ -26,41 +26,41 @@ function sortAndLimit(query: Query, docs: Doc[]) {
 
   for (let doc of docs) {
     if (query.orderBy === "path ASC") {
-      if (query.startAt !== undefined) {
-        if (query.startAt.path !== undefined && doc.path < query.startAt.path) {
+      if (query.startAfter !== undefined) {
+        if (query.startAfter.path !== undefined && doc.path <= query.startAfter.path) {
           continue;
         }
-        // doc.path is now >= startAt.path
+        // doc.path is now > startAfter.path
       }
     }
     if (query.orderBy === "path DESC") {
-      if (query.startAt !== undefined) {
-        if (query.startAt.path !== undefined && doc.path > query.startAt.path) {
+      if (query.startAfter !== undefined) {
+        if (query.startAfter.path !== undefined && doc.path >= query.startAfter.path) {
           continue;
         }
-        // doc.path is now <= startAt.path (we're descending)
+        // doc.path is now < startAfter.path (we're descending)
       }
     }
     if (query.orderBy === "localIndex ASC") {
-      if (query.startAt !== undefined) {
+      if (query.startAfter !== undefined) {
         if (
-          query.startAt.localIndex !== undefined &&
-          (doc._localIndex || 0) < query.startAt.localIndex
+          query.startAfter.localIndex !== undefined &&
+          (doc._localIndex || 0) <= query.startAfter.localIndex
         ) {
           continue;
         }
-        // doc.path is now >= startAt.localIndex
+        // doc.path is now > startAfter.localIndex
       }
     }
     if (query.orderBy === "localIndex DESC") {
-      if (query.startAt !== undefined) {
+      if (query.startAfter !== undefined) {
         if (
-          query.startAt.localIndex !== undefined &&
-          (doc._localIndex || 0) > query.startAt.localIndex
+          query.startAfter.localIndex !== undefined &&
+          (doc._localIndex || 0) >= query.startAfter.localIndex
         ) {
           continue;
         }
-        // doc.path is now <= startAt.localIndex (we're descending)
+        // doc.path is now < startAfter.localIndex (we're descending)
       }
     }
 

@@ -67,7 +67,7 @@ let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
     lock: Lock;
-    _highestLocalIndex: LocalIndex = -1;
+    _maxLocalIndex: LocalIndex = -1;  // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
     _isClosed: boolean = false;
     _configKv: Record<string, string> = {};
   
@@ -83,6 +83,20 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         this.lock = new Lock();
     }
   
+    //--------------------------------------------------
+    // LIFECYCLE
+
+    isClosed(): boolean {
+        return this._isClosed;
+    }
+    async close(): Promise<void> {
+        logger.debug('closing');
+        this._isClosed = true;
+    }
+
+    //--------------------------------------------------
+    // CONFIG
+
     async getConfig(key: string): Promise<string | undefined> {
         return this._configKv[key];
     }
@@ -98,10 +112,13 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         return had;
     }
 
-    getHighestLocalIndex() {
-        logger.debug(`getHighestLocalIndex(): it's ${this._highestLocalIndex}`);
+    //--------------------------------------------------
+    // GET
+
+    getMaxLocalIndex() {
+        logger.debug(`getMaxLocalIndex(): it's ${this._maxLocalIndex}`);
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        return this._highestLocalIndex;
+        return this._maxLocalIndex;
     }
   
     async _getAllDocs(): Promise<Doc[]> {
@@ -154,29 +171,29 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         let filteredDocs: Doc[] = [];
         logger.debug(`    filtering docs`);
         for (let doc of docs) {
-            // skip ahead until we pass continueAfter
+            // skip ahead until we reach startAfter
             if (query.orderBy === 'path ASC') {
-                if (query.startAt !== undefined) {
-                    if (query.startAt.path !== undefined && doc.path < query.startAt.path) { continue; }
-                    // doc.path is now >= startAt.path
+                if (query.startAfter !== undefined) {
+                    if (query.startAfter.path !== undefined && doc.path <= query.startAfter.path) { continue; }
+                    // doc.path is now > startAfter.path
                 }
             }
             if (query.orderBy === 'path DESC') {
-                if (query.startAt !== undefined) {
-                    if (query.startAt.path !== undefined && doc.path > query.startAt.path) { continue; }
-                    // doc.path is now <= startAt.path (we're descending)
+                if (query.startAfter !== undefined) {
+                    if (query.startAfter.path !== undefined && doc.path >= query.startAfter.path) { continue; }
+                    // doc.path is now < startAfter.path (we're descending)
                 }
             }
             if (query.orderBy === 'localIndex ASC') {
-                if (query.startAt !== undefined) {
-                    if (query.startAt.localIndex !== undefined && (doc._localIndex || 0) < query.startAt.localIndex) { continue; }
-                    // doc.path is now >= startAt.localIndex
+                if (query.startAfter !== undefined) {
+                    if (query.startAfter.localIndex !== undefined && (doc._localIndex ?? 0) <= query.startAfter.localIndex) { continue; }
+                    // doc.path is now > startAfter.localIndex
                 }
             }
             if (query.orderBy === 'localIndex DESC') {
-                if (query.startAt !== undefined) {
-                    if (query.startAt.localIndex !== undefined && (doc._localIndex || 0) > query.startAt.localIndex) { continue; }
-                    // doc.path is now <= startAt.localIndex (we're descending)
+                if (query.startAfter !== undefined) {
+                    if (query.startAfter.localIndex !== undefined && (doc._localIndex ?? 0) >= query.startAfter.localIndex) { continue; }
+                    // doc.path is now < startAfter.localIndex (we're descending)
                 }
             }
 
@@ -197,6 +214,9 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         return filteredDocs;
     }
   
+    //--------------------------------------------------
+    // SET
+
     async upsert(doc: Doc): Promise<Doc> {
         // add a doc.  don't enforce any rules on it.
         // overwrite existing doc even if this doc is older.
@@ -205,8 +225,8 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         if (this._isClosed) { throw new StorageIsClosedError(); }
 
         doc = {...doc};
-        this._highestLocalIndex += 1;
-        doc._localIndex = this._highestLocalIndex;
+        this._maxLocalIndex += 1;  // this starts at -1 initially, so the first doc has a localIndex of 0.
+        doc._localIndex = this._maxLocalIndex;
         Object.freeze(doc);
 
         logger.debug('upsert', doc);
@@ -229,11 +249,4 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         return doc;
     }
 
-    isClosed(): boolean {
-        return this._isClosed;
-    }
-    async close(): Promise<void> {
-        logger.debug('closing');
-        this._isClosed = true;
-    }
 }

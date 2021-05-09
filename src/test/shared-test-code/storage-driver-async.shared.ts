@@ -44,7 +44,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         let workspace = '+gardening.abcde';
         let driver = makeDriver(workspace);
 
-        t.same(driver.getHighestLocalIndex(), -1, 'highestLocalIndex starts at -1');
+        t.same(driver.getMaxLocalIndex(), -1, 'maxLocalIndex starts at -1');
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
 
         await driver.close();
@@ -125,7 +125,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
 
         let docResult: Doc = await driver.upsert(doc0);
         t.same(docResult._localIndex, 0, 'upsert doc0, localIndex is now 0');
-        t.same(driver.getHighestLocalIndex(), docResult._localIndex, 'driver.getHighestLocalIndex() matches doc._locaIndex');
+        t.same(driver.getMaxLocalIndex(), docResult._localIndex, 'driver.getMaxLocalIndex() matches doc._locaIndex');
 
         let docs = await driver.queryDocs({});
         t.same(docs.length, 1, 'query returns 1 doc');
@@ -137,7 +137,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         // overwrite same author, latest
         docResult = await driver.upsert(doc1);
         t.same(docResult._localIndex, 1, 'upsert doc1 from same author, localIndex is now 1');
-        t.same(driver.getHighestLocalIndex(), docResult._localIndex, 'driver.getHighestLocalIndex() matches doc._locaIndex');
+        t.same(driver.getMaxLocalIndex(), docResult._localIndex, 'driver.getMaxLocalIndex() matches doc._locaIndex');
 
         docs = await driver.queryDocs({});
         t.same(docs.length, 1, 'query returns 1 doc');
@@ -149,7 +149,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         // add a second author, latest
         docResult = await driver.upsert(doc2);
         t.same(docResult._localIndex, 2, 'upsert doc2 from second author, localIndex is now 3');
-        t.same(driver.getHighestLocalIndex(), docResult._localIndex, 'driver.getHighestLocalIndex() matches doc._locaIndex');
+        t.same(driver.getMaxLocalIndex(), docResult._localIndex, 'driver.getMaxLocalIndex() matches doc._locaIndex');
 
         let latestDocs = await driver.queryDocs({ historyMode: 'latest' });
         t.same(latestDocs.length, 1, 'there is 1 latest doc');
@@ -167,7 +167,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         // -- should not bounce, that's the job of IStorage
         docResult = await driver.upsert(doc3);
         t.same(docResult._localIndex, 3, 'upsert doc3 from second author (but older), localIndex is now 3');
-        t.same(driver.getHighestLocalIndex(), docResult._localIndex, 'driver.getHighestLocalIndex() matches doc._locaIndex');
+        t.same(driver.getMaxLocalIndex(), docResult._localIndex, 'driver.getMaxLocalIndex() matches doc._locaIndex');
 
         // latest doc is now from author 1
         latestDocs = await driver.queryDocs({ historyMode: 'latest' });
@@ -185,7 +185,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         // add a third author, oldest
         docResult = await driver.upsert(doc4);
         t.same(docResult._localIndex, 4, 'upsert doc4 from new third author (but oldest), localIndex is now 5');
-        t.same(driver.getHighestLocalIndex(), docResult._localIndex, 'driver.getHighestLocalIndex() matches doc._locaIndex');
+        t.same(driver.getMaxLocalIndex(), docResult._localIndex, 'driver.getMaxLocalIndex() matches doc._locaIndex');
 
         // latest doc is still from author 1
         latestDocs = await driver.queryDocs({ historyMode: 'latest' });
@@ -223,7 +223,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
                 query: {
                     historyMode: 'all',
                     orderBy: 'localIndex ASC',
-                    startAt: { localIndex: 3 },
+                    startAfter: { localIndex: 2 },
                 },
                 expectedContent: ['Hello 3', 'Hello 4'],
             },
@@ -231,7 +231,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
                 query: {
                     historyMode: 'all',
                     orderBy: 'localIndex ASC',
-                    startAt: { path: 'a' },  // invalid combo of orderBy and startAt
+                    startAfter: { path: 'a' },  // invalid combo of orderBy and startAt
                 },
                 expectedContent: [],
             },
@@ -239,7 +239,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
                 query: {
                     historyMode: 'all',
                     orderBy: 'localIndex ASC',
-                    startAt: { localIndex: 3 },
+                    startAfter: { localIndex: 2 },
                     limit: 1,
                 },
                 expectedContent: ['Hello 3'],

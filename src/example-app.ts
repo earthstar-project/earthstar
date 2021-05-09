@@ -88,7 +88,7 @@ let main = async () => {
         storage,
         {
             historyMode: 'all', orderBy: 'localIndex ASC',
-            //startAt: { localIndex: 1 },
+            //startAfter: { localIndex: 1 },
             //filter: { path: '/posts/post-0001.txt' },
         },
         async (doc): Promise<void> => {
@@ -143,7 +143,7 @@ let main = async () => {
         storage,
         {
             historyMode: 'all', orderBy: 'localIndex ASC',
-            //startAt: { localIndex: 1 },
+            //startAfter: { localIndex: 1 },
             //filter: { path: '/posts/post-0000.txt' },
         },
         async (doc): Promise<void> => {
