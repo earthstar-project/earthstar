@@ -1,11 +1,11 @@
 import { WorkspaceAddress } from '../util/doc-types';
 import { ICrypto } from '../crypto/crypto-types';
+import { StorageId } from '../storage/storage-types';
 import {
     IPeer,
     IPeerClient,
     IPeerServer,
     PeerId,
-    StorageId,
     saltAndHashWorkspace,
 } from './peer-types';
 

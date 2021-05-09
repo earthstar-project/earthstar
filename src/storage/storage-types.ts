@@ -27,6 +27,8 @@ import {
 
 //================================================================================
 
+export type StorageId = string;
+
 export type StorageEvent =
     'ingest' |  // 'ingest|/some/path.txt'
     'willClose' | 'didClose';
@@ -43,6 +45,7 @@ export interface IStorageAsyncConfig {
 }
 
 export interface IStorageAsync extends IStorageAsyncConfig {
+    storageId: StorageId;
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;

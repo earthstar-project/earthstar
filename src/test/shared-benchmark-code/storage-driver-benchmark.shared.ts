@@ -34,7 +34,6 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
     let workspace = '+gardening.pals';
     let crypto = new Crypto(cryptoDriver);
     let validator = new FormatValidatorEs4(crypto);
-    let storageDriver = makeStorageDriver();
 
     let keypair1 = crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
     let keypair2 = crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
@@ -43,9 +42,10 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
     //==================================================
     // benchmarks
 
+    // number of documents to test with
     let n = 100;
     for (let n of [100, 500]) {
-        let storageAdd = new StorageAsync(workspace, validator, storageDriver);
+        let storageAdd = new StorageAsync(workspace, validator, makeStorageDriver());
         await runner.runOnce(`add ${n} docs (docs/sec)`, {actualIters: n}, async () => {
             for (let ii = 0; ii < n; ii++) {
                 await storageAdd.set(keypair1, {
@@ -56,7 +56,7 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
             }
         });
 
-        let storageSync = new StorageAsync(workspace, validator, storageDriver);
+        let storageSync = new StorageAsync(workspace, validator, makeStorageDriver());
         await runner.runOnce(`sync ${n} docs to empty storage (docs/sec)`, {actualIters: n}, async () => {
             await syncLocal(storageAdd, storageSync);
         });
@@ -64,6 +64,9 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
         await runner.runOnce(`sync ${n} docs again to full storage (docs/sec)`, {actualIters: n}, async () => {
             await syncLocal(storageAdd, storageSync);
         });
+
+        await storageAdd.close();
+        await storageSync.close();
 
         runner.note('');
     }

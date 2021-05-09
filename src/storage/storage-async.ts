@@ -23,6 +23,7 @@ import {
     IngestResult,
     IngestResultAndDoc,
     StorageEvent,
+    StorageId,
 } from './storage-types';
 import {
     IFormatValidator,
@@ -34,7 +35,7 @@ import {
     ValidationError,
 } from '../util/errors';
 import {
-    microsecondNow,
+    microsecondNow, randomId,
 } from '../util/misc';
 import {
     compareArrays,
@@ -59,6 +60,7 @@ export let docCompareForOverwrite = (newDoc: Doc, oldDoc: Doc): Cmp => {
 }
 
 export class StorageAsync implements IStorageAsync {
+    storageId: StorageId;
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
@@ -68,6 +70,7 @@ export class StorageAsync implements IStorageAsync {
 
     constructor(workspace: WorkspaceAddress, validator: IFormatValidator, driver: IStorageDriverAsync) {
         logger.debug(`constructor.  driver = ${(driver as any)?.constructor?.name}`);
+        this.storageId = 'storage-' + randomId();
         this.workspace = workspace;
         this.formatValidator = validator;
         this.storageDriver = driver;

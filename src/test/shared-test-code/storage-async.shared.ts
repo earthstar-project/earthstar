@@ -89,6 +89,8 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         let storage = makeStorage(workspace);
         let events: string[] = [];
 
+        t.same(typeof storage.storageId, 'string', 'storage has a storageId');
+
         // subscribe in a different order than they will normally happen,
         // to make sure they really happen in the right order when they happen for real
         storage.bus.on('didClose', (channel, data) => {
@@ -146,6 +148,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         await sleep(50);
         loggerTest.debug('...done sleeping 50');
 
+        // storage is already closed
         t.end();
     });
 
@@ -249,8 +252,10 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.ok(docsB[0].timestamp > docsB[1].timestamp, 'docs are ordered latest first within this path');
         t.same(docsB_actualAuthorAndContent, docsB_expectedAuthorAndContent, '/pathB docs are as expected');
 
+        await storage.close();
         t.end();
     });
+
 
     // TODO: more StorageAsync tests
 };

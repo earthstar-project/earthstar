@@ -6,7 +6,6 @@ import { ICrypto } from '../crypto/crypto-types';
 // PEER
 
 export type PeerId = string;
-export type StorageId = string;
 
 export interface IPeer {
     // TODO: oops, or should we have storage IDs instead of peer IDs?

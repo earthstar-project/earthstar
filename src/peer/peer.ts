@@ -17,7 +17,6 @@ let J = JSON.stringify;
 
 //================================================================================
 
-
 //export type PeerEvent = 'close';
 
 export class Peer implements IPeer {
