@@ -13,6 +13,7 @@ import {
     isErr,
 } from '../util/errors';
 
+import { randomId } from '../util/misc';
 import {
     base32StringToBytes,
     base32BytesToString
@@ -138,7 +139,7 @@ export class Crypto implements ICrypto {
             let addressErr = checkAuthorIsValid(keypair.address);
             if (isErr(addressErr)) { return addressErr; }
 
-            let msg = 'a test message to sign. ' + Math.random();
+            let msg = 'a test message to sign. ' + randomId();
             let sig = this.sign(keypair, msg);
             if (isErr(sig)) { return sig; }
 

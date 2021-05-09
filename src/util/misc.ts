@@ -15,6 +15,10 @@ export let sleep = (ms: number) =>
         setTimeout(res, ms);
     });
 
+// TODO: better randomness here
+export let randomId = (): string =>
+    '' + Math.random() + Math.random() + Math.random();
+
 //================================================================================
 // MISC 
 

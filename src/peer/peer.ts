@@ -3,8 +3,11 @@ import { SuperbusMap } from 'superbus-map';
 import { WorkspaceAddress } from '../util/doc-types';
 import { IStorageAsync } from '../storage/storage-types';
 import {
-    IPeer, PeerId,
+    IPeer,
+    PeerId,
 } from './peer-types';
+
+import { randomId } from '../util/misc';
 
 //--------------------------------------------------
 
@@ -26,7 +29,7 @@ export class Peer implements IPeer {
         logger.debug('constructor');
         //this.bus = new Superbus<PeerEvent>();
         this.storageMap = new SuperbusMap<WorkspaceAddress, IStorageAsync>();
-        this.peerId = 'peer:' + Math.random();
+        this.peerId = 'peer:' + randomId();
     }
 
     //--------------------------------------------------

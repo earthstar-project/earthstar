@@ -5,6 +5,7 @@ import {
     ICryptoDriver,
     KeypairBytes
 } from '../../crypto/crypto-types';
+import { randomId } from '../../util/misc';
 
 import {
     BenchmarkRunner
@@ -22,14 +23,14 @@ export let runCryptoDriverBenchmark = async (runner: BenchmarkRunner, cryptoDriv
     let keypairBytes = cryptoDriver.generateKeypairBytes() as KeypairBytes;
     if (isErr(keypairBytes)) { console.warn(keypairBytes); }
 
-    let msgToSign = 'hello' + Math.random() + Math.random() + Math.random() + Math.random();
+    let msgToSign = 'hello' + randomId() + randomId();
     let sigBytes = cryptoDriver.sign(keypairBytes, msgToSign);
 
     //==================================================
     // benchmarks
 
     await runner.runMany('sha256', {minDuration: 1234}, async () => {
-        let msgToHash = 'hello' + Math.random() + Math.random() + Math.random();
+        let msgToHash = 'hello' + randomId() + randomId();
         cryptoDriver.sha256(msgToHash);
     });
 

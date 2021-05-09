@@ -5,6 +5,7 @@ import {
     SaltAndSaltedWorkspaces,
     saltAndHashWorkspace,
 } from './peer-types';
+import { randomId } from '../util/misc';
 
 //--------------------------------------------------
 
@@ -18,7 +19,7 @@ export class PeerServer implements IPeerServer {
     constructor(public peer: IPeer, public crypto: ICrypto) {
     }
     async saltedWorkspaces(): Promise<SaltAndSaltedWorkspaces> {
-        let salt = '' + Math.random() + Math.random() + Math.random() + Math.random() + Math.random();
+        let salt = 'salt-' + randomId();
         let saltedWorkspaces = this.peer.workspaces()
             .map(ws => saltAndHashWorkspace(this.crypto, salt, ws));
         let result = {
