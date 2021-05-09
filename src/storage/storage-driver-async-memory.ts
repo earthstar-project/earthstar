@@ -13,10 +13,15 @@ import {
 import {
     IStorageDriverAsync
 } from "./storage-types";
+import {
+    StorageIsClosedError,
+    ValidationError
+} from '../util/errors';
 
 import {
     compareArrays,
     compareByObjKey,
+    sortedInPlace,
 } from './compare';
 import {
     cleanUpQuery,
@@ -29,7 +34,6 @@ import {
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
-import { StorageIsClosedError, ValidationError } from '../util/errors';
 let logger = new Logger('storage driver async memory', 'yellow');
 
 //================================================================================
@@ -65,6 +69,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     lock: Lock;
     _highestLocalIndex: LocalIndex = -1;
     _isClosed: boolean = false;
+    _configKv: Record<string, string> = {};
   
     // Our indexes.
     // These maps all share the same Doc objects, so memory usage is not bad.
@@ -78,6 +83,21 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         this.lock = new Lock();
     }
   
+    async getConfig(key: string): Promise<string | undefined> {
+        return this._configKv[key];
+    }
+    async setConfig(key: string, value: string): Promise<void> {
+        this._configKv[key] = value;
+    }
+    async listConfigKeys(): Promise<string[]> {
+        return sortedInPlace(Object.keys(this._configKv));
+    }
+    async deleteConfig(key: string): Promise<boolean> {
+        let had = (key in this._configKv);
+        delete this._configKv[key];
+        return had;
+    }
+
     getHighestLocalIndex() {
         logger.debug(`getHighestLocalIndex(): it's ${this._highestLocalIndex}`);
         if (this._isClosed) { throw new StorageIsClosedError(); }

@@ -59,6 +59,31 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
     /* istanbul ignore next */ 
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
+    t.test(SUBTEST_NAME + ': config', async (t: any) => {
+        let workspace = '+gardening.abcde';
+        let storage = makeStorage(workspace);
+
+        // empty...
+        t.same(await storage.getConfig('foo'), undefined, `getConfig('nonexistent') --> undefined`);
+        t.same(await storage.listConfigKeys(), [], `listConfigKeys() is []`);
+        t.same(await storage.deleteConfig('foo'), false, `deleteConfig('nonexistent') --> false`);
+
+        // set some items...
+        await storage.setConfig('b', 'bb');
+        await storage.setConfig('a', 'aa');
+
+        // after adding some items...
+        t.same(await storage.getConfig('a'), 'aa', `getConfig works`);
+        t.same(await storage.listConfigKeys(), ['a', 'b'], `listConfigKeys() is ['a', 'b'] (sorted)`);
+
+        t.same(await storage.deleteConfig('a'), true, 'delete returns true on success');
+        t.same(await storage.deleteConfig('a'), false, 'delete returns false if nothing is there');
+        t.same(await storage.getConfig('a'), undefined, `getConfig returns undefined after deleting the key`);
+
+        await storage.close();
+        t.end();
+    });
+
     t.test(SUBTEST_NAME + ': storage close() and throwing when closed', async (t: any) => {
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);

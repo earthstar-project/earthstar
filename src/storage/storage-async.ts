@@ -74,6 +74,19 @@ export class StorageAsync implements IStorageAsync {
         this.bus = new Superbus<StorageEvent>('|');
     }
 
+    async getConfig(key: string): Promise<string | undefined> {
+        return await this.storageDriver.getConfig(key);
+    }
+    async setConfig(key: string, value: string): Promise<void> {
+        return await this.storageDriver.setConfig(key, value);
+    }
+    async listConfigKeys(): Promise<string[]> {
+        return await this.storageDriver.listConfigKeys();
+    }
+    async deleteConfig(key: string): Promise<boolean> {
+        return await this.storageDriver.deleteConfig(key);
+    }
+
     async getDocsSinceLocalIndex(historyMode: HistoryMode, startAt: LocalIndex, limit?: number): Promise<Doc[]> {
         logger.debug(`getDocsSinceLocalIndex(${historyMode}, ${startAt}, ${limit})`);
         if (this._isClosed) { throw new StorageIsClosedError(); }

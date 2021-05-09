@@ -31,7 +31,18 @@ export type StorageEvent =
     'ingest' |  // 'ingest|/some/path.txt'
     'willClose' | 'didClose';
 
-export interface IStorageAsync {
+export interface IStorageAsyncConfig {
+    // This is for local storage of configuration details for storage instances.
+    // This data will not be directly sync'd with other instances.
+    // Storage drivers implement these, and IStorageAsync just has stubs of
+    // these methods that call out to the storage driver.
+    getConfig(key: string): Promise<string | undefined>;
+    setConfig(key: string, value: string): Promise<void>;
+    listConfigKeys(): Promise<string[]>;  // sorted
+    deleteConfig(key: string): Promise<boolean>;
+}
+
+export interface IStorageAsync extends IStorageAsyncConfig {
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
@@ -85,7 +96,7 @@ export interface IStorageAsync {
     close(): Promise<void>;
 }
 
-export interface IStorageDriverAsync {
+export interface IStorageDriverAsync extends IStorageAsyncConfig {
     workspace: WorkspaceAddress;
     lock: Lock;
     // The max local index used so far.  the first doc will increment this and get index 1.

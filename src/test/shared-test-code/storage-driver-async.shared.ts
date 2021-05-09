@@ -47,6 +47,32 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(driver.getHighestLocalIndex(), -1, 'highestLocalIndex starts at -1');
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
 
+        await driver.close();
+        t.end();
+    });
+
+    t.test(SUBTEST_NAME + ': config', async (t: any) => {
+        let workspace = '+gardening.abcde';
+        let driver = makeDriver(workspace);
+
+        // empty...
+        t.same(await driver.getConfig('foo'), undefined, `getConfig('nonexistent') --> undefined`);
+        t.same(await driver.listConfigKeys(), [], `listConfigKeys() is []`);
+        t.same(await driver.deleteConfig('foo'), false, `deleteConfig('nonexistent') --> false`);
+
+        // set some items...
+        await driver.setConfig('b', 'bb');
+        await driver.setConfig('a', 'aa');
+
+        // after adding some items...
+        t.same(await driver.getConfig('a'), 'aa', `getConfig works`);
+        t.same(await driver.listConfigKeys(), ['a', 'b'], `listConfigKeys() is ['a', 'b'] (sorted)`);
+
+        t.same(await driver.deleteConfig('a'), true, 'delete returns true on success');
+        t.same(await driver.deleteConfig('a'), false, 'delete returns false if nothing is there');
+        t.same(await driver.getConfig('a'), undefined, `getConfig returns undefined after deleting the key`);
+
+        await driver.close();
         t.end();
     });
 
@@ -263,6 +289,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
             t.same(actualContent, expectedContent, `query: ${J(query)}`);
         }
 
+        await driver.close();
         t.end();
     });
 
