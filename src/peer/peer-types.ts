@@ -32,6 +32,11 @@ export interface SaltAndSaltedWorkspaces {
     saltedWorkspaces: string[],
 }
 
+export interface CommonWorkspacesAndPeerId {
+    commonWorkspaces: WorkspaceAddress[],
+    serverPeerId: PeerId,
+}
+
 // ok this isn't a type, but I put it here anyway.
 export let saltAndHashWorkspace = (crypto: ICrypto, salt: string, workspace: WorkspaceAddress): string =>
     crypto.sha256base32(salt + workspace + salt);
@@ -39,9 +44,11 @@ export let saltAndHashWorkspace = (crypto: ICrypto, salt: string, workspace: Wor
 // one server can talk to many clients.
 
 export interface IPeerClient {
-    discoverCommonWorkspaces(server: IPeerServer): Promise<WorkspaceAddress[]>;
+    syncWithPeer(server: IPeerServer): Promise<void>;
+    discoverCommonWorkspacesAndServerPeerId(server: IPeerServer): Promise<CommonWorkspacesAndPeerId>;
 }
 
 export interface IPeerServer {
     saltedWorkspaces(): Promise<SaltAndSaltedWorkspaces>
+    // storageDetails(workspaces): Promise<TODO>
 }

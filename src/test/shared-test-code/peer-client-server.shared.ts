@@ -48,36 +48,45 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             '+common.three',
         ]
 
-        let clientPeer = new Peer();
-        let serverPeer = new Peer();
+        // make Peers
+        let peerOnClient = new Peer();
+        let peerOnServer = new Peer();
+        t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same');
 
-        t.notSame(clientPeer.peerId, serverPeer.peerId, 'peerIds are not the same');
-
-        // add storages
+        // make Storages and add them to the Peers
         for (let ws of clientWorkspaces) {
-            let storage = makeStorage(ws);
-            clientPeer.addStorage(storage);
+            peerOnClient.addStorage(makeStorage(ws));
         }
         for (let ws of serverWorkspaces) {
-            let storage = makeStorage(ws);
-            serverPeer.addStorage(storage);
+            peerOnServer.addStorage(makeStorage(ws));
         }
 
         // create Client and Server instances
-        let client = new PeerClient(clientPeer, crypto);
-        let server = new PeerServer(serverPeer, crypto);
+        let client = new PeerClient(peerOnClient, crypto);
+        let server = new PeerServer(peerOnServer, crypto);
 
-        let wsInCommon = await client.discoverCommonWorkspaces(server);
-        t.same(wsInCommon, [
-            '+common.one',
-            '+common.three',
-            '+common.two',
-        ], `discovered correct workspaces in common, and they're sorted`);
+        // let Client talk to Server
+        let commonWorkspacesAndServerPeerId = await client.discoverCommonWorkspacesAndServerPeerId(server);
+        t.same(commonWorkspacesAndServerPeerId, {
+            serverPeerId: peerOnServer.peerId,
+            commonWorkspaces: [
+                '+common.one',
+                '+common.three',
+                '+common.two',
+            ],
+        }, `discovered correct workspaces in common, and they're sorted`);
 
         // do it again just because doing so shouldn't break anything
-        let wsInCommon2 = await client.discoverCommonWorkspaces(server);
-        t.same(wsInCommon, wsInCommon2, 'same workspaces in common when run twice');
+        let commonWorkspacesAndServerPeerId2 = await client.discoverCommonWorkspacesAndServerPeerId(server);
+        t.same(
+            commonWorkspacesAndServerPeerId,
+            commonWorkspacesAndServerPeerId2,
+            'same workspaces in common when run twice'
+        );
 
+        // close Storages
+        for (let storage of peerOnClient.storages()) { await storage.close(); }
+        for (let storage of peerOnServer.storages()) { await storage.close(); }
         t.end();
     });
 };
