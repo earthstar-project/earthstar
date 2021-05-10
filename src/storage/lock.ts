@@ -40,7 +40,8 @@ export class Lock<T> {
      * after `cb` has eventually gotten to the front of the queue and
      * had a chance to run.
      * 
-     * That promise returns the return value of `cb`.
+     * That promise returns the return value of `cb`, or rejects with
+     * any error thrown from `cb`.
      * 
      * Basic usage, not really proving that the run-callbacks never
      * run in parallel:
@@ -54,11 +55,37 @@ export class Lock<T> {
      *     });
      * ```
      * 
-     * (Separate instances of `Lock` are independent and don't affect
+     * The callback must be an async function.
+     * 
+     * If you need an easy way to bypass the lock and run your callback
+     * in a normal way, pass these opts after the callback: { bypass: true }
+     * 
+     *     await lock.run(() => {
+     *         // your code here
+     *     }, { bypass: true });
+     * 
+     * The callback is not started instantly; it's deferred to later in the
+     * current tick, or even more if there are other callbacks in the queue.
+     * Even with bypass mode, it's run using queueMicrotask.
+     * 
+     * (Note: Separate instances of `Lock` are independent and don't affect
      *  each other.)
      */
-    async run(cb: LockCb<T>): Promise<T> {
+    async run(cb: LockCb<T>, opts?: { bypass?: boolean }): Promise<T> {
         let deferred: Deferred<T> = makeDeferred<T>();
+
+        // a quick easy way to bypass the lock if you want to 
+        if (opts?.bypass === true) {
+            queueMicrotask(async () => {
+                try {
+                    deferred.resolve(await cb());
+                } catch (err) {
+                    deferred.reject(err);
+                }
+            });
+            return deferred.promise;
+        }
+
         this._itemQueue.push({
             cb,
             deferred,

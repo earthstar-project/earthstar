@@ -13,6 +13,112 @@ let TEST_NAME = 'lock';
 
 //================================================================================ 
 
+t.test('opts', async (t: any) => {
+    let lock = new Lock<any>();
+
+    t.same(await lock.run(async () => {
+        return 123;
+    }), 123);
+    t.same(await lock.run(async () => {
+        return 123;
+    }, {}), 123);
+    t.same(await lock.run(async () => {
+        return 123;
+    }, { bypass: false }), 123);
+    t.same(await lock.run(async () => {
+        return 123;
+    }, { bypass: true }), 123);
+
+    t.end();
+});
+
+t.test('bypass timing', async (t: any) => {
+    let lock = new Lock<any>();
+    let logs: string[] = ['-start'];
+
+    let prom = lock.run(async () => {
+        logs.push('callback-with-bypass');
+    }, { bypass: true });
+
+    logs.push('-await');
+    await prom;
+    logs.push('-end');
+
+    let expectedLogs = [
+        '-start',
+        '-await',
+        'callback-with-bypass',
+        '-end',
+    ];
+    t.same(logs, expectedLogs, 'logs are in expected order');
+
+    t.end();
+});
+
+t.test('non-bypass timing', async (t: any) => {
+    let lock = new Lock<any>();
+    let logs: string[] = ['-start'];
+
+    let prom = lock.run(async () => {
+        logs.push('callback');
+    });
+
+    logs.push('-await');
+    await prom;
+    logs.push('-end');
+
+    let expectedLogs = [
+        '-start',
+        '-await',
+        'callback',
+        '-end',
+    ];
+    t.same(logs, expectedLogs, 'logs are in expected order');
+
+    t.end();
+});
+
+t.test('bypass run in parallel with normal lock callbacks', async (t: any) => {
+    let lock = new Lock<any>();
+
+    let logs: string[] = ['-start'];
+
+    let promA = lock.run(async () => {
+        logs.push('a1'); await sleep(30); logs.push('a2'); return 'a';
+    });
+    let promBypass = lock.run(async () => {
+        logs.push('b1'); await sleep(30); logs.push('b2'); return 'b';
+    }, { bypass: true });
+    let promC = lock.run(async () => {
+        logs.push('c1'); await sleep(30); logs.push('c2'); return 'c';
+    });
+
+    logs.push('-await');
+    let valA = await promA;
+    let valB = await promBypass;
+    let valC = await promC;
+    logs.push('-end');
+
+    let expectedLogs = [
+        '-start',
+        '-await',
+        'b1',  // b ignores the lock, as expected...
+        'a1',
+        'b2',  // ...and interleaves with a
+        'a2',
+        'c1',
+        'c2',
+        '-end',
+    ];
+    t.same(logs, expectedLogs, 'logs are in expected order');
+    t.same(valA, 'a', 'value is correct');
+    t.same(valB, 'b', 'value is correct from bypass');
+    t.same(valC, 'c', 'value is correct');
+
+    t.end();
+});
+
+
 t.test('lock returning a value', async (t: any) => {
     let lock = new Lock<any>();
 
@@ -166,6 +272,16 @@ t.test('lock error handling', async (t: any) => {
         t.ok(false, 'error was not caught');
     } catch (err) {
         t.ok(true, 'error was caught');
+        t.same(err.message, 'kaboom', 'it was the same error');
+    }
+
+    try {
+        await lock.run(async () => {
+            throw new Error('kaboom');
+        }, { bypass: true });
+        t.ok(false, 'error was not caught with bypass');
+    } catch (err) {
+        t.ok(true, 'error was caught with bypass');
         t.same(err.message, 'kaboom', 'it was the same error');
     }
 

@@ -185,6 +185,7 @@ export class StorageAsync implements IStorageAsync {
     async set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestResultAndDoc> {
         loggerSet.debug(`set`, docToSet);
         if (this._isClosed) { throw new StorageIsClosedError(); }
+
         let protectedCode = async (): Promise<IngestResultAndDoc> => {
             loggerSet.debug('  + set: start of protected region');
             loggerSet.debug('  | deciding timestamp: getting latest doc at the same path (from any author)');
@@ -227,7 +228,7 @@ export class StorageAsync implements IStorageAsync {
             loggerSet.debug('  | signature =', signedDoc.signature);
 
             loggerSet.debug('  | ingesting...');
-            let result: IngestResultAndDoc = await this.ingest(signedDoc, false);  // false means don't get lock again since we're already in the lock
+            let result: IngestResultAndDoc = await this.ingest(signedDoc, true);  // true means bypass the lock, since we're already in it
             loggerSet.debug('  | ...done ingesting');
             loggerSet.debug('  + set: end of protected region');
             return result;
@@ -235,14 +236,18 @@ export class StorageAsync implements IStorageAsync {
 
         loggerSet.debug('  + set: running protected region...');
         let result = await this.storageDriver.lock.run(protectedCode);
-        if (this._isClosed) { throw new StorageIsClosedError(); }
         loggerSet.debug('  + set: ...done running protected region.  result =', result);
+
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         loggerSet.debug('set is done.');
 
         return result;
     }
 
-    async ingest(docToIngest: Doc, _getLock: boolean = true): Promise<IngestResultAndDoc> {
+    async ingest(docToIngest: Doc, _bypassLock: boolean = false): Promise<IngestResultAndDoc> {
+        // set _bypassLock to true to skip getting the lock --
+        // use it when this is called from set() which has already grabbed the lock.
+
         loggerIngest.debug(`ingest`, docToIngest);
         if (this._isClosed) { throw new StorageIsClosedError(); }
 
@@ -297,16 +302,12 @@ export class StorageAsync implements IStorageAsync {
         };
 
         loggerIngest.debug(' >> ingest: running protected region...');
-        let result: IngestResultAndDoc;
-        if (_getLock) {
-            result = await this.storageDriver.lock.run(protectedCode);
-        } else {
-            // we are already in a lock, just run the code
-            result = await protectedCode();
-        }
+        // bypass the lock if we are already in a lock (because we're being called from set())
+        let result: IngestResultAndDoc = await this.storageDriver.lock.run(protectedCode, { bypass: _bypassLock });
         let { ingestResult, docIngested } = result;
-        if (this._isClosed) { throw new StorageIsClosedError(); }
         loggerIngest.debug(' >> ingest: ...done running protected region', ingestResult);
+
+        if (this._isClosed) { throw new StorageIsClosedError(); }
 
         // only send events if we successfully ingested a doc
         if (docIngested !== null) {
