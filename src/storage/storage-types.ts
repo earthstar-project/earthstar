@@ -22,8 +22,8 @@ import {
 } from '../util/errors';
 
 import {
-    RLock,
-} from './rlock';
+    Lock,
+} from './lock';
 
 //================================================================================
 
@@ -103,7 +103,7 @@ export interface IStorageAsync extends IStorageAsyncConfig {
 
 export interface IStorageDriverAsync extends IStorageAsyncConfig {
     workspace: WorkspaceAddress;
-    lock: RLock<any>;
+    lock: Lock<any>;
 
     //--------------------------------------------------
     // LIFECYCLE

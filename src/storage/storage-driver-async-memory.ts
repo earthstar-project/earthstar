@@ -28,8 +28,8 @@ import {
     docMatchesFilter
 } from '../query/query';
 import {
-    RLock
-} from './rlock';
+    Lock
+} from './lock';
 
 //--------------------------------------------------
 
@@ -66,7 +66,7 @@ let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
 
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
-    lock: RLock<any>;
+    lock: Lock<any>;
     _maxLocalIndex: LocalIndex = -1;  // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
     _isClosed: boolean = false;
     _configKv: Record<string, string> = {};
@@ -80,7 +80,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     constructor(workspace: WorkspaceAddress) {
         logger.debug('constructor');
         this.workspace = workspace;
-        this.lock = new RLock();
+        this.lock = new Lock();
     }
   
     //--------------------------------------------------

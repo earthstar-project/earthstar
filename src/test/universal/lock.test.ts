@@ -1,10 +1,10 @@
 import t from 'tap';
 import { onFinishOneTest } from '../browser-run-exit';
-import { RLock } from '../../storage/rlock';
-import { sleep } from '../../util/misc';
-import { LogLevel } from '../../util/log';
 
-let TEST_NAME = 'rlock';
+import { sleep } from '../../util/misc';
+import { Lock } from '../../storage/lock';
+
+let TEST_NAME = 'lock';
 
 // Boilerplate to help browser-run know when this test is completed.
 // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
@@ -13,10 +13,10 @@ let TEST_NAME = 'rlock';
 
 //================================================================================ 
 
-t.test('rlock returning a value', async (t: any) => {
-    let rlock = new RLock<any>();
+t.test('lock returning a value', async (t: any) => {
+    let lock = new Lock<any>();
 
-    let result = await rlock.run(async () => {
+    let result = await lock.run(async () => {
         return 123;
     });
     t.same(result, 123, 'got expected result back from callback');
@@ -24,15 +24,15 @@ t.test('rlock returning a value', async (t: any) => {
     t.end();
 });
 
-t.test('rlock running in serial with await', async (t: any) => {
-    let rlock = new RLock<any>();
+t.test('lock running in serial with await', async (t: any) => {
+    let lock = new Lock<any>();
 
     let logs: string[] = ['-start'];
 
-    await rlock.run(async () => {
+    await lock.run(async () => {
         logs.push('1a'); sleep(60); logs.push('1b');
     });
-    await rlock.run(async () => {
+    await lock.run(async () => {
         logs.push('2a'); sleep(60); logs.push('2b');
     });
 
@@ -51,22 +51,22 @@ t.test('rlock running in serial with await', async (t: any) => {
     t.end();
 });
 
-t.test('rlock trying to run in parallel', async (t: any) => {
-    let rlock = new RLock<any>();
+t.test('lock trying to run in parallel', async (t: any) => {
+    let lock = new Lock<any>();
 
     let logs: string[] = ['-start'];
     let results: number[] = [];
 
     let proms = [];
-    proms.push(rlock.run(async () => {
+    proms.push(lock.run(async () => {
         logs.push('1a'); sleep(60); logs.push('1b'); return 1;
     }));
-    proms.push(rlock.run(async () => {
+    proms.push(lock.run(async () => {
         logs.push('2a'); sleep(60); logs.push('2b'); return 2;
     }));
     logs.push('-first sleep');
     await sleep(50);
-    proms.push(rlock.run(async () => {
+    proms.push(lock.run(async () => {
         logs.push('3a'); sleep(60); logs.push('3b'); return 3;
     }));
 
@@ -93,16 +93,19 @@ t.test('rlock trying to run in parallel', async (t: any) => {
     t.end();
 });
 
-t.test('rlock recursive', async (t: any) => {
-    let rlock = new RLock<any>();
+t.test('lock recursive', async (t: any) => {
+    let lock = new Lock<any>();
 
     let logs: string[] = ['-start'];
 
     let proms = [];
-    proms.push(rlock.run(async () => {
+    proms.push(lock.run(async () => {
         logs.push('1a'); sleep(60); logs.push('1b');
     }));
-    proms.push(rlock.run(async (innerLock) => {
+    proms.push(lock.run(async () => {
+        // This is not really a true recursive lock.
+        // We're just making a new Lock inside the run function of another Lock
+        let innerLock = new Lock();
         logs.push('2a');
         sleep(10);
 
@@ -122,7 +125,7 @@ t.test('rlock recursive', async (t: any) => {
         sleep(10);
         logs.push('2b');
     }));
-    proms.push(rlock.run(async () => {
+    proms.push(lock.run(async () => {
         logs.push('3a'); sleep(60); logs.push('3b');
     }));
 
@@ -153,4 +156,18 @@ t.test('rlock recursive', async (t: any) => {
     t.end();
 });
 
-// TODO: error handling
+t.test('lock error handling', async (t: any) => {
+    let lock = new Lock<any>();
+
+    try {
+        await lock.run(async () => {
+            throw new Error('kaboom');
+        });
+        t.ok(false, 'error was not caught');
+    } catch (err) {
+        t.ok(true, 'error was caught');
+        t.same(err.message, 'kaboom', 'it was the same error');
+    }
+
+    t.end();
+});

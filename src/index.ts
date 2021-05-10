@@ -18,7 +18,7 @@ export * from './query-follower/query-follower-types';
 export * from './query/query';
 export * from './query/query-types';
 export * from './storage/compare';
-export * from './storage/rlock';
+export * from './storage/lock';
 export * from './storage/storage-async';
 export * from './storage/storage-cache';
 export * from './storage/storage-driver-async-memory';
