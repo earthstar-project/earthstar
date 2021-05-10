@@ -32,6 +32,31 @@ export class Lock<T> {
 
     constructor() { }
 
+    /**
+     * Each callback given to `lock.run` will be queued up and run one at
+     * a time, without overlapping.
+     * 
+     * When you call `run(cb)`, you get a promise back which resolves
+     * after `cb` has eventually gotten to the front of the queue and
+     * had a chance to run.
+     * 
+     * That promise returns the return value of `cb`.
+     * 
+     * Basic usage, not really proving that the run-callbacks never
+     * run in parallel:
+     * 
+     * ```ts
+     *     let lock = new Lock();
+     * 
+     *     let seven = await lock.run(async () => {
+     *         sleep(1000);
+     *         return 7;
+     *     });
+     * ```
+     * 
+     * (Separate instances of `Lock` are independent and don't affect
+     *  each other.)
+     */
     async run(cb: LockCb<T>): Promise<T> {
         let deferred: Deferred<T> = makeDeferred<T>();
         this._itemQueue.push({
