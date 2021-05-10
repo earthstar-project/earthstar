@@ -103,7 +103,7 @@ export interface IStorageAsync extends IStorageAsyncConfig {
 
 export interface IStorageDriverAsync extends IStorageAsyncConfig {
     workspace: WorkspaceAddress;
-    lock: Lock;
+    lock: Lock<any>;
 
     //--------------------------------------------------
     // LIFECYCLE

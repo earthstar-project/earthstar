@@ -66,7 +66,7 @@ let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
 
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
-    lock: Lock;
+    lock: Lock<any>;
     _maxLocalIndex: LocalIndex = -1;  // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
     _isClosed: boolean = false;
     _configKv: Record<string, string> = {};

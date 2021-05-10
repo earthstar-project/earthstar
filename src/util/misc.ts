@@ -18,17 +18,3 @@ export let sleep = (ms: number) =>
 // TODO: better randomness here
 export let randomId = (): string =>
     '' + Math.random() + Math.random() + Math.random();
-
-//================================================================================
-// MISC 
-
-export let getPromiseParts = <T>() => {
-    // make a promise, extract the res and rej methods, and return all three.
-    let resolve: (value: T | PromiseLike<T>) => void = null as any;
-    let reject: (reason?: any) => void = null as any;
-    let prom = new Promise<T>((res, rej) => {
-        resolve = res;
-        reject = rej;
-    });
-    return { prom, resolve, reject };
-}
