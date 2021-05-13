@@ -26,29 +26,72 @@ export interface IPeer {
 //================================================================================
 // CLIENT AND SERVER
 
-export interface SaltAndSaltedWorkspaces {
-    peerId: PeerId,
-    salt: string,
-    saltedWorkspaces: string[],
-}
+/**
+ * Every kind of API endpoint follows the same pattern here:
+ *   - Client always initiates contact.
+ *   - client.do_thing(thing_request) => void
+ *   -     client asks for server.serve_thing(thing_request) => thing_response
+ *   -     client.process_thing(thing_response) => thing_outcome
+ *   -     client.update_thing(thing_outcome) => void
+ *
+ *    FUNCTION             DATA TYPE
+ * 
+ *                         x_request
+ *    client.do_x
+ *      server.serve_x
+ *                         x_response
+ *      client.process_x
+ *                         x_outcome
+ *      client.update_x
+ *                         void 
+ * 
+ */
 
-export interface CommonWorkspacesAndPeerId {
-    commonWorkspaces: WorkspaceAddress[],
-    serverPeerId: PeerId,
-}
-
-// ok this isn't a type, but I put it here anyway.
+// ok this isn't a type, but I put it here anyway since it's shared code for client and server
 export let saltAndHashWorkspace = (crypto: ICrypto, salt: string, workspace: WorkspaceAddress): string =>
     crypto.sha256base32(salt + workspace + salt);
 
-// one server can talk to many clients.
+//--------------------------------------------------
+// SALTY HANDSHAKE
 
-export interface IPeerClient {
-    syncWithPeer(server: IPeerServer): Promise<void>;
-    discoverCommonWorkspacesAndServerPeerId(server: IPeerServer): Promise<CommonWorkspacesAndPeerId>;
+export interface SaltyHandshake_Request {
+}
+export interface SaltyHandshake_Response {
+    serverPeerId: PeerId,
+    salt: string,
+    saltedWorkspaces: string[],
+}
+export interface SaltyHandshake_Outcome {
+    serverPeerId: PeerId
+    commonWorkspaces: WorkspaceAddress[],
 }
 
+//--------------------------------------------------
+
+export interface IPeerClient {
+    // Each client only talks to one server.
+
+    // do the entire thing
+    do_saltyHandshake(): Promise<void>;
+
+    // process and update are split into two functions
+    // for easier testing.
+
+    // this does any computation or complex work needed to boil this down
+    // into a simple state update, but it does not actually update our state,
+    // it just returns the changes to the state
+    process_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome>;
+
+    // this applies the changes to the state
+    update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void>;
+
+}
+
+//--------------------------------------------------
+
 export interface IPeerServer {
-    saltedWorkspaces(): Promise<SaltAndSaltedWorkspaces>
-    // storageDetails(workspaces): Promise<TODO>
+    // this does not affect any internal state, in fact
+    // the server has no internal state (except maybe for
+    // rate limiting, etc)
+    serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response>;
 }
