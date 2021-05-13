@@ -122,13 +122,12 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         // create Client and Server instances
         let server = new PeerServer(crypto, peerOnServer);
         let serverMethods = {
-            // list the server methods you want to expose here
-            // this is a bit awkward; the makeProxy method should just accept an entire classs
-            // instead of making you list out the methods again.
+            // you can either use the entire Server instance as your proxy object,
+            // or you can list the server methods you want to expose here.
             serve_saltyHandshake: server.serve_saltyHandshake.bind(server),
-            // we can add more methods here
-            ping: () => 'pong from server at ' + microsecondNow(),
 
+            // we can add more methods here too, for testing.
+            ping: () => 'pong from server at ' + microsecondNow(),
             throwGenericError: () => { throw new Error('a generic error') },
             throwNotImplemented: () => { throw new NotImplementedError('a not implemented error') },
             throwValidationError: () => { throw new ValidationError('a validation error') },

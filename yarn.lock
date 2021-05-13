@@ -266,10 +266,10 @@
   resolved "https://registry.yarnpkg.com/@blakeembrey/template/-/template-1.0.0.tgz#bf8828bc3ae8004d97904d78f64e3cc2cd216438"
   integrity sha512-J6WGZqCLdRMHUkyRG6fBSIFJ0rL60/nsQNh5rQvsYZ5u0PsKw6XQcJcA3DWvd9cN3j/IQx5yB1fexhCafwwUUw==
 
-"@earthstar-project/mini-rpc@^1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@earthstar-project/mini-rpc/-/mini-rpc-1.0.0.tgz#a1feebb5f86cd35ac8bf12cac79b8b091b0d54c8"
-  integrity sha512-tJhXmO5NEULlsFUzfAgl85QJq9YAc3TYJdDooTjBFMwBQK3wal0iI2OQ2J3Gkop4xHP+OF91Gr48uY8SV1f/fQ==
+"@earthstar-project/mini-rpc@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@earthstar-project/mini-rpc/-/mini-rpc-2.0.0.tgz#7222c9de394875de14a6a24f44e3cc548c714c36"
+  integrity sha512-ZAkXEEH1WiEqQpShV5gcj4ld3gT8AcmC5BnJVsr+uIArQTXyFzRtfRwew7lSlD3gh4hjVR4AkK9JSuOtVFK6CA==
   dependencies:
     chalk "^4.1.0"
 
@@ -963,15 +963,7 @@ chalk@^3.0.0:
     ansi-styles "^4.1.0"
     supports-color "^7.1.0"
 
-chalk@^4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.1.0.tgz#4e14870a618d9e2edd97dd8345fd9d9dc315646a"
-  integrity sha512-qwx12AxXe2Q5xQ43Ac//I6v5aXTipYrSESdOgzrN+9XjgEpyjpKuvSGaN4qE93f7TQTlerQQ8S+EQ0EyDoVL1A==
-  dependencies:
-    ansi-styles "^4.1.0"
-    supports-color "^7.1.0"
-
-chalk@^4.1.1:
+chalk@^4.1.0, chalk@^4.1.1:
   version "4.1.1"
   resolved "https://registry.yarnpkg.com/chalk/-/chalk-4.1.1.tgz#c80b3fab28bf6371e6863325eee67e618b77e6ad"
   integrity sha512-diHzdDKxcU+bAsUboHLPEDQiw0qEe0qd7SYUn3HgcFlWgbDcfLGswOHYeGrHKzG9z6UYf01d9VFMfZxPM1xZSg==
