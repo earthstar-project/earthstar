@@ -266,10 +266,10 @@
   resolved "https://registry.yarnpkg.com/@blakeembrey/template/-/template-1.0.0.tgz#bf8828bc3ae8004d97904d78f64e3cc2cd216438"
   integrity sha512-J6WGZqCLdRMHUkyRG6fBSIFJ0rL60/nsQNh5rQvsYZ5u0PsKw6XQcJcA3DWvd9cN3j/IQx5yB1fexhCafwwUUw==
 
-"@earthstar-project/mini-rpc@^2.0.0":
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/@earthstar-project/mini-rpc/-/mini-rpc-2.0.0.tgz#7222c9de394875de14a6a24f44e3cc548c714c36"
-  integrity sha512-ZAkXEEH1WiEqQpShV5gcj4ld3gT8AcmC5BnJVsr+uIArQTXyFzRtfRwew7lSlD3gh4hjVR4AkK9JSuOtVFK6CA==
+"@earthstar-project/mini-rpc@^2.1.0":
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/@earthstar-project/mini-rpc/-/mini-rpc-2.1.0.tgz#14e75a07c6fd182cfbd51f993d8927c6c40133a0"
+  integrity sha512-KwzVRrV2v5lHdSOn4rmdukzfdmxmJpQaimye+8K3BncjHLKRFD+WPRpX0kNjfmefRsahd/HFpFQIZke3kfY29g==
   dependencies:
     chalk "^4.1.0"
 

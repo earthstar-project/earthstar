@@ -72,8 +72,8 @@ export interface SaltyHandshake_Outcome {
 export interface IPeerClient {
     // Each client only talks to one server.
 
-    // get and return the server's peerId
-    // this can be used as a ping
+    // get and return the server's peerId.
+    // this can be used as a ping.
     getServerPeerId(): Promise<PeerId>;
 
     // do the entire thing

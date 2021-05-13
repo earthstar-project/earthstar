@@ -121,6 +121,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
 
         // create Client and Server instances
         let server = new PeerServer(crypto, peerOnServer);
+        /*
         let serverMethods = {
             // you can either use the entire Server instance as your proxy object,
             // or you can list the server methods you want to expose here.
@@ -132,7 +133,8 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             throwNotImplemented: () => { throw new NotImplementedError('a not implemented error') },
             throwValidationError: () => { throw new ValidationError('a validation error') },
         };
-        let serverProxy = makeProxy(serverMethods, evaluator);
+        */
+        let serverProxy = makeProxy(server, evaluator);
 
         // make a client that uses the proxy
         let client = new PeerClient(crypto, peerOnClient, serverProxy);

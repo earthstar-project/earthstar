@@ -60,7 +60,18 @@ export class PeerClient implements IPeerClient {
     }
 
     async getServerPeerId(): Promise<PeerId> {
-        return await this.server.getPeerId();
+        let prevServerPeerId = this.state.serverPeerId;
+        let serverPeerId = await this.server.getPeerId();
+        this.state = {
+            ...this.state,
+            serverPeerId,
+            lastSeenAt: microsecondNow(),
+        }
+        if (serverPeerId !== prevServerPeerId) {
+            // if server has changed its id, reset some of our state
+            this.state.commonWorkspaces = [];
+        }
+        return serverPeerId;
     }
 
     // do the entire thing
@@ -107,12 +118,12 @@ export class PeerClient implements IPeerClient {
     // this applies the changes to the state
     async update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void> {
         loggerUpdate.debug('update_saltyHandshake...');
-        this.state.serverPeerId = outcome.serverPeerId;
-        this.state.commonWorkspaces = outcome.commonWorkspaces;
-        this.state.lastSeenAt = Math.max(
-            this.state.lastSeenAt ?? 0,
-            microsecondNow(),
-        );
+        this.state = {
+            ...this.state,
+            serverPeerId: outcome.serverPeerId,
+            commonWorkspaces: outcome.commonWorkspaces,
+            lastSeenAt: microsecondNow(),
+        }
         loggerUpdate.debug('...update_saltyHandshake is done.  client state is:');
         loggerUpdate.debug(this.state);
     }
