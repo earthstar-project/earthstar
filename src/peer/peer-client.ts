@@ -1,154 +1,115 @@
 import { WorkspaceAddress } from '../util/doc-types';
 import { ICrypto } from '../crypto/crypto-types';
-import { StorageId } from '../storage/storage-types';
 import {
-    CommonWorkspacesAndPeerId,
     IPeer,
     IPeerClient,
     IPeerServer,
     PeerId,
+    SaltyHandshake_Outcome,
+    SaltyHandshake_Request,
+    SaltyHandshake_Response,
     saltAndHashWorkspace,
 } from './peer-types';
-
-import { microsecondNow } from '../util/misc';
 import { sortedInPlace } from '../storage/compare';
 
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
-import { workspaceAddressChars } from '../core-validators/characters';
+import { microsecondNow } from '../util/misc';
 let logger = new Logger('peer client', 'greenBright');
+let loggerDo = new Logger('peer client: do', 'green');
+let loggerProcess = new Logger('peer client: process', 'cyan');
+let loggerUpdate = new Logger('peer client: update', 'blue');
 let J = JSON.stringify;
 
 //================================================================================
 
-interface PeerInfo {
-    peerId: PeerId,
-    lastConnectedTimestamp: number,
-    commonWorkspaces: WorkspaceAddress[],
-    // TODO: we might want to access this by storageId, by workspace, or by peer + workspace...
-    storageInfos: Map<StorageId, StorageInfo>,
+// Data we learn from talking to the server.
+// Null means not known yet.
+// This should be easily serializable.
+interface ClientState {
+    serverPeerId: PeerId | null;
+    commonWorkspaces: WorkspaceAddress[] | null;
+    lastSeenAt: number | null,  // a timestamp in Earthstar-style microseconds
 }
 
-interface StorageInfo {
-    storageId: StorageId,
-    peerId: PeerId,
-    workspace: WorkspaceAddress,
-    maxLocalIndexReceived: number,
-    maxLocalIndexSent: number,
-    // TODO: how to find out what the server wants from us?
+let defaultClientState: ClientState = {
+    serverPeerId: null,
+    commonWorkspaces: null,
+    lastSeenAt: null,
 }
-
-let _defaultPeerInfo = (peerId: PeerId): PeerInfo => ({
-    peerId,
-    lastConnectedTimestamp: microsecondNow(),
-    commonWorkspaces: [],
-    storageInfos: new Map<StorageId, StorageInfo>(),
-});
 
 export class PeerClient implements IPeerClient {
-    // remember some things about each peer we've talked to
-    peerInfos: Map<PeerId, PeerInfo>;
+    crypto: ICrypto;
+    peer: IPeer;
+    server: IPeerServer;
 
-    constructor(public peer: IPeer, public crypto: ICrypto) {
-        this.peerInfos = new Map<PeerId, PeerInfo>();
+    state: ClientState = { ...defaultClientState };
+
+    // Each client only talks to one server.
+    constructor(crypto: ICrypto, peer: IPeer, server: IPeerServer) {
+        // TODO: load / save the client state (to where?)
+
+        logger.debug('peerClient constructor');
+        this.crypto = crypto;
+        this.peer = peer;
+        this.server = server;
+        logger.debug(`...peerId: ${this.peer.peerId}`);
+        logger.debug(`...client state:`);
+        logger.debug(this.state);
     }
 
-    async syncWithPeer(server: IPeerServer): Promise<void> {
-        logger.debug('sync');
-        let { commonWorkspaces, serverPeerId } =
-            await this.discoverCommonWorkspacesAndServerPeerId(server);
-        logger.debug(`...sync: got ${commonWorkspaces.length} common workspaces`);
-
-        // TODO: request info about storages we have in common
-
-        let peerInfo = this.peerInfos.get(serverPeerId) ?? _defaultPeerInfo(serverPeerId);
-
-        for (let workspace of commonWorkspaces) {
-            logger.debug(`...sync: doing workspace "${workspace}"`);
-            let storageInfo = peerInfo.storageInfos.get(workspace);
-            if (storageInfo === undefined) {
-                logger.debug(`...sync: ...we have not synced this workspace before`);
-                // TODO: get details of other storage: its storageId and maxLocalIndex
-                // so we can fill out a storageInfo for it
-            } else {
-                logger.debug(`...sync: ...we HAVE synced this workspace before:`);
-                logger.debug(storageInfo);
-            }
-        }
-
-        /*
-        for (let storageInfo of peerInfo.storageInfos.values()) {
-            if (commonWorkspaces.indexOf(storageInfo.workspace) === -1) {
-                // skip this storage, it's not a workspace we have in common
-                continue;
-            }
-            logger.debug(`...sync: doing workspace "${storageInfo.workspace}"`);
-            logger.debug(`...sync: so far, max local index received = ${storageInfo.maxLocalIndexReceived}`);
-            logger.debug(`...sync: so far, max local index sent = ${storageInfo.maxLocalIndexSent}`);
-        }
-        */
-
-        /*
-        for (let workspace of commonWorkspaces) {
-            logger.debug(`...sync: doing workspace "${workspace}"`);
-            logger.debug(`...(TODO)`);
-
-
-            // TODO: getDocuments(server, maxLocalIndex) and ingest them here
-            // TODO: push documents from us to the server (which docs?)
-        }
-        */
-
-        logger.debug('...sync: done');
+    // do the entire thing
+    async do_saltyHandshake(): Promise<void> {
+        loggerDo.debug('do_saltyHandshake...');
+        let request: SaltyHandshake_Request = {};
+        loggerDo.debug('...asking server to serve_ ...');
+        let response = await this.server.serve_saltyHandshake(request);
+        loggerDo.debug('...client is going to process_ ...');
+        let outcome = await this.process_saltyHandshake(response);
+        loggerDo.debug('...client is going to update_ ...');
+        await this.update_saltyHandshake(outcome);
+        loggerDo.debug('...do_saltyHandshake is done');
     }
 
-    async syncWorkspace(server: IPeerServer): Promise<void> {
-    }
-
-    /**
-     * This is the first step in talking with a server, so we discover a couple of things:
-     * - common workspaces
-     * - server's peerId
-     */
-    async discoverCommonWorkspacesAndServerPeerId(server: IPeerServer): Promise<CommonWorkspacesAndPeerId> {
-        logger.debug(`discoverCommonWorkspaces`);
-
-        // talk to server.  get peerId and salted workspaces
-        let {
-            peerId: serverPeerId,
-            salt,
-            saltedWorkspaces: serverSaltedWorkspaces
-        } = await server.saltedWorkspaces();
+    // this does any computation or complex work needed to boil this down
+    // into a simple state update, but it does not actually update our state,
+    // it just returns the changes to the state
+    async process_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome> {
+        loggerProcess.debug('process_saltyHandshake...');
 
         // figure out which workspaces we have in common
-        let commonWorkspacesSet = new Set<string>();
-        let serverSaltedSet = new Set<string>(serverSaltedWorkspaces);
-        for (let myWorkspace of this.peer.workspaces()) {
-            let mySalted = saltAndHashWorkspace(this.crypto, salt, myWorkspace);
-            if (serverSaltedSet.has(mySalted)) {
-                commonWorkspacesSet.add(myWorkspace);
+        // by salting and hashing our own workspaces in the same way
+        // the server did, and seeing what matches
+        let serverSaltedSet = new Set<string>(res.saltedWorkspaces);
+        let commonWorkspaceSet = new Set<WorkspaceAddress>();
+        for (let plainWs of this.peer.workspaces()) {
+            let saltedWs = saltAndHashWorkspace(this.crypto, res.salt, plainWs);
+            if (serverSaltedSet.has(saltedWs)) {
+                commonWorkspaceSet.add(plainWs);
             }
         }
-        let commonWorkspaces = sortedInPlace([...commonWorkspacesSet]);
+        let commonWorkspaces = sortedInPlace([...commonWorkspaceSet]);
 
-        // remember some facts about this server
-        logger.debug('server details before:', this.peerInfos.get(serverPeerId));
-        // load existing peerInfo
-        let peerInfo: PeerInfo = this.peerInfos.get(serverPeerId) ?? _defaultPeerInfo(serverPeerId);
-        // update peerInfo
-        peerInfo = {
-            ...peerInfo,
-            lastConnectedTimestamp: microsecondNow(),
-            commonWorkspaces: commonWorkspaces,
-        }
-        this.peerInfos.set(serverPeerId, peerInfo);
-        logger.debug('server details after:', peerInfo);
-
-        logger.debug(`...${commonWorkspaces.length} common workspaces: ${J(commonWorkspaces)}`);
-        return {
+        let outcome: SaltyHandshake_Outcome = {
+            serverPeerId: res.serverPeerId,
             commonWorkspaces,
-            serverPeerId,
-        }
+        };
+        loggerProcess.debug('...process_saltyHandshake is done:');
+        loggerProcess.debug(outcome);
+        return outcome;
+    }
+
+    // this applies the changes to the state
+    async update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void> {
+        loggerUpdate.debug('update_saltyHandshake...');
+        this.state.serverPeerId = outcome.serverPeerId;
+        this.state.commonWorkspaces = outcome.commonWorkspaces;
+        this.state.lastSeenAt = Math.max(
+            this.state.lastSeenAt ?? 0,
+            microsecondNow(),
+        );
+        loggerUpdate.debug('...update_saltyHandshake is done.  client state is:');
+        loggerUpdate.debug(this.state);
     }
 }

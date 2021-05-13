@@ -17,4 +17,4 @@ export let sleep = (ms: number) =>
 
 // TODO: better randomness here
 export let randomId = (): string =>
-    '' + Math.random() + Math.random() + Math.random();
+    '' + Math.random() + Math.random();
