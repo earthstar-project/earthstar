@@ -40,12 +40,12 @@ let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
 
 //setDefaultLogLevel(LogLevel.None);
-setLogLevel('peer client', LogLevel.Debug);
-setLogLevel('peer client: do', LogLevel.Debug);
-setLogLevel('peer client: process', LogLevel.Debug);
-setLogLevel('peer client: update', LogLevel.Debug);
-setLogLevel('peer server', LogLevel.Debug);
-setLogLevel('peer server: serve', LogLevel.Debug);
+//setLogLevel('peer client', LogLevel.Debug);
+//setLogLevel('peer client: do', LogLevel.Debug);
+//setLogLevel('peer client: process', LogLevel.Debug);
+//setLogLevel('peer client: update', LogLevel.Debug);
+//setLogLevel('peer server', LogLevel.Debug);
+//setLogLevel('peer server: serve', LogLevel.Debug);
 
 //================================================================================
 
