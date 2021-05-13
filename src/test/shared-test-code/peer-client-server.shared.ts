@@ -142,6 +142,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         // let them talk to each other
         let serverPeerId = await client.getServerPeerId();
         t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
+        t.same(client.state.serverPeerId, peerOnServer.peerId, 'setState worked');
 
         await client.do_saltyHandshake();
 

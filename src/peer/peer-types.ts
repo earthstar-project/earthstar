@@ -2,6 +2,7 @@ import { WorkspaceAddress } from '../util/doc-types';
 import { IStorageAsync } from '../storage/storage-types';
 import { ICrypto } from '../crypto/crypto-types';
 import { Peer } from './peer';
+import { PeerClient } from './peer-client';
 
 //================================================================================
 // PEER
@@ -69,8 +70,27 @@ export interface SaltyHandshake_Outcome {
 
 //--------------------------------------------------
 
+// Data we learn from talking to the server.
+// Null means not known yet.
+// This should be easily serializable.
+export interface PeerClientState {
+    serverPeerId: PeerId | null;
+    commonWorkspaces: WorkspaceAddress[] | null;
+    lastSeenAt: number | null,  // a timestamp in Earthstar-style microseconds
+}
+
+export let initialPeerClientState: PeerClientState = {
+    serverPeerId: null,
+    commonWorkspaces: null,
+    lastSeenAt: null,
+}
+
 export interface IPeerClient {
     // Each client only talks to one server.
+
+    // this is async in case we later want to set up
+    // a message bus that alerts when the state is changed
+    setState(newState: Partial<PeerClientState>): Promise<void>;
 
     // get and return the server's peerId.
     // this can be used as a ping.

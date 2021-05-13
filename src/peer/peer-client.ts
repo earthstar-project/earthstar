@@ -9,6 +9,8 @@ import {
     SaltyHandshake_Request,
     SaltyHandshake_Response,
     saltAndHashWorkspace,
+    PeerClientState,
+    initialPeerClientState,
 } from './peer-types';
 import { sortedInPlace } from '../storage/compare';
 
@@ -24,27 +26,12 @@ let J = JSON.stringify;
 
 //================================================================================
 
-// Data we learn from talking to the server.
-// Null means not known yet.
-// This should be easily serializable.
-interface ClientState {
-    serverPeerId: PeerId | null;
-    commonWorkspaces: WorkspaceAddress[] | null;
-    lastSeenAt: number | null,  // a timestamp in Earthstar-style microseconds
-}
-
-let defaultClientState: ClientState = {
-    serverPeerId: null,
-    commonWorkspaces: null,
-    lastSeenAt: null,
-}
-
 export class PeerClient implements IPeerClient {
     crypto: ICrypto;
     peer: IPeer;
     server: IPeerServer;
 
-    state: ClientState = { ...defaultClientState };
+    state: PeerClientState = { ...initialPeerClientState };
 
     // Each client only talks to one server.
     constructor(crypto: ICrypto, peer: IPeer, server: IPeerServer) {
@@ -59,17 +46,26 @@ export class PeerClient implements IPeerClient {
         logger.debug(this.state);
     }
 
+    async setState(newState: Partial<PeerClientState>): Promise<void> {
+        this.state = { ...this.state, ...newState };
+    }
+
     async getServerPeerId(): Promise<PeerId> {
         let prevServerPeerId = this.state.serverPeerId;
         let serverPeerId = await this.server.getPeerId();
-        this.state = {
-            ...this.state,
-            serverPeerId,
-            lastSeenAt: microsecondNow(),
-        }
-        if (serverPeerId !== prevServerPeerId) {
-            // if server has changed its id, reset some of our state
-            this.state.commonWorkspaces = [];
+        if (serverPeerId === prevServerPeerId) {
+            await this.setState({
+                serverPeerId,
+                lastSeenAt: microsecondNow(),
+            });
+        } else {
+            // if server has changed its id,
+            // we need to reset the commonWorkspaces
+            await this.setState({
+                serverPeerId,
+                commonWorkspaces: [],
+                lastSeenAt: microsecondNow(),
+            });
         }
         return serverPeerId;
     }
@@ -118,12 +114,11 @@ export class PeerClient implements IPeerClient {
     // this applies the changes to the state
     async update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void> {
         loggerUpdate.debug('update_saltyHandshake...');
-        this.state = {
-            ...this.state,
+        await this.setState({
             serverPeerId: outcome.serverPeerId,
             commonWorkspaces: outcome.commonWorkspaces,
             lastSeenAt: microsecondNow(),
-        }
+        });
         loggerUpdate.debug('...update_saltyHandshake is done.  client state is:');
         loggerUpdate.debug(this.state);
     }
