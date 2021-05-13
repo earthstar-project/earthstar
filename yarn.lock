@@ -266,6 +266,13 @@
   resolved "https://registry.yarnpkg.com/@blakeembrey/template/-/template-1.0.0.tgz#bf8828bc3ae8004d97904d78f64e3cc2cd216438"
   integrity sha512-J6WGZqCLdRMHUkyRG6fBSIFJ0rL60/nsQNh5rQvsYZ5u0PsKw6XQcJcA3DWvd9cN3j/IQx5yB1fexhCafwwUUw==
 
+"@earthstar-project/mini-rpc@^1.0.0":
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/@earthstar-project/mini-rpc/-/mini-rpc-1.0.0.tgz#a1feebb5f86cd35ac8bf12cac79b8b091b0d54c8"
+  integrity sha512-tJhXmO5NEULlsFUzfAgl85QJq9YAc3TYJdDooTjBFMwBQK3wal0iI2OQ2J3Gkop4xHP+OF91Gr48uY8SV1f/fQ==
+  dependencies:
+    chalk "^4.1.0"
+
 "@electron/get@^1.0.1":
   version "1.12.4"
   resolved "https://registry.yarnpkg.com/@electron/get/-/get-1.12.4.tgz#a5971113fc1bf8fa12a8789dc20152a7359f06ab"
