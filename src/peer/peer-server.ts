@@ -5,6 +5,7 @@ import {
     SaltyHandshake_Request,
     SaltyHandshake_Response,
     saltAndHashWorkspace,
+    PeerId,
 } from "./peer-types";
 import { randomId } from '../util/misc';
 
@@ -29,6 +30,9 @@ export class PeerServer implements IPeerServer {
     // this does not affect any internal state, in fact
     // the server has no internal state (except maybe for
     // rate limiting, etc)
+    async getPeerId(): Promise<PeerId> {
+        return this.peer.peerId;
+    }
     async serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response> {
         loggerServe.debug('serve_saltyHandshake...');
         let salt = randomId();
