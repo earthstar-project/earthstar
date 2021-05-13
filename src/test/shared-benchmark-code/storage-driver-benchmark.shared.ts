@@ -43,7 +43,6 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
     // benchmarks
 
     // number of documents to test with
-    let n = 100;
     for (let n of [100, 500]) {
         let storageAdd = new StorageAsync(workspace, validator, makeStorageDriver());
         await runner.runOnce(`add ${n} docs (docs/sec)`, {actualIters: n}, async () => {

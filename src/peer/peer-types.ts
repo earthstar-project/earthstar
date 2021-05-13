@@ -1,8 +1,6 @@
 import { WorkspaceAddress } from '../util/doc-types';
 import { IStorageAsync } from '../storage/storage-types';
 import { ICrypto } from '../crypto/crypto-types';
-import { Peer } from './peer';
-import { PeerClient } from './peer-client';
 
 //================================================================================
 // PEER

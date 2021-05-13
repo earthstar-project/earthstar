@@ -2,10 +2,10 @@ import { ICrypto } from '../crypto/crypto-types';
 import {
     IPeer,
     IPeerServer,
+    PeerId,
     SaltyHandshake_Request,
     SaltyHandshake_Response,
     saltAndHashWorkspace,
-    PeerId,
 } from "./peer-types";
 import { randomId } from '../util/misc';
 

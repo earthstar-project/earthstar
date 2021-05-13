@@ -4,13 +4,13 @@ import {
     IPeer,
     IPeerClient,
     IPeerServer,
+    PeerClientState,
     PeerId,
     SaltyHandshake_Outcome,
     SaltyHandshake_Request,
     SaltyHandshake_Response,
-    saltAndHashWorkspace,
-    PeerClientState,
     initialPeerClientState,
+    saltAndHashWorkspace,
 } from './peer-types';
 import { sortedInPlace } from '../storage/compare';
 

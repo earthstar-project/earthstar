@@ -8,7 +8,6 @@ import {
 import {
     identifyBufOrBytes
 } from '../../util/bytes';
-import { sleep } from '../../util/misc';
 
 //================================================================================
 

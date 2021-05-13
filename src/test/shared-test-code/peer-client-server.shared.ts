@@ -5,15 +5,8 @@ import { WorkspaceAddress, } from '../../util/doc-types';
 import { IStorageAsync, } from '../../storage/storage-types';
 import { ICrypto } from '../../crypto/crypto-types';
 
-import { NotImplementedError, ValidationError } from '../../util/errors';
+import { NotImplementedError } from '../../util/errors';
 
-import { microsecondNow } from '../../util/misc';
-
-import {
-    IPeerServer,
-    SaltyHandshake_Request,
-    SaltyHandshake_Response,
-} from "../../peer/peer-types";
 import { Peer } from '../../peer/peer';
 import { PeerClient } from '../../peer/peer-client';
 import { PeerServer } from '../../peer/peer-server';
