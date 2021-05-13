@@ -67,10 +67,8 @@ digraph G {
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-types.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-client.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
-    "src/peer/peer-client.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-client.ts" -> "src/peer/peer-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-client.ts" -> "src/storage/compare.ts" [penwidth=2; color=darkslategray4];
-    "src/peer/peer-client.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-server.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-server.ts" -> "src/peer/peer-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-types.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];

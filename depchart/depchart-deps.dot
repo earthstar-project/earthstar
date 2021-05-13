@@ -13,7 +13,7 @@ digraph G {
     // files in their folder clusters
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster1922687983 {
+        subgraph cluster6145265235 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -25,7 +25,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster9500547067 {
+        subgraph cluster9472546566 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -41,7 +41,7 @@ digraph G {
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster6426266908 {
+        subgraph cluster6405069589 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -52,7 +52,7 @@ digraph G {
             "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster575569090 {
+        subgraph cluster9331899579 {
             label=<<b>peer</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -65,7 +65,7 @@ digraph G {
             "src/peer/peer.ts" [label="peer.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster1025495158 {
+        subgraph cluster7051660984 {
             label=<<b>query-follower</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -76,7 +76,7 @@ digraph G {
             "src/query-follower/query-follower.ts" [label="query-follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster2144555012 {
+        subgraph cluster6035414639 {
             label=<<b>query</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -87,7 +87,7 @@ digraph G {
             "src/query/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster8049702507 {
+        subgraph cluster5355224194 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -141,10 +141,8 @@ digraph G {
     "src/format-validators/format-validator-es4.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
     "src/format-validators/format-validator-types.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-client.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
-    "src/peer/peer-client.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-client.ts" -> "src/peer/peer-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-client.ts" -> "src/storage/compare.ts" [penwidth=2; color=darkslategray4];
-    "src/peer/peer-client.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-server.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-server.ts" -> "src/peer/peer-types.ts" [penwidth=2; color=darkslategray4];
     "src/peer/peer-types.ts" -> "src/storage/storage-types.ts" [penwidth=2; color=darkslategray4];

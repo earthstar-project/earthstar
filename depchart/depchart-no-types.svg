@@ -10,42 +10,42 @@
 <title>G</title>
 <polygon fill="white" stroke="transparent" points="-4,4 -4,-729 859,-729 859,4 -4,4"/>
 <g id="clust1" class="cluster">
-<title>cluster1114164273</title>
+<title>cluster1716934412</title>
 <path fill="none" stroke="#8b7d6b" stroke-width="2" d="M20,-8C20,-8 835,-8 835,-8 841,-8 847,-14 847,-20 847,-20 847,-705 847,-705 847,-711 841,-717 835,-717 835,-717 20,-717 20,-717 14,-717 8,-711 8,-705 8,-705 8,-20 8,-20 8,-14 14,-8 20,-8"/>
 <text text-anchor="start" x="417" y="-702.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">src</text>
 </g>
 <g id="clust2" class="cluster">
-<title>cluster5369591397</title>
+<title>cluster7034099520</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M612,-261C612,-261 827,-261 827,-261 833,-261 839,-267 839,-273 839,-273 839,-378 839,-378 839,-384 833,-390 827,-390 827,-390 612,-390 612,-390 606,-390 600,-384 600,-378 600,-378 600,-273 600,-273 600,-267 606,-261 612,-261"/>
 <text text-anchor="start" x="671" y="-375.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">core&#45;validators</text>
 </g>
 <g id="clust3" class="cluster">
-<title>cluster5241667124</title>
+<title>cluster3713216487</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M200.5,-16C200.5,-16 688,-16 688,-16 694,-16 700,-22 700,-28 700,-28 700,-241 700,-241 700,-247 694,-253 688,-253 688,-253 200.5,-253 200.5,-253 194.5,-253 188.5,-247 188.5,-241 188.5,-241 188.5,-28 188.5,-28 188.5,-22 194.5,-16 200.5,-16"/>
 <text text-anchor="start" x="423.25" y="-238.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">crypto</text>
 </g>
 <g id="clust4" class="cluster">
-<title>cluster4588049026</title>
+<title>cluster1407238017</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M424,-288C424,-288 568,-288 568,-288 574,-288 580,-294 580,-300 580,-300 580,-351 580,-351 580,-357 574,-363 568,-363 568,-363 424,-363 424,-363 418,-363 412,-357 412,-351 412,-351 412,-300 412,-300 412,-294 418,-288 424,-288"/>
 <text text-anchor="start" x="440" y="-348.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">format&#45;validators</text>
 </g>
 <g id="clust5" class="cluster">
-<title>cluster5317597963</title>
+<title>cluster4100586268</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M234,-273C234,-273 326,-273 326,-273 332,-273 338,-279 338,-285 338,-285 338,-444 338,-444 338,-450 332,-456 326,-456 326,-456 234,-456 234,-456 228,-456 222,-450 222,-444 222,-444 222,-285 222,-285 222,-279 228,-273 234,-273"/>
 <text text-anchor="start" x="265.5" y="-441.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">peer</text>
 </g>
 <g id="clust6" class="cluster">
-<title>cluster6588261527</title>
+<title>cluster7592849202</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M226,-601C226,-601 334,-601 334,-601 340,-601 346,-607 346,-613 346,-613 346,-664 346,-664 346,-670 340,-676 334,-676 334,-676 226,-676 226,-676 220,-676 214,-670 214,-664 214,-664 214,-613 214,-613 214,-607 220,-601 226,-601"/>
 <text text-anchor="start" x="233" y="-661.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">query&#45;follower</text>
 </g>
 <g id="clust7" class="cluster">
-<title>cluster8425085502</title>
+<title>cluster686400807</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M468,-601C468,-601 524,-601 524,-601 530,-601 536,-607 536,-613 536,-613 536,-664 536,-664 536,-670 530,-676 524,-676 524,-676 468,-676 468,-676 462,-676 456,-670 456,-664 456,-664 456,-613 456,-613 456,-607 462,-601 468,-601"/>
 <text text-anchor="start" x="477.5" y="-661.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">query</text>
 </g>
 <g id="clust8" class="cluster">
-<title>cluster6606989903</title>
+<title>cluster4757035570</title>
 <path fill="bisque" stroke="#8b7d6b" stroke-width="2" d="M28,-464C28,-464 534,-464 534,-464 540,-464 546,-470 546,-476 546,-476 546,-581 546,-581 546,-587 540,-593 534,-593 534,-593 28,-593 28,-593 22,-593 16,-587 16,-581 16,-581 16,-476 16,-476 16,-470 22,-464 28,-464"/>
 <text text-anchor="start" x="256.5" y="-578.8" font-family="Helvetica,sans-Serif" font-weight="bold" font-size="14.00">storage</text>
 </g>
@@ -247,12 +247,6 @@
 <path fill="#79cdcd" stroke="#79cdcd" d="M315,-425C315,-425 245,-425 245,-425 239,-425 233,-419 233,-413 233,-413 233,-401 233,-401 233,-395 239,-389 245,-389 245,-389 315,-389 315,-389 321,-389 327,-395 327,-401 327,-401 327,-413 327,-413 327,-419 321,-425 315,-425"/>
 <text text-anchor="middle" x="280" y="-403.3" font-family="Helvetica,sans-Serif" font-size="14.00">peer&#45;client.ts</text>
 </g>
-<!-- src/peer/peer&#45;client.ts&#45;&gt;src/core&#45;validators/characters.ts -->
-<g id="edge19" class="edge">
-<title>src/peer/peer&#45;client.ts&#45;&gt;src/core&#45;validators/characters.ts</title>
-<path fill="none" stroke="#528b8b" stroke-width="2" d="M327.13,-408.5C405.28,-409.96 568.15,-408.31 701,-376 713.46,-372.97 726.45,-368.23 738.31,-363.22"/>
-<polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="739.8,-366.38 747.55,-359.16 736.99,-359.97 739.8,-366.38"/>
-</g>
 <!-- src/storage/compare.ts -->
 <g id="node17" class="node">
 <title>src/storage/compare.ts</title>
@@ -278,7 +272,7 @@
 <text text-anchor="middle" x="496" y="-623.3" font-family="Helvetica,sans-Serif" font-size="14.00">query.ts</text>
 </g>
 <!-- src/query&#45;follower/query&#45;follower.ts&#45;&gt;src/query/query.ts -->
-<g id="edge20" class="edge">
+<g id="edge19" class="edge">
 <title>src/query&#45;follower/query&#45;follower.ts&#45;&gt;src/query/query.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M338.07,-627C374.49,-627 420.86,-627 453.73,-627"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="453.9,-630.5 463.9,-627 453.9,-623.5 453.9,-630.5"/>
@@ -290,7 +284,7 @@
 <text text-anchor="middle" x="496" y="-540.3" font-family="Helvetica,sans-Serif" font-size="14.00">lock.ts</text>
 </g>
 <!-- src/storage/storage&#45;async.ts&#45;&gt;src/storage/compare.ts -->
-<g id="edge21" class="edge">
+<g id="edge20" class="edge">
 <title>src/storage/storage&#45;async.ts&#45;&gt;src/storage/compare.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M338.07,-490C370.77,-490 411.5,-490 443.27,-490"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="443.67,-493.5 453.67,-490 443.67,-486.5 443.67,-493.5"/>
@@ -302,37 +296,37 @@
 <text text-anchor="middle" x="82" y="-540.3" font-family="Helvetica,sans-Serif" font-size="14.00">storage&#45;cache.ts</text>
 </g>
 <!-- src/storage/storage&#45;cache.ts&#45;&gt;src/query&#45;follower/query&#45;follower.ts -->
-<g id="edge23" class="edge">
+<g id="edge22" class="edge">
 <title>src/storage/storage&#45;cache.ts&#45;&gt;src/query&#45;follower/query&#45;follower.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M110.61,-562.02C128.66,-573.22 153.07,-587.29 176,-597 187.43,-601.84 199.9,-606.2 212.08,-609.99"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="211.18,-613.38 221.77,-612.91 213.2,-606.68 211.18,-613.38"/>
 </g>
 <!-- src/storage/storage&#45;cache.ts&#45;&gt;src/query/query.ts -->
-<g id="edge22" class="edge">
+<g id="edge21" class="edge">
 <title>src/storage/storage&#45;cache.ts&#45;&gt;src/query/query.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M89.13,-562.38C100.58,-593.32 128.44,-654.91 176,-680 257.76,-723.14 293.84,-700.42 384,-680 409.76,-674.17 436.54,-661.6 457.34,-650.16"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="459.17,-653.15 466.16,-645.18 455.73,-647.05 459.17,-653.15"/>
 </g>
 <!-- src/storage/storage&#45;cache.ts&#45;&gt;src/storage/storage&#45;async.ts -->
-<g id="edge24" class="edge">
+<g id="edge23" class="edge">
 <title>src/storage/storage&#45;cache.ts&#45;&gt;src/storage/storage&#45;async.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M140.48,-527.06C152.22,-523.67 164.49,-520.18 176,-517 187.62,-513.79 200.01,-510.46 212.02,-507.29"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="213.21,-510.59 221.99,-504.66 211.43,-503.82 213.21,-510.59"/>
 </g>
 <!-- src/storage/storage&#45;driver&#45;async&#45;memory.ts&#45;&gt;src/query/query.ts -->
-<g id="edge26" class="edge">
+<g id="edge25" class="edge">
 <title>src/storage/storage&#45;driver&#45;async&#45;memory.ts&#45;&gt;src/query/query.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M324.5,-562.08C349.92,-572.52 382.67,-585.77 412,-597 425.7,-602.25 440.77,-607.76 454.26,-612.62"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="453.17,-615.95 463.76,-616.02 455.53,-609.36 453.17,-615.95"/>
 </g>
 <!-- src/storage/storage&#45;driver&#45;async&#45;memory.ts&#45;&gt;src/storage/compare.ts -->
-<g id="edge25" class="edge">
+<g id="edge24" class="edge">
 <title>src/storage/storage&#45;driver&#45;async&#45;memory.ts&#45;&gt;src/storage/compare.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M352.56,-525.94C382.53,-518.38 416.69,-509.76 444.04,-502.86"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="444.95,-506.24 453.79,-500.4 443.24,-499.45 444.95,-506.24"/>
 </g>
 <!-- src/storage/storage&#45;driver&#45;async&#45;memory.ts&#45;&gt;src/storage/lock.ts -->
-<g id="edge27" class="edge">
+<g id="edge26" class="edge">
 <title>src/storage/storage&#45;driver&#45;async&#45;memory.ts&#45;&gt;src/storage/lock.ts</title>
 <path fill="none" stroke="#528b8b" stroke-width="2" d="M384.24,-544C410.63,-544 437.33,-544 457.91,-544"/>
 <polygon fill="#528b8b" stroke="#528b8b" stroke-width="2" points="458.07,-547.5 468.07,-544 458.07,-540.5 458.07,-547.5"/>
