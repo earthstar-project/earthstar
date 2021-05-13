@@ -1,6 +1,7 @@
 import { WorkspaceAddress } from '../util/doc-types';
 import { IStorageAsync } from '../storage/storage-types';
 import { ICrypto } from '../crypto/crypto-types';
+import { Peer } from './peer';
 
 //================================================================================
 // PEER
@@ -71,6 +72,10 @@ export interface SaltyHandshake_Outcome {
 export interface IPeerClient {
     // Each client only talks to one server.
 
+    // get and return the server's peerId
+    // this can be used as a ping
+    getServerPeerId(): Promise<PeerId>;
+
     // do the entire thing
     do_saltyHandshake(): Promise<void>;
 
@@ -93,5 +98,7 @@ export interface IPeerServer {
     // this does not affect any internal state, in fact
     // the server has no internal state (except maybe for
     // rate limiting, etc)
+
+    getPeerId(): Promise<PeerId>;
     serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response>;
 }

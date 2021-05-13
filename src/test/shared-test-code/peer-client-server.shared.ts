@@ -125,9 +125,9 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             // you can either use the entire Server instance as your proxy object,
             // or you can list the server methods you want to expose here.
             serve_saltyHandshake: server.serve_saltyHandshake.bind(server),
+            getPeerId: server.getPeerId.bind(server),
 
             // we can add more methods here too, for testing.
-            ping: () => 'pong from server at ' + microsecondNow(),
             throwGenericError: () => { throw new Error('a generic error') },
             throwNotImplemented: () => { throw new NotImplementedError('a not implemented error') },
             throwValidationError: () => { throw new ValidationError('a validation error') },
@@ -138,6 +138,9 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         let client = new PeerClient(crypto, peerOnClient, serverProxy);
 
         // let them talk to each other
+        let serverPeerId = await client.getServerPeerId();
+        t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
+
         await client.do_saltyHandshake();
 
         t.same(client.state.serverPeerId, server.peer.peerId, `client knows server's peer id`);
@@ -148,6 +151,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             '+common.two',
         ], 'client knows the correct common workspaces (and in sorted order)');
 
+        /*
         try {
             await serverProxy.throwGenericError();
             t.ok(false, 'should have thrown generic error');
@@ -169,6 +173,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             t.ok(true, `got expected error: ${err} / ${err.name} / ${err.message}`);
             t.ok(err instanceof ValidationError, 'is instance of ValidationError');
         }
+        */
 
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }

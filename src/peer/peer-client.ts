@@ -59,6 +59,10 @@ export class PeerClient implements IPeerClient {
         logger.debug(this.state);
     }
 
+    async getServerPeerId(): Promise<PeerId> {
+        return await this.server.getPeerId();
+    }
+
     // do the entire thing
     async do_saltyHandshake(): Promise<void> {
         loggerDo.debug('do_saltyHandshake...');
