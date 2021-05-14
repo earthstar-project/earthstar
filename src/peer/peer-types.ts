@@ -1,5 +1,5 @@
 import { WorkspaceAddress } from '../util/doc-types';
-import { IStorageAsync } from '../storage/storage-types';
+import { IStorageAsync, StorageId } from '../storage/storage-types';
 import { ICrypto } from '../crypto/crypto-types';
 
 //================================================================================
@@ -16,6 +16,7 @@ export interface IPeer {
     workspaces(): WorkspaceAddress[];
     storages(): IStorageAsync[];
     size(): number;
+    getStorage(ws: WorkspaceAddress): IStorageAsync | undefined;
 
     // setters
     addStorage(storage: IStorageAsync): Promise<void>;
@@ -68,18 +69,45 @@ export interface SaltyHandshake_Outcome {
 
 //--------------------------------------------------
 
+// ask server for storage states
+
+export interface AllStorageStates_Request {
+    commonWorkspaces: WorkspaceAddress[],
+}
+export type AllStorageStates_Response = Record<WorkspaceAddress, ServerStorageSyncState>;
+export type AllStorageStates_Outcome = Record<WorkspaceAddress, ClientStorageSyncState>;
+
+//--------------------------------------------------
+
 // Data we learn from talking to the server.
 // Null means not known yet.
 // This should be easily serializable.
 export interface PeerClientState {
     serverPeerId: PeerId | null;
+    // TODO: commonWorkspaces could be merged with storgaeSyncStates?
     commonWorkspaces: WorkspaceAddress[] | null;
+    clientStorageSyncStates: Record<WorkspaceAddress, ClientStorageSyncState>;
     lastSeenAt: number | null,  // a timestamp in Earthstar-style microseconds
+}
+export interface ServerStorageSyncState {
+    workspaceAddress: WorkspaceAddress,
+    serverStorageId: StorageId;
+    serverMaxLocalIndexOverall: number,
+}
+export interface ClientStorageSyncState {
+    workspaceAddress: WorkspaceAddress,
+    serverStorageId: StorageId;
+    serverMaxLocalIndexOverall: number,
+    clientMaxLocalIndexOverall: number,
+    serverMaxLocalIndexSoFar: number,  // -1 if unknown
+    clientMaxLocalIndexSoFar: number,  // -1 if unknown
+    lastSeenAt: number,
 }
 
 export let initialPeerClientState: PeerClientState = {
     serverPeerId: null,
     commonWorkspaces: null,
+    clientStorageSyncStates: {},
     lastSeenAt: null,
 }
 
@@ -94,20 +122,21 @@ export interface IPeerClient {
     // this can be used as a ping.
     getServerPeerId(): Promise<PeerId>;
 
-    // do the entire thing
-    do_saltyHandshake(): Promise<void>;
-
+    // do_: do the entire thing
     // process and update are split into two functions
     // for easier testing.
-
-    // this does any computation or complex work needed to boil this down
+    // process_: this does any computation or complex work needed to boil this down
     // into a simple state update, but it does not actually update our state,
     // it just returns the changes to the state
-    process_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome>;
+    // update_: this applies the changes to the state
 
-    // this applies the changes to the state
+    do_saltyHandshake(): Promise<void>;
+    process_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome>;
     update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void>;
 
+    do_allStorageStates(): Promise<void>;
+    process_allStorageStates(res: AllStorageStates_Response): Promise<AllStorageStates_Outcome>;
+    update_allStorageStates(outcome: AllStorageStates_Outcome): Promise<void>;
 }
 
 //--------------------------------------------------
@@ -118,5 +147,8 @@ export interface IPeerServer {
     // rate limiting, etc)
 
     getPeerId(): Promise<PeerId>;
+
     serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response>;
+
+    serve_allStorageStates(req: AllStorageStates_Request): Promise<AllStorageStates_Response>;
 }
