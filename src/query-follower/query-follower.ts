@@ -49,7 +49,7 @@ export class QueryFollower implements IQueryFollower {
      * call the callback on it.
      * Only some kinds of queries are supported:
      * queries must have these specific settings:
-     *      { historyMode: 'all', orderBy: 'localIndexASC' }
+     *      { historyMode: 'all', orderBy: 'localIndex ASC' }
      * queries may have:
      *      { startAfter: { localIndex: number }}  // to start the follower partway through the sequence
      *      { filter: { ... any filters ... }}  // to filter the docs
@@ -67,7 +67,7 @@ export class QueryFollower implements IQueryFollower {
         this.bus = new Superbus<QueryFollowerEvent>();
 
         // enforce rules on supported queries
-        if (this._query.historyMode !== 'all') { throw new NotImplementedError(`query  historyMode must be 'all'`); }
+        if (this._query.historyMode !== 'all') { throw new NotImplementedError(`query historyMode must be 'all'`); }
         if (this._query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`query orderBy must be 'localIndexASC'`); }
         if (this._query.limit !== undefined) { throw new NotImplementedError(`query must not have a limit`); }
 
