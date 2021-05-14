@@ -55,7 +55,7 @@
     "benchmark.browser": "yarn clean && yarn build-tsc && mkdir -p benchmark-results && yarn browserify-benchmark && yarn browser-run-benchmark | tee benchmark-results/benchmark.browser.txt",
     "test.node": "yarn test",
     "benchmark.node": "yarn clean && yarn build-tsc && mkdir -p benchmark-results && node --expose-gc build/test/node/*.benchmark.js | tee benchmark-results/benchmark.node.txt",
-    "test": "tap --timeout=120 --no-bail --lines 90 --branches 90 --functions 90 --statements 90 build/test/universal/*.test.js build/test/node/*.test.js",
+    "test": "tap --timeout=120 --no-bail build/test/universal/*.test.js build/test/node/*.test.js",
     "test-verbose": "tap -Rspecy --no-bail --jobs=1 build/test/universal/*.test.js build/test/node/*.test.js",
     "test-coverage": "yarn test --coverage-report=lcov",
     "watch-test": "onchange -i src/*.ts src/test/*.ts -- yarn clean-build-test",
