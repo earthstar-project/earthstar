@@ -73,6 +73,9 @@ export interface IStorageAsync extends IStorageAsyncConfig {
     //--------------------------------------------------
     // GET
 
+    // this one is synchronous
+    getMaxLocalIndex(): number;
+
     // these should all return frozen docs
     getDocsAfterLocalIndex(historyMode: HistoryMode, startAfter: LocalIndex, limit?: number): Promise<Doc[]>;
     getAllDocs(): Promise<Doc[]>;
@@ -108,6 +111,8 @@ export interface IStorageDriverAsync extends IStorageAsyncConfig {
     //--------------------------------------------------
     // LIFECYCLE
 
+    // TODO: hatch (and load maxLocalIndex)
+
     isClosed(): boolean;
     // the IStorage will call this
     close(): Promise<void>;
@@ -115,7 +120,10 @@ export interface IStorageDriverAsync extends IStorageAsyncConfig {
     //--------------------------------------------------
     // GET
 
-    // The max local index used so far.  the first doc will increment this and get index 1.
+    // The max local index used so far.
+    // The first doc will increment this and get index 1.
+    // This is synchronous because it's expected that the driver will
+    // load it once at startup and then keep it in memory.
     getMaxLocalIndex(): number;
 
     // this should return frozen docs

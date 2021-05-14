@@ -6,6 +6,9 @@ import {
     SaltyHandshake_Request,
     SaltyHandshake_Response,
     saltAndHashWorkspace,
+    AllStorageStates_Request,
+    AllStorageStates_Response,
+    ServerStorageSyncState,
 } from "./peer-types";
 import { randomId } from '../util/misc';
 
@@ -45,6 +48,25 @@ export class PeerServer implements IPeerServer {
         }
         loggerServe.debug('...serve_saltyHandshake is done:');
         loggerServe.debug(response);
+        return response;
+    }
+    async serve_allStorageStates(req: AllStorageStates_Request): Promise<AllStorageStates_Response> {
+        loggerServe.debug('serve_allStorageStates...')
+        let response: AllStorageStates_Response = {};
+        for (let workspace of req.commonWorkspaces) {
+            let storage = this.peer.getStorage(workspace);
+            if (storage === undefined) {
+                loggerServe.debug(`workspace ${workspace} is unknown; skipping`);
+                continue;
+            }
+            let storageState: ServerStorageSyncState = {
+                workspaceAddress: workspace,
+                serverStorageId: storage.storageId,
+                serverMaxLocalIndexOverall: storage.getMaxLocalIndex(),
+            };
+            response[workspace] = storageState;
+        }
+        loggerServe.debug('...serve_allStorageStates is done')
         return response;
     }
 }

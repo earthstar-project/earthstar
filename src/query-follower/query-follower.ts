@@ -151,7 +151,7 @@ export class QueryFollower implements IQueryFollower {
      * changes from the Storage?
      */
     isCaughtUp(): boolean {
-        return this._maxLocalIndex >= this.storage.storageDriver.getMaxLocalIndex();
+        return this._maxLocalIndex >= this.storage.getMaxLocalIndex();
     }
 
     async _catchUp(): Promise<void> {

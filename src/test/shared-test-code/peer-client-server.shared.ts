@@ -32,7 +32,7 @@ let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
 
-//setDefaultLogLevel(LogLevel.None);
+setDefaultLogLevel(LogLevel.None);
 //setLogLevel('peer client', LogLevel.Debug);
 //setLogLevel('peer client: do', LogLevel.Debug);
 //setLogLevel('peer client: process', LogLevel.Debug);
@@ -64,6 +64,12 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             '+common.two',
             '+common.three',
         ]
+        let expectedCommonWorkspaces = [
+            // sorted
+            '+common.one',
+            '+common.three',
+            '+common.two',
+        ];
 
         // make Peers
         let peerOnClient = new Peer();
@@ -80,27 +86,71 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         return {
             peerOnClient,
             peerOnServer,
+            expectedCommonWorkspaces,
         }
     }
 
-    t.skip(SUBTEST_NAME + ': saltyHandshake, directly', async (t: any) => {
-        let { peerOnClient, peerOnServer } = setupTest();
+    t.test(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
+        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
         t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same');
-
-        // create Client and Server instances
         let server = new PeerServer(crypto, peerOnServer);
         let client = new PeerClient(crypto, peerOnClient, server);
 
         // let them talk to each other
-        await client.do_saltyHandshake();
+        t.ok(true, '------ getServerPeerId ------');
+        let serverPeerId = await client.getServerPeerId();
+        t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
+        t.same(client.state.serverPeerId, peerOnServer.peerId, 'setState worked');
 
+        // close Storages
+        for (let storage of peerOnClient.storages()) { await storage.close(); }
+        for (let storage of peerOnServer.storages()) { await storage.close(); }
+        t.end();
+    });
+
+    t.test(SUBTEST_NAME + ': saltyHandshake', async (t: any) => {
+        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
+        t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same');
+        let server = new PeerServer(crypto, peerOnServer);
+        let client = new PeerClient(crypto, peerOnClient, server);
+
+        // let them talk to each other
+        t.ok(true, '------ saltyHandshake ------');
+        await client.do_saltyHandshake();
         t.same(client.state.serverPeerId, server.peer.peerId, `client knows server's peer id`);
         t.notSame(client.state.lastSeenAt, null, 'client state lastSeeenAt is not null');
-        t.same(client.state.commonWorkspaces, [
-            '+common.one',
-            '+common.three',
-            '+common.two',
-        ], 'client knows the correct common workspaces (and in sorted order)');
+        t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
+
+        // close Storages
+        for (let storage of peerOnClient.storages()) { await storage.close(); }
+        for (let storage of peerOnServer.storages()) { await storage.close(); }
+        t.end();
+    });
+
+    t.test(SUBTEST_NAME + ': SaltyHandshake + AllStorageStates', async (t: any) => {
+        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
+        t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same');
+        let server = new PeerServer(crypto, peerOnServer);
+        let client = new PeerClient(crypto, peerOnClient, server);
+
+        // let them talk to each other
+        t.ok(true, '------ saltyHandshake ------');
+        await client.do_saltyHandshake();
+        t.ok(true, '------ allStorageStates ------');
+        await client.do_allStorageStates();
+
+        t.same(
+            Object.keys(client.state.clientStorageSyncStates).length,
+            expectedCommonWorkspaces.length,
+            'we now have info on the expected number of storages from the server'
+        );
+        let wsAddr0 = expectedCommonWorkspaces[0];
+        let clientStorageSyncState0 = client.state.clientStorageSyncStates[wsAddr0];
+        t.ok(true, 'for the first of the common workspaces...');
+        t.same(clientStorageSyncState0.workspaceAddress, expectedCommonWorkspaces[0], 'workspace matches between key and value');
+        t.same(clientStorageSyncState0.serverStorageId, server.peer.getStorage(wsAddr0)?.storageId, 'storageId matches server');
+        t.same(clientStorageSyncState0.serverMaxLocalIndexSoFar, -1, 'server max local index so far starts at -1');
+        t.same(clientStorageSyncState0.clientMaxLocalIndexSoFar, -1, 'client max local index so far starts at -1');
 
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }
@@ -109,30 +159,18 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
     });
 
     t.test(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
-        let { peerOnClient, peerOnServer } = setupTest();
+        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
         t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same');
 
         // create Client and Server instances
         let server = new PeerServer(crypto, peerOnServer);
-        /*
-        let serverMethods = {
-            // you can either use the entire Server instance as your proxy object,
-            // or you can list the server methods you want to expose here.
-            serve_saltyHandshake: server.serve_saltyHandshake.bind(server),
-            getPeerId: server.getPeerId.bind(server),
-
-            // we can add more methods here too, for testing.
-            throwGenericError: () => { throw new Error('a generic error') },
-            throwNotImplemented: () => { throw new NotImplementedError('a not implemented error') },
-            throwValidationError: () => { throw new ValidationError('a validation error') },
-        };
-        */
         let serverProxy = makeProxy(server, evaluator);
 
         // make a client that uses the proxy
         let client = new PeerClient(crypto, peerOnClient, serverProxy);
 
         // let them talk to each other
+        t.ok(true, '------ saltyHandshake ------');
         let serverPeerId = await client.getServerPeerId();
         t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
         t.same(client.state.serverPeerId, peerOnServer.peerId, 'setState worked');
@@ -141,35 +179,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
 
         t.same(client.state.serverPeerId, server.peer.peerId, `client knows server's peer id`);
         t.notSame(client.state.lastSeenAt, null, 'client state lastSeeenAt is not null');
-        t.same(client.state.commonWorkspaces, [
-            '+common.one',
-            '+common.three',
-            '+common.two',
-        ], 'client knows the correct common workspaces (and in sorted order)');
-
-        /*
-        try {
-            await serverProxy.throwGenericError();
-            t.ok(false, 'should have thrown generic error');
-        } catch (err) {
-            t.ok(true, `got expected error: ${err} / ${err.name} / ${err.message}`);
-            t.ok(err instanceof Error, 'is instance of Error');
-        }
-        try {
-            await serverProxy.throwNotImplemented();
-            t.ok(false, 'should have thrown not implemented error');
-        } catch (err) {
-            t.ok(true, `got expected error: ${err} / ${err.name} / ${err.message}`);
-            t.ok(err instanceof NotImplementedError, 'is instance of NotImplementedError');
-        }
-        try {
-            await serverProxy.throwValidationError();
-            t.ok(false, 'should have thrown validation error');
-        } catch (err) {
-            t.ok(true, `got expected error: ${err} / ${err.name} / ${err.message}`);
-            t.ok(err instanceof ValidationError, 'is instance of ValidationError');
-        }
-        */
+        t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
 
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }

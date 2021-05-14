@@ -50,6 +50,9 @@ export class Peer implements IPeer {
     size(): number {
         return this.storageMap.size;
     }
+    getStorage(ws: WorkspaceAddress): IStorageAsync | undefined {
+        return this.storageMap.get(ws);
+    }
 
     //--------------------------------------------------
     // setters

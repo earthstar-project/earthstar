@@ -120,6 +120,11 @@ export class StorageAsync implements IStorageAsync {
     //--------------------------------------------------
     // GET
 
+    // one of the few that's synchronous
+    getMaxLocalIndex(): number {
+        return this.storageDriver.getMaxLocalIndex();
+    }
+
     async getDocsAfterLocalIndex(historyMode: HistoryMode, startAfter: LocalIndex, limit?: number): Promise<Doc[]> {
         logger.debug(`getDocsAfterLocalIndex(${historyMode}, ${startAfter}, ${limit})`);
         if (this._isClosed) { throw new StorageIsClosedError(); }
