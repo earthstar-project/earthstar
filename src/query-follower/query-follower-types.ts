@@ -13,6 +13,8 @@ export type QueryFollowerEvent = 'close' | 'caught-up';
 export interface IQueryFollower {
     storage: IStorageAsync;
 
+    // constructor(storage: IStorageAsync, query: Query, cb: (doc: Doc) => Promise<void>)
+
     /** Subscribe to events here */
     bus: Superbus<QueryFollowerEvent>;
 
