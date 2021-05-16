@@ -9,12 +9,17 @@ import {
     AllStorageStates_Request,
     AllStorageStates_Response,
     ServerStorageSyncState,
+    WorkspaceQuery_Request,
+    WorkspaceQuery_Response,
 } from "./peer-types";
 import { randomId } from '../util/misc';
 
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
+import { docMatchesFilter } from '../query/query';
+import { Doc } from '../util/doc-types';
+import { ValidationError } from '../util/errors';
 let logger = new Logger('peer server', 'magentaBright');
 let loggerServe = new Logger('peer server: serve', 'magenta');
 let J = JSON.stringify;
@@ -30,26 +35,24 @@ export class PeerServer implements IPeerServer {
         this.peer = peer;
         logger.debug(`...peerId: ${this.peer.peerId}`);
     }
-    // this does not affect any internal state, in fact
-    // the server has no internal state (except maybe for
-    // rate limiting, etc)
+
     async getPeerId(): Promise<PeerId> {
         return this.peer.peerId;
     }
+
     async serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response> {
         loggerServe.debug('serve_saltyHandshake...');
         let salt = randomId();
         let saltedWorkspaces = this.peer.workspaces().map(ws =>
             saltAndHashWorkspace(this.crypto, salt, ws));
-        let response: SaltyHandshake_Response = {
+        loggerServe.debug('...serve_saltyHandshake is done.');
+        return {
             serverPeerId: this.peer.peerId,
             salt,
             saltedWorkspaces,
         }
-        loggerServe.debug('...serve_saltyHandshake is done:');
-        loggerServe.debug(response);
-        return response;
     }
+
     async serve_allStorageStates(req: AllStorageStates_Request): Promise<AllStorageStates_Response> {
         loggerServe.debug('serve_allStorageStates...')
         let response: AllStorageStates_Response = {};
@@ -66,7 +69,34 @@ export class PeerServer implements IPeerServer {
             };
             response[workspace] = storageState;
         }
-        loggerServe.debug('...serve_allStorageStates is done')
+        loggerServe.debug('...serve_allStorageStates is done.')
         return response;
+    }
+
+    async serve_workspaceQuery(request: WorkspaceQuery_Request): Promise<WorkspaceQuery_Response> {
+        // TODO: enforce a certain limit on queries so they can't just get everything all at once
+        let { workspace, storageId, query } = request;
+        loggerServe.debug('serve_workspaceQuery...')
+        let storage = this.peer.getStorage(workspace);
+        if (storage === undefined) {
+            let err = `workspace ${workspace} is unknown; skipping`;
+            loggerServe.debug(err);
+            throw err;
+        }
+        if (storage.storageId !== storageId) {
+            let err = `storageId for ${workspace} is not ${storageId} anymore, it's ${storage.storageId}`;
+            loggerServe.debug(err);
+            throw err;
+        }
+        loggerServe.debug('...querying storage for docs')
+        let docs: Doc[] = await storage.queryDocs(query);
+        loggerServe.debug(`...got ${docs.length} docs`)
+        loggerServe.debug('...serve_workspaceQuery is done')
+        return {
+            workspace,
+            storageId,
+            serverMaxLocalIndexOverall: storage.getMaxLocalIndex(),
+            docs,
+        }
     }
 }
