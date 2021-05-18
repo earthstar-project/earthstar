@@ -35,7 +35,9 @@ export class PeerServer implements IPeerServer {
         logger.debug(`...peerId: ${this.peer.peerId}`);
     }
 
-    async getPeerId(): Promise<PeerId> {
+    async serve_peerId(): Promise<PeerId> {
+        loggerServe.debug('serve_peerId...');
+        loggerServe.debug(`... ${this.peer.peerId}`);
         return this.peer.peerId;
     }
 

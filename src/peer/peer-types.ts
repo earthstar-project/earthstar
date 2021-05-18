@@ -31,11 +31,13 @@ export interface IPeer {
 /**
  * API endpoints follow some similar patterns:
  * 
+ * ## Do, Serve, Handle
+ * 
  *   - Client always initiates contact.
  *   - client_do_thing(thing_request) => void -- handles all the following calls:
  *   -     client asks for server.serve_thing(thing_request) => thing_response
- *   -     client.transform_thing(thing_response) => thing_outcome
- *   -     client.update_thing(thing_outcome) => void
+ *   -     client.handle_thing(thing_response) => newState
+ *   -     client.setState(newState)
  *
  *    FUNCTION             DATA TYPE
  * 
@@ -43,16 +45,19 @@ export interface IPeer {
  *    client.do_x
  *      server.serve_x
  *                         x_response
- *      client.transform_x
- *                         x_outcome
- *      client.update_x
- *                         void 
+ *      client.handle_x    
+ *                         Partial<PeerClientState>
  * 
- * And sometimes instead of transform-and-update, we have a single step "process":
- * 
- *   - client_do_thing(thing_request) => void -- handles all the following calls:
+ * ## Do, Serve, Process
+ *
+ * This is used when the client needs to perform some side-effects besides just
+ * updating its own client state.  For example, ingesting docs.  It also lets
+ * the overall return value of process_x and do_x be something more useful,
+ * like the number of docs ingested.
+ *  
+ *   - client_do_thing(thing_request) => ? -- handles all the following calls:
  *   -     client asks for server.serve_thing(thing_request) => thing_response
- *   -     client.process_thing(thing_response) => void
+ *   -     client.process_thing(thing_response) => ?
  * 
  *    FUNCTION             DATA TYPE
  * 
@@ -61,7 +66,7 @@ export interface IPeer {
  *      server.serve_x
  *                         x_response
  *      client.process_x
- *                         void 
+ *                         ? 
  */
 
 // ok this isn't a type, but I put it here anyway since it's shared code for client and server
@@ -150,24 +155,21 @@ export interface IPeerClient {
     setState(newState: Partial<PeerClientState>): Promise<void>;
 
     // get and return the server's peerId.
-    // this can be used as a ping.
-    getServerPeerId(): Promise<PeerId>;
+    // this is small and simple and it be used as a ping to check if the server is online.
+    do_getServerPeerId(): Promise<PeerId>;
 
-    // do_: do the entire thing
-    // process and update are split into two functions
-    // for easier testing.
-    // transform_: this does any computation or complex work needed to boil this down
-    // into a simple state update, but it does not actually update our state,
-    // it just returns the changes to the state
-    // update_: this applies the changes to the state
-
+    // figure out workspaces we have in common
+    // do_: launches the request, runs handle_, and updates our state with the result
     do_saltyHandshake(): Promise<void>;
     handle_saltyHandshake(response: SaltyHandshake_Response): Promise<Partial<PeerClientState>>;
 
+    // get workspace states from the server (localIndex numbers)
+    // do_: launches the request, runs handle_, and updates our state with the result
     do_allWorkspaceStates(): Promise<void>;
     handle_allWorkspaceStates(request: AllWorkspaceStates_Request, response: AllWorkspaceStates_Response): Promise<Partial<PeerClientState>>;
 
-    // return number of docs obtained that were not invalid
+    // do a query and ingest the results
+    // do_: launches the request, runs process_, returns number of docs obtained that were not invalid
     do_workspaceQuery(request: WorkspaceQuery_Request): Promise<number>;
     process_workspaceQuery(response: WorkspaceQuery_Response): Promise<number>;
 }
@@ -182,7 +184,7 @@ export interface IPeerServer {
     // this class will be exposed over RPC --
     // make sure it only has methods that are safe to be exposed to the internet.
 
-    getPeerId(): Promise<PeerId>;
+    serve_peerId(): Promise<PeerId>;
 
     serve_saltyHandshake(request: SaltyHandshake_Request): Promise<SaltyHandshake_Response>;
     serve_allWorkspaceStates(request: AllWorkspaceStates_Request): Promise<AllWorkspaceStates_Response>;

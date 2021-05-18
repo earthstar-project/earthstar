@@ -28,8 +28,6 @@ import { Logger } from '../util/log';
 let logger = new Logger('peer client', 'greenBright');
 let loggerDo = new Logger('peer client: do', 'green');
 let loggerHandle = new Logger('peer client: handle', 'cyan');
-let loggerTransform = new Logger('peer client: transform', 'cyan');
-let loggerUpdate = new Logger('peer client: update', 'blue');
 let loggerProcess = new Logger('peer client: process', 'cyan');
 let J = JSON.stringify;
 
@@ -68,23 +66,17 @@ export class PeerClient implements IPeerClient {
         this.state = { ...this.state, ...newState };
     }
 
-    async getServerPeerId(): Promise<PeerId> {
-        let prevServerPeerId = this.state.serverPeerId;
-        let serverPeerId = await this.server.getPeerId();
-        if (serverPeerId === prevServerPeerId) {
-            await this.setState({
-                serverPeerId,
-                lastSeenAt: microsecondNow(),
-            });
-        } else {
-            // if server has changed its id,
-            // we need to reset the commonWorkspaces
-            await this.setState({
-                serverPeerId,
-                commonWorkspaces: [],
-                lastSeenAt: microsecondNow(),
-            });
-        }
+    //--------------------------------------------------
+    // GET SERVER PEER ID
+
+    async do_getServerPeerId(): Promise<PeerId> {
+        let serverPeerId = await this.server.serve_peerId();
+        // setState will detect if the server peerId
+        // has changed, and reset our own state.
+        await this.setState({
+            serverPeerId,
+            lastSeenAt: microsecondNow(),
+        });
         return serverPeerId;
     }
 
@@ -112,7 +104,7 @@ export class PeerClient implements IPeerClient {
         loggerDo.debug('...state update:')
         loggerDo.debug(stateUpdate);
         loggerDo.debug('...setting state...')
-        this.setState(stateUpdate);
+        await this.setState(stateUpdate);
         loggerDo.debug('...new combined state:')
         loggerDo.debug(this.state);
 
@@ -179,7 +171,7 @@ export class PeerClient implements IPeerClient {
         loggerDo.debug('...state update:')
         loggerDo.debug(stateUpdate);
         loggerDo.debug('...setting state...')
-        this.setState(stateUpdate);
+        await this.setState(stateUpdate);
         loggerDo.debug('...new combined state:')
         loggerDo.debug(this.state);
 
@@ -190,13 +182,13 @@ export class PeerClient implements IPeerClient {
         // request is provided here so we can check for consistency in case the server replied with
         // something totally different
 
-        loggerTransform.debug('handle_allWorkspaceStates...');
+        loggerHandle.debug('handle_allWorkspaceStates...');
         let { commonWorkspaces } = request;
         let { serverPeerId, workspaceStatesFromServer } = response;
 
         let newWorkspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
         for (let workspace of Object.keys(workspaceStatesFromServer)) {
-            loggerTransform.debug(`  > ${workspace}`);
+            loggerHandle.debug(`  > ${workspace}`);
             let workspaceStateFromServer = workspaceStatesFromServer[workspace];
             if (workspaceStateFromServer.workspace !== workspace) {
                 throw new ValidationError(`server shenanigans: server response is not self-consistent, workspace key does not match data in the Record ${workspaceStateFromServer.workspace} & ${workspace}`);
@@ -227,7 +219,7 @@ export class PeerClient implements IPeerClient {
             }
         }
 
-        loggerTransform.debug('...handle_allWorkspaceStates is done');
+        loggerHandle.debug('...handle_allWorkspaceStates is done');
         return {
             serverPeerId,
             // TODO: should this merge with, or overwrite, the existing one?
@@ -327,7 +319,7 @@ export class PeerClient implements IPeerClient {
                 serverMaxLocalIndexSoFar: doc._localIndex ?? -1,
                 lastSeenAt: microsecondNow(),
             }
-            this.setState({
+            await this.setState({
                 workspaceStates: {
                     ...this.state.workspaceStates,
                     [workspace]: myWorkspaceState,

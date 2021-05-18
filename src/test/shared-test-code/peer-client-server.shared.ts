@@ -7,6 +7,7 @@ import { ICrypto } from '../../crypto/crypto-types';
 
 import { isErr, NotImplementedError } from '../../util/errors';
 
+import { WorkspaceQuery_Request } from '../../peer/peer-types';
 import { Peer } from '../../peer/peer';
 import { PeerClient } from '../../peer/peer-client';
 import { PeerServer } from '../../peer/peer-server';
@@ -33,16 +34,14 @@ let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
 
 setDefaultLogLevel(LogLevel.None);
-setLogLevel('test', LogLevel.Debug);
-setLogLevel('test cb', LogLevel.Debug);
-setLogLevel('peer client', LogLevel.Debug);
-setLogLevel('peer client: do', LogLevel.Debug);
-setLogLevel('peer client: transform', LogLevel.Debug);
-setLogLevel('peer client: handle', LogLevel.Debug);
-setLogLevel('peer client: update', LogLevel.Debug);
-setLogLevel('peer client: process', LogLevel.Debug);
-setLogLevel('peer server', LogLevel.Debug);
-setLogLevel('peer server: serve', LogLevel.Debug);
+//setLogLevel('test', LogLevel.Debug);
+//setLogLevel('test cb', LogLevel.Debug);
+//setLogLevel('peer client', LogLevel.Debug);
+//setLogLevel('peer client: do', LogLevel.Debug);
+//setLogLevel('peer client: handle', LogLevel.Debug);
+//setLogLevel('peer client: process', LogLevel.Debug);
+//setLogLevel('peer server', LogLevel.Debug);
+//setLogLevel('peer server: serve', LogLevel.Debug);
 
 //================================================================================
 
@@ -106,7 +105,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         }
     }
 
-    t.skip(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
+    t.test(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
         let { peerOnClient, peerOnServer } = setupTest();
         t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same, as expected');
         let server = new PeerServer(crypto, peerOnServer);
@@ -115,7 +114,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         // let them talk to each other
         t.ok(true, '------ getServerPeerId ------');
         loggerTest.debug(true, '------ getServerPeerId ------');
-        let serverPeerId = await client.getServerPeerId();
+        let serverPeerId = await client.do_getServerPeerId();
         loggerTest.debug(true, '------ /getServerPeerId ------');
 
         t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
@@ -183,8 +182,6 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.same(workspaceState0.serverMaxLocalIndexSoFar, -1, 'server max local index so far starts at -1');
         t.same(workspaceState0.clientMaxLocalIndexSoFar, -1, 'client max local index so far starts at -1');
 
-        /*
-
         t.ok(true, '------ workspaceQuery ------');
         loggerTest.debug(true, '------ workspaceQuery ------');
         let workspace: WorkspaceAddress = expectedCommonWorkspaces[0];
@@ -208,7 +205,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.same(numPulled, 2, 'pulled all 2 docs');
         workspaceState0 = client.state.workspaceStates[workspace0];
         t.ok(true, 'for the first of the common workspaces...');
-        t.same(workspaceState0.workspaceAddress, workspace0);
+        t.same(workspaceState0.workspace, workspace0);
         t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
         t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
 
@@ -233,10 +230,9 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
 
         t.same(numPulled, 0, 'pulled 0 docs this time');
         t.ok(true, 'no changes to syncState for this workspace');
-        t.same(workspaceState0.workspaceAddress, workspace0);
+        t.same(workspaceState0.workspace, workspace0);
         t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
         t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
-        */
 
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }
@@ -244,7 +240,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.end();
     });
 
-    t.skip(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
+    t.test(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
         let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
 
         // create Client and Server instances
@@ -256,7 +252,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
 
         // let them talk to each other
         t.ok(true, '------ saltyHandshake ------');
-        let serverPeerId = await client.getServerPeerId();
+        let serverPeerId = await client.do_getServerPeerId();
         t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
         t.same(client.state.serverPeerId, peerOnServer.peerId, 'setState worked');
 
