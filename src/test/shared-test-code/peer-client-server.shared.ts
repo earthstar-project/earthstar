@@ -144,15 +144,17 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             path: '/author1',
             content: 'a1',
         });
-        await storage0peer.set(author1, {
-            format: 'es.4',
-            path: '/author1',
-            content: 'a1.1',
-        });
-        await storage0peer.set(author1, {
+        // this doc will be overwritten
+        // the total number of docs will be 2
+        await storage0peer.set(author2, {
             format: 'es.4',
             path: '/author2',
             content: 'a2',
+        });
+        await storage0peer.set(author2, {
+            format: 'es.4',
+            path: '/author2',
+            content: 'a2.1',
         });
 
         // let them talk to each other
@@ -229,7 +231,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         loggerTest.debug(true, '------ /workspaceQuery again ------');
 
         t.same(numPulled, 0, 'pulled 0 docs this time');
-        t.ok(true, 'no changes to syncState for this workspace');
+        t.ok(true, 'no changes to workspaceState for this workspace');
         t.same(workspaceState0.workspace, workspace0);
         t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
         t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
