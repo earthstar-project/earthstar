@@ -2,7 +2,6 @@ import { WorkspaceAddress } from '../util/doc-types';
 import { ICrypto } from '../crypto/crypto-types';
 import { IngestResult } from '../storage/storage-types';
 import {
-    AllWorkspaceStates_Outcome,
     AllWorkspaceStates_Request,
     AllWorkspaceStates_Response,
     IPeer,
@@ -15,7 +14,6 @@ import {
     WorkspaceQuery_Request,
     WorkspaceQuery_Response,
     WorkspaceState,
-    WorkspaceStateFromServer,
     initialPeerClientState,
     saltAndHashWorkspace,
 } from './peer-types';
@@ -121,7 +119,7 @@ export class PeerClient implements IPeerClient {
         loggerDo.debug('...do_saltyHandshake is done');
     }
 
-    handle_saltyHandshake(response: SaltyHandshake_Response): Partial<PeerClientState> {
+    async handle_saltyHandshake(response: SaltyHandshake_Response): Promise<Partial<PeerClientState>> {
         loggerHandle.debug('handle_saltyHandshake...');
         let { serverPeerId, salt, saltedWorkspaces } = response;
 
@@ -175,56 +173,69 @@ export class PeerClient implements IPeerClient {
         loggerDo.debug('...response:')
         loggerDo.debug(response);
 
-        loggerDo.debug('...client is going to transform_ ...');
-        let outcome = await this.transform_allWorkspaceStates(response);
-        loggerDo.debug('...outcome:')
-        loggerDo.debug(outcome);
+        loggerDo.debug('...client is going to handle_ ...');
+        let stateUpdate = await this.handle_allWorkspaceStates(request, response);
 
-        loggerDo.debug('...client is going to update_ ...');
-        await this.update_allWorkspaceStates(outcome);
-        loggerDo.debug('...client state:');
+        loggerDo.debug('...state update:')
+        loggerDo.debug(stateUpdate);
+        loggerDo.debug('...setting state...')
+        this.setState(stateUpdate);
+        loggerDo.debug('...new combined state:')
         loggerDo.debug(this.state);
 
         loggerDo.debug('...do_allWorkspaceStates is done');
     }
-    async transform_allWorkspaceStates(res: AllWorkspaceStates_Response): Promise<AllWorkspaceStates_Outcome> {
-        loggerTransform.debug('transform_allWorkspaceStates...');
-        let myWorkspaceStates: Record<WorkspaceAddress, WorkspaceState> = this.state.workspaceStates || {};
-        for (let workspace of Object.keys(res)) {
-            loggerTransform.debug(`  > workspace: ${workspace}`);
-            let workspaceStateFromServer: WorkspaceStateFromServer = res[workspace];
-            loggerTransform.debug(`    workspaceStateFromServer: ${J(workspaceStateFromServer)}`);
-            if (workspace !== workspaceStateFromServer.workspaceAddress) {
-                throw new ValidationError('server shenanigans: server response is not self-consistent, workspace key does not match data in the Record');
+
+    async handle_allWorkspaceStates(request: AllWorkspaceStates_Request, response: AllWorkspaceStates_Response): Promise<Partial<PeerClientState>> {
+        // request is provided here so we can check for consistency in case the server replied with
+        // something totally different
+
+        loggerTransform.debug('handle_allWorkspaceStates...');
+        let { commonWorkspaces } = request;
+        let { serverPeerId, workspaceStatesFromServer } = response;
+
+        let newWorkspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
+        for (let workspace of Object.keys(workspaceStatesFromServer)) {
+            loggerTransform.debug(`  > ${workspace}`);
+            let workspaceStateFromServer = workspaceStatesFromServer[workspace];
+            if (workspaceStateFromServer.workspace !== workspace) {
+                throw new ValidationError(`server shenanigans: server response is not self-consistent, workspace key does not match data in the Record ${workspaceStateFromServer.workspace} & ${workspace}`);
+            }
+            if (commonWorkspaces.indexOf(workspace) === -1) {
+                throw new ValidationError(`server shenanigans: server included a workspace that is not common: ${workspace}`);
             }
             let clientStorage = this.peer.getStorage(workspace);
             if (clientStorage === undefined) {
-                throw new ValidationError('server shenanigans: referenced a workspace we don\'t have');
+                throw new ValidationError(`server shenanigans: referenced a workspace we don't have: ${workspace}`);
             }
             let existingWorkspaceState = this.state.workspaceStates[workspace] || {};
-            let newWorkspaceState: WorkspaceState = {
-                workspaceAddress: workspaceStateFromServer.workspaceAddress,
+            newWorkspaceStates[workspace] = {
+                workspace,
+
                 serverStorageId: workspaceStateFromServer.serverStorageId,
                 serverMaxLocalIndexOverall: workspaceStateFromServer.serverMaxLocalIndexOverall,
+                // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
+                serverMaxLocalIndexSoFar: existingWorkspaceState.serverMaxLocalIndexSoFar ?? -1,
+
+                // TODO: check if client storage id has changed, and if so reset this state
+                clientStorageId: clientStorage.storageId,
                 clientMaxLocalIndexOverall: clientStorage.getMaxLocalIndex(),
                 // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
-                serverMaxLocalIndexSoFar: existingWorkspaceState.serverMaxLocalIndexOverall ?? -1,
-                clientMaxLocalIndexSoFar: existingWorkspaceState.clientMaxLocalIndexOverall ?? -1,
+                clientMaxLocalIndexSoFar: existingWorkspaceState.clientMaxLocalIndexSoFar ?? -1,
+
                 lastSeenAt: microsecondNow(),
             }
-            loggerTransform.debug(`    new clientSyncState: ${J(newWorkspaceState)}`);
-            myWorkspaceStates[workspace] = newWorkspaceState;
         }
-        loggerTransform.debug('...transform_allWorkspaceStates is done');
-        return myWorkspaceStates;
-    }
-    async update_allWorkspaceStates(outcome: AllWorkspaceStates_Outcome): Promise<void> {
-        loggerUpdate.debug('updateAllWorkspaceStates');
-        this.setState({
-            workspaceStates: outcome,
+
+        loggerTransform.debug('...handle_allWorkspaceStates is done');
+        return {
+            serverPeerId,
+            // TODO: should this merge with, or overwrite, the existing one?
+            // we've incorporated the existing one into this one already, so we should
+            // have checked if the serverPeerId has changed also...
+            workspaceStates: newWorkspaceStates,
             lastSeenAt: microsecondNow(),
-        });
-        loggerUpdate.debug('...updateAllWorkspaceStates is done.');
+        }
     }
 
     //--------------------------------------------------

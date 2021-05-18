@@ -1,4 +1,4 @@
-import { Doc } from '../util/doc-types';
+import { Doc, WorkspaceAddress } from '../util/doc-types';
 import { ICrypto } from '../crypto/crypto-types';
 import {
     AllWorkspaceStates_Request,
@@ -39,7 +39,7 @@ export class PeerServer implements IPeerServer {
         return this.peer.peerId;
     }
 
-    async serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response> {
+    async serve_saltyHandshake(request: SaltyHandshake_Request): Promise<SaltyHandshake_Response> {
         // request is empty and unused
         loggerServe.debug('serve_saltyHandshake...');
         let salt = randomId();
@@ -53,24 +53,27 @@ export class PeerServer implements IPeerServer {
         }
     }
 
-    async serve_allWorkspaceStates(req: AllWorkspaceStates_Request): Promise<AllWorkspaceStates_Response> {
+    async serve_allWorkspaceStates(request: AllWorkspaceStates_Request): Promise<AllWorkspaceStates_Response> {
         loggerServe.debug('serve_allWorkspaceStates...')
-        let response: AllWorkspaceStates_Response = {};
-        for (let workspace of req.commonWorkspaces) {
+        let workspaceStatesFromServer: Record<WorkspaceAddress, WorkspaceStateFromServer> = {};
+        for (let workspace of request.commonWorkspaces) {
             let storage = this.peer.getStorage(workspace);
             if (storage === undefined) {
                 loggerServe.debug(`workspace ${workspace} is unknown??; skipping`);
                 continue;
             }
             let workspaceStateFromServer: WorkspaceStateFromServer = {
-                workspaceAddress: workspace,
+                workspace: workspace,
                 serverStorageId: storage.storageId,
                 serverMaxLocalIndexOverall: storage.getMaxLocalIndex(),
             };
-            response[workspace] = workspaceStateFromServer;
+            workspaceStatesFromServer[workspace] = workspaceStateFromServer;
         }
         loggerServe.debug('...serve_allWorkspaceStates is done.')
-        return response;
+        return {
+            serverPeerId: this.peer.peerId,
+            workspaceStatesFromServer,
+        };
     }
 
     async serve_workspaceQuery(request: WorkspaceQuery_Request): Promise<WorkspaceQuery_Response> {

@@ -33,16 +33,16 @@ let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
 
 setDefaultLogLevel(LogLevel.None);
-//setLogLevel('test', LogLevel.Debug);
-//setLogLevel('test cb', LogLevel.Debug);
-//setLogLevel('peer client', LogLevel.Debug);
-//setLogLevel('peer client: do', LogLevel.Debug);
-//setLogLevel('peer client: transform', LogLevel.Debug);
-//setLogLevel('peer client: handle', LogLevel.Debug);
-//setLogLevel('peer client: update', LogLevel.Debug);
-//setLogLevel('peer client: process', LogLevel.Debug);
-//setLogLevel('peer server', LogLevel.Debug);
-//setLogLevel('peer server: serve', LogLevel.Debug);
+setLogLevel('test', LogLevel.Debug);
+setLogLevel('test cb', LogLevel.Debug);
+setLogLevel('peer client', LogLevel.Debug);
+setLogLevel('peer client: do', LogLevel.Debug);
+setLogLevel('peer client: transform', LogLevel.Debug);
+setLogLevel('peer client: handle', LogLevel.Debug);
+setLogLevel('peer client: update', LogLevel.Debug);
+setLogLevel('peer client: process', LogLevel.Debug);
+setLogLevel('peer server', LogLevel.Debug);
+setLogLevel('peer server: serve', LogLevel.Debug);
 
 //================================================================================
 
@@ -106,7 +106,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         }
     }
 
-    t.test(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
+    t.skip(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
         let { peerOnClient, peerOnServer } = setupTest();
         t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same, as expected');
         let server = new PeerServer(crypto, peerOnServer);
@@ -165,7 +165,6 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.same(client.state.serverPeerId, server.peer.peerId, `client knows server's peer id`);
         t.notSame(client.state.lastSeenAt, null, 'client state lastSeeenAt is not null');
         t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
-        /*
 
         t.ok(true, '------ allWorkspaceStates ------');
         loggerTest.debug(true, '------ allWorkspaceStates ------');
@@ -179,10 +178,12 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         );
         let workspaceState0 = client.state.workspaceStates[workspace0];
         t.ok(true, 'for the first of the common workspaces...');
-        t.same(workspaceState0.workspaceAddress, expectedCommonWorkspaces[0], 'workspace matches between key and value');
+        t.same(workspaceState0.workspace, expectedCommonWorkspaces[0], 'workspace matches between key and value');
         t.same(workspaceState0.serverStorageId, server.peer.getStorage(workspace0)?.storageId, 'storageId matches server');
         t.same(workspaceState0.serverMaxLocalIndexSoFar, -1, 'server max local index so far starts at -1');
         t.same(workspaceState0.clientMaxLocalIndexSoFar, -1, 'client max local index so far starts at -1');
+
+        /*
 
         t.ok(true, '------ workspaceQuery ------');
         loggerTest.debug(true, '------ workspaceQuery ------');
@@ -243,7 +244,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
+    t.skip(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
         let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
 
         // create Client and Server instances

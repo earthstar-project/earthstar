@@ -85,7 +85,10 @@ export interface SaltyHandshake_Response {
 export interface AllWorkspaceStates_Request {
     commonWorkspaces: WorkspaceAddress[],
 }
-export type AllWorkspaceStates_Response = Record<WorkspaceAddress, WorkspaceStateFromServer>;
+export type AllWorkspaceStates_Response = {
+    serverPeerId: PeerId,
+    workspaceStatesFromServer: Record<WorkspaceAddress, WorkspaceStateFromServer>;
+}
 export type AllWorkspaceStates_Outcome = Record<WorkspaceAddress, WorkspaceState>;
 
 //--------------------------------------------------
@@ -117,16 +120,17 @@ export interface PeerClientState {
     lastSeenAt: number | null,  // a timestamp in Earthstar-style microseconds
 }
 export interface WorkspaceStateFromServer {
-    workspaceAddress: WorkspaceAddress,
+    workspace: WorkspaceAddress,
     serverStorageId: StorageId;
     serverMaxLocalIndexOverall: number,
 }
 export interface WorkspaceState {
-    workspaceAddress: WorkspaceAddress,
+    workspace: WorkspaceAddress,
     serverStorageId: StorageId;
     serverMaxLocalIndexOverall: number,
-    clientMaxLocalIndexOverall: number,
     serverMaxLocalIndexSoFar: number,  // -1 if unknown
+    clientStorageId: StorageId;
+    clientMaxLocalIndexOverall: number,
     clientMaxLocalIndexSoFar: number,  // -1 if unknown
     lastSeenAt: number,
 }
@@ -158,14 +162,10 @@ export interface IPeerClient {
     // update_: this applies the changes to the state
 
     do_saltyHandshake(): Promise<void>;
-    //transform_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome>;
-    //update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void>;
-
-    handle_saltyHandshake(res: SaltyHandshake_Response): Partial<PeerClientState>;
+    handle_saltyHandshake(response: SaltyHandshake_Response): Promise<Partial<PeerClientState>>;
 
     do_allWorkspaceStates(): Promise<void>;
-    transform_allWorkspaceStates(res: AllWorkspaceStates_Response): Promise<AllWorkspaceStates_Outcome>;
-    update_allWorkspaceStates(outcome: AllWorkspaceStates_Outcome): Promise<void>;
+    handle_allWorkspaceStates(request: AllWorkspaceStates_Request, response: AllWorkspaceStates_Response): Promise<Partial<PeerClientState>>;
 
     // return number of docs obtained that were not invalid
     do_workspaceQuery(request: WorkspaceQuery_Request): Promise<number>;
@@ -179,9 +179,12 @@ export interface IPeerServer {
     // the server has no internal state (except maybe for
     // rate limiting, etc)
 
+    // this class will be exposed over RPC --
+    // make sure it only has methods that are safe to be exposed to the internet.
+
     getPeerId(): Promise<PeerId>;
 
-    serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response>;
-    serve_allWorkspaceStates(req: AllWorkspaceStates_Request): Promise<AllWorkspaceStates_Response>;
+    serve_saltyHandshake(request: SaltyHandshake_Request): Promise<SaltyHandshake_Response>;
+    serve_allWorkspaceStates(request: AllWorkspaceStates_Request): Promise<AllWorkspaceStates_Response>;
     serve_workspaceQuery(request: WorkspaceQuery_Request): Promise<WorkspaceQuery_Response>;
 }
