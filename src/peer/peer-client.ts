@@ -10,7 +10,6 @@ import {
     IPeerServer,
     PeerClientState,
     PeerId,
-    SaltyHandshake_Outcome,
     SaltyHandshake_Request,
     SaltyHandshake_Response,
     WorkspaceQuery_Request,
@@ -30,6 +29,7 @@ import { ValidationError } from '../util/errors';
 import { Logger } from '../util/log';
 let logger = new Logger('peer client', 'greenBright');
 let loggerDo = new Logger('peer client: do', 'green');
+let loggerHandle = new Logger('peer client: handle', 'cyan');
 let loggerTransform = new Logger('peer client: transform', 'cyan');
 let loggerUpdate = new Logger('peer client: update', 'blue');
 let loggerProcess = new Logger('peer client: process', 'cyan');
@@ -53,11 +53,20 @@ export class PeerClient implements IPeerClient {
         this.peer = peer;
         this.server = server;
         logger.debug(`...peerId: ${this.peer.peerId}`);
-        logger.debug(`...client state:`);
+        logger.debug(`...client initial state:`);
         logger.debug(this.state);
     }
 
     async setState(newState: Partial<PeerClientState>): Promise<void> {
+        // if peerId changes, reset state
+        if (newState.serverPeerId !== null && newState.serverPeerId !== undefined) {
+            if (this.state.serverPeerId !== null) {
+                if (newState.serverPeerId !== this.state.serverPeerId) {
+                    logger.warn(`server has changed peer ID from ${this.state.serverPeerId} to ${newState.serverPeerId}; resetting PeerClient state`);
+                    this.state = { ...initialPeerClientState };
+                }
+            }
+        }
         this.state = { ...this.state, ...newState };
     }
 
@@ -99,50 +108,46 @@ export class PeerClient implements IPeerClient {
         loggerDo.debug('...response:')
         loggerDo.debug(response);
 
-        loggerDo.debug('...client is going to transform_ ...');
-        let outcome = await this.transform_saltyHandshake(response);
-        loggerDo.debug('...outcome:')
-        loggerDo.debug(outcome);
+        loggerDo.debug('...client is going to handle_ ...');
+        let stateUpdate = await this.handle_saltyHandshake(response);
 
-        loggerDo.debug('...client is going to update_ ...');
-        await this.update_saltyHandshake(outcome);
-        loggerDo.debug('...client state:');
+        loggerDo.debug('...state update:')
+        loggerDo.debug(stateUpdate);
+        loggerDo.debug('...setting state...')
+        this.setState(stateUpdate);
+        loggerDo.debug('...new combined state:')
         loggerDo.debug(this.state);
 
         loggerDo.debug('...do_saltyHandshake is done');
     }
 
-    async transform_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome> {
-        loggerTransform.debug('transform_saltyHandshake...');
+    handle_saltyHandshake(response: SaltyHandshake_Response): Partial<PeerClientState> {
+        loggerHandle.debug('handle_saltyHandshake...');
+        let { serverPeerId, salt, saltedWorkspaces } = response;
 
         // figure out which workspaces we have in common
         // by salting and hashing our own workspaces in the same way
         // the server did, and seeing what matches
-        let serverSaltedSet = new Set<string>(res.saltedWorkspaces);
+        loggerHandle.debug('...salting and hashing my own workspaces and comparing with server...');
+        let serverSaltedSet = new Set<string>(saltedWorkspaces);
         let commonWorkspaceSet = new Set<WorkspaceAddress>();
         for (let plainWs of this.peer.workspaces()) {
-            let saltedWs = saltAndHashWorkspace(this.crypto, res.salt, plainWs);
+            let saltedWs = saltAndHashWorkspace(this.crypto, salt, plainWs);
             if (serverSaltedSet.has(saltedWs)) {
                 commonWorkspaceSet.add(plainWs);
             }
         }
         let commonWorkspaces = sortedInPlace([...commonWorkspaceSet]);
 
-        loggerTransform.debug('...transform_saltyHandshake is done.');
-        return {
-            serverPeerId: res.serverPeerId,
-            commonWorkspaces,
-        };
-    }
+        loggerHandle.debug(`...server has ${saltedWorkspaces.length} workspaces; we have ${this.peer.workspaces().length}; and ${commonWorkspaces.length} are in common`);
+        loggerHandle.debug(`...handle_saltyHandshake is done.`);
 
-    async update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void> {
-        loggerUpdate.debug('update_saltyHandshake...');
-        await this.setState({
-            serverPeerId: outcome.serverPeerId,
-            commonWorkspaces: outcome.commonWorkspaces,
+        // make a state update
+        return {
+            serverPeerId,
+            commonWorkspaces,
             lastSeenAt: microsecondNow(),
-        });
-        loggerUpdate.debug('...update_saltyHandshake is done.');
+        };
     }
 
     //--------------------------------------------------

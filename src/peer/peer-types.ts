@@ -78,10 +78,6 @@ export interface SaltyHandshake_Response {
     salt: string,
     saltedWorkspaces: string[],
 }
-export interface SaltyHandshake_Outcome {
-    serverPeerId: PeerId
-    commonWorkspaces: WorkspaceAddress[],
-}
 
 //--------------------------------------------------
 // ask server for all storage states
@@ -162,8 +158,10 @@ export interface IPeerClient {
     // update_: this applies the changes to the state
 
     do_saltyHandshake(): Promise<void>;
-    transform_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome>;
-    update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void>;
+    //transform_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome>;
+    //update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void>;
+
+    handle_saltyHandshake(res: SaltyHandshake_Response): Partial<PeerClientState>;
 
     do_allWorkspaceStates(): Promise<void>;
     transform_allWorkspaceStates(res: AllWorkspaceStates_Response): Promise<AllWorkspaceStates_Outcome>;

@@ -27,7 +27,6 @@ ERROR_CLASSES.concat([
 import {
     Logger, LogLevel, setDefaultLogLevel, setLogLevel,
 } from '../../util/log';
-import { WorkspaceQuery_Request } from '../../peer/peer-types';
 
 let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
@@ -39,6 +38,7 @@ setDefaultLogLevel(LogLevel.None);
 //setLogLevel('peer client', LogLevel.Debug);
 //setLogLevel('peer client: do', LogLevel.Debug);
 //setLogLevel('peer client: transform', LogLevel.Debug);
+//setLogLevel('peer client: handle', LogLevel.Debug);
 //setLogLevel('peer client: update', LogLevel.Debug);
 //setLogLevel('peer client: process', LogLevel.Debug);
 //setLogLevel('peer server', LogLevel.Debug);
@@ -127,7 +127,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': SaltyHandshake + AllWorkspaceState', async (t: any) => {
+    t.test(SUBTEST_NAME + ': SaltyHandshake + AllWorkspaceState + WorkspaceQuery', async (t: any) => {
         let {
             peerOnClient,
             peerOnServer,
@@ -165,6 +165,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.same(client.state.serverPeerId, server.peer.peerId, `client knows server's peer id`);
         t.notSame(client.state.lastSeenAt, null, 'client state lastSeeenAt is not null');
         t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
+        /*
 
         t.ok(true, '------ allWorkspaceStates ------');
         loggerTest.debug(true, '------ allWorkspaceStates ------');
@@ -234,6 +235,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.same(workspaceState0.workspaceAddress, workspace0);
         t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
         t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
+        */
 
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }
