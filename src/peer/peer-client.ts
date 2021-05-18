@@ -1,10 +1,10 @@
 import { WorkspaceAddress } from '../util/doc-types';
 import { ICrypto } from '../crypto/crypto-types';
+import { IngestResult } from '../storage/storage-types';
 import {
-    AllStorageStates_Outcome,
-    AllStorageStates_Request,
-    AllStorageStates_Response,
-    ClientStorageSyncState,
+    AllWorkspaceStates_Outcome,
+    AllWorkspaceStates_Request,
+    AllWorkspaceStates_Response,
     IPeer,
     IPeerClient,
     IPeerServer,
@@ -13,12 +13,14 @@ import {
     SaltyHandshake_Outcome,
     SaltyHandshake_Request,
     SaltyHandshake_Response,
-    ServerStorageSyncState,
     WorkspaceQuery_Request,
     WorkspaceQuery_Response,
+    WorkspaceState,
+    WorkspaceStateFromServer,
     initialPeerClientState,
     saltAndHashWorkspace,
 } from './peer-types';
+
 import { sortedInPlace } from '../storage/compare';
 import { microsecondNow } from '../util/misc';
 import { ValidationError } from '../util/errors';
@@ -26,7 +28,6 @@ import { ValidationError } from '../util/errors';
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
-import { IngestResult } from '../storage/storage-types';
 let logger = new Logger('peer client', 'greenBright');
 let loggerDo = new Logger('peer client: do', 'green');
 let loggerTransform = new Logger('peer client: transform', 'cyan');
@@ -147,8 +148,8 @@ export class PeerClient implements IPeerClient {
     //--------------------------------------------------
     // ALL STORAGE STATES
 
-    async do_allStorageStates(): Promise<void> {
-        loggerDo.debug('do_allStorageStates...');
+    async do_allWorkspaceStates(): Promise<void> {
+        loggerDo.debug('do_allWorkspaceStates...');
         loggerDo.debug('...initial client state:');
         loggerDo.debug(this.state);
 
@@ -158,67 +159,67 @@ export class PeerClient implements IPeerClient {
             return;
         }
 
-        let request: AllStorageStates_Request = {
+        let request: AllWorkspaceStates_Request = {
             commonWorkspaces: this.state.commonWorkspaces || [],
         };
         loggerDo.debug('...request:')
         loggerDo.debug(request)
 
         loggerDo.debug('...asking server to serve_ ...');
-        let response = await this.server.serve_allStorageStates(request);
+        let response = await this.server.serve_allWorkspaceStates(request);
         loggerDo.debug('...response:')
         loggerDo.debug(response);
 
         loggerDo.debug('...client is going to transform_ ...');
-        let outcome = await this.transform_allStorageStates(response);
+        let outcome = await this.transform_allWorkspaceStates(response);
         loggerDo.debug('...outcome:')
         loggerDo.debug(outcome);
 
         loggerDo.debug('...client is going to update_ ...');
-        await this.update_allStorageStates(outcome);
+        await this.update_allWorkspaceStates(outcome);
         loggerDo.debug('...client state:');
         loggerDo.debug(this.state);
 
-        loggerDo.debug('...do_allStorageStates is done');
+        loggerDo.debug('...do_allWorkspaceStates is done');
     }
-    async transform_allStorageStates(res: AllStorageStates_Response): Promise<AllStorageStates_Outcome> {
-        loggerTransform.debug('transform_allStorageStates...');
-        let clientStorageSyncStates: Record<WorkspaceAddress, ClientStorageSyncState> = this.state.clientStorageSyncStates || {};
+    async transform_allWorkspaceStates(res: AllWorkspaceStates_Response): Promise<AllWorkspaceStates_Outcome> {
+        loggerTransform.debug('transform_allWorkspaceStates...');
+        let myWorkspaceStates: Record<WorkspaceAddress, WorkspaceState> = this.state.workspaceStates || {};
         for (let workspace of Object.keys(res)) {
             loggerTransform.debug(`  > workspace: ${workspace}`);
-            let serverSyncState: ServerStorageSyncState = res[workspace];
-            loggerTransform.debug(`    ServerStorageSyncState: ${J(serverSyncState)}`);
-            if (workspace !== serverSyncState.workspaceAddress) {
+            let workspaceStateFromServer: WorkspaceStateFromServer = res[workspace];
+            loggerTransform.debug(`    workspaceStateFromServer: ${J(workspaceStateFromServer)}`);
+            if (workspace !== workspaceStateFromServer.workspaceAddress) {
                 throw new ValidationError('server shenanigans: server response is not self-consistent, workspace key does not match data in the Record');
             }
             let clientStorage = this.peer.getStorage(workspace);
             if (clientStorage === undefined) {
                 throw new ValidationError('server shenanigans: referenced a workspace we don\'t have');
             }
-            let existingClientSyncState = this.state.clientStorageSyncStates[workspace] || {};
-            let clientSyncState: ClientStorageSyncState = {
-                workspaceAddress: serverSyncState.workspaceAddress,
-                serverStorageId: serverSyncState.serverStorageId,
-                serverMaxLocalIndexOverall: serverSyncState.serverMaxLocalIndexOverall,
+            let existingWorkspaceState = this.state.workspaceStates[workspace] || {};
+            let newWorkspaceState: WorkspaceState = {
+                workspaceAddress: workspaceStateFromServer.workspaceAddress,
+                serverStorageId: workspaceStateFromServer.serverStorageId,
+                serverMaxLocalIndexOverall: workspaceStateFromServer.serverMaxLocalIndexOverall,
                 clientMaxLocalIndexOverall: clientStorage.getMaxLocalIndex(),
                 // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
-                serverMaxLocalIndexSoFar: existingClientSyncState.serverMaxLocalIndexOverall ?? -1,
-                clientMaxLocalIndexSoFar: existingClientSyncState.clientMaxLocalIndexOverall ?? -1,
+                serverMaxLocalIndexSoFar: existingWorkspaceState.serverMaxLocalIndexOverall ?? -1,
+                clientMaxLocalIndexSoFar: existingWorkspaceState.clientMaxLocalIndexOverall ?? -1,
                 lastSeenAt: microsecondNow(),
             }
-            loggerTransform.debug(`    new clientSyncState: ${J(clientSyncState)}`);
-            clientStorageSyncStates[workspace] = clientSyncState;
+            loggerTransform.debug(`    new clientSyncState: ${J(newWorkspaceState)}`);
+            myWorkspaceStates[workspace] = newWorkspaceState;
         }
-        loggerTransform.debug('...transform_allStorageStates is done');
-        return clientStorageSyncStates;
+        loggerTransform.debug('...transform_allWorkspaceStates is done');
+        return myWorkspaceStates;
     }
-    async update_allStorageStates(outcome: AllStorageStates_Outcome): Promise<void> {
-        loggerUpdate.debug('updateAllStorageStates');
+    async update_allWorkspaceStates(outcome: AllWorkspaceStates_Outcome): Promise<void> {
+        loggerUpdate.debug('updateAllWorkspaceStates');
         this.setState({
-            clientStorageSyncStates: outcome,
+            workspaceStates: outcome,
             lastSeenAt: microsecondNow(),
         });
-        loggerUpdate.debug('...updateAllStorageStates is done.');
+        loggerUpdate.debug('...updateAllWorkspaceStates is done.');
     }
 
     //--------------------------------------------------
@@ -267,9 +268,9 @@ export class PeerClient implements IPeerClient {
             throw err;
         }
 
-        let syncState = this.state.clientStorageSyncStates[workspace];
-        if (storageId !== syncState.serverStorageId) {
-            let err = `storageId for ${workspace} is not ${storageId} anymore, it's ${syncState.serverStorageId}`;
+        let myWorkspaceState = this.state.workspaceStates[workspace];
+        if (storageId !== myWorkspaceState.serverStorageId) {
+            let err = `storageId for ${workspace} is not ${storageId} anymore, it's ${myWorkspaceState.serverStorageId}`;
             loggerProcess.error(err);
             throw err;
         }
@@ -278,7 +279,8 @@ export class PeerClient implements IPeerClient {
         let numPulled = 0;
         for (let doc of docs) {
             loggerProcess.debug('trying to ingest a doc', doc);
-            let clientStorageSyncState = this.state.clientStorageSyncStates[workspace];
+            // get the workspace every time in case something else is changing it?
+            let myWorkspaceState = this.state.workspaceStates[workspace];
             // TODO: keep checking if storageId has changed every time
             let {ingestResult, docIngested } = await storage.ingest(doc);
             if (ingestResult === IngestResult.Invalid || ingestResult === IngestResult.WriteError) {
@@ -303,16 +305,16 @@ export class PeerClient implements IPeerClient {
                 break;
             }
             numPulled += 1;
-            clientStorageSyncState = {
-                ...clientStorageSyncState,
+            myWorkspaceState = {
+                ...myWorkspaceState,
                 serverMaxLocalIndexOverall,
                 serverMaxLocalIndexSoFar: doc._localIndex ?? -1,
                 lastSeenAt: microsecondNow(),
             }
             this.setState({
-                clientStorageSyncStates: {
-                    ...this.state.clientStorageSyncStates,
-                    [workspace]: clientStorageSyncState,
+                workspaceStates: {
+                    ...this.state.workspaceStates,
+                    [workspace]: myWorkspaceState,
                 },
                 lastSeenAt: microsecondNow(),
             });

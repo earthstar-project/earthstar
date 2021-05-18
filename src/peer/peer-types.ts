@@ -86,11 +86,11 @@ export interface SaltyHandshake_Outcome {
 //--------------------------------------------------
 // ask server for all storage states
 
-export interface AllStorageStates_Request {
+export interface AllWorkspaceStates_Request {
     commonWorkspaces: WorkspaceAddress[],
 }
-export type AllStorageStates_Response = Record<WorkspaceAddress, ServerStorageSyncState>;
-export type AllStorageStates_Outcome = Record<WorkspaceAddress, ClientStorageSyncState>;
+export type AllWorkspaceStates_Response = Record<WorkspaceAddress, WorkspaceStateFromServer>;
+export type AllWorkspaceStates_Outcome = Record<WorkspaceAddress, WorkspaceState>;
 
 //--------------------------------------------------
 // do a query for one workspace, one server
@@ -117,15 +117,15 @@ export interface PeerClientState {
     serverPeerId: PeerId | null;
     // TODO: commonWorkspaces could be merged with storageSyncStates?
     commonWorkspaces: WorkspaceAddress[] | null;
-    clientStorageSyncStates: Record<WorkspaceAddress, ClientStorageSyncState>;
+    workspaceStates: Record<WorkspaceAddress, WorkspaceState>;
     lastSeenAt: number | null,  // a timestamp in Earthstar-style microseconds
 }
-export interface ServerStorageSyncState {
+export interface WorkspaceStateFromServer {
     workspaceAddress: WorkspaceAddress,
     serverStorageId: StorageId;
     serverMaxLocalIndexOverall: number,
 }
-export interface ClientStorageSyncState {
+export interface WorkspaceState {
     workspaceAddress: WorkspaceAddress,
     serverStorageId: StorageId;
     serverMaxLocalIndexOverall: number,
@@ -138,7 +138,7 @@ export interface ClientStorageSyncState {
 export let initialPeerClientState: PeerClientState = {
     serverPeerId: null,
     commonWorkspaces: null,
-    clientStorageSyncStates: {},
+    workspaceStates: {},
     lastSeenAt: null,
 }
 
@@ -165,9 +165,9 @@ export interface IPeerClient {
     transform_saltyHandshake(res: SaltyHandshake_Response): Promise<SaltyHandshake_Outcome>;
     update_saltyHandshake(outcome: SaltyHandshake_Outcome): Promise<void>;
 
-    do_allStorageStates(): Promise<void>;
-    transform_allStorageStates(res: AllStorageStates_Response): Promise<AllStorageStates_Outcome>;
-    update_allStorageStates(outcome: AllStorageStates_Outcome): Promise<void>;
+    do_allWorkspaceStates(): Promise<void>;
+    transform_allWorkspaceStates(res: AllWorkspaceStates_Response): Promise<AllWorkspaceStates_Outcome>;
+    update_allWorkspaceStates(outcome: AllWorkspaceStates_Outcome): Promise<void>;
 
     // return number of docs obtained that were not invalid
     do_workspaceQuery(request: WorkspaceQuery_Request): Promise<number>;
@@ -184,6 +184,6 @@ export interface IPeerServer {
     getPeerId(): Promise<PeerId>;
 
     serve_saltyHandshake(req: SaltyHandshake_Request): Promise<SaltyHandshake_Response>;
-    serve_allStorageStates(req: AllStorageStates_Request): Promise<AllStorageStates_Response>;
+    serve_allWorkspaceStates(req: AllWorkspaceStates_Request): Promise<AllWorkspaceStates_Response>;
     serve_workspaceQuery(request: WorkspaceQuery_Request): Promise<WorkspaceQuery_Response>;
 }

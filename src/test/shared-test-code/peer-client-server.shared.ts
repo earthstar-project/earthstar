@@ -5,7 +5,7 @@ import { WorkspaceAddress, } from '../../util/doc-types';
 import { IStorageAsync, } from '../../storage/storage-types';
 import { ICrypto } from '../../crypto/crypto-types';
 
-import { isErr, NotImplementedError, ValidationError } from '../../util/errors';
+import { isErr, NotImplementedError } from '../../util/errors';
 
 import { Peer } from '../../peer/peer';
 import { PeerClient } from '../../peer/peer-client';
@@ -127,7 +127,7 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': SaltyHandshake + AllStorageStates', async (t: any) => {
+    t.test(SUBTEST_NAME + ': SaltyHandshake + AllWorkspaceState', async (t: any) => {
         let {
             peerOnClient,
             peerOnServer,
@@ -138,8 +138,8 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         } = setupTest();
         let server = new PeerServer(crypto, peerOnServer);
         let client = new PeerClient(crypto, peerOnClient, server);
-        let wsAddr0 = expectedCommonWorkspaces[0];
-        let storage0peer = server.peer.getStorage(wsAddr0) as IStorageAsync;
+        let workspace0 = expectedCommonWorkspaces[0];
+        let storage0peer = server.peer.getStorage(workspace0) as IStorageAsync;
         await storage0peer.set(author1, {
             format: 'es.4',
             path: '/author1',
@@ -166,29 +166,29 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         t.notSame(client.state.lastSeenAt, null, 'client state lastSeeenAt is not null');
         t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
 
-        t.ok(true, '------ allStorageStates ------');
-        loggerTest.debug(true, '------ allStorageStates ------');
-        await client.do_allStorageStates();
-        loggerTest.debug(true, '------ /allStorageStates ------');
+        t.ok(true, '------ allWorkspaceStates ------');
+        loggerTest.debug(true, '------ allWorkspaceStates ------');
+        await client.do_allWorkspaceStates();
+        loggerTest.debug(true, '------ /allWorkspaceStates ------');
 
         t.same(
-            Object.keys(client.state.clientStorageSyncStates).length,
+            Object.keys(client.state.workspaceStates).length,
             expectedCommonWorkspaces.length,
             'we now have info on the expected number of storages from the server'
         );
-        let clientStorageSyncState0 = client.state.clientStorageSyncStates[wsAddr0];
+        let workspaceState0 = client.state.workspaceStates[workspace0];
         t.ok(true, 'for the first of the common workspaces...');
-        t.same(clientStorageSyncState0.workspaceAddress, expectedCommonWorkspaces[0], 'workspace matches between key and value');
-        t.same(clientStorageSyncState0.serverStorageId, server.peer.getStorage(wsAddr0)?.storageId, 'storageId matches server');
-        t.same(clientStorageSyncState0.serverMaxLocalIndexSoFar, -1, 'server max local index so far starts at -1');
-        t.same(clientStorageSyncState0.clientMaxLocalIndexSoFar, -1, 'client max local index so far starts at -1');
+        t.same(workspaceState0.workspaceAddress, expectedCommonWorkspaces[0], 'workspace matches between key and value');
+        t.same(workspaceState0.serverStorageId, server.peer.getStorage(workspace0)?.storageId, 'storageId matches server');
+        t.same(workspaceState0.serverMaxLocalIndexSoFar, -1, 'server max local index so far starts at -1');
+        t.same(workspaceState0.clientMaxLocalIndexSoFar, -1, 'client max local index so far starts at -1');
 
         t.ok(true, '------ workspaceQuery ------');
         loggerTest.debug(true, '------ workspaceQuery ------');
         let workspace: WorkspaceAddress = expectedCommonWorkspaces[0];
-        let syncState = client.state.clientStorageSyncStates[workspace];
-        let storageId = syncState.serverStorageId;
-        let startAfter = syncState.serverMaxLocalIndexSoFar;
+        let workspaceState = client.state.workspaceStates[workspace];
+        let storageId = workspaceState.serverStorageId;
+        let startAfter = workspaceState.serverMaxLocalIndexSoFar;
         let queryRequest: WorkspaceQuery_Request = {
             workspace,
             storageId,
@@ -204,17 +204,17 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         loggerTest.debug(true, '------ /workspaceQuery ------');
 
         t.same(numPulled, 2, 'pulled all 2 docs');
-        clientStorageSyncState0 = client.state.clientStorageSyncStates[wsAddr0];
+        workspaceState0 = client.state.workspaceStates[workspace0];
         t.ok(true, 'for the first of the common workspaces...');
-        t.same(clientStorageSyncState0.workspaceAddress, wsAddr0);
-        t.same(clientStorageSyncState0.serverMaxLocalIndexOverall, 2);
-        t.same(clientStorageSyncState0.serverMaxLocalIndexSoFar, 2);
+        t.same(workspaceState0.workspaceAddress, workspace0);
+        t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
+        t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
 
         t.ok(true, '------ workspaceQuery again ------');
         loggerTest.debug(true, '------ workspaceQuery again ------');
         // continue where we left off
-        syncState = client.state.clientStorageSyncStates[workspace];
-        startAfter = syncState.serverMaxLocalIndexSoFar;
+        workspaceState = client.state.workspaceStates[workspace];
+        startAfter = workspaceState.serverMaxLocalIndexSoFar;
         queryRequest = {
             workspace,
             storageId,
@@ -231,9 +231,9 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
 
         t.same(numPulled, 0, 'pulled 0 docs this time');
         t.ok(true, 'no changes to syncState for this workspace');
-        t.same(clientStorageSyncState0.workspaceAddress, wsAddr0);
-        t.same(clientStorageSyncState0.serverMaxLocalIndexOverall, 2);
-        t.same(clientStorageSyncState0.serverMaxLocalIndexSoFar, 2);
+        t.same(workspaceState0.workspaceAddress, workspace0);
+        t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
+        t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
 
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }
