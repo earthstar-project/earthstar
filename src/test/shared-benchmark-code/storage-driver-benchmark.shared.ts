@@ -2,7 +2,7 @@ import { AuthorKeypair } from '../../util/doc-types';
 import { ICryptoDriver } from '../../crypto/crypto-types';
 import { IStorageAsync, IStorageDriverAsync } from '../../storage/storage-types';
 
-import { Crypto } from '../../crypto/crypto';
+import { GlobalCrypto, GlobalCryptoDriver, setGlobalCryptoDriver } from '../../crypto/crypto';
 import { FormatValidatorEs4 } from '../../format-validators/format-validator-es4';
 import { StorageAsync } from '../../storage/storage-async';
 
@@ -30,14 +30,14 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
     // setup
 
     runner.setScenario(scenarioName);
+    setGlobalCryptoDriver(cryptoDriver);
 
     let workspace = '+gardening.pals';
-    let crypto = new Crypto(cryptoDriver);
-    let validator = new FormatValidatorEs4(crypto);
+    let validator = new FormatValidatorEs4();
 
-    let keypair1 = crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
-    let keypair2 = crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
-    let keypair3 = crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair1 = GlobalCrypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair2 = GlobalCrypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair3 = GlobalCrypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
 
     //==================================================
     // benchmarks
@@ -72,4 +72,8 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
 
     //==================================================
     // teardown
+
+    if (cryptoDriver !== GlobalCryptoDriver) {
+        console.log('=== ERROR: GlobalCryptoDriver changed unexpectedly');
+    }
 }

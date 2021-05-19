@@ -1,5 +1,4 @@
 import { WorkspaceAddress } from '../util/doc-types';
-import { ICrypto } from '../crypto/crypto-types';
 import { IngestResult } from '../storage/storage-types';
 import {
     AllWorkspaceStates_Request,
@@ -34,18 +33,16 @@ let J = JSON.stringify;
 //================================================================================
 
 export class PeerClient implements IPeerClient {
-    crypto: ICrypto;
     peer: IPeer;
     server: IPeerServer;
 
     state: PeerClientState = { ...initialPeerClientState };
 
     // Each client only talks to one server.
-    constructor(crypto: ICrypto, peer: IPeer, server: IPeerServer) {
+    constructor(peer: IPeer, server: IPeerServer) {
         // TODO: load / save the client state (to where?)
 
         logger.debug('peerClient constructor');
-        this.crypto = crypto;
         this.peer = peer;
         this.server = server;
         logger.debug(`...peerId: ${this.peer.peerId}`);
@@ -122,7 +119,7 @@ export class PeerClient implements IPeerClient {
         let serverSaltedSet = new Set<string>(saltedWorkspaces);
         let commonWorkspaceSet = new Set<WorkspaceAddress>();
         for (let plainWs of this.peer.workspaces()) {
-            let saltedWs = saltAndHashWorkspace(this.crypto, salt, plainWs);
+            let saltedWs = saltAndHashWorkspace(salt, plainWs);
             if (serverSaltedSet.has(saltedWs)) {
                 commonWorkspaceSet.add(plainWs);
             }

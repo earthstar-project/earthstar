@@ -3,9 +3,9 @@ import { onFinishOneTest } from '../browser-run-exit';
 
 import { WorkspaceAddress, } from '../../util/doc-types';
 import { IStorageAsync, } from '../../storage/storage-types';
-import { ICrypto } from '../../crypto/crypto-types';
 
 import { isErr, NotImplementedError } from '../../util/errors';
+import { GlobalCrypto, GlobalCryptoDriver } from '../../crypto/crypto';
 
 import { WorkspaceQuery_Request } from '../../peer/peer-types';
 import { Peer } from '../../peer/peer';
@@ -45,7 +45,7 @@ setDefaultLogLevel(LogLevel.None);
 
 //================================================================================
 
-export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
+export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
     let TEST_NAME = 'peerClient + peerServer shared tests';
     let SUBTEST_NAME = subtestName;
 
@@ -87,9 +87,9 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         }
 
         // make some identities
-        let author1 = crypto.generateAuthorKeypair('onee');
-        let author2 = crypto.generateAuthorKeypair('twoo');
-        let author3 = crypto.generateAuthorKeypair('thre');
+        let author1 = GlobalCrypto.generateAuthorKeypair('onee');
+        let author2 = GlobalCrypto.generateAuthorKeypair('twoo');
+        let author3 = GlobalCrypto.generateAuthorKeypair('thre');
 
         if (isErr(author1)) { throw author1; }
         if (isErr(author2)) { throw author2; }
@@ -106,10 +106,12 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
     }
 
     t.test(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let { peerOnClient, peerOnServer } = setupTest();
         t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same, as expected');
-        let server = new PeerServer(crypto, peerOnServer);
-        let client = new PeerClient(crypto, peerOnClient, server);
+        let server = new PeerServer(peerOnServer);
+        let client = new PeerClient(peerOnClient, server);
 
         // let them talk to each other
         t.ok(true, '------ getServerPeerId ------');
@@ -123,10 +125,14 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }
         for (let storage of peerOnServer.storages()) { await storage.close(); }
+
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': SaltyHandshake + AllWorkspaceState + WorkspaceQuery', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let {
             peerOnClient,
             peerOnServer,
@@ -135,8 +141,8 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
             author2,
             author3,
         } = setupTest();
-        let server = new PeerServer(crypto, peerOnServer);
-        let client = new PeerClient(crypto, peerOnClient, server);
+        let server = new PeerServer(peerOnServer);
+        let client = new PeerClient(peerOnClient, server);
         let workspace0 = expectedCommonWorkspaces[0];
         let storage0peer = server.peer.getStorage(workspace0) as IStorageAsync;
         await storage0peer.set(author1, {
@@ -239,18 +245,22 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }
         for (let storage of peerOnServer.storages()) { await storage.close(); }
+
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
 
         // create Client and Server instances
-        let serverLocal = new PeerServer(crypto, peerOnServer);
+        let serverLocal = new PeerServer(peerOnServer);
         let serverProxy = makeProxy(serverLocal, evaluator);
 
         // make a client that uses the proxy
-        let client = new PeerClient(crypto, peerOnClient, serverProxy);
+        let client = new PeerClient(peerOnClient, serverProxy);
 
         // let them talk to each other
         t.ok(true, '------ saltyHandshake ------');
@@ -267,6 +277,8 @@ export let runPeerClientServerTests = (subtestName: string, crypto: ICrypto, mak
         // close Storages
         for (let storage of peerOnClient.storages()) { await storage.close(); }
         for (let storage of peerOnServer.storages()) { await storage.close(); }
+
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 

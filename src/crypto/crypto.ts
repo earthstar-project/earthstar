@@ -30,23 +30,24 @@ import {
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
+import { CryptoDriverTweetnacl } from './crypto-driver-tweetnacl';
 let logger = new Logger('crypto', 'cyanBright');
 
 //================================================================================
 
-export class Crypto implements ICrypto {
-    driver: ICryptoDriver;
+export let GlobalCryptoDriver: ICryptoDriver = CryptoDriverTweetnacl;
 
-    constructor(driver: ICryptoDriver) {
-        logger.debug('Crypto constructor with driver:', (driver as any).name);
-        this.driver = driver;
-    }
+export let setGlobalCryptoDriver = (driver: ICryptoDriver): void => {
+    logger.debug(`set global crypto driver: ${(driver as any).name}`);
+    GlobalCryptoDriver = driver;
+}
 
+export const GlobalCrypto: ICrypto = class {
     /**
      * Do a sha256 hash, then return the output bytes encoded as base32.
      */
-    sha256base32(input: string | Uint8Array): Base32String {
-        return base32BytesToString(this.driver.sha256(input));
+    static sha256base32(input: string | Uint8Array): Base32String {
+        return base32BytesToString(GlobalCryptoDriver.sha256(input));
     }
 
     /**
@@ -59,9 +60,9 @@ export class Crypto implements ICrypto {
      * 
      * @param name A 4-character nickname to make the address easier to remember and identify.
      */
-    generateAuthorKeypair(name: string): AuthorKeypair | ValidationError {
+    static generateAuthorKeypair(name: string): AuthorKeypair | ValidationError {
         logger.debug(`generateAuthorKeypair("${name}")`);
-        let keypairBytes: KeypairBytes = this.driver.generateKeypairBytes();
+        let keypairBytes: KeypairBytes = GlobalCryptoDriver.generateKeypairBytes();
         let keypairFormatted = {
             address: assembleAuthorAddress(name, base32BytesToString(keypairBytes.pubkey)),
             secret: base32BytesToString(keypairBytes.secret),
@@ -79,12 +80,12 @@ export class Crypto implements ICrypto {
      * Can return a ValidationError if the keypair is bad
      * or something goes unexpectedly wrong with signing.
      */
-    sign(keypair: AuthorKeypair, msg: string | Uint8Array): Base32String | ValidationError {
+    static sign(keypair: AuthorKeypair, msg: string | Uint8Array): Base32String | ValidationError {
         logger.debug(`sign`);
         try {
             let keypairBytes = decodeAuthorKeypairToBytes(keypair);
             if (isErr(keypairBytes)) { return keypairBytes; }
-            return base32BytesToString(this.driver.sign(keypairBytes, msg));
+            return base32BytesToString(GlobalCryptoDriver.sign(keypairBytes, msg));
         } catch (err) {
             /* istanbul ignore next */
             return new ValidationError('unexpected error while signing: ' + err.message);
@@ -100,12 +101,12 @@ export class Crypto implements ICrypto {
      *   * signature base32 format is valid but signature itself is invalid
      *   * unexpected failure from crypto library
      */
-    verify(authorAddress: AuthorAddress, sig: Base32String, msg: string | Uint8Array): boolean {
+    static verify(authorAddress: AuthorAddress, sig: Base32String, msg: string | Uint8Array): boolean {
         logger.debug(`verify`);
         try {
             let authorParsed = parseAuthorAddress(authorAddress);
             if (isErr(authorParsed)) { return false; }
-            return this.driver.verify(base32StringToBytes(authorParsed.pubkey), base32StringToBytes(sig), msg);
+            return GlobalCryptoDriver.verify(base32StringToBytes(authorParsed.pubkey), base32StringToBytes(sig), msg);
         } catch (err) {
             // catch any unexpected errors
             /* istanbul ignore next */
@@ -122,7 +123,7 @@ export class Crypto implements ICrypto {
      * - a ValidationError if the author address or secret are not validly formatted strings.
      * - a ValidationError if anything else goes wrong
      */
-    checkAuthorKeypairIsValid(keypair: AuthorKeypair): true | ValidationError {
+    static checkAuthorKeypairIsValid(keypair: AuthorKeypair): true | ValidationError {
         // We check if the secret matches the pubkey by signing something and then validating the signature.
         // However, key generation is deterministic, so it would be more direct to just do this:
         //

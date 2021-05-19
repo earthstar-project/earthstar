@@ -1,7 +1,7 @@
 import { Doc, WorkspaceAddress } from '../util/doc-types';
 import { IStorageAsync, StorageId } from '../storage/storage-types';
-import { ICrypto } from '../crypto/crypto-types';
 import { Query } from '../query/query-types';
+import { GlobalCrypto } from '../crypto/crypto';
 
 //================================================================================
 // PEER
@@ -70,8 +70,8 @@ export interface IPeer {
  */
 
 // ok this isn't a type, but I put it here anyway since it's shared code for client and server
-export let saltAndHashWorkspace = (crypto: ICrypto, salt: string, workspace: WorkspaceAddress): string =>
-    crypto.sha256base32(salt + workspace + salt);
+export let saltAndHashWorkspace = (salt: string, workspace: WorkspaceAddress): string =>
+    GlobalCrypto.sha256base32(salt + workspace + salt);
 
 //--------------------------------------------------
 // SALTY HANDSHAKE

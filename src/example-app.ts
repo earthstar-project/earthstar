@@ -14,7 +14,7 @@ import {
     StorageAsync,
 } from './storage/storage-async';
 import {
-    Crypto,
+    GlobalCrypto, setGlobalCryptoDriver,
 } from './crypto/crypto';
 import {
     CryptoDriverTweetnacl,
@@ -57,9 +57,10 @@ let main = async () => {
     loggerMain.info('-----------\\')
     loggerMain.info('setup')
     loggerMain.info('workspace =', workspace);
-    loggerMain.info('instantiate crypto, validator, storageDriver, and storage')
-    let crypto = new Crypto(CryptoDriverTweetnacl);
-    let validator = new FormatValidatorEs4(crypto);
+    loggerMain.info('set global crypto driver')
+    setGlobalCryptoDriver(CryptoDriverTweetnacl);
+    loggerMain.info('instantiate validator, storageDriver, and storage')
+    let validator = new FormatValidatorEs4();
     let storageDriver = new StorageDriverAsyncMemory(workspace);
     let storage = new StorageAsync(workspace, validator, storageDriver);
 
@@ -70,7 +71,7 @@ let main = async () => {
     peer.addStorage(storage);
 
     loggerMain.info('generate a keypair')
-    let keypair = crypto.generateAuthorKeypair('suzy');
+    let keypair = GlobalCrypto.generateAuthorKeypair('suzy');
     if (isErr(keypair)) {
         console.error(keypair);
         process.exit(1);

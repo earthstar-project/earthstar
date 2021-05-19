@@ -1,5 +1,4 @@
 import { Doc, WorkspaceAddress } from '../util/doc-types';
-import { ICrypto } from '../crypto/crypto-types';
 import {
     AllWorkspaceStates_Request,
     AllWorkspaceStates_Response,
@@ -26,11 +25,9 @@ let J = JSON.stringify;
 //================================================================================
 
 export class PeerServer implements IPeerServer {
-    crypto: ICrypto;
     peer: IPeer;
-    constructor(crypto: ICrypto, peer: IPeer) {
+    constructor(peer: IPeer) {
         logger.debug('peerServer constructor');
-        this.crypto = crypto;
         this.peer = peer;
         logger.debug(`...peerId: ${this.peer.peerId}`);
     }
@@ -46,7 +43,7 @@ export class PeerServer implements IPeerServer {
         loggerServe.debug('serve_saltyHandshake...');
         let salt = randomId();
         let saltedWorkspaces = this.peer.workspaces().map(ws =>
-            saltAndHashWorkspace(this.crypto, salt, ws));
+            saltAndHashWorkspace(salt, ws));
         loggerServe.debug(`...serve_saltyHandshake is done.  found ${saltedWorkspaces.length} workspaces.`);
         return {
             serverPeerId: this.peer.peerId,

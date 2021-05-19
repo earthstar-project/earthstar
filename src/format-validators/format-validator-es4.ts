@@ -13,8 +13,9 @@ import {
     IFormatValidator
 } from './format-validator-types';
 import { 
-    ICrypto,
-} from '../crypto/crypto-types';
+    GlobalCrypto,
+    GlobalCryptoDriver,
+} from '../crypto/crypto';
 
 import {
     authorAddressChars,
@@ -73,11 +74,9 @@ const ES4_CORE_SCHEMA: CheckObjOpts = {
 
 export class FormatValidatorEs4 implements IFormatValidator {
     format: 'es.4' = 'es.4';
-    crypto: ICrypto;
 
-    constructor(crypto: ICrypto) {
-        logger.debug(`constructor.  format="${this.format}".  crypto is using ${(crypto.driver as any).name}`);
-        this.crypto = crypto;
+    constructor() {
+        logger.debug(`constructor.  format="${this.format}".  crypto is using ${(GlobalCryptoDriver as any).name}`);
     }
 
     /** Deterministic hash of this version of the document */
@@ -108,7 +107,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         //     skip fields with value === null.
         //     result += fieldname + "\t" + convertToString(value) + "\n"
         // return base32encode(sha256(result).binaryDigest())
-        return this.crypto.sha256base32(
+        return GlobalCrypto.sha256base32(
             `author\t${doc.author}\n` +
             `contentHash\t${doc.contentHash}\n` +
             (doc.deleteAfter === null ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
@@ -133,7 +132,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         let hash = this.hashDocument(doc);
         if (isErr(hash)) { return hash; }
 
-        let sig = this.crypto.sign(keypair, hash);
+        let sig = GlobalCrypto.sign(keypair, hash);
         if (isErr(sig)) { return sig; }
 
         return { ...doc, signature: sig };
@@ -307,7 +306,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         try {
             let hash = this.hashDocument(doc);
             if (isErr(hash)) { return hash; }
-            let verified = this.crypto.verify(doc.author, doc.signature, hash);
+            let verified = GlobalCrypto.verify(doc.author, doc.signature, hash);
             if (verified !== true) { return new ValidationError('signature is invalid'); }
             return true;
         } catch (err) {
@@ -319,7 +318,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         // return a ValidationError, or return true on success.
 
         // TODO: if content is null, skip this check
-        if (this.crypto.sha256base32(content) !== contentHash) {
+        if (GlobalCrypto.sha256base32(content) !== contentHash) {
             return new ValidationError('content does not match contentHash');
         }
         return true;

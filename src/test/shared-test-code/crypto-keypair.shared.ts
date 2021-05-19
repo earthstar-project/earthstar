@@ -5,6 +5,9 @@ import {
     AuthorKeypair
 } from '../../util/doc-types';
 import {
+    ICryptoDriver
+} from '../../crypto/crypto-types';
+import {
     isErr,
     ValidationError,
 } from '../../util/errors';
@@ -13,14 +16,17 @@ import {
     decodeAuthorKeypairToBytes,
     encodeAuthorKeypairToStrings,
 } from '../../crypto/keypair';
-import { ICrypto } from '../../crypto/crypto-types';
+import {
+    GlobalCrypto,
+    GlobalCryptoDriver,
+    setGlobalCryptoDriver }
+from '../../crypto/crypto';
 
 //================================================================================
 
-export let runCryptoKeypairTests = (crypto: ICrypto) => {
-
+export let runCryptoKeypairTests = (driver: ICryptoDriver) => {
     let TEST_NAME = 'crypto-keypair shared tests';
-    let SUBTEST_NAME = (crypto.driver as any).name;
+    let SUBTEST_NAME = (driver as any).name;
 
     // Boilerplate to help browser-run know when this test is completed.
     // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
@@ -28,8 +34,10 @@ export let runCryptoKeypairTests = (crypto: ICrypto) => {
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
     t.test(SUBTEST_NAME + ': encode/decode author keypair: from bytes to string and back', (t: any) => {
+        setGlobalCryptoDriver(driver);
+
         let shortname = 'test';
-        let keypair = crypto.generateAuthorKeypair(shortname);
+        let keypair = GlobalCrypto.generateAuthorKeypair(shortname);
         if (isErr(keypair)) {
             t.ok(false, 'keypair 1 is an error');
             t.end();
@@ -67,10 +75,13 @@ export let runCryptoKeypairTests = (crypto: ICrypto) => {
 
         // we test for base32-too-short later in another test
 
+        t.same(driver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  should be ${(driver as any).name}, was ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': decodeAuthorKeypairToBytes checks Uint8Array length', (t: any) => {
+        setGlobalCryptoDriver(driver);
+
         interface Vector {
             valid: Boolean,
             keypair: AuthorKeypair,
@@ -141,6 +152,8 @@ export let runCryptoKeypairTests = (crypto: ICrypto) => {
                 t.same(keypairBytesOrErr instanceof ValidationError, true, 'should be an error: ' + JSON.stringify(keypair));
             }
         }
+
+        t.same(driver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  should be ${(driver as any).name}, was ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 }

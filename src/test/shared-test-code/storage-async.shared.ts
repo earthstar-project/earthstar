@@ -13,6 +13,7 @@ import {
 import {
     microsecondNow, sleep,
 } from '../../util/misc';
+import { GlobalCrypto, GlobalCryptoDriver } from '../../crypto/crypto';
 
 //================================================================================
 
@@ -60,6 +61,8 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
     t.test(SUBTEST_NAME + ': config', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
 
@@ -81,10 +84,13 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.same(await storage.getConfig('a'), undefined, `getConfig returns undefined after deleting the key`);
 
         await storage.close();
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': storage close() and throwing when closed', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
         let events: string[] = [];
@@ -149,15 +155,18 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         loggerTest.debug('...done sleeping 50');
 
         // storage is already closed
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': storage overwriteAllDocsByAuthor', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
 
-        let keypair1 = storage.formatValidator.crypto.generateAuthorKeypair('aaaa');
-        let keypair2 = storage.formatValidator.crypto.generateAuthorKeypair('aaaa');
+        let keypair1 = GlobalCrypto.generateAuthorKeypair('aaaa');
+        let keypair2 = GlobalCrypto.generateAuthorKeypair('aaaa');
         if (isErr(keypair1) || isErr(keypair2)) {
             t.ok(false, 'error making keypair');
             t.end();
@@ -253,6 +262,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.same(docsB_actualAuthorAndContent, docsB_expectedAuthorAndContent, '/pathB docs are as expected');
 
         await storage.close();
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
