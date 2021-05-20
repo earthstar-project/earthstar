@@ -17,9 +17,6 @@ import {
     GlobalCrypto, setGlobalCryptoDriver,
 } from './crypto/crypto';
 import {
-    CryptoDriverTweetnacl,
-} from './crypto/crypto-driver-tweetnacl';
-import {
     QueryFollower,
 } from './query-follower/query-follower';
 import {
@@ -57,8 +54,8 @@ let main = async () => {
     loggerMain.info('-----------\\')
     loggerMain.info('setup')
     loggerMain.info('workspace =', workspace);
-    loggerMain.info('set global crypto driver')
-    setGlobalCryptoDriver(CryptoDriverTweetnacl);
+    //loggerMain.info('set global crypto driver')
+    //setGlobalCryptoDriver(CryptoDriverTweetnacl);  // this is the default
     loggerMain.info('instantiate validator, storageDriver, and storage')
     let validator = new FormatValidatorEs4();
     let storageDriver = new StorageDriverAsyncMemory(workspace);
