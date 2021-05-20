@@ -21,6 +21,7 @@ digraph G {
             "src/crypto/crypto-driver-tweetnacl.ts" [label="src/crypto/crypto-driver-tweetnacl.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto-types.ts" [label="src/crypto/crypto-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/crypto.ts" [label="src/crypto/crypto.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            "src/crypto/global-crypto-driver.ts" [label="src/crypto/global-crypto-driver.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/crypto/keypair.ts" [label="src/crypto/keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         "src/format-validators/format-validator-es4.ts" [label="src/format-validators/format-validator-es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             "src/format-validators/format-validator-types.ts" [label="src/format-validators/format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
@@ -50,7 +51,9 @@ digraph G {
     "src/crypto/crypto.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/keypair.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
-    "src/crypto/crypto.ts" -> "src/crypto/crypto-driver-tweetnacl.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto.ts" -> "src/crypto/global-crypto-driver.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/global-crypto-driver.ts" -> "src/crypto/crypto-driver-tweetnacl.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/global-crypto-driver.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/keypair.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/keypair.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/keypair.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
