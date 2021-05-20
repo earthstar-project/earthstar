@@ -10,9 +10,7 @@ import {
 import { runCryptoDriverBenchmark } from '../shared-benchmark-code/crypto-driver-benchmark.shared';
 import { runStorageDriverBenchmark } from '../shared-benchmark-code/storage-driver-benchmark.shared';
 
-
 let log = console.log;
-
 
 let main = async () => {
     let runner = new BenchmarkRunner(log);

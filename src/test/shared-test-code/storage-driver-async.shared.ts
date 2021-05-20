@@ -11,6 +11,7 @@ import {
 import {
     IStorageDriverAsync,
 } from '../../storage/storage-types';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 //================================================================================
 
@@ -41,6 +42,8 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
     t.test(SUBTEST_NAME + ': empty storage', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
         let driver = makeDriver(workspace);
 
@@ -48,10 +51,13 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
 
         await driver.close();
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': config', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
         let driver = makeDriver(workspace);
 
@@ -73,10 +79,13 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(await driver.getConfig('a'), undefined, `getConfig returns undefined after deleting the key`);
 
         await driver.close();
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': upsert and basic querying with one path', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
         let driver = makeDriver(workspace);
 
@@ -290,6 +299,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         }
 
         await driver.close();
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 

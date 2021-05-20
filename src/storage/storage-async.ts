@@ -41,6 +41,8 @@ import {
     compareArrays,
 } from './compare';
 
+import { Crypto } from '../crypto/crypto';
+
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
@@ -216,7 +218,7 @@ export class StorageAsync implements IStorageAsync {
                 format: 'es.4',
                 author: keypair.address,
                 content: docToSet.content,
-                contentHash: this.formatValidator.crypto.sha256base32(docToSet.content),
+                contentHash: Crypto.sha256base32(docToSet.content),
                 deleteAfter: null,
                 path: docToSet.path,
                 timestamp,
@@ -351,7 +353,7 @@ export class StorageAsync implements IStorageAsync {
             let emptyDoc: Doc = {
                 ...cleanedDoc,
                 content: '',
-                contentHash: this.formatValidator.crypto.sha256base32(''),
+                contentHash: Crypto.sha256base32(''),
                 timestamp: doc.timestamp + 1,
                 signature: '?',
             }

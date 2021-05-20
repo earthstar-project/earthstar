@@ -8,13 +8,12 @@ let TEST_NAME = 'storage-cache';
 /* istanbul ignore next */ 
 (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME));
 
-import { StorageCache } from "../../storage/storage-cache";
-import { StorageAsync } from "../../storage/storage-async";
-import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4";
-import { Crypto } from "../../crypto/crypto";
-import { CryptoDriverTweetnacl } from "../../crypto/crypto-driver-tweetnacl";
+import { Crypto } from '../../crypto/crypto';
 import { AuthorKeypair } from "../../util/doc-types";
+import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4";
+import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory";
+import { StorageAsync } from "../../storage/storage-async";
+import { StorageCache } from "../../storage/storage-cache";
 
 // No types for tap...? Bit of a drag.
 
@@ -32,14 +31,12 @@ import {
 const WORKSPACE_ADDR = "+test.a123";
 
 t.test("works", (t: any) => {
-  const crypto = new Crypto(CryptoDriverTweetnacl);
-
-  const keypair = crypto.generateAuthorKeypair("test") as AuthorKeypair;
-  const keypairB = crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
+  const keypair = Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+  const keypairB = Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 
   const storage = new StorageAsync(
     WORKSPACE_ADDR,
-    new FormatValidatorEs4(crypto),
+    new FormatValidatorEs4(),
     new StorageDriverAsyncMemory(WORKSPACE_ADDR)
   );
 

@@ -1,10 +1,9 @@
 import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
 
-
 import { WorkspaceAddress, } from '../../util/doc-types';
-import { IStorageAsync, } from '../../storage/storage-types';
-import { ICrypto } from '../../crypto/crypto-types';
+import { IStorageAsync } from '../../storage/storage-types';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 import { compareByFn, sortedInPlace } from '../../storage/compare';
 import { Peer } from '../../peer/peer';
 
@@ -23,7 +22,7 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export let runPeerTests = (subtestName: string, crypto: ICrypto, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
+export let runPeerTests = (subtestName: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
 
     let TEST_NAME = 'peer shared tests';
     let SUBTEST_NAME = subtestName;
@@ -34,6 +33,8 @@ export let runPeerTests = (subtestName: string, crypto: ICrypto, makeStorage: (w
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
     t.test(SUBTEST_NAME + ': peer basics', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspaces = [
             '+one.ws',
             '+two.ws',
@@ -74,6 +75,7 @@ export let runPeerTests = (subtestName: string, crypto: ICrypto, makeStorage: (w
         t.same(peer.workspaces(), ['+three.ws'], 'removed storage instance');
         t.same(peer.size(), 1, 'size is 1');
 
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
 
         // TODO: eventually test peer.bus events when we have them

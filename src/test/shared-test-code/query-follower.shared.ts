@@ -2,12 +2,13 @@ import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
 
 import { WorkspaceAddress } from '../../util/doc-types';
-import { ICrypto } from '../../crypto/crypto-types';
 import { Query } from '../../query/query-types';
 import { IStorageAsync } from '../../storage/storage-types';
 
 import { isErr } from '../../util/errors';
 import { sleep } from '../../util/misc';
+import { Crypto } from '../../crypto/crypto';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 import { QueryFollower } from '../../query-follower/query-follower';
 
@@ -46,11 +47,7 @@ let doesNotThrow = async (t: any, fn: () => Promise<any>, msg: string) => {
     }
 }
 
-export interface StorageAndCrypto {
-    storage: IStorageAsync,
-    crypto: ICrypto,
-}
-export let runQueryFollowerTests = (subtestName: string, makeStorageAndCrypto: (ws: WorkspaceAddress) => StorageAndCrypto) => {
+export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
 
     let TEST_NAME = 'query-follower shared tests';
     let SUBTEST_NAME = subtestName;
@@ -61,11 +58,12 @@ export let runQueryFollowerTests = (subtestName: string, makeStorageAndCrypto: (
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
     t.test(SUBTEST_NAME + ': query rules', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
-        let { storage, crypto } = makeStorageAndCrypto(workspace);
-        let author1 = crypto.generateAuthorKeypair('onee');
+        let storage = makeStorage(workspace);
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
-       
 
         interface Vector { query: Query, isValid: Boolean, note?: string };
         let vectors: Vector[] = [
@@ -90,13 +88,16 @@ export let runQueryFollowerTests = (subtestName: string, makeStorageAndCrypto: (
         }
 
         await storage.close();
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': basics', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
-        let { storage, crypto } = makeStorageAndCrypto(workspace);
-        let author1 = crypto.generateAuthorKeypair('onee');
+        let storage = makeStorage(workspace);
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
        
         let logs: string[] = [];
@@ -145,13 +146,16 @@ export let runQueryFollowerTests = (subtestName: string, makeStorageAndCrypto: (
             '-end',
         ], 'logs are as expected');
 
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': delayed start', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
-        let { storage, crypto } = makeStorageAndCrypto(workspace);
-        let author1 = crypto.generateAuthorKeypair('onee');
+        let storage = makeStorage(workspace);
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
        
         let logs: string[] = [];
@@ -201,13 +205,16 @@ export let runQueryFollowerTests = (subtestName: string, makeStorageAndCrypto: (
             '-end',
         ], 'logs are as expected');
 
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
     t.test(SUBTEST_NAME + ': completely delayed start', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
         let workspace = '+gardening.abcde';
-        let { storage, crypto } = makeStorageAndCrypto(workspace);
-        let author1 = crypto.generateAuthorKeypair('onee');
+        let storage = makeStorage(workspace);
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
        
         let logs: string[] = [];
@@ -253,6 +260,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorageAndCrypto: (
             '-end',
         ], 'logs are as expected');
 
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 };

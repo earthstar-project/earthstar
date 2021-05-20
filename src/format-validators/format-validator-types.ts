@@ -9,9 +9,6 @@ import {
 import {
     ValidationError
 } from '../util/errors';
-import {
-    ICrypto
-} from '../crypto/crypto-types';
 
 /**
  * Validators are each responsible for one document format such as "es.4".
@@ -27,7 +24,6 @@ import {
 export interface IFormatValidator {
     /** The string name of the format, like "es.4" */
     format: FormatName;
-    crypto: ICrypto;
 
     /** Deterministic hash of this version of the document */
     hashDocument(doc: Doc): Base32String | ValidationError;

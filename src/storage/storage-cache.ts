@@ -1,3 +1,6 @@
+import isEqual from "fast-deep-equal";
+import stringify from 'fast-json-stable-stringify'
+
 import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types";
 import { isErr, StorageIsClosedError } from "../util/errors";
 import { microsecondNow } from "../util/misc";
@@ -6,8 +9,7 @@ import { QueryFollower } from "../query-follower/query-follower";
 import { Query } from "../query/query-types";
 import { StorageAsync } from "./storage-async";
 import { IngestResult, IngestResultAndDoc } from "./storage-types";
-import isEqual from "fast-deep-equal";
-import stringify from 'fast-json-stable-stringify'
+import { Crypto } from '../crypto/crypto';
 
 //--------------------------------------------------
 
@@ -214,9 +216,7 @@ export class StorageCache {
       format: "es.4",
       author: keypair.address,
       content: docToSet.content,
-      contentHash: this._storage.formatValidator.crypto.sha256base32(
-        docToSet.content
-      ),
+      contentHash: Crypto.sha256base32(docToSet.content),
       deleteAfter: null,
       path: docToSet.path,
       timestamp: microsecondNow(),
