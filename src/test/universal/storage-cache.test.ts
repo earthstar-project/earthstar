@@ -36,7 +36,7 @@ t.test("works", (t: any) => {
 
   const storage = new StorageAsync(
     WORKSPACE_ADDR,
-    new FormatValidatorEs4(),
+    FormatValidatorEs4,
     new StorageDriverAsyncMemory(WORKSPACE_ADDR)
   );
 

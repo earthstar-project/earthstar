@@ -23,9 +23,8 @@ for (let storageDriver of storageDriversAsync_browserAndUniversal) {
     let description = `${storageDriverName} + ${cryptoDriverName}`;
 
     let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
-        let validator = new FormatValidatorEs4();
         let stDriver = new storageDriver(ws);
-        let storage = new StorageAsync(ws, validator, stDriver);
+        let storage = new StorageAsync(ws, FormatValidatorEs4, stDriver);
         return storage;
     }
 

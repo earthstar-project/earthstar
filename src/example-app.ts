@@ -56,10 +56,9 @@ let main = async () => {
     loggerMain.info('workspace =', workspace);
     //loggerMain.info('set global crypto driver')
     //setGlobalCryptoDriver(CryptoDriverTweetnacl);  // this is the default
-    loggerMain.info('instantiate validator, storageDriver, and storage')
-    let validator = new FormatValidatorEs4();
+    loggerMain.info('instantiate storageDriver and storage')
     let storageDriver = new StorageDriverAsyncMemory(workspace);
-    let storage = new StorageAsync(workspace, validator, storageDriver);
+    let storage = new StorageAsync(workspace, FormatValidatorEs4, storageDriver);
 
     let peer = new Peer();
     peer.storageMap.bus.on('*', (channel, data) => {

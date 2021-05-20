@@ -71,15 +71,11 @@ const ES4_CORE_SCHEMA: CheckObjOpts = {
     allowExtraKeys: false,
 }
 
-export class FormatValidatorEs4 implements IFormatValidator {
-    format: 'es.4' = 'es.4';
-
-    constructor() {
-        logger.debug(`constructor.  format="${this.format}"`);
-    }
+export const FormatValidatorEs4: IFormatValidator = class {
+    static format: 'es.4' = 'es.4';
 
     /** Deterministic hash of this version of the document */
-    hashDocument(doc: Doc): Base32String | ValidationError {
+    static hashDocument(doc: Doc): Base32String | ValidationError {
         // Deterministic hash of the document.
         // Can return a ValidationError, but only checks for very basic document validity.
 
@@ -123,7 +119,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
      * it will be overwritten here, so you may as well just set signature: '' on the input.
      * Return a copy of the original document with the signature field changed, or return a ValidationError.
      */
-    signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError {
+    static signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError {
         if (keypair.address !== doc.author) {
             return new ValidationError('when signing a document, keypair address must match document author');
         }
@@ -144,7 +140,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
      * This should be run before checkDocumentIsValid.  The output doc will be
      * more likely to be valid once the extra fields have been removed.
      */
-     removeExtraFields(doc: Doc): {doc: Doc, extras: Record<string, any> } | ValidationError {
+    static removeExtraFields(doc: Doc): {doc: Doc, extras: Record<string, any> } | ValidationError {
         if (!isPlainObject(doc)) {
             return new ValidationError('doc is not a plain javascript object');
         }
@@ -174,7 +170,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
      * Normally `now` should be omitted so that it defaults to the current time,
      * or you can override it for testing purposes.
      */
-    checkDocumentIsValid(doc: Doc, now?: number): true | ValidationError {
+    static checkDocumentIsValid(doc: Doc, now?: number): true | ValidationError {
         if (now === undefined) { now = Date.now() * 1000; }
         // do this first to ensure we have all the right datatypes in the right fields
         let errBV = this._checkBasicDocumentValidity(doc);
@@ -211,12 +207,12 @@ export class FormatValidatorEs4 implements IFormatValidator {
     // These are broken out for easier unit testing.
     // They will not normally be used directly; use the main assertDocumentIsValid instead.
     // Return true on success.
-    _checkBasicDocumentValidity(doc: Doc): true | ValidationError {  // check for correct fields and datatypes
+    static _checkBasicDocumentValidity(doc: Doc): true | ValidationError {  // check for correct fields and datatypes
         let err = checkObj(ES4_CORE_SCHEMA)(doc);
         if (err !== null) { return new ValidationError(err); }
         return true; // TODO: is there more to check?
     }
-    _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError {
+    static _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError {
         // Can the author write to the path?
         // return a ValidationError, or return true on success.
 
@@ -227,7 +223,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         // else, path contains at least one tilde but not ~@author.  The author can't write here.
         return new ValidationError(`author ${author} can't write to path ${path}`);
     }
-    _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError {
+    static _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError {
         // Check for valid timestamp, and expired ephemeral documents.
         // return a ValidationError, or return true on success.
 
@@ -253,7 +249,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         }
         return true;
     }
-    _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError {
+    static _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError {
         // Ensure the path matches the spec for allowed path strings.
         //
         // Path validity depends on if the document is ephemeral or not.  To check
@@ -299,7 +295,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
 
         return true;
     }
-    _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError {
+    static _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError {
         // Check if the signature is good.
         // return a ValidationError, or return true on success.
         try {
@@ -312,7 +308,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
             return new ValidationError('signature is invalid (unexpected exception)');
         }
     }
-    _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError {
+    static _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError {
         // Ensure the contentHash matches the actual content.
         // return a ValidationError, or return true on success.
 
