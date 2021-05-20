@@ -14,7 +14,7 @@ import {
     StorageAsync,
 } from './storage/storage-async';
 import {
-    GlobalCrypto, setGlobalCryptoDriver,
+    Crypto,
 } from './crypto/crypto';
 import {
     QueryFollower,
@@ -68,7 +68,7 @@ let main = async () => {
     peer.addStorage(storage);
 
     loggerMain.info('generate a keypair')
-    let keypair = GlobalCrypto.generateAuthorKeypair('suzy');
+    let keypair = Crypto.generateAuthorKeypair('suzy');
     if (isErr(keypair)) {
         console.error(keypair);
         process.exit(1);

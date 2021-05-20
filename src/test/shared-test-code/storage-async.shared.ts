@@ -13,7 +13,8 @@ import {
 import {
     microsecondNow, sleep,
 } from '../../util/misc';
-import { GlobalCrypto, GlobalCryptoDriver } from '../../crypto/crypto';
+import { Crypto } from '../../crypto/crypto';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 //================================================================================
 
@@ -165,8 +166,8 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
 
-        let keypair1 = GlobalCrypto.generateAuthorKeypair('aaaa');
-        let keypair2 = GlobalCrypto.generateAuthorKeypair('aaaa');
+        let keypair1 = Crypto.generateAuthorKeypair('aaaa');
+        let keypair2 = Crypto.generateAuthorKeypair('aaaa');
         if (isErr(keypair1) || isErr(keypair2)) {
             t.ok(false, 'error making keypair');
             t.end();

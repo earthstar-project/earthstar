@@ -7,7 +7,8 @@ import { IStorageAsync } from '../../storage/storage-types';
 
 import { isErr } from '../../util/errors';
 import { sleep } from '../../util/misc';
-import { GlobalCrypto, GlobalCryptoDriver } from '../../crypto/crypto';
+import { Crypto } from '../../crypto/crypto';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 import { QueryFollower } from '../../query-follower/query-follower';
 
@@ -61,7 +62,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
 
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
-        let author1 = GlobalCrypto.generateAuthorKeypair('onee');
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
 
         interface Vector { query: Query, isValid: Boolean, note?: string };
@@ -96,7 +97,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
 
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
-        let author1 = GlobalCrypto.generateAuthorKeypair('onee');
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
        
         let logs: string[] = [];
@@ -154,7 +155,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
 
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
-        let author1 = GlobalCrypto.generateAuthorKeypair('onee');
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
        
         let logs: string[] = [];
@@ -213,7 +214,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
 
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
-        let author1 = GlobalCrypto.generateAuthorKeypair('onee');
+        let author1 = Crypto.generateAuthorKeypair('onee');
         if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
        
         let logs: string[] = [];

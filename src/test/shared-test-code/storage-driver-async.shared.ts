@@ -11,7 +11,7 @@ import {
 import {
     IStorageDriverAsync,
 } from '../../storage/storage-types';
-import { GlobalCryptoDriver } from '../../crypto/crypto';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 //================================================================================
 

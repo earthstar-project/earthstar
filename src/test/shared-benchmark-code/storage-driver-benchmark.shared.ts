@@ -2,7 +2,8 @@ import { AuthorKeypair } from '../../util/doc-types';
 import { ICryptoDriver } from '../../crypto/crypto-types';
 import { IStorageAsync, IStorageDriverAsync } from '../../storage/storage-types';
 
-import { GlobalCrypto, GlobalCryptoDriver, setGlobalCryptoDriver } from '../../crypto/crypto';
+import { Crypto } from '../../crypto/crypto';
+import { GlobalCryptoDriver, setGlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 import { FormatValidatorEs4 } from '../../format-validators/format-validator-es4';
 import { StorageAsync } from '../../storage/storage-async';
 
@@ -35,9 +36,9 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
     let workspace = '+gardening.pals';
     let validator = new FormatValidatorEs4();
 
-    let keypair1 = GlobalCrypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
-    let keypair2 = GlobalCrypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
-    let keypair3 = GlobalCrypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair1 = Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair2 = Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair3 = Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
 
     //==================================================
     // benchmarks

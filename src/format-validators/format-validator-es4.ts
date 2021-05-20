@@ -13,8 +13,7 @@ import {
     IFormatValidator
 } from './format-validator-types';
 import { 
-    GlobalCrypto,
-    GlobalCryptoDriver,
+    Crypto,
 } from '../crypto/crypto';
 
 import {
@@ -76,7 +75,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
     format: 'es.4' = 'es.4';
 
     constructor() {
-        logger.debug(`constructor.  format="${this.format}".  crypto is using ${(GlobalCryptoDriver as any).name}`);
+        logger.debug(`constructor.  format="${this.format}"`);
     }
 
     /** Deterministic hash of this version of the document */
@@ -107,7 +106,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         //     skip fields with value === null.
         //     result += fieldname + "\t" + convertToString(value) + "\n"
         // return base32encode(sha256(result).binaryDigest())
-        return GlobalCrypto.sha256base32(
+        return Crypto.sha256base32(
             `author\t${doc.author}\n` +
             `contentHash\t${doc.contentHash}\n` +
             (doc.deleteAfter === null ? '' : `deleteAfter\t${doc.deleteAfter}\n`) +
@@ -132,7 +131,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         let hash = this.hashDocument(doc);
         if (isErr(hash)) { return hash; }
 
-        let sig = GlobalCrypto.sign(keypair, hash);
+        let sig = Crypto.sign(keypair, hash);
         if (isErr(sig)) { return sig; }
 
         return { ...doc, signature: sig };
@@ -306,7 +305,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         try {
             let hash = this.hashDocument(doc);
             if (isErr(hash)) { return hash; }
-            let verified = GlobalCrypto.verify(doc.author, doc.signature, hash);
+            let verified = Crypto.verify(doc.author, doc.signature, hash);
             if (verified !== true) { return new ValidationError('signature is invalid'); }
             return true;
         } catch (err) {
@@ -318,7 +317,7 @@ export class FormatValidatorEs4 implements IFormatValidator {
         // return a ValidationError, or return true on success.
 
         // TODO: if content is null, skip this check
-        if (GlobalCrypto.sha256base32(content) !== contentHash) {
+        if (Crypto.sha256base32(content) !== contentHash) {
             return new ValidationError('content does not match contentHash');
         }
         return true;

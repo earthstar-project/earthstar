@@ -5,7 +5,6 @@ import {
 } from '../util/doc-types';
 import {
     ICrypto,
-    ICryptoDriver,
     KeypairBytes,
 } from './crypto-types';
 import {
@@ -27,22 +26,16 @@ import {
     parseAuthorAddress
 } from '../core-validators/addresses';
 
+import { GlobalCryptoDriver } from './global-crypto-driver';
+
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
-import { CryptoDriverTweetnacl } from './crypto-driver-tweetnacl';
 let logger = new Logger('crypto', 'cyanBright');
 
 //================================================================================
 
-export let GlobalCryptoDriver: ICryptoDriver = CryptoDriverTweetnacl;
-
-export let setGlobalCryptoDriver = (driver: ICryptoDriver): void => {
-    logger.debug(`set global crypto driver: ${(driver as any).name}`);
-    GlobalCryptoDriver = driver;
-}
-
-export const GlobalCrypto: ICrypto = class {
+export const Crypto: ICrypto = class {
     /**
      * Do a sha256 hash, then return the output bytes encoded as base32.
      */

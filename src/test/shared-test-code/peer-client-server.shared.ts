@@ -5,7 +5,8 @@ import { WorkspaceAddress, } from '../../util/doc-types';
 import { IStorageAsync, } from '../../storage/storage-types';
 
 import { isErr, NotImplementedError } from '../../util/errors';
-import { GlobalCrypto, GlobalCryptoDriver } from '../../crypto/crypto';
+import { Crypto } from '../../crypto/crypto';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 import { WorkspaceQuery_Request } from '../../peer/peer-types';
 import { Peer } from '../../peer/peer';
@@ -87,9 +88,9 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
         }
 
         // make some identities
-        let author1 = GlobalCrypto.generateAuthorKeypair('onee');
-        let author2 = GlobalCrypto.generateAuthorKeypair('twoo');
-        let author3 = GlobalCrypto.generateAuthorKeypair('thre');
+        let author1 = Crypto.generateAuthorKeypair('onee');
+        let author2 = Crypto.generateAuthorKeypair('twoo');
+        let author3 = Crypto.generateAuthorKeypair('thre');
 
         if (isErr(author1)) { throw author1; }
         if (isErr(author2)) { throw author2; }

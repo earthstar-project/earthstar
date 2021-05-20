@@ -41,7 +41,7 @@ import {
     compareArrays,
 } from './compare';
 
-import { GlobalCrypto } from '../crypto/crypto';
+import { Crypto } from '../crypto/crypto';
 
 //--------------------------------------------------
 
@@ -218,7 +218,7 @@ export class StorageAsync implements IStorageAsync {
                 format: 'es.4',
                 author: keypair.address,
                 content: docToSet.content,
-                contentHash: GlobalCrypto.sha256base32(docToSet.content),
+                contentHash: Crypto.sha256base32(docToSet.content),
                 deleteAfter: null,
                 path: docToSet.path,
                 timestamp,
@@ -353,7 +353,7 @@ export class StorageAsync implements IStorageAsync {
             let emptyDoc: Doc = {
                 ...cleanedDoc,
                 content: '',
-                contentHash: GlobalCrypto.sha256base32(''),
+                contentHash: Crypto.sha256base32(''),
                 timestamp: doc.timestamp + 1,
                 signature: '?',
             }

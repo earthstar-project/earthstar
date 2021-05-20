@@ -20,10 +20,12 @@ import {
     encodeAuthorKeypairToStrings,
 } from '../../crypto/keypair';
 import {
-    GlobalCrypto,
-    GlobalCryptoDriver,
-    setGlobalCryptoDriver
+    Crypto
 } from '../../crypto/crypto';
+import {
+    GlobalCryptoDriver,
+    setGlobalCryptoDriver,
+} from '../../crypto/global-crypto-driver';
 
 //================================================================================
 
@@ -53,7 +55,7 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
         ];
 
         for (let [input, output] of vectors) {
-            t.equal(GlobalCrypto.sha256base32(input), output, `hash of ${JSON.stringify(input)}`);
+            t.equal(Crypto.sha256base32(input), output, `hash of ${JSON.stringify(input)}`);
         }
         t.same(driver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  should be ${(driver as any).name}, was ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -72,7 +74,7 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
             [snowmanBytes, 'bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga'],
         ];
         for (let [input, output] of vectors) {
-            t.equal(GlobalCrypto.sha256base32(input), output, `hash of bytes: ${JSON.stringify(input)}`)
+            t.equal(Crypto.sha256base32(input), output, `hash of bytes: ${JSON.stringify(input)}`)
         }
         t.same(driver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  should be ${(driver as any).name}, was ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -81,16 +83,16 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
     t.test(SUBTEST_NAME + ': generateAuthorKeypair', (t: any) => {
         setGlobalCryptoDriver(driver);
 
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('abc')), 'error when author shortname is too short');
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('abcde')), 'error when author shortname is too long');
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('TEST')), 'error when author shortname is uppercase');
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('1abc')), 'error when author shortname starts with a number');
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('abc-')), 'error when author shortname has dashes');
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('abc.')), 'error when author shortname has a dot');
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('abc ')), 'error when author shortname has a space');
-        t.ok(isErr(GlobalCrypto.generateAuthorKeypair('')), 'error when author shortname is empty');
+        t.ok(isErr(Crypto.generateAuthorKeypair('abc')), 'error when author shortname is too short');
+        t.ok(isErr(Crypto.generateAuthorKeypair('abcde')), 'error when author shortname is too long');
+        t.ok(isErr(Crypto.generateAuthorKeypair('TEST')), 'error when author shortname is uppercase');
+        t.ok(isErr(Crypto.generateAuthorKeypair('1abc')), 'error when author shortname starts with a number');
+        t.ok(isErr(Crypto.generateAuthorKeypair('abc-')), 'error when author shortname has dashes');
+        t.ok(isErr(Crypto.generateAuthorKeypair('abc.')), 'error when author shortname has a dot');
+        t.ok(isErr(Crypto.generateAuthorKeypair('abc ')), 'error when author shortname has a space');
+        t.ok(isErr(Crypto.generateAuthorKeypair('')), 'error when author shortname is empty');
 
-        let keypair = GlobalCrypto.generateAuthorKeypair('ok99');
+        let keypair = Crypto.generateAuthorKeypair('ok99');
         if (isErr(keypair)) {
             t.ok(false, 'should have succeeded but instead was an error: ' + keypair);
             t.end();
@@ -102,7 +104,7 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
             t.ok(keypair.secret.startsWith('b'), 'keypair.secret starts with "b"');
         }
 
-        let keypair2 = GlobalCrypto.generateAuthorKeypair('ok99');
+        let keypair2 = Crypto.generateAuthorKeypair('ok99');
         if (isErr(keypair2)) {
             t.ok(false, 'should have succeeded but instead was an error: ' + keypair2);
         } else {
@@ -117,8 +119,8 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
     t.test(SUBTEST_NAME + ': authorKeypairIsValid', (t: any) => {
         setGlobalCryptoDriver(driver);
 
-        let keypair1 = GlobalCrypto.generateAuthorKeypair('onee');
-        let keypair2 = GlobalCrypto.generateAuthorKeypair('twoo');
+        let keypair1 = Crypto.generateAuthorKeypair('onee');
+        let keypair2 = Crypto.generateAuthorKeypair('twoo');
         if (isErr(keypair1)) { 
             t.ok(false, 'keypair1 was not generated successfully');
             t.end();
@@ -130,59 +132,59 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
             return;
         }
 
-        t.equal(GlobalCrypto.checkAuthorKeypairIsValid(keypair1), true, 'keypair1 is valid');
+        t.equal(Crypto.checkAuthorKeypairIsValid(keypair1), true, 'keypair1 is valid');
         t.notSame(keypair1.secret, keypair2.secret, 'different keypairs have different secrets');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: '',
             secret: keypair1.secret,
         })), 'empty address makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address,
             secret: '',
         })), 'empty secret makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address + 'a',
             secret: keypair1.secret,
         })), 'adding char to pubkey makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address,
             secret: keypair1.secret + 'a'
         })), 'adding char to secret makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address.slice(0, -8) + 'aaaaaaaa',
             secret: keypair1.secret,
         })), 'altering pubkey makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address,
             secret: keypair1.secret.slice(0, -8) + 'aaaaaaaa',
         })), 'altering secret makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address,
             secret: keypair2.secret,
         })), 'mixing address and secret from 2 different keypairs is invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address,
             secret: keypair1.secret.slice(0, -1) + '1',  // 1 is not a valid b32 character
         })), 'invalid b32 char in address makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address,
             secret: keypair1.secret.slice(0, -1) + '1',  // 1 is not a valid b32 character
         })), 'invalid b32 char in secret makes keypair invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             secret: keypair1.secret,
         } as any)), 'missing address is invalid');
 
-        t.ok(isErr(GlobalCrypto.checkAuthorKeypairIsValid({
+        t.ok(isErr(Crypto.checkAuthorKeypairIsValid({
             address: keypair1.address,
         } as any)), 'missing secret is invalid');
 
@@ -194,7 +196,7 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
         setGlobalCryptoDriver(driver);
 
         let shortname = 'test';
-        let keypair = GlobalCrypto.generateAuthorKeypair(shortname);
+        let keypair = Crypto.generateAuthorKeypair(shortname);
         if (isErr(keypair)) {
             t.ok(false, 'keypair 1 is an error');
             t.end();
@@ -241,15 +243,15 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
 
         let input = 'abc';
 
-        let keypair = GlobalCrypto.generateAuthorKeypair('test') as AuthorKeypair;
-        let keypair2 = GlobalCrypto.generateAuthorKeypair('fooo') as AuthorKeypair;
+        let keypair = Crypto.generateAuthorKeypair('test') as AuthorKeypair;
+        let keypair2 = Crypto.generateAuthorKeypair('fooo') as AuthorKeypair;
         if (isErr(keypair) || isErr(keypair2)) {
             t.ok(false, 'keypair generation error');
             t.end(); return;
         }
 
-        let sig = GlobalCrypto.sign(keypair, input);
-        let sig2 = GlobalCrypto.sign(keypair2, input);
+        let sig = Crypto.sign(keypair, input);
+        let sig2 = Crypto.sign(keypair2, input);
         if (isErr(sig)) {
             t.ok(false, 'signature error ' + sig);
             t.end(); return;
@@ -259,24 +261,24 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
             t.end(); return;
         }
 
-        t.ok(GlobalCrypto.verify(keypair.address, sig, input), 'real signature is valid');
+        t.ok(Crypto.verify(keypair.address, sig, input), 'real signature is valid');
 
         // ways a signature should fail
-        t.notOk(GlobalCrypto.verify(keypair.address, 'bad sig', input), 'garbage signature is not valid');
-        t.notOk(GlobalCrypto.verify(keypair.address, sig2, input), 'signature from another key is not valid');
-        t.notOk(GlobalCrypto.verify(keypair.address, sig, 'different input'), 'signature is not valid with different input');
-        t.notOk(GlobalCrypto.verify('@bad.address', sig, input), 'invalid author address = invalid signature, return false');
+        t.notOk(Crypto.verify(keypair.address, 'bad sig', input), 'garbage signature is not valid');
+        t.notOk(Crypto.verify(keypair.address, sig2, input), 'signature from another key is not valid');
+        t.notOk(Crypto.verify(keypair.address, sig, 'different input'), 'signature is not valid with different input');
+        t.notOk(Crypto.verify('@bad.address', sig, input), 'invalid author address = invalid signature, return false');
 
         // determinism
-        t.equal(GlobalCrypto.sign(keypair, 'aaa'), GlobalCrypto.sign(keypair, 'aaa'), 'signatures should be deterministic');
+        t.equal(Crypto.sign(keypair, 'aaa'), Crypto.sign(keypair, 'aaa'), 'signatures should be deterministic');
 
         // changing input should change signature
-        t.notEqual(GlobalCrypto.sign(keypair, 'aaa'), GlobalCrypto.sign(keypair, 'xxx'), 'different inputs should make different signature');
-        t.notEqual(GlobalCrypto.sign(keypair, 'aaa'), GlobalCrypto.sign(keypair2, 'aaa'), 'different keys should make different signature');
+        t.notEqual(Crypto.sign(keypair, 'aaa'), Crypto.sign(keypair, 'xxx'), 'different inputs should make different signature');
+        t.notEqual(Crypto.sign(keypair, 'aaa'), Crypto.sign(keypair2, 'aaa'), 'different keys should make different signature');
 
         // encoding of input msg
-        let snowmanStringSig = GlobalCrypto.sign(keypair, snowmanString);
-        let snowmanBytesSig = GlobalCrypto.sign(keypair, snowmanBytes);
+        let snowmanStringSig = Crypto.sign(keypair, snowmanString);
+        let snowmanBytesSig = Crypto.sign(keypair, snowmanBytes);
         if (isErr(snowmanStringSig)) {
             t.ok(false, 'signature error ' + snowmanStringSig);
             t.end(); return;
@@ -285,8 +287,8 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
             t.ok(false, 'signature error ' + snowmanBytesSig);
             t.end(); return;
         }
-        t.ok(GlobalCrypto.verify(keypair.address, snowmanStringSig, snowmanString), 'signature roundtrip works on snowman utf-8 string');
-        t.ok(GlobalCrypto.verify(keypair.address, snowmanBytesSig, snowmanBytes), 'signature roundtrip works on snowman Uint8Array');
+        t.ok(Crypto.verify(keypair.address, snowmanStringSig, snowmanString), 'signature roundtrip works on snowman utf-8 string');
+        t.ok(Crypto.verify(keypair.address, snowmanBytesSig, snowmanBytes), 'signature roundtrip works on snowman Uint8Array');
 
         t.same(driver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  should be ${(driver as any).name}, was ${(GlobalCryptoDriver as any).name}`)
         t.end();

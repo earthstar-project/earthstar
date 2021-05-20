@@ -9,7 +9,7 @@ import { CryptoDriverTweetnacl } from '../../crypto/crypto-driver-tweetnacl';
 import { runStorageTests } from '../shared-test-code/storage-async.shared';
 
 import { storageDriversAsync_browserAndUniversal } from './platform.browser';
-import { GlobalCryptoDriver, setGlobalCryptoDriver } from '../../crypto/crypto';
+import { GlobalCryptoDriver, setGlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 for (let storageDriver of storageDriversAsync_browserAndUniversal) {
     // just hardcode this crypto driver since it works on all platforms

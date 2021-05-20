@@ -3,7 +3,7 @@ import { onFinishOneTest } from '../browser-run-exit';
 
 import { WorkspaceAddress, } from '../../util/doc-types';
 import { IStorageAsync } from '../../storage/storage-types';
-import { GlobalCryptoDriver } from '../../crypto/crypto';
+import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 import { compareByFn, sortedInPlace } from '../../storage/compare';
 import { Peer } from '../../peer/peer';
 

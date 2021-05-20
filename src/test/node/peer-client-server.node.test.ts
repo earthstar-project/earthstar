@@ -9,7 +9,7 @@ import { storageDriversAsync_nodeAndUniversal } from './platform.node';
 
 import { runPeerClientServerTests } from '../shared-test-code/peer-client-server.shared';
 import { runPeerTests } from '../shared-test-code/peer.shared';
-import { setGlobalCryptoDriver } from '../../crypto/crypto';
+import { setGlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 
 //================================================================================
 

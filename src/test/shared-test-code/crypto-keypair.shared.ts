@@ -17,10 +17,12 @@ import {
     encodeAuthorKeypairToStrings,
 } from '../../crypto/keypair';
 import {
-    GlobalCrypto,
+    Crypto,
+} from '../../crypto/crypto';
+import {
     GlobalCryptoDriver,
-    setGlobalCryptoDriver }
-from '../../crypto/crypto';
+    setGlobalCryptoDriver,
+} from '../../crypto/global-crypto-driver';
 
 //================================================================================
 
@@ -37,7 +39,7 @@ export let runCryptoKeypairTests = (driver: ICryptoDriver) => {
         setGlobalCryptoDriver(driver);
 
         let shortname = 'test';
-        let keypair = GlobalCrypto.generateAuthorKeypair(shortname);
+        let keypair = Crypto.generateAuthorKeypair(shortname);
         if (isErr(keypair)) {
             t.ok(false, 'keypair 1 is an error');
             t.end();

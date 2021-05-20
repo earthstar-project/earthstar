@@ -9,7 +9,7 @@ import { QueryFollower } from "../query-follower/query-follower";
 import { Query } from "../query/query-types";
 import { StorageAsync } from "./storage-async";
 import { IngestResult, IngestResultAndDoc } from "./storage-types";
-import { GlobalCrypto } from '../crypto/crypto';
+import { Crypto } from '../crypto/crypto';
 
 //--------------------------------------------------
 
@@ -216,7 +216,7 @@ export class StorageCache {
       format: "es.4",
       author: keypair.address,
       content: docToSet.content,
-      contentHash: GlobalCrypto.sha256base32(docToSet.content),
+      contentHash: Crypto.sha256base32(docToSet.content),
       deleteAfter: null,
       path: docToSet.path,
       timestamp: microsecondNow(),

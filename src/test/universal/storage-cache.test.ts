@@ -8,7 +8,7 @@ let TEST_NAME = 'storage-cache';
 /* istanbul ignore next */ 
 (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME));
 
-import { GlobalCrypto } from '../../crypto/crypto';
+import { Crypto } from '../../crypto/crypto';
 import { AuthorKeypair } from "../../util/doc-types";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4";
 import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory";
@@ -31,8 +31,8 @@ import {
 const WORKSPACE_ADDR = "+test.a123";
 
 t.test("works", (t: any) => {
-  const keypair = GlobalCrypto.generateAuthorKeypair("test") as AuthorKeypair;
-  const keypairB = GlobalCrypto.generateAuthorKeypair("suzy") as AuthorKeypair;
+  const keypair = Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+  const keypairB = Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 
   const storage = new StorageAsync(
     WORKSPACE_ADDR,
