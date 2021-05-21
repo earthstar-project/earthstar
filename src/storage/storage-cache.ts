@@ -7,8 +7,7 @@ import { microsecondNow } from "../util/misc";
 import { docMatchesFilter, cleanUpQuery } from "../query/query";
 import { QueryFollower } from "../query-follower/query-follower";
 import { Query } from "../query/query-types";
-import { StorageAsync } from "./storage-async";
-import { IngestResult, IngestResultAndDoc } from "./storage-types";
+import { IngestResult, IngestResultAndDoc, IStorageAsync } from "./storage-types";
 import { Crypto } from "../crypto/crypto";
 
 //--------------------------------------------------
@@ -85,7 +84,7 @@ function sortAndLimit(query: Query, docs: Doc[]) {
 }
 
 export class StorageCache {
-  _storage: StorageAsync;
+  _storage: IStorageAsync;
 
   _docCache = new Map<
     string,
@@ -96,7 +95,7 @@ export class StorageCache {
 
   _onCacheUpdatedCallbacks = new Set<() => void | (() => Promise<void>)>();
 
-  constructor(storage: StorageAsync, timeToLive?: number) {
+  constructor(storage: IStorageAsync, timeToLive?: number) {
     this._storage = storage;
     this._timeToLive = timeToLive || 1000;
   }
