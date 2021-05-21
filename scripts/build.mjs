@@ -9,6 +9,7 @@ const externals = [
   "rfdc",
   "sha256-uint8array",
   "superbus",
+  "superbus-map",
   // tslib?
   "tweetnacl",
 ];
