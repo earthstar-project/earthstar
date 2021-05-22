@@ -119,11 +119,10 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         await doesNotThrow(t, async () => await storage.queryDocs(), 'does not throw because not closed');
         t.same(events, [], 'no events yet');
 
-        loggerTest.debug('launching microtask, nextTick, setTimeout, and setImmediate');
+        loggerTest.debug('launching microtask, nextTick, and setTimeout');
         queueMicrotask(() => loggerTestCb.debug('--- microtask ---'));
         process.nextTick(() => loggerTestCb.debug('--- nextTick ---'));
         setTimeout(() => loggerTestCb.debug('--- setTimeout 0 ---'), 0);
-        setImmediate(() => loggerTestCb.debug('--- setImmediate ---'));
 
         loggerTest.debug('closing...');
         await storage.close();
