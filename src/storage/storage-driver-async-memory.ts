@@ -1,4 +1,8 @@
 import {
+    Lock
+} from 'concurrency-friends';
+
+import {
     Cmp
 } from './util-types';
 import {
@@ -27,9 +31,6 @@ import {
     cleanUpQuery,
     docMatchesFilter
 } from '../query/query';
-import {
-    Lock
-} from './lock';
 
 //--------------------------------------------------
 

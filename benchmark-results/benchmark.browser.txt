@@ -1,23 +1,23 @@
 $ cat browserify-tests/bundle.benchmark.js | browser-run
-2021-05-24T21:21:16.403Z
+2021-05-24T21:33:45.055Z
 
 > CryptoDriverChloride (without waiting)
   > ops/sec
-  >     104,659:  sha256
-  >         189:  generateAuthorKeypair
-  >         159:  sign
-  >       3,585:  validate
+  >     105,433:  sha256
+  >         206:  generateAuthorKeypair
+  >         179:  sign
+  >       5,887:  validate
 
 > CryptoDriverChloride (after waiting)
   > ops/sec
-  >     111,566:  sha256
-  >       4,139:  generateAuthorKeypair
-  >       9,399:  sign
-  >       3,910:  validate
+  >     112,948:  sha256
+  >       4,428:  generateAuthorKeypair
+  >      11,281:  sign
+  >       6,040:  validate
 
 > CryptoDriverTweetnacl 
   > ops/sec
-  >     132,458:  sha256
-  >         201:  generateAuthorKeypair
-  >         216:  sign
-  >         109:  validate
+  >     184,236:  sha256
+  >         214:  generateAuthorKeypair
+  >         213:  sign
+  >         115:  validate

@@ -3,6 +3,7 @@ import esbuild from "esbuild";
 const externals = [
   "chalk",
   "chloride",
+  "concurrency-friends",
   "fast-deep-equal",
   "fast-json-stable-stringify",
   "rfc4648",

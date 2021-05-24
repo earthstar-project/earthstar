@@ -28,7 +28,6 @@ export * from './query-follower/query-follower';
 //export * from './shims/node';
 
 export * from './storage/compare';
-export * from './storage/lock';
 export * from './storage/storage-async';
 export * from './storage/storage-cache';
 export * from './storage/storage-driver-async-memory';
