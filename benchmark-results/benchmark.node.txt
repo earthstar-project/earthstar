@@ -1,37 +1,55 @@
-2021-05-19T21:21:37.442Z
+2021-05-24T21:23:56.105Z
+
+> CryptoDriverFake 
+  > ops/sec
+  >   365807: sha256
+  >   433033: generateAuthorKeypair
+  >   447339: sign
+  >  5437279: validate
 
 > CryptoDriverNode 
   > ops/sec
-  >   158625: sha256
-  >    17924: generateAuthorKeypair
-  >    10247: sign
-  >     7764: validate
+  >   169436: sha256
+  >    18304: generateAuthorKeypair
+  >    10574: sign
+  >     7900: validate
 
 > CryptoDriverTweetnacl 
   > ops/sec
-  >   266580: sha256
-  >      190: generateAuthorKeypair
-  >      209: sign
+  >   292095: sha256
+  >      226: generateAuthorKeypair
+  >      227: sign
   >      115: validate
+
+> StorageDriverAsyncMemory w/ CryptoDriverFake
+  > ops/sec
+  >      552: add 100 docs (docs/sec)
+  >      323: sync 100 docs to empty storage (docs/sec)
+  >      327: sync 100 docs again to full storage (docs/sec)
+
+  >      594: add 500 docs (docs/sec)
+  >      322: sync 500 docs to empty storage (docs/sec)
+  >      322: sync 500 docs again to full storage (docs/sec)
+
 
 > StorageDriverAsyncMemory w/ CryptoDriverNode
   > ops/sec
-  >      457: add 100 docs (docs/sec)
-  >      282: sync 100 docs to empty storage (docs/sec)
-  >      288: sync 100 docs again to full storage (docs/sec)
+  >      521: add 100 docs (docs/sec)
+  >      293: sync 100 docs to empty storage (docs/sec)
+  >      293: sync 100 docs again to full storage (docs/sec)
 
-  >      480: add 500 docs (docs/sec)
-  >      284: sync 500 docs to empty storage (docs/sec)
-  >      268: sync 500 docs again to full storage (docs/sec)
+  >      511: add 500 docs (docs/sec)
+  >      287: sync 500 docs to empty storage (docs/sec)
+  >      290: sync 500 docs again to full storage (docs/sec)
 
 
 > StorageDriverAsyncMemory w/ CryptoDriverTweetnacl
   > ops/sec
-  >       67: add 100 docs (docs/sec)
-  >       45: sync 100 docs to empty storage (docs/sec)
+  >       69: add 100 docs (docs/sec)
+  >       48: sync 100 docs to empty storage (docs/sec)
   >       49: sync 100 docs again to full storage (docs/sec)
 
-  >       66: add 500 docs (docs/sec)
-  >       48: sync 500 docs to empty storage (docs/sec)
-  >       48: sync 500 docs again to full storage (docs/sec)
+  >       69: add 500 docs (docs/sec)
+  >       49: sync 500 docs to empty storage (docs/sec)
+  >       49: sync 500 docs again to full storage (docs/sec)
 
