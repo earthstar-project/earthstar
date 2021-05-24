@@ -3,6 +3,10 @@ import {
 } from 'superbus';
 
 import {
+    Lock,
+} from 'concurrency-friends';
+
+import {
     AuthorKeypair,
     Doc,
     DocToSet,
@@ -20,10 +24,6 @@ import {
 import {
     ValidationError
 } from '../util/errors';
-
-import {
-    Lock,
-} from './lock';
 
 //================================================================================
 

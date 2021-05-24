@@ -1,8 +1,9 @@
 import t from 'tap';
 import { onFinishOneTest } from '../browser-run-exit';
 
+import { Lock } from 'concurrency-friends';
+
 import { sleep } from '../../util/misc';
-import { Lock } from '../../storage/lock';
 
 let TEST_NAME = 'lock';
 
@@ -87,7 +88,7 @@ t.test('bypass run in parallel with normal lock callbacks', async (t: any) => {
         logs.push('a1'); await sleep(30); logs.push('a2'); return 'a';
     });
     let promBypass = lock.run(async () => {
-        logs.push('b1'); await sleep(30); logs.push('b2'); return 'b';
+        logs.push('b1'); await sleep(40); logs.push('b2'); return 'b';
     }, { bypass: true });
     let promC = lock.run(async () => {
         logs.push('c1'); await sleep(30); logs.push('c2'); return 'c';
@@ -102,11 +103,13 @@ t.test('bypass run in parallel with normal lock callbacks', async (t: any) => {
     let expectedLogs = [
         '-start',
         '-await',
-        'b1',  // b ignores the lock, as expected...
+        // a runs
         'a1',
-        'b2',  // ...and interleaves with a
+            'b1',  // b ignores the lock and runs while a is running
         'a2',
-        'c1',
+        // c runs
+        'c1', 
+            'b2',  // b finishes while c is running
         'c2',
         '-end',
     ];
