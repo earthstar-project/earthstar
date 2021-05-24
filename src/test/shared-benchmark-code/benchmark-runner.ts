@@ -31,14 +31,15 @@ export class BenchmarkRunner {
     _startRun(testName: TestName) {
     }
     _finishRun(testName: TestName, msPerOp: number, err?: any) {
+        let maxChars = 11;
         if (err) {
-            let result = 'ERROR'.padStart(8, ' ');
+            let result = 'ERROR'.padStart(maxChars, ' ');
             this.log(`  > ${result}: ${testName}`);
             this.log(err);
         } else {
             let opsPerSec = 1000 / msPerOp;
-            let result = ('' + Math.round(opsPerSec)).padStart(8, ' ');
-            this.log(`  > ${result}: ${testName}`);
+            let result = Number(Math.round(opsPerSec)).toLocaleString('en-US').padStart(maxChars, ' ');
+            this.log(`  > ${result}:  ${testName}`);
         }
 
         if (this.data[this.currentScenario] === undefined) {
