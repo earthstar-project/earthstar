@@ -15,7 +15,7 @@ import {
     Query
 } from "../query/query-types";
 import {
-    IStorageDriverAsync
+    IStorageDriverAsync, QueryResult
 } from "./storage-types";
 import {
     StorageIsClosedError,
@@ -138,7 +138,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         return docs;
     }
 
-    async queryDocs(queryToClean: Query): Promise<Doc[]> {
+    async queryWithState(queryToClean: Query): Promise<QueryResult> {
         // Query the documents.
 
         logger.debug('queryDocs', queryToClean);
@@ -147,7 +147,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         // clean up the query and exit early if possible.
         let { query, willMatch } = cleanUpQuery(queryToClean);
         logger.debug(`    cleanUpQuery.  willMatch = ${willMatch}`);
-        if (willMatch === 'nothing') { return []; }
+        if (willMatch === 'nothing') { return { docs: [], maxLocalIndex: this.getMaxLocalIndex() }; }
 
         // get history docs or all docs
         logger.debug(`    getting docs; historyMode = ${query.historyMode}`);
@@ -212,7 +212,10 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         }
 
         logger.debug(`    queryDocs is done: found ${filteredDocs.length} docs`);
-        return filteredDocs;
+        return { docs: filteredDocs, maxLocalIndex: this.getMaxLocalIndex() };
+    }
+    async queryDocs(queryToClean: Query): Promise<Doc[]> {
+        return (await this.queryWithState(queryToClean)).docs;
     }
   
     //--------------------------------------------------

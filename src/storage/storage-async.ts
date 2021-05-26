@@ -24,6 +24,7 @@ import {
     IngestResultAndDoc,
     StorageEvent,
     StorageId,
+    QueryResult,
 } from './storage-types';
 import {
     IFormatValidator,
@@ -176,6 +177,11 @@ export class StorageAsync implements IStorageAsync {
         });
         if (docs.length === 0) { return undefined; }
         return docs[0];
+    }
+
+    async queryWithState(query: Query = {}): Promise<QueryResult> {
+        logger.debug(`queryWithState`, query);
+        return await this.storageDriver.queryWithState(query);
     }
 
     async queryDocs(query: Query = {}): Promise<Doc[]> {

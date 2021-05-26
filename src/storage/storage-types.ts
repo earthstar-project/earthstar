@@ -33,6 +33,11 @@ export type StorageEvent =
     'ingest' |  // 'ingest|/some/path.txt'
     'willClose' | 'didClose';
 
+export interface QueryResult {
+    docs: Doc[],
+    maxLocalIndex: number,
+}
+
 export interface IStorageAsyncConfig {
     // This is for local storage of configuration details for storage instances.
     // This data will not be directly sync'd with other instances.
@@ -83,6 +88,7 @@ export interface IStorageAsync extends IStorageAsyncConfig {
     getAllDocsAtPath(path: Path): Promise<Doc[]>;
     getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
 
+    queryWithState(query: Query): Promise<QueryResult>;
     queryDocs(query?: Query): Promise<Doc[]>;
 //    queryPaths(query?: Query): Path[];
 //    queryAuthors(query?: Query): AuthorAddress[];
@@ -126,7 +132,8 @@ export interface IStorageDriverAsync extends IStorageAsyncConfig {
     // load it once at startup and then keep it in memory.
     getMaxLocalIndex(): number;
 
-    // this should return frozen docs
+    // these should return frozen docs
+    queryWithState(query: Query): Promise<QueryResult>;
     queryDocs(query: Query): Promise<Doc[]>;
 //    queryPaths(query: Query): Doc[];
 
