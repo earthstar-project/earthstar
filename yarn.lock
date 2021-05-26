@@ -1173,7 +1173,7 @@ concat-stream@~0.1.0:
   resolved "https://registry.yarnpkg.com/concat-stream/-/concat-stream-0.1.1.tgz#d7f4e278b90cfc4f0f3ef77fe4c03b40eb3f7900"
   integrity sha1-1/TieLkM/E8PPvd/5MA7QOs/eQA=
 
-concurrency-friends@^5.0.0:
+concurrency-friends@^5.0.1:
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/concurrency-friends/-/concurrency-friends-5.0.1.tgz#399339321c2923da2596548555a0bc6ffdd71f48"
   integrity sha512-R00265D/UY2iktsbH6pAi7AjtMN+hZPsv55YhcKZajMuAkLY+xyfNbEn3+cl1OOpSxB2r/Q032u29o5AzSLCdQ==
@@ -4281,6 +4281,13 @@ superbus@^2.0.2:
   version "2.0.2"
   resolved "https://registry.yarnpkg.com/superbus/-/superbus-2.0.2.tgz#fc8104cddbd4916ab9fdfd167a5e50b3e90e8a2f"
   integrity sha512-5JZJKxTEd/WWjShXpmRkZzJio7Gw4V1vWL0VTWZ+r5QVvZP6cwSc8nbW0akprX3WTeFOANmYfinQPDGpoKac7A==
+
+superbus@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/superbus/-/superbus-3.0.0.tgz#364d36060e968353b6eabe980031b4152e901e0d"
+  integrity sha512-GxiRoHsv4Y3dRNKNwF/GhflvJL2BncRavh/gJG9TwAG2ym4rx3JICe5+p3h8POzpRk0nuvblwSeXw/IdLSdDMw==
+  dependencies:
+    concurrency-friends "^5.0.1"
 
 supports-color@^2.0.0:
   version "2.0.0"
