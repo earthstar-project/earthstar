@@ -352,7 +352,7 @@ export class StorageAsync implements IStorageAsync {
         loggerIngest.debug(' >> ingest: ...done running protected region');
 
         loggerIngest.debug('...send ingest event after releasing the lock');
-        await this.bus.sendAndWait('ingest', ingestEvent);
+        await this.bus.sendAndWait(`ingest|${docToIngest.path}` as 'ingest', ingestEvent); // include the path in the channel even on failures
 
         return ingestEvent;
     }

@@ -102,7 +102,7 @@ export class QueryFollower implements IQueryFollower {
 
             let { doc, maxLocalIndex, prevDocFromSameAuthor, prevLatestDoc, docIsLatest } = ingestEvent;
 
-            logger.debug(`on storage 'ingest' event.  doc._locaIndex: ${doc._localIndex}; overall maxLocalIndex: ${maxLocalIndex}`);
+            logger.debug(`on storage 'ingest' event.  doc._localIndex: ${doc._localIndex}; overall maxLocalIndex: ${maxLocalIndex}; channel: ${channel}`);
             if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
 
             let docIsInteresting = docMatchesFilter(doc, this._query.filter ?? {});
