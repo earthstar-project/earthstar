@@ -1,4 +1,1 @@
-// IndexedDB goes in here some day.
-
-export const FakeIndexedDbStorage = {};
-export const FakeWebCryptoDriver = {};
+export { StorageDriverLocalStorage} from '../storage/storage-driver-local-storage'
