@@ -16,6 +16,7 @@ import {
 } from '../util/errors';
 import {
     IStorageAsync,
+    IngestEvent,
 } from '../storage/storage-types';
 import {
     docMatchesFilter,
@@ -96,15 +97,18 @@ export class QueryFollower implements IQueryFollower {
         //  so we can skip this event handler when we're catching-up.
         //  Or it might not happen because all these events are blocking events so maybe the storage won't
         //  accept any docs until our catchUp process is all done.
-        this._unsubIngest = this.storage.bus.on('ingest', async (channel: string, docIngested: Doc) => {
+        this._unsubIngest = this.storage.bus.on('ingest', async (channel: string, ingestEvent: IngestEvent) => {
+            if (ingestEvent.kind !== 'success') { return; }
 
-            logger.debug('on storage.ingest doc with _localIndex:', docIngested._localIndex);
+            let { doc, maxLocalIndex, prevDocFromSameAuthor, prevLatestDoc, docIsLatest } = ingestEvent;
+
+            logger.debug(`on storage 'ingest' event.  doc._locaIndex: ${doc._localIndex}; overall maxLocalIndex: ${maxLocalIndex}`);
             if (this.isClosed()) { logger.debug(`stopping catch-up because we're closed`); return; }
 
-            let docIsInteresting = docMatchesFilter(docIngested, this._query.filter ?? {});
+            let docIsInteresting = docMatchesFilter(doc, this._query.filter ?? {});
             logger.debug('the doc matches our filters:', docIsInteresting);
 
-            if (docIngested._localIndex === this._maxLocalIndex + 1) {
+            if (doc._localIndex === this._maxLocalIndex + 1) {
                 // We've gotten the next doc in the localIndex sequence without any gaps,
                 // so we know we can process it right away and we don't need to catch up.
                 logger.debug('this follower is on the leading edge.  looking at this doc...');
@@ -114,7 +118,7 @@ export class QueryFollower implements IQueryFollower {
 
                 if (docIsInteresting) {
                     logger.debug('...doc matches query filter.  running callback blockingly...');
-                    await this._cb(docIngested);
+                    await this._cb(doc);
                     logger.debug('...done with callback.');
 
                     logger.debug('...sending caught-up event');

@@ -3,10 +3,6 @@ import {
 } from 'superbus';
 
 import {
-    Lock,
-} from 'concurrency-friends';
-
-import {
     AuthorKeypair,
     Doc,
     DocToSet,
@@ -26,19 +22,63 @@ import {
 } from '../util/errors';
 
 //================================================================================
+// TYPES AND EVENTS
 
 export type StorageId = string;
 
-export type StorageEvent =
-    'ingest' |  // 'ingest|/some/path.txt'
-    'willClose' | 'didClose';
+export type StorageBusChannel =
+    'ingest' |  // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
+    'willClose' |
+    'didClose';
 
 export interface QueryResult {
+    // the docs from the query...
     docs: Doc[],
+    // ...and the storageDriver's maxLocalIndex at the time the
+    // query was done.  This is the OVERALL max local index for
+    // the whole storage, not just for the resulting docs.
+    // TODO: include the max for the doc results also
     maxLocalIndex: number,
 }
 
-export interface IStorageAsyncConfig {
+// IngestEvents are returned from storage.set() and storage.ingest(),
+// and sent as events on the storage.bus 'ingest' channel.
+
+export interface IngestEventFailure {
+    kind: 'failure',
+    reason: 'write_error' | 'invalid_document',
+    maxLocalIndex: number,
+    err: Error | null,
+}
+export interface IngestEventNothingHappened {
+    kind: 'nothing_happened',
+    reason: 'obsolete_from_same_author' | 'already_had_it'
+    maxLocalIndex: number,
+    doc: Doc,  // won't have a _localIndex because it was not actually ingested
+}
+export interface IngestEventSuccess {
+    kind: 'success',
+    maxLocalIndex: number,
+    doc: Doc,  // the just-written doc, frozen, with updated extra properties like _localIndex
+
+    docIsLatest: boolean,  // is it the latest at this path (for any author)?
+
+    // the most recent doc from the same author, at this path, before the new doc was written.
+    prevDocFromSameAuthor: Doc | null,
+
+    // the latest doc from any author at this path, before the new doc was written.
+    // note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
+    prevLatestDoc: Doc | null,
+}
+export type IngestEvent =
+    IngestEventFailure |
+    IngestEventNothingHappened |
+    IngestEventSuccess;
+
+//================================================================================
+
+export interface IStorageAsyncConfigStorage {
+    // These methods will be mixed into the IStorageAsync.
     // This is for local storage of configuration details for storage instances.
     // This data will not be directly sync'd with other instances.
     // Storage drivers implement these, and IStorageAsync just has stubs of
@@ -49,12 +89,12 @@ export interface IStorageAsyncConfig {
     deleteConfig(key: string): Promise<boolean>;
 }
 
-export interface IStorageAsync extends IStorageAsyncConfig {
+export interface IStorageAsync extends IStorageAsyncConfigStorage {
     storageId: StorageId;
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
-    bus: Superbus<StorageEvent>;
+    bus: Superbus<StorageBusChannel>;
 
     //--------------------------------------------------
     // LIFECYCLE
@@ -96,10 +136,10 @@ export interface IStorageAsync extends IStorageAsyncConfig {
     //--------------------------------------------------
     // SET
 
-    set(keypair: AuthorKeypair, doc: DocToSet): Promise<IngestResultAndDoc>;
+    set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestEvent>;
 
     // this should freeze the incoming doc if needed
-    ingest(doc: Doc): Promise<IngestResultAndDoc>;
+    ingest(doc: Doc): Promise<IngestEvent>;
 
     // Overwrite every doc from this author, including history versions, with an empty doc.
     // The new docs will have a timestamp of (oldDoc.timestamp + 1) to prevent them from
@@ -110,9 +150,8 @@ export interface IStorageAsync extends IStorageAsyncConfig {
     overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError>;
 }
 
-export interface IStorageDriverAsync extends IStorageAsyncConfig {
+export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     workspace: WorkspaceAddress;
-    lock: Lock<any>;
 
     //--------------------------------------------------
     // LIFECYCLE
@@ -137,6 +176,8 @@ export interface IStorageDriverAsync extends IStorageAsyncConfig {
     queryDocs(query: Query): Promise<Doc[]>;
 //    queryPaths(query: Query): Doc[];
 
+    // TODO: add a special getAllDocsAtPath for use by ingest?
+
     //--------------------------------------------------
     // SET
     // do no checks of any kind, just save it to the indexes
@@ -145,41 +186,3 @@ export interface IStorageDriverAsync extends IStorageAsyncConfig {
     // return a copy of the doc, frozen, with _localIndex set.
     upsert(doc: Doc): Promise<Doc>;
 }
-
-//================================================================================ 
-// EVENTS
-
-export enum IngestResult {
-    // doc was not saved: negative numbers
-    WriteError = 'WRITE_ERROR',
-    ObsoleteFromSameAuthor = 'OBSOLETE_FROM_SAME_AUTHOR',
-    AlreadyHadIt = 'ALREADY_HAD_IT',
-    Invalid = 'INVALID_DOCUMENT',
-
-    // doc was saved: positive numbers
-    AcceptedButNotLatest = 'ACCEPTED_BUT_NOT_LATEST',
-    AcceptedAndLatest = 'ACCEPTED_AND_LATEST',
-}
-
-export interface IngestResultAndDoc {
-    ingestResult: IngestResult,
-    docIngested: Doc | null,
-}
-
-/*
-export interface WriteEvent {
-    // This is only sent on a successful write.
-    doc: Doc,
-
-    // Is this doc the latest one at its path (for any author)?
-    isLatest: boolean,
-
-    // Prev doc from the same author at this path, if there was one.
-    // This may be present no matter the value of isLatest.
-    previousDocSameAuthor: Doc | undefined;
-
-    // If this doc isLatest, what was the previous latest doc until just now?
-    // It can be from the same author or a different one.
-    previousLatestDoc: Doc | undefined;
-}
-*/

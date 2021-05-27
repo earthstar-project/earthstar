@@ -1,5 +1,5 @@
 import { WorkspaceAddress } from '../util/doc-types';
-import { IngestResult } from '../storage/storage-types';
+import { IngestEvent } from '../storage/storage-types';
 import {
     AllWorkspaceStates_Request,
     AllWorkspaceStates_Response,
@@ -24,6 +24,7 @@ import { ValidationError } from '../util/errors';
 //--------------------------------------------------
 
 import { Logger } from '../util/log';
+import { write } from 'fs';
 let logger = new Logger('peer client', 'greenBright');
 let loggerDo = new Logger('peer client: do', 'green');
 let loggerHandle = new Logger('peer client: handle', 'cyan');
@@ -254,6 +255,8 @@ export class PeerClient implements IPeerClient {
     }
 
     async process_workspaceQuery(response: WorkspaceQuery_Response): Promise<number> {
+        // returns the number of docs pulled, even if they were obsolete or we alreayd had them.
+
         loggerProcess.debug('process_workspaceQuery');
         let {
             workspace,
@@ -287,10 +290,13 @@ export class PeerClient implements IPeerClient {
             // get the workspace every time in case something else is changing it?
             let myWorkspaceState = this.state.workspaceStates[workspace];
             // TODO: keep checking if storageId has changed every time
-            let {ingestResult, docIngested } = await storage.ingest(doc);
-            if (ingestResult === IngestResult.Invalid || ingestResult === IngestResult.WriteError) {
+
+            // save the doc
+            let ingestEvent = await storage.ingest(doc);
+            if (ingestEvent.kind === 'failure') {
                 loggerProcess.error('doc was not written.');
-                loggerProcess.error('...ingestResult', ingestResult);
+                loggerProcess.error('...reason', ingestEvent.reason);
+                loggerProcess.error('...err', ingestEvent.err);
                 loggerProcess.error('...doc', doc);
                 loggerProcess.error('if it is invalid, it might be from the future;');
                 loggerProcess.error('we will need to try again later.');

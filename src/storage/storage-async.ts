@@ -1,6 +1,9 @@
 import {
     Superbus
 } from 'superbus';
+import {
+    Lock
+} from 'concurrency-friends';
 
 import {
     Cmp,
@@ -20,11 +23,10 @@ import {
 import {
     IStorageAsync,
     IStorageDriverAsync,
-    IngestResult,
-    IngestResultAndDoc,
-    StorageEvent,
-    StorageId,
     QueryResult,
+    StorageBusChannel,
+    StorageId,
+    IngestEvent,
 } from './storage-types';
 import {
     IFormatValidator,
@@ -50,15 +52,16 @@ import { Logger } from '../util/log';
 let logger = new Logger('storage async', 'yellowBright');
 let loggerSet = new Logger('storage async set', 'yellowBright');
 let loggerIngest = new Logger('storage async ingest', 'yellowBright');
+let J = JSON.stringify;
 
 //================================================================================
 
-export let docCompareForOverwrite = (newDoc: Doc, oldDoc: Doc): Cmp => {
-    // A doc can overwrite another doc if the timestamp is higher, or
-    // if the timestamp is tied, if the signature is higher.
+let docCompareNewestFirst = (a: Doc, b: Doc): Cmp => {
+    // Sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
     return compareArrays(
-        [newDoc.timestamp, newDoc.signature],
-        [oldDoc.timestamp, oldDoc.signature],
+        [a.timestamp, a.signature],
+        [b.timestamp, a.signature],
+        ['DESC', 'ASC'],
     );
 }
 
@@ -67,9 +70,10 @@ export class StorageAsync implements IStorageAsync {
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
-    bus: Superbus<StorageEvent>;
+    bus: Superbus<StorageBusChannel>;
 
     _isClosed: boolean = false;
+    _ingestLock: Lock<IngestEvent>;
 
     constructor(workspace: WorkspaceAddress, validator: IFormatValidator, driver: IStorageDriverAsync) {
         logger.debug(`constructor.  driver = ${(driver as any)?.constructor?.name}`);
@@ -77,7 +81,8 @@ export class StorageAsync implements IStorageAsync {
         this.workspace = workspace;
         this.formatValidator = validator;
         this.storageDriver = driver;
-        this.bus = new Superbus<StorageEvent>('|');
+        this.bus = new Superbus<StorageBusChannel>('|');
+        this._ingestLock = new Lock<IngestEvent>();
     }
 
     //--------------------------------------------------
@@ -195,141 +200,161 @@ export class StorageAsync implements IStorageAsync {
     //--------------------------------------------------
     // SET
 
-    async set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestResultAndDoc> {
+    async set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestEvent> {
         loggerSet.debug(`set`, docToSet);
         if (this._isClosed) { throw new StorageIsClosedError(); }
 
-        let protectedCode = async (): Promise<IngestResultAndDoc> => {
-            loggerSet.debug('  + set: start of protected region');
-            loggerSet.debug('  | deciding timestamp: getting latest doc at the same path (from any author)');
-            if (this._isClosed) { throw new StorageIsClosedError(); }
+        loggerSet.debug('...deciding timestamp: getting latest doc at the same path (from any author)');
+        if (this._isClosed) { throw new StorageIsClosedError(); }
 
-            let timestamp: number;
-            if (typeof docToSet.timestamp === 'number') {
-                timestamp = docToSet.timestamp;
-                loggerSet.debug('  |     docToSet already has a timestamp; not changing it from ', timestamp);
+        let timestamp: number;
+        if (typeof docToSet.timestamp === 'number') {
+            timestamp = docToSet.timestamp;
+            loggerSet.debug('...docToSet already has a timestamp; not changing it from ', timestamp);
+        } else {
+            // bump timestamp if needed to win over existing latest doc at same path
+            let latestDocSamePath = await this.getLatestDocAtPath(docToSet.path);
+            if (latestDocSamePath === undefined) {
+                timestamp = microsecondNow();
+                loggerSet.debug('...no existing latest doc, setting timestamp to now() =', timestamp);
             } else {
-                // bump timestamp if needed to win over existing latest doc at same path
-                let latestDocSamePath = await this.getLatestDocAtPath(docToSet.path);
-                if (latestDocSamePath === undefined) {
-                    timestamp = microsecondNow();
-                    loggerSet.debug('  |     no existing latest doc, setting timestamp to now() =', timestamp);
-                } else {
-                    timestamp = Math.max(microsecondNow(), latestDocSamePath.timestamp + 1);
-                    loggerSet.debug('  |     existing latest doc found, bumping timestamp to win if needed =', timestamp);
-                }
+                timestamp = Math.max(microsecondNow(), latestDocSamePath.timestamp + 1);
+                loggerSet.debug('...existing latest doc found, bumping timestamp to win if needed =', timestamp);
             }
-
-            let doc: Doc = {
-                format: 'es.4',
-                author: keypair.address,
-                content: docToSet.content,
-                contentHash: Crypto.sha256base32(docToSet.content),
-                deleteAfter: docToSet.deleteAfter ?? null,
-                path: docToSet.path,
-                timestamp,
-                workspace: this.workspace,
-                signature: '?',  // signature will be added in just a moment
-                // _localIndex will be added during upsert.  it's not needed for the signature.
-            }
-
-            loggerSet.debug('  | signing doc');
-            let signedDoc = this.formatValidator.signDocument(keypair, doc);
-            if (isErr(signedDoc)) {
-                return { ingestResult: IngestResult.Invalid, docIngested: null };
-            }
-            loggerSet.debug('  | signature =', signedDoc.signature);
-
-            loggerSet.debug('  | ingesting...');
-            let result: IngestResultAndDoc = await this.ingest(signedDoc, true);  // true means bypass the lock, since we're already in it
-            loggerSet.debug('  | ...done ingesting');
-            loggerSet.debug('  + set: end of protected region');
-            return result;
         }
 
-        loggerSet.debug('  + set: running protected region...');
-        let result = await this.storageDriver.lock.run(protectedCode);
-        loggerSet.debug('  + set: ...done running protected region.  result =', result);
+        let doc: Doc = {
+            format: 'es.4',
+            author: keypair.address,
+            content: docToSet.content,
+            contentHash: Crypto.sha256base32(docToSet.content),
+            deleteAfter: docToSet.deleteAfter ?? null,
+            path: docToSet.path,
+            timestamp,
+            workspace: this.workspace,
+            signature: '?',  // signature will be added in just a moment
+            // _localIndex will be added during upsert.  it's not needed for the signature.
+        }
 
-        if (this._isClosed) { throw new StorageIsClosedError(); }
-        loggerSet.debug('set is done.');
+        loggerSet.debug('...signing doc');
+        let signedDoc = this.formatValidator.signDocument(keypair, doc);
+        if (isErr(signedDoc)) {
+            return {
+                kind: 'failure',
+                reason: 'invalid_document',
+                err: signedDoc,
+                maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+            }
+        }
+        loggerSet.debug('...signature =', signedDoc.signature);
 
-        return result;
+        loggerSet.debug('...ingesting');
+        loggerSet.debug('-----------------------');
+        let ingestEvent = await this.ingest(signedDoc);
+        loggerSet.debug('-----------------------');
+        loggerSet.debug('...done ingesting');
+        loggerSet.debug('...set is done.');
+        return ingestEvent;
     }
 
-    async ingest(docToIngest: Doc, _bypassLock: boolean = false): Promise<IngestResultAndDoc> {
-        // set _bypassLock to true to skip getting the lock --
-        // use it when this is called from set() which has already grabbed the lock.
-
+    async ingest(docToIngest: Doc): Promise<IngestEvent> {
         loggerIngest.debug(`ingest`, docToIngest);
         if (this._isClosed) { throw new StorageIsClosedError(); }
 
-        loggerIngest.debug('    removing extra fields');
+        loggerIngest.debug('...removing extra fields');
         let removeResultsOrErr = this.formatValidator.removeExtraFields(docToIngest);
-        if (isErr(removeResultsOrErr)) { return { ingestResult: IngestResult.Invalid, docIngested: null }; }
+        if (isErr(removeResultsOrErr)) {
+            return {
+                kind: 'failure',
+                reason: 'invalid_document',
+                err: removeResultsOrErr,
+                maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+            }
+        }
         docToIngest = removeResultsOrErr.doc;  // a copy of doc without extra fields
         let extraFields = removeResultsOrErr.extras;  // any extra fields starting with underscores
         if (Object.keys(extraFields).length > 0) {
-            loggerIngest.debug(`    ....extra fields found: ${JSON.stringify(extraFields)}`);
+            loggerIngest.debug(`...extra fields found: ${J(extraFields)}`);
         }
 
         // now actually check doc validity against core schema
         let docIsValid = this.formatValidator.checkDocumentIsValid(docToIngest);
-        if (isErr(docIsValid)) { return { ingestResult: IngestResult.Invalid, docIngested: null }; }
+        if (isErr(docIsValid)) {
+            return {
+                kind: 'failure',
+                reason: 'invalid_document',
+                err: docIsValid,
+                maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+            }
+        }
 
-        let protectedCode = async (): Promise<IngestResultAndDoc> => {
+        let writeToDriverWithLock = async (): Promise<IngestEvent> => {
             // get other docs at the same path
             loggerIngest.debug(' >> ingest: start of protected region');
-            loggerIngest.debug('  > getting other docs at the same path');
-            if (this._isClosed) { throw new StorageIsClosedError(); }
+            loggerIngest.debug('  > getting other history docs at the same path by any author');
             let existingDocsSamePath = await this.getAllDocsAtPath(docToIngest.path);
+            loggerIngest.debug(`  > ...got ${existingDocsSamePath.length}`);
 
-            // check if this is obsolete or redudant from the same other
-            loggerIngest.debug('  > checking if obsolete from same author');
-            let existingDocSameAuthor = existingDocsSamePath.filter(d =>
-                d.author === docToIngest.author)[0];
-            if (existingDocSameAuthor !== undefined) {
-                let docComp = docCompareForOverwrite(docToIngest, existingDocSameAuthor);
-                if (docComp === Cmp.LT) { return { ingestResult: IngestResult.ObsoleteFromSameAuthor, docIngested: null }; }
-                if (docComp === Cmp.EQ) { return { ingestResult: IngestResult.AlreadyHadIt, docIngested: null }; }
-            }
-        
-            // check if latest
-            loggerIngest.debug('  > checking if latest');
-            let isLatest = true;
-            for (let d of existingDocsSamePath) {
-                // TODO: use docCompareForOverwrite or something
-                if (docToIngest.timestamp < d.timestamp) { isLatest = false; break; }
+            loggerIngest.debug('  > getting prevLatest and prevSameAuthor');
+            let prevLatest: Doc | null = existingDocsSamePath[0] ?? null;
+            let prevSameAuthor: Doc | null = existingDocsSamePath.filter(d => d.author === docToIngest.author)[0] ?? null;
+
+            loggerIngest.debug('  > checking if new doc is latest at this path');
+            existingDocsSamePath.push(docToIngest);
+            existingDocsSamePath.sort(docCompareNewestFirst);
+            let isLatest = existingDocsSamePath[0] === docToIngest;
+            loggerIngest.debug(`  > ...isLatest: ${isLatest}`);
+
+            if (!isLatest && prevSameAuthor !== null) {
+                loggerIngest.debug('  > new doc is not latest and there is another one from the same author...');
+                // check if this is obsolete or redudant from the same author
+                let docComp = docCompareNewestFirst(docToIngest, prevSameAuthor);
+                if (docComp === Cmp.GT) {
+                    loggerIngest.debug('  > new doc is GT prevSameAuthor, so it is obsolete');
+                    return {
+                        kind: 'nothing_happened',
+                        reason: 'obsolete_from_same_author',
+                        doc: docToIngest,
+                        maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                    };
+                }
+                if (docComp === Cmp.EQ) {
+                    loggerIngest.debug('  > new doc is EQ prevSameAuthor, so it is redundant (already_had_it)');
+                    return {
+                        kind: 'nothing_happened',
+                        reason: 'already_had_it',
+                        doc: docToIngest,
+                        maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                    };
+                }
             }
 
             // save it
             loggerIngest.debug('  > upserting into storageDriver...');
-            let docResult = await this.storageDriver.upsert(docToIngest);
+            let docAsWritten = await this.storageDriver.upsert(docToIngest);  // TODO: pass existingDocsSamePath to save another lookup
             loggerIngest.debug('  > ...done upserting into storageDriver');
-            loggerIngest.debug(' >> ingest: end of protected region');
+            loggerIngest.debug('  > ...getting storageDriver maxLocalIndex...');
+            let maxLocalIndex = this.storageDriver.getMaxLocalIndex();
 
-            if (!docResult) { return { ingestResult: IngestResult.WriteError, docIngested: null}; }
-            return isLatest
-                ? { ingestResult: IngestResult.AcceptedAndLatest, docIngested: docResult }
-                : { ingestResult: IngestResult.AcceptedButNotLatest, docIngested: docResult }
+            loggerIngest.debug(' >> ingest: end of protected region, returning a WriteEvent from the lock');
+            return {
+                kind: 'success',
+                maxLocalIndex,
+                doc: docAsWritten,  // with updated extra properties like _localIndex
+                docIsLatest: isLatest,
+                prevDocFromSameAuthor: prevSameAuthor,
+                prevLatestDoc: prevLatest,
+            };
         };
 
         loggerIngest.debug(' >> ingest: running protected region...');
-        // bypass the lock if we are already in a lock (because we're being called from set())
-        let result: IngestResultAndDoc = await this.storageDriver.lock.run(protectedCode, { bypass: _bypassLock });
-        let { ingestResult, docIngested } = result;
-        loggerIngest.debug(' >> ingest: ...done running protected region', ingestResult);
+        let ingestEvent: IngestEvent = await this._ingestLock.run(writeToDriverWithLock);
+        loggerIngest.debug(' >> ingest: ...done running protected region');
 
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+        loggerIngest.debug('...send ingest event after releasing the lock');
+        await this.bus.sendAndWait('ingest', ingestEvent);
 
-        // only send events if we successfully ingested a doc
-        if (docIngested !== null) {
-            loggerIngest.debug('  - ingest: send ingest event blockingly...');
-            await this.bus.sendAndWait(('ingest|' + docIngested.path) as 'ingest', docIngested);
-            loggerIngest.debug('  - ingest: ...done sending ingest event');
-        }
-
-        return result;
+        return ingestEvent;
     }
 
     // overwrite every doc with an empty one, from this author:
@@ -368,12 +393,15 @@ export class StorageAsync implements IStorageAsync {
             let signedDoc = this.formatValidator.signDocument(keypair, emptyDoc)
             if (isErr(signedDoc)) { return signedDoc }
 
-            let { ingestResult, docIngested } = await this.ingest(signedDoc);
-            if (ingestResult !== IngestResult.AcceptedAndLatest && ingestResult !== IngestResult.AcceptedButNotLatest) {
-                return new ValidationError('ingestion error during overwriteAllDocsBySameAuthor: ' + ingestResult);
+            let ingestEvent = await this.ingest(signedDoc);
+            if (ingestEvent.kind === 'failure') {
+                return new ValidationError('ingestion error during overwriteAllDocsBySameAuthor: ' + ingestEvent.reason + ': ' + ingestEvent.err);
+            } if (ingestEvent.kind === 'nothing_happened') {
+                return new ValidationError('ingestion did nothing during overwriteAllDocsBySameAuthor: ' + ingestEvent.reason);
+            } else {
+                // success
+                numOverwritten += 1;
             }
-
-            numOverwritten += 1;
         }
         logger.debug(`    ...done; ${numOverwritten} overwritten to be empty; ${numAlreadyEmpty} were already empty; out of total ${docsToOverwrite.length} docs`);
         return numOverwritten;

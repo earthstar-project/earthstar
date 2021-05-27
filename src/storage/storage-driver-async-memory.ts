@@ -1,8 +1,4 @@
 import {
-    Lock
-} from 'concurrency-friends';
-
-import {
     Cmp
 } from './util-types';
 import {
@@ -15,7 +11,8 @@ import {
     Query
 } from "../query/query-types";
 import {
-    IStorageDriverAsync, QueryResult
+    IStorageDriverAsync,
+    QueryResult,
 } from "./storage-types";
 import {
     StorageIsClosedError,
@@ -67,7 +64,6 @@ let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
 
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
-    lock: Lock<any>;
     _maxLocalIndex: LocalIndex = -1;  // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
     _isClosed: boolean = false;
     _configKv: Record<string, string> = {};
@@ -81,7 +77,6 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     constructor(workspace: WorkspaceAddress) {
         logger.debug('constructor');
         this.workspace = workspace;
-        this.lock = new Lock();
     }
   
     //--------------------------------------------------
@@ -232,7 +227,6 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         this._maxLocalIndex += 1;  // this starts at -1 initially, so the first doc has a localIndex of 0.
         doc._localIndex = this._maxLocalIndex;
         Object.freeze(doc);
-
         logger.debug('upsert', doc);
   
         // save into our various indexes and data structures
@@ -240,7 +234,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         this.docByPathAndAuthor.set(combinePathAndAuthor(doc), doc);
 
         // get list of history docs at this path
-        let docsByPath = this.docsByPathNewestFirst.get(doc.path) || [];
+        let docsByPath = this.docsByPathNewestFirst.get(doc.path) ?? [];
         // remove existing doc from same author same path
         docsByPath = docsByPath.filter(d => d.author !== doc.author);
         // add this new doc

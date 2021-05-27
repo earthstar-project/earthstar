@@ -7,8 +7,8 @@ import { microsecondNow } from "../util/misc";
 import { docMatchesFilter, cleanUpQuery } from "../query/query";
 import { QueryFollower } from "../query-follower/query-follower";
 import { Query } from "../query/query-types";
-import { IngestResult, IngestResultAndDoc, IStorageAsync } from "./storage-types";
-import { Crypto } from "../crypto/crypto";
+import { IngestEvent, IStorageAsync } from "./storage-types";
+import { Crypto } from '../crypto/crypto';
 
 //--------------------------------------------------
 
@@ -223,7 +223,7 @@ export class StorageCache {
 
   // Do a version of set which assumes this will be latest, and add that doc to the cache.
   // In the meantime, call set on the backing storage, and update results after.
-  set(keypair: AuthorKeypair, docToSet: DocToSet): IngestResultAndDoc {
+  set(keypair: AuthorKeypair, docToSet: DocToSet): IngestEvent {
     if (this._storage.isClosed()) {
       throw new StorageIsClosedError();
     }
@@ -242,7 +242,12 @@ export class StorageCache {
 
     let signedDoc = this._storage.formatValidator.signDocument(keypair, doc);
     if (isErr(signedDoc)) {
-      return { ingestResult: IngestResult.Invalid, docIngested: null };
+      return {
+          kind: 'failure',
+          reason: 'invalid_document',
+          err: signedDoc,
+          maxLocalIndex: this._storage.storageDriver.getMaxLocalIndex(),
+      }
     }
 
     // Update the cache optimistically
@@ -254,8 +259,12 @@ export class StorageCache {
 
     // Assume this is accepted and latest for the moment.
     return {
-      docIngested: signedDoc,
-      ingestResult: IngestResult.AcceptedAndLatest,
+        kind: 'success',
+        maxLocalIndex: this._storage.storageDriver.getMaxLocalIndex(),
+        doc: signedDoc,  // this is missing _localIndex for now
+        docIsLatest: true,
+        prevDocFromSameAuthor: null, // we don't actually know this
+        prevLatestDoc: null, // we don't actually know this
     };
   }
 
