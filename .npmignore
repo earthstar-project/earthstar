@@ -1,9 +1,5 @@
 # Ignore every file in the repo
 /*
 
-# Then unignore the build folder
-!/build
-
-# Then re-ignore the extra built files
-build/test/
-build/experimental/
+# Then unignore the dist folder
+!/dist
