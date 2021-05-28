@@ -1,16 +1,9 @@
-*.swp
-.DS_Store
-.github/
-.nyc_output/
-.vscode/
-benchmark-results/*
-browserify-tests/*
-build/example*
+# Ignore every file in the repo
+/*
+
+# Then unignore the build folder
+!/build
+
+# Then re-ignore the extra built files
 build/test/
-classes.png
-coverage/
-depchart/*
-dts-bundle.config.json
-src/
-tsconfig.json
-yarn-error.log
+build/experimental/
