@@ -1,17 +1,11 @@
-.github/
-.nyc_output/
-.prettierrc
-*.md
-*.txt
-docs/
-ignore/
-src/
-tsconfig.json
-*.sh
-typedoc/
-.vscode/
-depgraph.svg
-depchart*
-*.yml
-*.conf.js
-standalone-test*.html
+# Ignore every file in the repo
+/*
+
+# Then unignore the build folder
+!/build
+!/dist
+!LICENSE
+!README.md
+
+# Then re-ignore the extra built files
+build/test/
