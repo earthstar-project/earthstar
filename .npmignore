@@ -11,3 +11,7 @@ tsconfig.json
 typedoc/
 .vscode/
 depgraph.svg
+depchart*
+*.yml
+*.conf.js
+standalone-test*.html
