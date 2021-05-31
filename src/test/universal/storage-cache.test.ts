@@ -91,13 +91,6 @@ t.test("works", (t: any) => {
   t.equals(values.latestDocs.length, 3);
   t.equals(values.orangesDoc?.path, "/test/oranges.txt");
   t.equals(values.orangesDoc?.author, keypairB.address);
-  
-  cache.overwriteAllDocsByAuthor(keypair);
-  
-  t.equals(values.allDocs.length, 4);
-  t.equals(values.latestDocs.length, 3);
-  t.equals(values.allDocs.filter((doc) => doc.author === keypair.address).every((doc) => doc.content === ''), true)
-  t.equals(values.latestDocs.filter((doc) => doc.author === keypair.address).every((doc) => doc.content === ''), true)
 
   t.end();
 });
