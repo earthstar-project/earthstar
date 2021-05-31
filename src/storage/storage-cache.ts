@@ -260,59 +260,14 @@ export class StorageCache {
   }
 
   // OVERWRITE
+  
+  // We just call the backing storage's implementation
+  // A user calling this method probably wants to be sure 
+  // that their docs are _really_ deleted,
+  // so we don't do a quick and dirty version in the cache here.
 
-  overwriteAllDocsByAuthor(keypair: AuthorKeypair): number | ValidationError {
-    if (this._storage.isClosed()) {
-      throw new StorageIsClosedError();
-    }
-
-    this._storage.overwriteAllDocsByAuthor(keypair);
-
-    let docsToOverwrite = new Set(
-      Array.from(this._docCache.values()).flatMap((cache) => {
-        return cache.docs.filter((doc) => doc.author === keypair.address);
-      })
-    );
-
-    let numOverwritten = 0;
-
-    console.log({ docsToOverwrite });
-
-    for (let doc of docsToOverwrite) {
-      if (doc.content.length === 0) {
-        continue;
-      }
-
-      // remove extra fields
-      let cleanedResult = this._storage.formatValidator.removeExtraFields(doc);
-      if (isErr(cleanedResult)) {
-        return cleanedResult;
-      }
-      let cleanedDoc = cleanedResult.doc;
-
-      // make new doc which is empty and just barely newer than the original
-      let emptyDoc: Doc = {
-        ...cleanedDoc,
-        content: "",
-        contentHash: Crypto.sha256base32(""),
-        timestamp: doc.timestamp + 1,
-        signature: "?",
-      };
-
-      // sign and ingest it
-      let signedDoc = this._storage.formatValidator.signDocument(
-        keypair,
-        emptyDoc
-      );
-      if (isErr(signedDoc)) {
-        return signedDoc;
-      }
-
-      this._updateCacheOptimistically(signedDoc);
-      numOverwritten += 1;
-    }
-
-    return numOverwritten;
+  overwriteAllDocsByAuthor(keypair: AuthorKeypair) {
+    return this._storage.overwriteAllDocsByAuthor(keypair);
   }
 
   // CACHE
