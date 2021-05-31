@@ -34,11 +34,19 @@ export type StorageBusChannel =
 export interface QueryResult {
     // the docs from the query...
     docs: Doc[],
-    // ...and the storageDriver's maxLocalIndex at the time the
-    // query was done.  This is the OVERALL max local index for
-    // the whole storage, not just for the resulting docs.
-    // TODO: include the max for the doc results also
-    maxLocalIndex: number,
+    // ...and the storageDriver's maxLocalIndex at the time
+    // just before and just after the query was done.
+    // This provided a lower and upper bound for the maxLocalIndex
+    // associated with the resulting docs.
+    // (This is the OVERALL max local index for
+    // the whole storage, not just for the resulting docs.)
+    maxLocalIndexBefore: number,
+    maxLocalIndexAfter: number,
+    // The max localIndex out of the returned docs.
+    // This could be much smaller than the overall maxLocalIndex
+    // if the docs have been filtered.
+    // If there are no matching docs, this is -1.
+    maxLocalIndexInResult: number,
 }
 
 // IngestEvents are returned from storage.set() and storage.ingest(),
