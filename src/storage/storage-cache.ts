@@ -1,20 +1,19 @@
 import isEqual from "fast-deep-equal";
-import stringify from 'fast-json-stable-stringify'
+import stringify from "fast-json-stable-stringify";
 
 import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types";
-import { isErr, StorageIsClosedError } from "../util/errors";
+import { isErr, StorageIsClosedError, ValidationError } from "../util/errors";
 import { microsecondNow } from "../util/misc";
 import { docMatchesFilter, cleanUpQuery } from "../query/query";
 import { QueryFollower } from "../query-follower/query-follower";
 import { Query } from "../query/query-types";
-import { StorageAsync } from "./storage-async";
-import { IngestResult, IngestResultAndDoc } from "./storage-types";
-import { Crypto } from '../crypto/crypto';
+import { IngestResult, IngestResultAndDoc, IStorageAsync } from "./storage-types";
+import { Crypto } from "../crypto/crypto";
 
 //--------------------------------------------------
 
-import { Logger } from '../util/log';
-let logger = new Logger('storage cache', 'cyan');
+import { Logger } from "../util/log";
+let logger = new Logger("storage cache", "cyan");
 
 //================================================================================
 
@@ -29,7 +28,10 @@ function sortAndLimit(query: Query, docs: Doc[]) {
   for (let doc of docs) {
     if (query.orderBy === "path ASC") {
       if (query.startAfter !== undefined) {
-        if (query.startAfter.path !== undefined && doc.path <= query.startAfter.path) {
+        if (
+          query.startAfter.path !== undefined &&
+          doc.path <= query.startAfter.path
+        ) {
           continue;
         }
         // doc.path is now > startAfter.path
@@ -37,7 +39,10 @@ function sortAndLimit(query: Query, docs: Doc[]) {
     }
     if (query.orderBy === "path DESC") {
       if (query.startAfter !== undefined) {
-        if (query.startAfter.path !== undefined && doc.path >= query.startAfter.path) {
+        if (
+          query.startAfter.path !== undefined &&
+          doc.path >= query.startAfter.path
+        ) {
           continue;
         }
         // doc.path is now < startAfter.path (we're descending)
@@ -79,17 +84,20 @@ function sortAndLimit(query: Query, docs: Doc[]) {
 }
 
 export class StorageCache {
-  _storage: StorageAsync;
+  _storage: IStorageAsync;
 
-  _docCache = new Map<string, { docs: Doc[]; follower: QueryFollower, expires: number }>();
-  
+  _docCache = new Map<
+    string,
+    { docs: Doc[]; follower: QueryFollower; expires: number }
+  >();
+
   _timeToLive: number;
 
   _onCacheUpdatedCallbacks = new Set<() => void | (() => Promise<void>)>();
 
-  constructor(storage: StorageAsync, timeToLive?: number) {
+  constructor(storage: IStorageAsync, timeToLive?: number) {
     this._storage = storage;
-    this._timeToLive = timeToLive || 1000
+    this._timeToLive = timeToLive || 1000;
   }
 
   // GET
@@ -159,10 +167,14 @@ export class StorageCache {
       this._storage.queryDocs(query).then((docs) => {
         this._docCache.set(queryString, { ...cachedResult, docs });
       });
-      
+
       if (Date.now() > cachedResult.expires) {
         this._storage.queryDocs(query).then((docs) => {
-          this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
+          this._docCache.set(queryString, {
+            follower,
+            docs,
+            expires: Date.now() + this._timeToLive,
+          });
           logger.debug("⌛️");
           this._fireOnCacheUpdateds();
         });
@@ -187,14 +199,18 @@ export class StorageCache {
     this._docCache.set(queryString, {
       docs: [],
       follower,
-      expires: Date.now() + this._timeToLive
+      expires: Date.now() + this._timeToLive,
     });
 
     // Hatch the follower.
     follower.hatch();
-    
+
     this._storage.queryDocs(query).then((docs) => {
-      this._docCache.set(queryString, { follower, docs, expires: Date.now() + this._timeToLive });
+      this._docCache.set(queryString, {
+        follower,
+        docs,
+        expires: Date.now() + this._timeToLive,
+      });
       logger.debug("👹");
       this._fireOnCacheUpdateds();
     });
@@ -243,6 +259,17 @@ export class StorageCache {
     };
   }
 
+  // OVERWRITE
+  
+  // We just call the backing storage's implementation
+  // A user calling this method probably wants to be sure 
+  // that their docs are _really_ deleted,
+  // so we don't do a quick and dirty version in the cache here.
+
+  overwriteAllDocsByAuthor(keypair: AuthorKeypair) {
+    return this._storage.overwriteAllDocsByAuthor(keypair);
+  }
+
   // CACHE
 
   // Update cache entries as best as we can until results from the backing storage arrive.
@@ -280,7 +307,10 @@ export class StorageCache {
       const appendDoc = () => {
         logger.debug("🥞");
         let nextDocs = [...entry.docs, doc];
-        this._docCache.set(key, { ...entry, docs: sortAndLimit(query, nextDocs) });
+        this._docCache.set(key, {
+          ...entry,
+          docs: sortAndLimit(query, nextDocs),
+        });
         this._fireOnCacheUpdateds();
       };
 
@@ -300,13 +330,17 @@ export class StorageCache {
           return existingDoc;
         });
 
-        this._docCache.set(key, { ...entry, docs: sortAndLimit(query,nextDocs) });
+        this._docCache.set(key, {
+          ...entry,
+          docs: sortAndLimit(query, nextDocs),
+        });
         this._fireOnCacheUpdateds();
       };
 
       const documentsWithSamePath = entry.docs.filter(
         (existingDoc) => existingDoc.path === doc.path
       );
+
       const documentsWithSamePathAndAuthor = entry.docs.filter(
         (existingDoc) =>
           existingDoc.path === doc.path && existingDoc.author === doc.author
@@ -330,18 +364,22 @@ export class StorageCache {
           return;
         }
 
-        logger.debug('🕰')
+        logger.debug("🕰");
         replaceDoc({ exact: true });
         return;
       }
 
       const latestDoc = documentsWithSamePath[0];
 
-      const docIsDifferent =
-        doc.author !== latestDoc?.author || isEqual(doc, latestDoc);
+      // console.log({latestDoc, doc})
 
-      if (docIsDifferent) {
-        logger.debug('⌚️')
+      const docIsDifferent =
+        doc.author !== latestDoc?.author || !isEqual(doc, latestDoc);
+
+      const docIsLater = doc.timestamp > latestDoc.timestamp;
+
+      if (docIsDifferent && docIsLater) {
+        logger.debug("⌚️");
         replaceDoc({ exact: false });
         return;
       }
