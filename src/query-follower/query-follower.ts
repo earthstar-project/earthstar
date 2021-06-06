@@ -69,7 +69,7 @@ export class QueryFollower implements IQueryFollower {
 
         // enforce rules on supported queries
         if (this._query.historyMode !== 'all') { throw new NotImplementedError(`query historyMode must be 'all'`); }
-        if (this._query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`query orderBy must be 'localIndexASC'`); }
+        if (this._query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`query orderBy must be 'localIndex ASC'`); }
         if (this._query.limit !== undefined) { throw new NotImplementedError(`query must not have a limit`); }
 
         // startAfter is equivalent to maxLocalIndex -- both are the max known value, not the next one that we want (+1)

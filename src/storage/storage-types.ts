@@ -20,6 +20,7 @@ import {
 import {
     ValidationError
 } from '../util/errors';
+import { Thunk } from './util-types';
 
 //================================================================================
 // TYPES AND EVENTS
@@ -78,10 +79,39 @@ export interface IngestEventSuccess {
     // note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
     prevLatestDoc: Doc | null,
 }
+export interface IngestEventExisting {
+    // for a doc that was previously ingested, when a live query is catching up.
+    kind: 'existing',
+    maxLocalIndex: number,
+    doc: Doc,  // the just-written doc, frozen, with updated extra properties like _localIndex
+
+    //docIsLatest: boolean,  // is it the latest at this path (for any author)?
+
+    //// the most recent doc from the same author, at this path, before the new doc was written.
+    //prevDocFromSameAuthor: Doc | null,
+
+    //// the latest doc from any author at this path, before the new doc was written.
+    //// note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
+    //prevLatestDoc: Doc | null,
+}
+export interface StorageEventWillClose {
+    kind: 'willClose',
+    maxLocalIndex: number,
+}
+export interface StorageEventDidClose {
+    kind: 'didClose',
+}
+
 export type IngestEvent =
     IngestEventFailure |
     IngestEventNothingHappened |
     IngestEventSuccess;
+
+export type LiveQueryEvent =
+    IngestEvent |
+    IngestEventExisting |
+    StorageEventWillClose |
+    StorageEventDidClose;
 
 //================================================================================
 
@@ -138,6 +168,9 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
 
     queryWithState(query: Query): Promise<QueryResult>;
     queryDocs(query?: Query): Promise<Doc[]>;
+
+    liveQuery(query: Query, cb: (event: LiveQueryEvent) => Promise<void>): Promise<Thunk>;  // unsub
+
 //    queryPaths(query?: Query): Path[];
 //    queryAuthors(query?: Query): AuthorAddress[];
 

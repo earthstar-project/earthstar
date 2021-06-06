@@ -1,11 +1,12 @@
 import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
+t.runOnly = true;
 
 import {
     WorkspaceAddress,
 } from '../../util/doc-types';
 import {
-    IStorageAsync,
+    IStorageAsync, LiveQueryEvent,
 } from '../../storage/storage-types';
 import {
     isErr,
@@ -19,12 +20,16 @@ import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
 //================================================================================
 
 import {
-    Logger,
+    Logger, LogLevel, setLogLevel,
 } from '../../util/log';
+import { Query } from '../../query/query-types';
+import { logMain } from '@earthstar-project/mini-rpc/build/lib/util';
 
 let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
+
+setLogLevel('test', LogLevel.Debug);
 
 //================================================================================
 
@@ -166,7 +171,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         let storage = makeStorage(workspace);
 
         let keypair1 = Crypto.generateAuthorKeypair('aaaa');
-        let keypair2 = Crypto.generateAuthorKeypair('aaaa');
+        let keypair2 = Crypto.generateAuthorKeypair('bbbb');
         if (isErr(keypair1) || isErr(keypair2)) {
             t.ok(false, 'error making keypair');
             t.end();
@@ -261,6 +266,77 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.ok(docsB[0].timestamp > docsB[1].timestamp, 'docs are ordered latest first within this path');
         t.same(docsB_actualAuthorAndContent, docsB_expectedAuthorAndContent, '/pathB docs are as expected');
 
+        await storage.close();
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
+        t.end();
+    });
+
+    t.only(SUBTEST_NAME + ': storage liveQuery', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
+        logMain('begin');
+
+        let workspace = '+gardening.abcde';
+        let storage = makeStorage(workspace);
+
+        let keypair1 = Crypto.generateAuthorKeypair('aaaa');
+        let keypair2 = Crypto.generateAuthorKeypair('bbbb');
+        if (isErr(keypair1) || isErr(keypair2)) {
+            t.ok(false, 'error making keypair');
+            t.end();
+            return;
+        }
+
+        let now = microsecondNow();
+        logMain('write doc 0');
+        await storage.set(keypair1, {
+            format: 'es.4',
+            path: '/apple',
+            content: 'crunchy0',
+            timestamp: now + 0,
+        });
+
+        logMain('write doc 1');
+        await storage.set(keypair1, {
+            format: 'es.4',
+            path: '/cherry',
+            content: 'crispy1',
+            timestamp: now + 1,
+        });
+
+        logMain('starting live query');
+        let query: Query = {
+            historyMode: 'all',
+            orderBy: 'localIndex ASC',
+            //filter: { path: '/apple' },
+            startAfter: { localIndex: -1 },
+        }
+        storage.liveQuery(query, async (event: LiveQueryEvent) => {
+            loggerTestCb.debug('>>>>>>>>>>>>>>>>', event);
+            console.log(event);
+        });
+
+        logMain('write doc 2');
+        await storage.set(keypair2, {
+            format: 'es.4',
+            path: '/apple',
+            content: 'juicy2',
+            timestamp: now + 2,
+        });
+
+        logMain('write doc 3');
+        await storage.set(keypair2, {
+            format: 'es.4',
+            path: '/banana',
+            content: 'yellow3',
+            timestamp: now + 3,
+        });
+
+
+        logMain('sleep so live query can catch up');
+        await sleep(10);
+
+        logMain('close');
         await storage.close();
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();

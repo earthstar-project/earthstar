@@ -6,7 +6,7 @@ import {
 } from 'concurrency-friends';
 
 import {
-    Cmp,
+    Cmp, Thunk,
 } from './util-types';
 import {
     AuthorKeypair,
@@ -27,6 +27,9 @@ import {
     StorageBusChannel,
     StorageId,
     IngestEvent,
+    LiveQueryEvent,
+    StorageEventWillClose,
+    StorageEventDidClose,
 } from './storage-types';
 import {
     IFormatValidator,
@@ -34,25 +37,35 @@ import {
 
 import {
     isErr,
+    NotImplementedError,
     StorageIsClosedError,
     ValidationError,
 } from '../util/errors';
 import {
-    microsecondNow, randomId,
+    microsecondNow, randomId, sleep,
 } from '../util/misc';
 import {
     compareArrays,
 } from './compare';
 
 import { Crypto } from '../crypto/crypto';
+import { docMatchesFilter } from '../query/query';
 
 //--------------------------------------------------
 
-import { Logger } from '../util/log';
+import { Logger, LogLevel, setDefaultLogLevel, setLogLevel } from '../util/log';
+let J = JSON.stringify;
 let logger = new Logger('storage async', 'yellowBright');
 let loggerSet = new Logger('storage async set', 'yellowBright');
 let loggerIngest = new Logger('storage async ingest', 'yellowBright');
-let J = JSON.stringify;
+let loggerLiveQuery = new Logger('storage live query', 'magentaBright');
+let loggerLiveQuerySubscription = new Logger('storage live query subscription', 'magenta');
+setDefaultLogLevel(LogLevel.None);
+setLogLevel('storage async', LogLevel.Debug);
+setLogLevel('storage async set', LogLevel.Debug);
+setLogLevel('storage async ingest', LogLevel.Debug);
+setLogLevel('storage live query', LogLevel.Debug);
+setLogLevel('storage live query subscription', LogLevel.Debug);
 
 //================================================================================
 
@@ -193,6 +206,138 @@ export class StorageAsync implements IStorageAsync {
         logger.debug(`queryDocs`, query);
         return await this.storageDriver.queryDocs(query);
     }
+
+    //--------------------------------------------------
+    async liveQuery(query: Query, cb: (event: LiveQueryEvent) => Promise<void>): Promise<Thunk> {
+        loggerLiveQuery.debug(`starting live query: ${J(query)}`);
+
+        // enforce rules on supported queries
+        if (query.historyMode !== 'all') { throw new NotImplementedError(`live query historyMode must be 'all'`); }
+        if (query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`live query orderBy must be 'localIndex ASC'`); }
+        if (query.limit !== undefined) { throw new NotImplementedError(`live query must not have a limit`); }
+
+        // if query specifies a startAfter, start there and catch up with existing docs.
+        if (query.startAfter) {
+            loggerLiveQuery.debug(`live query has a startAfter already; catching up.`);
+            while (true) {
+                let asOf: number = -100;
+                try {
+                    let asOf = this.storageDriver.getMaxLocalIndex();
+                    loggerLiveQuery.debug(`...querying for existing docs as of ${asOf}`);
+                    let existingDocs = await this.queryDocs(query);
+                    loggerLiveQuery.debug(`...got ${existingDocs.length} existing docs`);
+                    loggerLiveQuery.debug(`...running cb on existing docs`);
+                    for (let doc of existingDocs) {
+                        await cb({
+                            kind: 'existing',
+                            maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                            doc: doc,
+                        });
+                    }
+                } catch (err) {
+                    if (err instanceof StorageIsClosedError) {
+                        loggerLiveQuery.debug(`storage was closed while we were catching up, oh well.`);
+                        return () => {}; // return empty unsubscribe
+                    }
+                    throw err;
+                }
+
+                if (asOf === -100) {
+                    loggerLiveQuery.error('how is asOf -100 ???');
+                }
+
+                // check if any changes have happened since the query we just did.
+                let newAsOf = this.storageDriver.getMaxLocalIndex();
+                if (asOf === newAsOf) {
+                    loggerLiveQuery.debug(`...asOf went from ${asOf} to ${newAsOf} so nothing new has happened since we did the query, so we can stop catching up now.`);
+                    loggerLiveQuery.debug(`...setting startAfter to localIndex: ${asOf}`);
+                    // no changes; we can stop catching up
+                    // and let's set startAfter to continue where we just left off.
+                    query.startAfter = { localIndex: asOf };
+                    break;
+                }
+                else {
+                    // changes happened.
+                    // wait a moment, then do another query to keep catching up.
+                    loggerLiveQuery.debug(`... asOf went from ${asOf} to ${newAsOf} so changes happened since we did our query; gotta query again to get those changes.`);
+                    loggerLiveQuery.debug(`...setting startAfter to localIndex: ${asOf}`);
+                    query.startAfter = { localIndex: asOf };
+                    await sleep(10);
+                }
+            }
+        } else {
+            loggerLiveQuery.debug(`live query does not have a startAfter already; only getting new events starting now.`);
+        }
+
+        // if query did not specify a startAfter, we will start with the next
+        // ingest event that happens.
+
+        let queryFilter = query.filter || {};
+        let queryStartAfter = this.storageDriver.getMaxLocalIndex();
+        if (query.startAfter !== undefined && query.startAfter.localIndex !== undefined) {
+            queryStartAfter = query.startAfter.localIndex;
+        }
+        loggerLiveQuery.debug(`OK: live query is switching to subscription mode:`);
+        loggerLiveQuery.debug(`...queryFilter: ${J(queryFilter)}`);
+        loggerLiveQuery.debug(`...start paying attention after local index ${queryStartAfter}`);
+
+        let unsub = this.bus.on('*', async (channel: StorageBusChannel | '*', data: any) => {
+            loggerLiveQuerySubscription.debug(`--- live query subscription: got an event on channel ${channel}`);
+            let event = data as LiveQueryEvent;
+            if (event === undefined) {
+                if (channel === 'willClose') {
+                    let event: StorageEventWillClose = {
+                        kind: 'willClose',
+                        maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                    }
+                    await cb(event);
+                } else if (channel === 'didClose') {
+                    let event: StorageEventDidClose = {
+                        kind: 'didClose',
+                    }
+                    await cb(event);
+                } else {
+                    loggerLiveQuerySubscription.error('weird event on channel ', channel);
+                }
+                return;
+            }
+
+            if (event.kind === 'success') {
+                // let events through that are after our query's startAfter
+                // and match our query's filter
+                loggerLiveQuerySubscription.debug(`--- it's a write success.  do we care?`);
+                let doc_li = event.doc._localIndex ?? -1;
+                let query_sa = queryStartAfter;
+                if (doc_li <= query_sa) {
+                    loggerLiveQuerySubscription.debug(`--- don't care; localIndex is old (doc.localIndex ${doc_li} <= queryStartAfter ${query_sa})`);
+                } else {
+                    if (!docMatchesFilter(event.doc, queryFilter)) {
+                        loggerLiveQuerySubscription.debug(`--- don't care; filter doesn't match`);
+                    } else {
+                        loggerLiveQuerySubscription.debug(`--- we care! running callback blockingly...`);
+                        await cb(event);
+                        loggerLiveQuerySubscription.debug(`--- ...done running callback`);
+                    }
+                }
+            // let all the other kinds of events through
+            } else if (event.kind === 'failure') {
+                loggerLiveQuerySubscription.debug(`--- ingest failure event`);
+                await cb(event);
+            } else if (event.kind === 'nothing_happened') {
+                loggerLiveQuerySubscription.debug(`--- nothing happened event`);
+                await cb(event);
+            } else {
+                loggerLiveQuerySubscription.debug(`--- WARNING: unknown event type event`);
+                console.warn('this should never happen:', event);
+                console.warn('this should never happen: unrecognised kind of LiveQueryEvent: ' + event.kind);
+            }
+        });
+        return unsub;
+
+        // TODO: when this storage closes, unsub from itself?  that seems unneccesary 
+    }
+    
+
 
     //queryPaths(query?: Query): Path[];
     //queryAuthors(query?: Query): AuthorAddress[];
