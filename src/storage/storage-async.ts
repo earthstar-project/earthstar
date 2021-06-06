@@ -220,12 +220,19 @@ export class StorageAsync implements IStorageAsync {
         if (query.startAfter) {
             loggerLiveQuery.debug(`live query has a startAfter already; catching up.`);
             while (true) {
-                let asOf: number = -100;
+                let asOf1: number = -100;  // before query
+                let asOf2: number = -100;  // after query; before callbacks, doesn't really matter
+                let asOf3: number = -100;  // after callbacks
+                let maxReturned: number = -100;
                 try {
-                    let asOf = this.storageDriver.getMaxLocalIndex();
-                    loggerLiveQuery.debug(`...querying for existing docs as of ${asOf}`);
+                    asOf1 = this.storageDriver.getMaxLocalIndex();
+                    loggerLiveQuery.debug(`...at ${asOf1}, started querying for existing docs`);
                     let existingDocs = await this.queryDocs(query);
-                    loggerLiveQuery.debug(`...got ${existingDocs.length} existing docs`);
+                    for (let doc of existingDocs) {
+                        maxReturned = Math.max(maxReturned, doc._localIndex ?? -1);
+                    }
+                    asOf2 = this.storageDriver.getMaxLocalIndex();
+                    loggerLiveQuery.debug(`...at ${asOf2}, got ${existingDocs.length} existing docs`);
                     loggerLiveQuery.debug(`...running cb on existing docs`);
                     for (let doc of existingDocs) {
                         await cb({
@@ -234,34 +241,32 @@ export class StorageAsync implements IStorageAsync {
                             doc: doc,
                         });
                     }
+                    asOf3 = this.storageDriver.getMaxLocalIndex();
+                    loggerLiveQuery.debug(`...at ${asOf3}, finished running ${existingDocs.length} callbacks for existing docs`);
                 } catch (err) {
                     if (err instanceof StorageIsClosedError) {
                         loggerLiveQuery.debug(`storage was closed while we were catching up, oh well.`);
                         return () => {}; // return empty unsubscribe
+                    } else {
+                        throw err;
                     }
-                    throw err;
                 }
 
-                if (asOf === -100) {
-                    loggerLiveQuery.error('how is asOf -100 ???');
-                }
-
-                // check if any changes have happened since the query we just did.
-                let newAsOf = this.storageDriver.getMaxLocalIndex();
-                if (asOf === newAsOf) {
-                    loggerLiveQuery.debug(`...asOf went from ${asOf} to ${newAsOf} so nothing new has happened since we did the query, so we can stop catching up now.`);
-                    loggerLiveQuery.debug(`...setting startAfter to localIndex: ${asOf}`);
+                let asOfSummary = `( asOf: ${asOf1} [query] ${asOf2} [callbacks] ${asOf3}.  maxReturned: ${maxReturned} )`;
+                loggerLiveQuery.debug(`...query and callback summary: ${asOfSummary}`);
+                if (asOf1 === asOf3) {
+                    loggerLiveQuery.debug(`...asOf stayed at ${asOf1} so nothing new has happened since we did the query, so we can stop catching up now.`);
+                    loggerLiveQuery.debug(`...setting startAfter to localIndex: ${asOf1}`);
                     // no changes; we can stop catching up
                     // and let's set startAfter to continue where we just left off.
-                    query.startAfter = { localIndex: asOf };
+                    query.startAfter = { localIndex: asOf1 };
                     break;
-                }
-                else {
+                } else {
                     // changes happened.
                     // wait a moment, then do another query to keep catching up.
-                    loggerLiveQuery.debug(`... asOf went from ${asOf} to ${newAsOf} so changes happened since we did our query; gotta query again to get those changes.`);
-                    loggerLiveQuery.debug(`...setting startAfter to localIndex: ${asOf}`);
-                    query.startAfter = { localIndex: asOf };
+                    loggerLiveQuery.debug(`...asOf went from ${asOf1} to ${asOf3} so changes happened since we did our query; gotta query again to get those changes.`);
+                    loggerLiveQuery.debug(`...setting startAfter to localIndex: ${maxReturned} which is the max returned doc we saw.`);
+                    query.startAfter = { localIndex: maxReturned };
                     await sleep(10);
                 }
             }
@@ -497,6 +502,7 @@ export class StorageAsync implements IStorageAsync {
         loggerIngest.debug(' >> ingest: ...done running protected region');
 
         loggerIngest.debug('...send ingest event after releasing the lock');
+        loggerIngest.debug('...ingest event:', ingestEvent);
         await this.bus.sendAndWait(`ingest|${docToIngest.path}` as 'ingest', ingestEvent); // include the path in the channel even on failures
 
         return ingestEvent;
