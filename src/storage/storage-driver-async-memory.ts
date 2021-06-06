@@ -133,9 +133,8 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         return docs;
     }
 
-    async queryWithState(queryToClean: Query): Promise<QueryResult> {
+    async queryDocs(queryToClean: Query): Promise<Doc[]> {
         // Query the documents.
-        let maxLocalIndexBefore = this.getMaxLocalIndex();
 
         logger.debug('queryDocs', queryToClean);
         if (this._isClosed) { throw new StorageIsClosedError(); }
@@ -144,12 +143,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         let { query, willMatch } = cleanUpQuery(queryToClean);
         logger.debug(`    cleanUpQuery.  willMatch = ${willMatch}`);
         if (willMatch === 'nothing') {
-            return {
-                docs: [],
-                maxLocalIndexBefore,
-                maxLocalIndexAfter: maxLocalIndexBefore,  // same maxLocalIndex before and after; no time has passed
-                maxLocalIndexInResult: -1,
-            };
+            return []
         }
 
         // get history docs or all docs
@@ -214,20 +208,8 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
             }
         }
 
-        let maxLocalIndexInResult: number = docs.reduce((maxSoFar: number, doc: Doc) => {
-            return Math.max(maxSoFar, doc._localIndex ?? -1)
-        }, -1);
-        let maxLocalIndexAfter = this.getMaxLocalIndex();
-        logger.debug(`    queryDocs is done: found ${filteredDocs.length} docs.  max localIndexInResult = ${maxLocalIndexInResult}; max overall local index between ${maxLocalIndexBefore} and ${maxLocalIndexAfter}`);
-        return {
-            docs: filteredDocs,
-            maxLocalIndexBefore,
-            maxLocalIndexAfter,
-            maxLocalIndexInResult,
-        };
-    }
-    async queryDocs(queryToClean: Query): Promise<Doc[]> {
-        return (await this.queryWithState(queryToClean)).docs;
+        logger.debug(`    queryDocs is done: found ${filteredDocs.length} docs.`);
+        return filteredDocs;
     }
   
     //--------------------------------------------------

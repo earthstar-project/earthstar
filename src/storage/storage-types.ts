@@ -166,7 +166,6 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
     getAllDocsAtPath(path: Path): Promise<Doc[]>;
     getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
 
-    queryWithState(query: Query): Promise<QueryResult>;
     queryDocs(query?: Query): Promise<Doc[]>;
 
     liveQuery(query: Query, cb: (event: LiveQueryEvent) => Promise<void>): Promise<Thunk>;  // unsub
@@ -213,7 +212,6 @@ export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     getMaxLocalIndex(): number;
 
     // these should return frozen docs
-    queryWithState(query: Query): Promise<QueryResult>;
     queryDocs(query: Query): Promise<Doc[]>;
 //    queryPaths(query: Query): Doc[];
 

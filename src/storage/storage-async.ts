@@ -198,11 +198,6 @@ export class StorageAsync implements IStorageAsync {
         return docs[0];
     }
 
-    async queryWithState(query: Query = {}): Promise<QueryResult> {
-        logger.debug(`queryWithState`, query);
-        return await this.storageDriver.queryWithState(query);
-    }
-
     async queryDocs(query: Query = {}): Promise<Doc[]> {
         logger.debug(`queryDocs`, query);
         return await this.storageDriver.queryDocs(query);
