@@ -79,7 +79,7 @@ export interface IngestEventSuccess {
     // note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
     prevLatestDoc: Doc | null,
 }
-export interface IngestEventExisting {
+export interface DocAlreadyExists {
     // for a doc that was previously ingested, when a live query is catching up.
     kind: 'existing',
     maxLocalIndex: number,
@@ -109,7 +109,7 @@ export type IngestEvent =
 
 export type LiveQueryEvent =
     IngestEvent |
-    IngestEventExisting |
+    DocAlreadyExists |
     StorageEventWillClose |
     StorageEventDidClose;
 

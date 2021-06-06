@@ -209,6 +209,70 @@ export class StorageAsync implements IStorageAsync {
     }
 
     //--------------------------------------------------
+    /**
+     * Subscribe to the ongoing results of a query.
+     * When anything happens, call the given callback.
+     * 
+     * The given callback can be sync or async.
+     * It will be called blockingly and new events will not be fed to it
+     * until it finishes the one it's handling, one at a time.
+     * 
+     * The callback will be fed a variety of events:
+     *   (see LiveQueryEvent in storageTypes for a comprehensive list)
+     * 
+     *   - DocAlreadyExists -- when catching up with old docs
+     *   - IngestEvent
+     *   -     IngestEventSuccess -- a new doc was written
+     *   -     IngestEventFailure -- refused an invalid doc
+     *   -     IngestEventNothingHappened -- ingested an obsolete or duplicate doc
+     *   - StorageEventWillClose -- the storage is about to close
+     *   - StorageEventDidClose -- the storage has closed
+     * 
+     * The query has some limitations:
+     *   - historyMode must be 'all'
+     *   - orderBy must be 'localIndex ASC'
+     *   - limit cannot be set (TODO: fix this eventually)
+     * 
+     * The query's startAfter controls the behavior of the live query:
+     *   - If startAfter is not set, we begin with the next write event that occurs, and ignore
+     *      existing documents.
+     *   - If startAfter is set to a localIndex value, begin there.  This may involve running
+     *      through a backlog of existing documents, then eventually catching up and switching
+     *      over to write events as new things happen.
+     *      The usual use case for this is to set startAfter to localIndex: -1 to begin processing
+     *      with the oldest doc (to get all of them).
+     * 
+     *  So the liveQuery can be in two modes:
+     *    1. catching up with the backlog
+     *    2. caught up; processing new events as they happen.
+     * 
+     *  When the liveQuery is in catching-up-with-the-backlog mode, it has no effect on
+     *  new concurrent writes.
+     * 
+     *  When the liveQuery is caught up and is handling new events as they happen, it will block
+     *  those events as it processes each one with its callback.
+     * 
+     *  liveQuery returns an unsubscribe function that can be used to stop handling future events.
+     *  However there's currently no way to abort it when it's in catching-up mode; in fact you can't
+     *  even get your hands on the unsub function until it's done catching up.
+     * 
+     *  Two ways to use this:
+     * 
+     *      // Start a liveQuery and block until it's done catching up to the most recent doc.
+     *      // This gives you access to the unsub function.
+     *      let unsub = await liveQuery({... your query ...}, (event) => {... your callback ...});
+     *      //...Later, you can unsub (when it's caught-up).
+     *      unsub();
+     * 
+     *      // OR, don't await it, and let it catch up on its own time.
+     *      // You will not be able to stop it or unsub it.
+     *      liveQuery({... your query ...}, (event) => {... your callback ...});
+     * 
+     *  TODO: let the callback return something special (false?) to kill the liveQuery no matter
+     *    what phase it's in.
+     *  TODO: throttle the catching-up mode so it doesn't hog the CPU.
+     *  TODO: catch-up in smaller batches instead of one giant batch, to save memory.
+     */
     async liveQuery(query: Query, cb: (event: LiveQueryEvent) => Promise<void>): Promise<Thunk> {
         loggerLiveQuery.debug(`starting live query: ${J(query)}`);
 
@@ -228,6 +292,7 @@ export class StorageAsync implements IStorageAsync {
                 try {
                     asOf1 = this.storageDriver.getMaxLocalIndex();
                     loggerLiveQuery.debug(`...at ${asOf1}, started querying for existing docs`);
+                    // TODO: catch up in smaller batches by setting a limit in the query
                     let existingDocs = await this.queryDocs(query);
                     for (let doc of existingDocs) {
                         maxReturned = Math.max(maxReturned, doc._localIndex ?? -1);
@@ -236,11 +301,13 @@ export class StorageAsync implements IStorageAsync {
                     loggerLiveQuery.debug(`...at ${asOf2}, got ${existingDocs.length} existing docs`);
                     loggerLiveQuery.debug(`...running cb on existing docs`);
                     for (let doc of existingDocs) {
-                        await cb({
+                        let result = cb({
                             kind: 'existing',
                             maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
                             doc: doc,
                         });
+                        // only await if cb was an async function that returned a promise
+                        if (result instanceof Promise) { await result; }
                     }
                     asOf3 = this.storageDriver.getMaxLocalIndex();
                     loggerLiveQuery.debug(`...at ${asOf3}, finished running ${existingDocs.length} callbacks for existing docs`);
