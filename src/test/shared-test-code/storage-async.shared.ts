@@ -1,6 +1,6 @@
 import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
-t.runOnly = true;
+//t.runOnly = true;
 
 import {
     WorkspaceAddress,
@@ -23,13 +23,12 @@ import {
     Logger, LogLevel, setLogLevel,
 } from '../../util/log';
 import { Query } from '../../query/query-types';
-import { logMain } from '@earthstar-project/mini-rpc/build/lib/util';
 
 let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
 
-setLogLevel('test', LogLevel.Debug);
+//setLogLevel('test', LogLevel.Debug);
 
 //================================================================================
 
@@ -271,10 +270,12 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.end();
     });
 
-    t.only(SUBTEST_NAME + ': storage liveQuery', async (t: any) => {
+    t.test(SUBTEST_NAME + ': storage liveQuery', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        logMain('begin');
+        loggerTest.debug('begin');
+
+        let logs: string[] = ['-begin'];
 
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
@@ -288,7 +289,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         }
 
         let now = microsecondNow();
-        logMain('write doc 0');
+        loggerTest.debug('write doc 0');
         await storage.set(keypair1, {
             format: 'es.4',
             path: '/apple',
@@ -296,7 +297,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
             timestamp: now + 0,
         });
 
-        logMain('write doc 1');
+        loggerTest.debug('write doc 1');
         await storage.set(keypair1, {
             format: 'es.4',
             path: '/cherry',
@@ -304,19 +305,27 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
             timestamp: now + 1,
         });
 
-        logMain('starting live query');
+        loggerTest.debug('starting live query');
         let query: Query = {
             historyMode: 'all',
             orderBy: 'localIndex ASC',
             //filter: { path: '/apple' },
-            startAfter: { localIndex: -1 },
+            startAfter: { localIndex: -1 }, // start at beginning
         }
         storage.liveQuery(query, async (event: LiveQueryEvent) => {
             loggerTestCb.debug('>>>>>>>>>>>>>>>>', event);
-            console.log(event);
+            if (event.kind && event.kind === 'existing') {
+                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
+            } else if (event.kind && event.kind === 'success') {
+                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
+            } else if (event.kind) {
+                logs.push(`${event.kind}`);
+            } else {
+                logs.push(`???`);
+            }
         });
 
-        logMain('write doc 2');
+        loggerTest.debug('write doc 2');
         await storage.set(keypair2, {
             format: 'es.4',
             path: '/apple',
@@ -324,7 +333,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
             timestamp: now + 2,
         });
 
-        logMain('write doc 3');
+        loggerTest.debug('write doc 3');
         await storage.set(keypair2, {
             format: 'es.4',
             path: '/banana',
@@ -332,12 +341,38 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
             timestamp: now + 3,
         });
 
-
-        logMain('sleep so live query can catch up');
+        loggerTest.debug('sleep so live query can catch up');
         await sleep(10);
 
-        logMain('close');
+        loggerTest.debug('write doc 4');
+        await storage.set(keypair2, {
+            format: 'es.4',
+            path: '/peach',
+            content: 'orange4',
+            timestamp: now + 4,
+        });
+
+        loggerTest.debug('sleep so live query can catch up');
+        await sleep(10);
+
+        loggerTest.debug('close');
         await storage.close();
+
+        await sleep(100);
+        logs.push('-end');
+        let expectedLogs = [
+            '-begin',
+            'existing: /apple index 0',
+            'existing: /cherry index 1',
+            'existing: /apple index 2',
+            'existing: /banana index 3',
+            'success: /peach index 4',
+            'willClose',
+            'didClose',
+            '-end',
+        ];
+        t.same(logs, expectedLogs, 'logs match');
+
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
