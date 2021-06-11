@@ -48,7 +48,6 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
         setGlobalCryptoDriver(scenario.cryptoDriver);
         let initialCryptoDriver = GlobalCryptoDriver;
 
-
         let workspace = '+gardening.abcde';
         let storage = makeStorageOrDriver(workspace);
 
@@ -87,10 +86,13 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
         await throws(t, async () => { await storage.getConfig('b'); }, 'getConfig should throw if used after close()');
         await throws(t, async () => { await storage.listConfigKeys(); }, 'listConfigKeys should throw if used after close()');
         await throws(t, async () => { await storage.deleteConfig('b'); }, 'deleteConfig should throw if used after close()');
+        await throws(t, async () => { await storage.destroy(); }, 'destroy should throw if used after close()');
 
-        // clean up, and destroy twice to make sure that's allowed
-        storage.destroy();
-        storage.destroy();
+        // make a new one so we can destroy it to clean up
+        let storage2 = makeStorageOrDriver(workspace);
+        await storage2.destroy();
+        await storage2.destroy();
+        await storage2.close();
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -113,13 +115,13 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
 
         // see if data is still there (depending on the scenario)
         if (scenario.persistent) {
-            t.same(await storage2.getConfig('b'), 'bb', 'this kind of storage should persist after close');
+            t.same(await storage2.getConfig('a'), 'aa', 'this kind of storage should persist after close');
         } else {
-            t.same(await storage2.getConfig('b'), undefined, 'this kind of storage should not persist after close');
+            t.same(await storage2.getConfig('a'), undefined, 'this kind of storage should not persist after close');
         }
 
-        await storage1.destroy();
         await storage2.destroy();
+        await storage2.close();
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -137,13 +139,16 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
 
         // destroy, then reopen the same workspace.  this should also close it.
         await storage1.destroy();
-        t.same(storage1.isClosed(), true, 'destroying should also close');
+        t.same(storage1.isClosed(), false, 'destroying should not close');
+        await storage1.close();
+        t.same(storage1.isClosed(), true, 'closing should close');
 
         // re-open.  data should be gone
         let storage2 = makeStorageOrDriver(workspace);
         t.same(await storage2.getConfig('a'), undefined, 'destroy has emptied out the data');
 
         await storage2.destroy();
+        await storage2.close();
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -164,16 +169,12 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
         let storage1b = makeStorageOrDriver(workspace);
         t.same(await storage1b.getConfig('x'), undefined, 'destroy then close');
         await storage1b.destroy();
+        await storage1b.close();
 
         // can close then destroy
         let storage2 = makeStorageOrDriver(workspace);
-        await storage2.setConfig('y', 'yy');
         await storage2.close();
-        await storage2.destroy();
-
-        let storage2b = makeStorageOrDriver(workspace);
-        t.same(await storage2b.getConfig('y'), undefined, 'close then destroy');
-        await storage2b.destroy();
+        await throws(t, () => storage2.destroy(), 'destroy after close will throw');
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();

@@ -141,7 +141,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': storage destroy() should also close()', async (t: any) => {
+    t.test(SUBTEST_NAME + ': storage destroy() and close()', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
@@ -156,17 +156,13 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         await storage.destroy();
         loggerTest.debug('...done destroying');
 
-        // wait for didClose to happen on setTimeout
-        await sleep(20);
+        t.same(storage.isClosed(), false, 'is not closed after destroy()');
 
-        t.same(storage.isClosed(), true, 'is closed after close()');
-        await doesNotThrow(t, async () => storage.isClosed(), 'isClosed does not throw');
-
+        await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
         await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
         t.same(storage.isClosed(), true, 'still closed after calling close() twice');
 
-        await doesNotThrow(t, async () => await storage.destroy(), 'can destroy() twice');
-        t.same(storage.isClosed(), true, 'still closed after calling destroy() twice');
+        await throws(t, async () => await storage.destroy(), 'cannot destroy after closing');
 
         // storage is already closed
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)

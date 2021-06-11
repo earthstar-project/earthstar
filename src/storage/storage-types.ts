@@ -155,8 +155,8 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
 
     /**
      * Actually delete and forget data locally.
-     * This also closes if it's not closed already.
-     * This can be called again with no effect.
+     * It's safe to call this twice in a row.
+     * This can't be called if the storage is closed; so do it in this order: destroy(), then close()
      */
     destroy(): Promise<void>;
 

@@ -12,7 +12,6 @@ import {
 } from "../query/query-types";
 import {
     IStorageDriverAsync,
-    QueryResult,
 } from "./storage-types";
 import {
     StorageIsClosedError,
@@ -91,7 +90,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     }
     async destroy(): Promise<void> {
         logger.debug('destroy');
-        await this.close();
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         // this is an in-memory store so we don't really need to delete anything,
         // but this might help free up memory for the garbage collector
         this._configKv = {};

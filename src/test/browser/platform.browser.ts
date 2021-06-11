@@ -17,7 +17,7 @@ export let cryptoDrivers_browserOnly: ICryptoDriver[] = [
 ];
 
 export let storageDriversAsync_browserOnly: ClassThatImplements<IStorageDriverAsync>[] = [
-    StorageDriverLocalStorage
+    //StorageDriverLocalStorage // can't test this yet because the tests don't expect persistence between runs
 ];
 
 //================================================================================

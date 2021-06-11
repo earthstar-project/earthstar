@@ -1,4 +1,5 @@
 import { Doc, Path, WorkspaceAddress } from "../util/doc-types";
+import { StorageIsClosedError } from '../util/errors';
 import { StorageDriverAsyncMemory } from "./storage-driver-async-memory";
 
 type SerializedDriverDocs = {
@@ -7,18 +8,11 @@ type SerializedDriverDocs = {
 };
 
 function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
+    // check if data we've loaded from localStorage is actually in the format we expect
     if (typeof value !== "object") {
         return false;
     }
-
-    if (
-        "byPathAndAuthor" in value &&
-        "byPathNewestFirst" in value
-    ) {
-        return true;
-    }
-
-    return false;
+    return ("byPathAndAuthor" in value && "byPathNewestFirst" in value);
 }
 
 export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
@@ -28,8 +22,10 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     constructor(workspace: WorkspaceAddress) {
         super(workspace);
 
-        this._localStorageKeyConfig = `earthstar:config:${workspace}`;
-        this._localStorageKeyDocs = `earthstar:documents:pathandauthor:${workspace}`;
+        // each config item starts with this prefix and gets its own entry in localstorage
+        this._localStorageKeyConfig = `stonesoup:config:${workspace}`;  // TODO: change this to "earthstar:..." later
+        // all docs are stored inside this one item, as a giant JSON object
+        this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${workspace}`;
 
         let existingData = localStorage.getItem(this._localStorageKeyDocs);
 
@@ -37,6 +33,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
             let parsed = JSON.parse(existingData);
 
             if (!isSerializedDriverDocs(parsed)) {
+                console.warn(`localStorage data could not be parsed for workspace ${workspace}`);
                 return;
             }
 
@@ -45,37 +42,79 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
         }
     }
 
+    //--------------------------------------------------
+    // LIFECYCLE
+
+    // close(): inherited
+    // isClosed(): inherited
+    async destroy(): Promise<void> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+        await super.destroy();
+        localStorage.removeItem(this._localStorageKeyDocs);
+        for (let key of await this.listConfigKeys()) {
+            await this.deleteConfig(key);
+        }
+    }
+
+    //--------------------------------------------------
+    // CONFIG
+
     async getConfig(key: string): Promise<string | undefined> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         key = `${this._localStorageKeyConfig}:${key}`;
         let result = localStorage.getItem(key);
         return result === null ? undefined : result;
     }
     
     async setConfig(key: string, value: string): Promise<void> {
-        super.setConfig(key, value);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+        await super.setConfig(key, value);
 
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.setItem(key, value);
     }
 
+    async listConfigKeys(): Promise<string[]> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+        let keys = Object.keys(localStorage)
+            .filter(key => key.startsWith(this._localStorageKeyConfig + ':'))
+            .map(key => key.slice(this._localStorageKeyConfig.length + 1));
+        keys.sort();
+        return keys;
+    }
+
     async deleteConfig(key: string): Promise<boolean> {
-        let had = super.deleteConfig(key);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+        let hadIt = await super.deleteConfig(key);
         
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.removeItem(key);
         
-        return had;
+        return hadIt;
     }
 
+    //--------------------------------------------------
+    // GET
+
+    // getMaxLocalIndex(): inherited
+    // queryDocs(query: Query): inherited
+
+    //--------------------------------------------------
+    // SET
+
     async upsert(doc: Doc): Promise<Doc> {
-        let upsertedDoc = super.upsert(doc);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
+        let upsertedDoc = await super.upsert(doc);
+
+        // After every upsert, for now, we save everything
+        // to localStorage as a single giant JSON blob.
+        // TODO: debounce this, only do it every 1 second or something
 
         const docsToBeSerialised: SerializedDriverDocs = {
             byPathAndAuthor: Object.fromEntries(this.docByPathAndAuthor),
             byPathNewestFirst: Object.fromEntries(this.docsByPathNewestFirst),
         };
 
-        // Todo: Debouncing of writing in-memory values to localStorage.
         localStorage.setItem(
             this._localStorageKeyDocs,
             JSON.stringify(docsToBeSerialised)
