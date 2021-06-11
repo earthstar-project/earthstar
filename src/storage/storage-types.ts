@@ -153,6 +153,13 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
      */
     close(): Promise<void>;
 
+    /**
+     * Actually delete and forget data locally.
+     * This also closes if it's not closed already.
+     * This can be called again with no effect.
+     */
+    destroy(): Promise<void>;
+
     //--------------------------------------------------
     // GET
 
@@ -201,6 +208,13 @@ export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     isClosed(): boolean;
     // the IStorage will call this
     close(): Promise<void>;
+
+    /**
+     * Actually delete and forget data locally.
+     * This also closes if it's not closed already.
+     * This can be called again with no effect.
+     */
+    destroy(): Promise<void>;
 
     //--------------------------------------------------
     // GET

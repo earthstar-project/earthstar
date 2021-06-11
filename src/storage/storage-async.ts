@@ -122,6 +122,14 @@ export class StorageAsync implements IStorageAsync {
         this.bus.sendLater('didClose');
         logger.debug('...closing done');
     }
+    async destroy(): Promise<void> {
+        logger.debug('destroying...');
+        logger.debug('    destroying: close()...');
+        await this.close();
+        logger.debug('    destroying: driver.destroy()...');
+        await this.storageDriver.destroy();
+        logger.debug('...destroying done');
+    }
 
     //--------------------------------------------------
     // CONFIG

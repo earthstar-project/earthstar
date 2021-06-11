@@ -41,7 +41,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
     /* istanbul ignore next */ 
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    t.test(SUBTEST_NAME + ': empty storage', async (t: any) => {
+    t.test(SUBTEST_NAME + ': empty storage, close', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
@@ -51,6 +51,24 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
 
         await driver.close();
+        t.same(driver.isClosed(), true, 'isClosed');
+
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
+        t.end();
+    });
+
+    t.test(SUBTEST_NAME + ': destroy', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
+        let workspace = '+gardening.abcde';
+        let driver = makeDriver(workspace);
+
+        t.same(driver.getMaxLocalIndex(), -1, 'maxLocalIndex starts at -1');
+        t.same(await driver.queryDocs({}), [], 'query returns empty array');
+
+        await driver.destroy();
+        t.same(driver.isClosed(), true, 'isClosed');
+
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
