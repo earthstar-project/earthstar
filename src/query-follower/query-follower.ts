@@ -33,6 +33,9 @@ let logger = new Logger('QueryFollower', 'redBright');
 
 //================================================================================
 
+/**
+ * @deprecated - replaced with StorageAsync.liveQuery()
+ */
 export class QueryFollower implements IQueryFollower {
     storage: IStorageAsync;
     bus: Superbus<QueryFollowerEvent>;

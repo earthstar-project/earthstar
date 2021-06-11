@@ -10,6 +10,9 @@ import {
 
 export type QueryFollowerEvent = 'close' | 'caught-up';
 
+/**
+ * @deprecated - replaced with StorageAsync.liveQuery()
+ */
 export interface IQueryFollower {
     storage: IStorageAsync;
 
