@@ -1,5 +1,7 @@
 import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
+import { snowmanString, snowmanBytes } from '../test-utils';
+//t.runOnly = true;
 
 let TEST_NAME = 'bytes';
 
@@ -20,16 +22,8 @@ import {
 
 //================================================================================
 
-// use this unicode character for testing
-let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
-let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
-let snowmanBuffer = Buffer.from([0xe2, 0x98, 0x83]);
-
 let simpleString = 'aa';
 let simpleBytes = Uint8Array.from([97, 97]);
-let simpleBuffer = Buffer.from([97, 97]);
-
-//================================================================================
 
 t.test('bytesToString', (t: any) => {
     t.same(bytesToString(simpleBytes), simpleString, 'simple bytes to string');

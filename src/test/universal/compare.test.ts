@@ -20,11 +20,6 @@ import {
 
 //================================================================================
 
-// use this unicode character for testing
-let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
-
-//================================================================================
-
 t.test('compareBasic', (t: any) => {
     type Vector = [a: any, result: any, b: any, sortOrder: SortOrder | undefined, note?: string];
     let vectors: Vector[] = [

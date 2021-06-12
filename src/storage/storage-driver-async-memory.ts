@@ -103,15 +103,19 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     // CONFIG
 
     async getConfig(key: string): Promise<string | undefined> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return this._configKv[key];
     }
     async setConfig(key: string, value: string): Promise<void> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         this._configKv[key] = value;
     }
     async listConfigKeys(): Promise<string[]> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return sortedInPlace(Object.keys(this._configKv));
     }
     async deleteConfig(key: string): Promise<boolean> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         let had = (key in this._configKv);
         delete this._configKv[key];
         return had;
@@ -121,8 +125,8 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     // GET
 
     getMaxLocalIndex() {
-        logger.debug(`getMaxLocalIndex(): it's ${this._maxLocalIndex}`);
         if (this._isClosed) { throw new StorageIsClosedError(); }
+        logger.debug(`getMaxLocalIndex(): it's ${this._maxLocalIndex}`);
         return this._maxLocalIndex;
     }
   

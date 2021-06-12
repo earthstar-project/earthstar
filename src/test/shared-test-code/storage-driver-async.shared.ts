@@ -1,5 +1,6 @@
 import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
+//t.runOnly = true;
 
 import {
     Doc,
@@ -22,12 +23,6 @@ import {
 
 //setDefaultLogLevel(LogLevel.Debug);
 let J = JSON.stringify;
-
-//================================================================================
-
-// use this unicode character for testing
-let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
-let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 
 //================================================================================
 

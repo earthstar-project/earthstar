@@ -135,15 +135,19 @@ export class StorageAsync implements IStorageAsync {
     // CONFIG
 
     async getConfig(key: string): Promise<string | undefined> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.getConfig(key);
     }
     async setConfig(key: string, value: string): Promise<void> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.setConfig(key, value);
     }
     async listConfigKeys(): Promise<string[]> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.listConfigKeys();
     }
     async deleteConfig(key: string): Promise<boolean> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.deleteConfig(key);
     }
 

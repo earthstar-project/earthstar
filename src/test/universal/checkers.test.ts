@@ -1,5 +1,7 @@
 import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
+import { snowmanString } from '../test-utils';
+//t.runOnly = true;
 
 let TEST_NAME = 'checkers';
 
@@ -17,11 +19,6 @@ import {
     checkString,
     isPlainObject
 } from '../../core-validators/checkers';
-
-//================================================================================
-
-// use this unicode character for testing
-let snowmanString = '\u2603';  // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
 
 //================================================================================
 
