@@ -42,7 +42,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
         let author1 = Crypto.generateAuthorKeypair('onee');
-        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
+        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(true); t.end(); return }
 
         interface Vector { query: Query, isValid: Boolean, note?: string };
         let vectors: Vector[] = [
@@ -66,7 +66,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
             else         { throws(      t, makeFollower, 'invalid: ' + (note || J(query))); }
         }
 
-        await storage.close();
+        await storage.close(true);
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
@@ -77,7 +77,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
         let author1 = Crypto.generateAuthorKeypair('onee');
-        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
+        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(true); t.end(); return }
        
         let logs: string[] = [];
         logs.push('-start');
@@ -102,7 +102,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
 
         logs.push('-closing storage');
 
-        await storage.close();
+        await storage.close(true);
         await sleep(20);
 
         logs.push('-end');
@@ -135,7 +135,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
         let author1 = Crypto.generateAuthorKeypair('onee');
-        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
+        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(true); t.end(); return }
        
         let logs: string[] = [];
         logs.push('-start');
@@ -163,7 +163,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
 
         logs.push('-closing storage');
 
-        await storage.close();
+        await storage.close(true);
         await sleep(20);
 
         logs.push('-end');
@@ -194,7 +194,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
         let author1 = Crypto.generateAuthorKeypair('onee');
-        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(); t.end(); return }
+        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(true); t.end(); return }
        
         let logs: string[] = [];
         logs.push('-start');
@@ -221,7 +221,7 @@ export let runQueryFollowerTests = (subtestName: string, makeStorage: (ws: Works
 
         logs.push('-closing storage');
 
-        await storage.close();
+        await storage.close(true);
         await sleep(20);
 
         logs.push('-end');

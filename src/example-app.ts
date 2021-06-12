@@ -190,7 +190,7 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.info('closing storage');
     loggerMain.info('-------------------------------------------')
-    await storage.close();
+    await storage.close(true);  // erase=true for this example, but normally use erase=false
     loggerMain.info('-------------------------------------------')
     loggerMain.blank()
     loggerMain.blank()

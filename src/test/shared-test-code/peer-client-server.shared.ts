@@ -124,8 +124,8 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
         t.same(client.state.serverPeerId, peerOnServer.peerId, 'setState worked');
 
         // close Storages
-        for (let storage of peerOnClient.storages()) { await storage.close(); }
-        for (let storage of peerOnServer.storages()) { await storage.close(); }
+        for (let storage of peerOnClient.storages()) { await storage.close(true); }
+        for (let storage of peerOnServer.storages()) { await storage.close(true); }
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -244,8 +244,8 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
         t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
 
         // close Storages
-        for (let storage of peerOnClient.storages()) { await storage.close(); }
-        for (let storage of peerOnServer.storages()) { await storage.close(); }
+        for (let storage of peerOnClient.storages()) { await storage.close(true); }
+        for (let storage of peerOnServer.storages()) { await storage.close(true); }
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -276,8 +276,8 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
         t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
 
         // close Storages
-        for (let storage of peerOnClient.storages()) { await storage.close(); }
-        for (let storage of peerOnServer.storages()) { await storage.close(); }
+        for (let storage of peerOnClient.storages()) { await storage.close(true); }
+        for (let storage of peerOnServer.storages()) { await storage.close(true); }
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();

@@ -2,6 +2,12 @@ import { Doc, Path, WorkspaceAddress } from "../util/doc-types";
 import { StorageIsClosedError } from '../util/errors';
 import { StorageDriverAsyncMemory } from "./storage-driver-async-memory";
 
+//--------------------------------------------------
+
+import { Logger } from '../util/log';
+let logger = new Logger('storage driver localStorage', 'yellowBright');
+
+//================================================================================
 type SerializedDriverDocs = {
     byPathAndAuthor: Record<string, Doc>;
     byPathNewestFirst: Record<Path, Doc[]>;
@@ -21,15 +27,16 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
 
     constructor(workspace: WorkspaceAddress) {
         super(workspace);
+        logger.debug('constructor');
 
         // each config item starts with this prefix and gets its own entry in localstorage
         this._localStorageKeyConfig = `stonesoup:config:${workspace}`;  // TODO: change this to "earthstar:..." later
-        // all docs are stored inside this one item, as a giant JSON object
+        // but all docs are stored together inside this one item, as a giant JSON object
         this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${workspace}`;
 
         let existingData = localStorage.getItem(this._localStorageKeyDocs);
-
         if (existingData !== null) {
+            logger.debug('...constructor: loading data from localStorage');
             let parsed = JSON.parse(existingData);
 
             if (!isSerializedDriverDocs(parsed)) {
@@ -39,42 +46,56 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
 
             this.docByPathAndAuthor = new Map(Object.entries(parsed.byPathAndAuthor));
             this.docsByPathNewestFirst = new Map(Object.entries(parsed.byPathNewestFirst));
+        } else {
+            logger.debug('...constructor: there was no existing data in localStorage');
         }
+        logger.debug('...constructor is done.');
     }
 
     //--------------------------------------------------
     // LIFECYCLE
 
-    // close(): inherited
     // isClosed(): inherited
-    async erase(): Promise<void> {
+    async close(erase: boolean): Promise<void> {
+        logger.debug('close');
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        await super.erase();
-        localStorage.removeItem(this._localStorageKeyDocs);
-        for (let key of await this.listConfigKeys()) {
-            await this.deleteConfig(key);
+        if (erase) {
+            logger.debug('...close: and erase');
+            this._configKv = {};
+            this._maxLocalIndex = -1;
+            this.docsByPathNewestFirst.clear();
+            this.docByPathAndAuthor.clear();
+
+            logger.debug('...close: erasing localStorage');
+            localStorage.removeItem(this._localStorageKeyDocs);
+            for (let key of this._listConfigKeysSync()) {
+                this._deleteConfigSync(key);
+            }
+            logger.debug('...close: erasing is done');
         }
+        this._isClosed = true;
+        logger.debug('...close is done.');
     }
 
     //--------------------------------------------------
     // CONFIG
 
-    async getConfig(key: string): Promise<string | undefined> {
+    // synchronous versions for internal use
+
+    _getConfigSync(key: string): string | undefined {
         if (this._isClosed) { throw new StorageIsClosedError(); }
         key = `${this._localStorageKeyConfig}:${key}`;
         let result = localStorage.getItem(key);
         return result === null ? undefined : result;
     }
     
-    async setConfig(key: string, value: string): Promise<void> {
+    _setConfigSync(key: string, value: string): void {
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        await super.setConfig(key, value);
-
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.setItem(key, value);
     }
 
-    async listConfigKeys(): Promise<string[]> {
+    _listConfigKeysSync(): string[] {
         if (this._isClosed) { throw new StorageIsClosedError(); }
         let keys = Object.keys(localStorage)
             .filter(key => key.startsWith(this._localStorageKeyConfig + ':'))
@@ -83,14 +104,27 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
         return keys;
     }
 
-    async deleteConfig(key: string): Promise<boolean> {
+    _deleteConfigSync(key: string): boolean {
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        let hadIt = await super.deleteConfig(key);
-        
+        let hadIt = this._getConfigSync(key);
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.removeItem(key);
-        
-        return hadIt;
+        return hadIt !== undefined;
+    }
+
+    // async versions to match the IStorageDriverAsync interface
+
+    async getConfig(key: string): Promise<string | undefined> {
+        return this._getConfigSync(key);
+    }
+    async setConfig(key: string, value: string): Promise<void> {
+        return this._setConfigSync(key, value);
+    }
+    async listConfigKeys(): Promise<string[]> {
+        return await this._listConfigKeysSync();
+    }
+    async deleteConfig(key: string): Promise<boolean> {
+        return this._deleteConfigSync(key);
     }
 
     //--------------------------------------------------

@@ -45,26 +45,8 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(driver.getMaxLocalIndex(), -1, 'maxLocalIndex starts at -1');
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
 
-        await driver.close();
+        await driver.close(true);
         t.same(driver.isClosed(), true, 'isClosed');
-
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
-
-    t.test(SUBTEST_NAME + ': erase', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
-
-        let workspace = '+gardening.abcde';
-        let driver = makeDriver(workspace);
-
-        t.same(driver.getMaxLocalIndex(), -1, 'maxLocalIndex starts at -1');
-        t.same(await driver.queryDocs({}), [], 'query returns empty array');
-
-        await driver.erase();
-        t.same(driver.isClosed(), false, 'not isClosed after erase');
-        await driver.close();
-        t.same(driver.isClosed(), true, 'isClosed after close');
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
@@ -93,7 +75,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(await driver.deleteConfig('a'), false, 'delete returns false if nothing is there');
         t.same(await driver.getConfig('a'), undefined, `getConfig returns undefined after deleting the key`);
 
-        await driver.close();
+        await driver.close(true);
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
@@ -313,7 +295,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
             t.same(actualContent, expectedContent, `query: ${J(query)}`);
         }
 
-        await driver.close();
+        await driver.close(true);
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });

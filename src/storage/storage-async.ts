@@ -79,7 +79,7 @@ let docCompareNewestFirst = (a: Doc, b: Doc): Cmp => {
 }
 
 export class StorageAsync implements IStorageAsync {
-    storageId: StorageId;  // todo: reset this when erased; save it to the driver too...
+    storageId: StorageId;  // todo: save it to the driver too, and reload it when starting up
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
@@ -104,30 +104,19 @@ export class StorageAsync implements IStorageAsync {
     isClosed(): boolean {
         return this._isClosed;
     }
-    async close(): Promise<void> {
+    async close(erase: boolean): Promise<void> {
         logger.debug('closing...');
-        if (this._isClosed) {
-            logger.debug('...already closed.');
-            return;
-        }
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         // TODO: do this all in a lock?
         logger.debug('    sending willClose blockingly...');
         await this.bus.sendAndWait('willClose');
         logger.debug('    marking self as closed...');
         this._isClosed = true;
-        logger.debug('    closing storageDriver...');
-        await this.storageDriver.close();
+        logger.debug(`    closing storageDriver (erase = ${erase})...`);
+        await this.storageDriver.close(erase);
         logger.debug('    sending didClose nonblockingly...');
         this.bus.sendLater('didClose');
         logger.debug('...closing done');
-    }
-    async erase(): Promise<void> {
-        if (this._isClosed) { throw new StorageIsClosedError(); }
-        logger.debug('erase...');
-        logger.debug('    erase: driver.erase()...');
-        await this.storageDriver.erase();
-        // TODO: emit an Erase event on this.bus
-        logger.debug('...erase done');
     }
 
     //--------------------------------------------------

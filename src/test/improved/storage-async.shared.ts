@@ -3,79 +3,43 @@ import { onFinishOneTest } from '../browser-run-exit';
 import { doesNotThrow, throws } from '../test-utils';
 //t.runOnly = true;
 
-import {
-    WorkspaceAddress,
-} from '../../util/doc-types';
-import {
-    IStorageAsync, LiveQueryEvent,
-} from '../../storage/storage-types';
-import {
-    isErr,
-} from '../../util/errors';
-import {
-    microsecondNow, sleep,
-} from '../../util/misc';
+import { WorkspaceAddress } from '../../util/doc-types';
+import { Query } from '../../query/query-types';
+import { IStorageAsync, LiveQueryEvent } from '../../storage/storage-types';
+import { isErr } from '../../util/errors';
+import { microsecondNow, sleep } from '../../util/misc';
 import { Crypto } from '../../crypto/crypto';
 import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
+
+import { StorageTestScenario } from './storage.utils';
 
 //================================================================================
 
 import {
     Logger, LogLevel, setLogLevel,
 } from '../../util/log';
-import { Query } from '../../query/query-types';
-
 let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
-
 //setLogLevel('test', LogLevel.Debug);
 
 //================================================================================
 
-export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
+export let runStorageTests = (scenario: StorageTestScenario) => {
 
-    let TEST_NAME = 'storage shared tests';
-    let SUBTEST_NAME = subtestName;
+    let TEST_NAME = 'storage tests';
+    let SUBTEST_NAME = scenario.name;
 
     // Boilerplate to help browser-run know when this test is completed.
     // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
     /* istanbul ignore next */ 
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    t.test(SUBTEST_NAME + ': config', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
-
-        let workspace = '+gardening.abcde';
-        let storage = makeStorage(workspace);
-
-        // empty...
-        t.same(await storage.getConfig('foo'), undefined, `getConfig('nonexistent') --> undefined`);
-        t.same(await storage.listConfigKeys(), [], `listConfigKeys() is []`);
-        t.same(await storage.deleteConfig('foo'), false, `deleteConfig('nonexistent') --> false`);
-
-        // set some items...
-        await storage.setConfig('b', 'bb');
-        await storage.setConfig('a', 'aa');
-
-        // after adding some items...
-        t.same(await storage.getConfig('a'), 'aa', `getConfig works`);
-        t.same(await storage.listConfigKeys(), ['a', 'b'], `listConfigKeys() is ['a', 'b'] (sorted)`);
-
-        t.same(await storage.deleteConfig('a'), true, 'delete returns true on success');
-        t.same(await storage.deleteConfig('a'), false, 'delete returns false if nothing is there');
-        t.same(await storage.getConfig('a'), undefined, `getConfig returns undefined after deleting the key`);
-
-        await storage.close();
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
-
     t.test(SUBTEST_NAME + ': storage close() and throwing when closed', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
-        let storage = makeStorage(workspace);
+        let storage = scenario.makeStorage(workspace);
         let events: string[] = [];
 
         t.same(typeof storage.storageId, 'string', 'storage has a storageId');
@@ -107,7 +71,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         setTimeout(() => loggerTestCb.debug('--- setTimeout 0 ---'), 0);
 
         loggerTest.debug('closing...');
-        await storage.close();
+        await storage.close(true);
         loggerTest.debug('...done closing');
 
         // wait for didClose to happen on setTimeout
@@ -127,7 +91,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
 
         // TODO: skipping set() and ingest() for now
 
-        await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
+        await throws(t, async () => await storage.close(false), 'cannot close() twice');
         t.same(storage.isClosed(), true, 'still closed after calling close() twice');
 
         t.same(events, ['willClose', 'didClose'], 'no more closing events on second call to close()');
@@ -141,39 +105,15 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': storage erase() and close()', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
-
-        let workspace = '+gardening.abcde';
-        let storage = makeStorage(workspace);
-
-        t.same(typeof storage.storageId, 'string', 'storage has a storageId');
-
-        t.same(storage.isClosed(), false, 'is not initially closed');
-        await doesNotThrow(t, async () => storage.isClosed(), 'isClosed does not throw');
-
-        loggerTest.debug('erase...');
-        await storage.erase();
-        loggerTest.debug('...done erasing');
-
-        t.same(storage.isClosed(), false, 'is not closed after erase()');
-
-        await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
-        await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
-        t.same(storage.isClosed(), true, 'still closed after calling close() twice');
-
-        await throws(t, async () => await storage.erase(), 'cannot erase after closing');
-
-        // storage is already closed
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
+    // TODO: test if erase removes docs (we already tested that it removes config, elsewhere)
+    // TODO: test basic writes
+    // TODO: test querying
 
     t.test(SUBTEST_NAME + ': storage overwriteAllDocsByAuthor', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
-        let storage = makeStorage(workspace);
+        let storage = scenario.makeStorage(workspace);
 
         let keypair1 = Crypto.generateAuthorKeypair('aaaa');
         let keypair2 = Crypto.generateAuthorKeypair('bbbb');
@@ -271,118 +211,117 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.ok(docsB[0].timestamp > docsB[1].timestamp, 'docs are ordered latest first within this path');
         t.same(docsB_actualAuthorAndContent, docsB_expectedAuthorAndContent, '/pathB docs are as expected');
 
-        await storage.close();
+        await storage.close(true);
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': storage liveQuery', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
-
-        loggerTest.debug('begin');
-
-        let logs: string[] = ['-begin'];
-
-        let workspace = '+gardening.abcde';
-        let storage = makeStorage(workspace);
-
-        let keypair1 = Crypto.generateAuthorKeypair('aaaa');
-        let keypair2 = Crypto.generateAuthorKeypair('bbbb');
-        if (isErr(keypair1) || isErr(keypair2)) {
-            t.ok(false, 'error making keypair');
-            t.end();
-            return;
-        }
-
-        let now = microsecondNow();
-        loggerTest.debug('write doc 0');
-        await storage.set(keypair1, {
-            format: 'es.4',
-            path: '/apple',
-            content: 'crunchy0',
-            timestamp: now + 0,
-        });
-
-        loggerTest.debug('write doc 1');
-        await storage.set(keypair1, {
-            format: 'es.4',
-            path: '/cherry',
-            content: 'crispy1',
-            timestamp: now + 1,
-        });
-
-        loggerTest.debug('starting live query');
-        let query: Query = {
-            historyMode: 'all',
-            orderBy: 'localIndex ASC',
-            //filter: { path: '/apple' },
-            startAfter: { localIndex: -1 }, // start at beginning
-        }
-        storage.liveQuery(query, async (event: LiveQueryEvent) => {
-            loggerTestCb.debug('>>>>>>>>>>>>>>>>', event);
-            if (event.kind && event.kind === 'existing') {
-                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
-            } else if (event.kind && event.kind === 'success') {
-                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
-            } else if (event.kind) {
-                logs.push(`${event.kind}`);
-            } else {
-                logs.push(`???`);
-            }
-        });
-
-        loggerTest.debug('write doc 2');
-        await storage.set(keypair2, {
-            format: 'es.4',
-            path: '/apple',
-            content: 'juicy2',
-            timestamp: now + 2,
-        });
-
-        loggerTest.debug('write doc 3');
-        await storage.set(keypair2, {
-            format: 'es.4',
-            path: '/banana',
-            content: 'yellow3',
-            timestamp: now + 3,
-        });
-
-        loggerTest.debug('sleep so live query can catch up');
-        await sleep(10);
-
-        loggerTest.debug('write doc 4');
-        await storage.set(keypair2, {
-            format: 'es.4',
-            path: '/peach',
-            content: 'orange4',
-            timestamp: now + 4,
-        });
-
-        loggerTest.debug('sleep so live query can catch up');
-        await sleep(10);
-
-        loggerTest.debug('close');
-        await storage.close();
-
-        await sleep(100);
-        logs.push('-end');
-        let expectedLogs = [
-            '-begin',
-            'existing: /apple index 0',
-            'existing: /cherry index 1',
-            'existing: /apple index 2',
-            'existing: /banana index 3',
-            'success: /peach index 4',
-            'willClose',
-            'didClose',
-            '-end',
-        ];
-        t.same(logs, expectedLogs, 'logs match');
-
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
-
+//    t.test(SUBTEST_NAME + ': storage liveQuery', async (t: any) => {
+//        let initialCryptoDriver = GlobalCryptoDriver;
+//
+//        loggerTest.debug('begin');
+//
+//        let logs: string[] = ['-begin'];
+//
+//        let workspace = '+gardening.abcde';
+//        let storage = scenario.makeStorage(workspace);
+//
+//        let keypair1 = Crypto.generateAuthorKeypair('aaaa');
+//        let keypair2 = Crypto.generateAuthorKeypair('bbbb');
+//        if (isErr(keypair1) || isErr(keypair2)) {
+//            t.ok(false, 'error making keypair');
+//            t.end();
+//            return;
+//        }
+//
+//        let now = microsecondNow();
+//        loggerTest.debug('write doc 0');
+//        await storage.set(keypair1, {
+//            format: 'es.4',
+//            path: '/apple',
+//            content: 'crunchy0',
+//            timestamp: now + 0,
+//        });
+//
+//        loggerTest.debug('write doc 1');
+//        await storage.set(keypair1, {
+//            format: 'es.4',
+//            path: '/cherry',
+//            content: 'crispy1',
+//            timestamp: now + 1,
+//        });
+//
+//        loggerTest.debug('starting live query');
+//        let query: Query = {
+//            historyMode: 'all',
+//            orderBy: 'localIndex ASC',
+//            //filter: { path: '/apple' },
+//            startAfter: { localIndex: -1 }, // start at beginning
+//        }
+//        storage.liveQuery(query, async (event: LiveQueryEvent) => {
+//            loggerTestCb.debug('>>>>>>>>>>>>>>>>', event);
+//            if (event.kind && event.kind === 'existing') {
+//                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
+//            } else if (event.kind && event.kind === 'success') {
+//                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
+//            } else if (event.kind) {
+//                logs.push(`${event.kind}`);
+//            } else {
+//                logs.push(`???`);
+//            }
+//        });
+//
+//        loggerTest.debug('write doc 2');
+//        await storage.set(keypair2, {
+//            format: 'es.4',
+//            path: '/apple',
+//            content: 'juicy2',
+//            timestamp: now + 2,
+//        });
+//
+//        loggerTest.debug('write doc 3');
+//        await storage.set(keypair2, {
+//            format: 'es.4',
+//            path: '/banana',
+//            content: 'yellow3',
+//            timestamp: now + 3,
+//        });
+//
+//        loggerTest.debug('sleep so live query can catch up');
+//        await sleep(10);
+//
+//        loggerTest.debug('write doc 4');
+//        await storage.set(keypair2, {
+//            format: 'es.4',
+//            path: '/peach',
+//            content: 'orange4',
+//            timestamp: now + 4,
+//        });
+//
+//        loggerTest.debug('sleep so live query can catch up');
+//        await sleep(10);
+//
+//        loggerTest.debug('close');
+//        await storage.close();
+//
+//        await sleep(100);
+//        logs.push('-end');
+//        let expectedLogs = [
+//            '-begin',
+//            'existing: /apple index 0',
+//            'existing: /cherry index 1',
+//            'existing: /apple index 2',
+//            'existing: /banana index 3',
+//            'success: /peach index 4',
+//            'willClose',
+//            'didClose',
+//            '-end',
+//        ];
+//        t.same(logs, expectedLogs, 'logs match');
+//
+//        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
+//        t.end();
+//    });
 
     // TODO: more StorageAsync tests
 };

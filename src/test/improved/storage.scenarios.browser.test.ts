@@ -16,6 +16,7 @@ import { StorageTestScenario } from './storage.utils';
 
 // tests
 import { runStorageConfigTests } from './storage-config.shared';
+import { runStorageTests } from './storage-async.shared';
 
 //================================================================================
 
@@ -46,4 +47,5 @@ let scenarios: StorageTestScenario[] = [
 
 for (let scenario of scenarios) {
     runStorageConfigTests(scenario);
+    runStorageTests(scenario);
 }

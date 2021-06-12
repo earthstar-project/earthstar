@@ -65,8 +65,8 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
             await syncLocal(storageAdd, storageSync);
         });
 
-        await storageAdd.close();
-        await storageSync.close();
+        await storageAdd.close(true);
+        await storageSync.close(true);
 
         runner.note('');
     }

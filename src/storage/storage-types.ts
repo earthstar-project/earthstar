@@ -142,23 +142,21 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
      * close()
      *   * send StorageWillClose events and wait for event receivers to finish blocking.
      *   * close the IStorage
-     *   * close the IStorageDriver
+     *   * close the IStorageDriver and possibly erase it
      *   * send StorageDidClose events and do not wait for event receivers.
      * 
      * Any function called after the storage is closed will throw a StorageIsClosedError,
-     *  except isClosed() is always allowed, and close() can be called multiple times.
+     *  except isClosed() is always allowed.
+     * 
+     * You cannot call close() if the storage is already closed (it will throw a StorageIsClosedError).
      * 
      * close() can happen while set() or ingest() are waiting for locks or have pending transactions.
      * In that case, the pending operations will fail and throw a storageIsClosed.
+     * 
+     * If erase is true, actually delete and forget the local data (remove files, etc).
+     * Erase defaults to false if not provided.
      */
-    close(): Promise<void>;
-
-    /**
-     * Actually delete and forget data locally.
-     * It's safe to call this twice in a row.
-     * This can't be called if the storage is closed; so do it in this order: erase(), then close()
-     */
-    erase(): Promise<void>;
+    close(erase: boolean): Promise<void>;
 
     //--------------------------------------------------
     // GET
@@ -197,6 +195,12 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
     overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError>;
 }
 
+/**
+ * A storageDriver provides low-level access to actual storage and is used by
+ * IStorageAsync to actually load and save data.
+ * StorageDrivers are not meant to be used directly by users; let the IStorageAsync
+ * talk to it for you.
+ */
 export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     workspace: WorkspaceAddress;
 
@@ -206,15 +210,14 @@ export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     // TODO: hatch (and load maxLocalIndex)
 
     isClosed(): boolean;
-    // the IStorage will call this
-    close(): Promise<void>;
-
     /**
-     * Actually delete and forget data locally.
-     * This also closes if it's not closed already.
-     * This can be called again with no effect.
+     * Close the storageDriver.
+     * The Storage will call this.
+     * You cannot call close() if the storage is already closed (it will throw a StorageIsClosedError).
+     * If erase, actually delete and forget data locally.
+     * Erase defaults to false if not provided.
      */
-    erase(): Promise<void>;
+    close(erase: boolean): Promise<void>;
 
     //--------------------------------------------------
     // GET
