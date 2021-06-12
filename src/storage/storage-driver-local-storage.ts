@@ -47,9 +47,9 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
 
     // close(): inherited
     // isClosed(): inherited
-    async destroy(): Promise<void> {
+    async erase(): Promise<void> {
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        await super.destroy();
+        await super.erase();
         localStorage.removeItem(this._localStorageKeyDocs);
         for (let key of await this.listConfigKeys()) {
             await this.deleteConfig(key);

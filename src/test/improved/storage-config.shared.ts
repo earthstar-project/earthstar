@@ -51,8 +51,8 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
         let workspace = '+gardening.abcde';
         let storage = makeStorageOrDriver(workspace);
 
-        // set, get, list, delete
-        // close, destroy
+        // methods in common between Storage and StorageDriver:
+        // set, get, list, delete, erase, close
 
         // empty...
         t.same(await storage.getConfig('a'), undefined, `getConfig('nonexistent') --> undefined`);
@@ -86,12 +86,12 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
         await throws(t, async () => { await storage.getConfig('b'); }, 'getConfig should throw if used after close()');
         await throws(t, async () => { await storage.listConfigKeys(); }, 'listConfigKeys should throw if used after close()');
         await throws(t, async () => { await storage.deleteConfig('b'); }, 'deleteConfig should throw if used after close()');
-        await throws(t, async () => { await storage.destroy(); }, 'destroy should throw if used after close()');
+        await throws(t, async () => { await storage.erase(); }, 'erase should throw if used after close()');
 
-        // make a new one so we can destroy it to clean up
+        // make a new one so we can erase it to clean up
         let storage2 = makeStorageOrDriver(workspace);
-        await storage2.destroy();
-        await storage2.destroy();
+        await storage2.erase();
+        await storage2.erase();
         await storage2.close();
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
@@ -120,14 +120,14 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
             t.same(await storage2.getConfig('a'), undefined, 'this kind of storage should not persist after close');
         }
 
-        await storage2.destroy();
+        await storage2.erase();
         await storage2.close();
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': config destroy should delete data', async (t: any) => {
+    t.test(SUBTEST_NAME + ': config erase should delete data', async (t: any) => {
         setGlobalCryptoDriver(scenario.cryptoDriver);
         let initialCryptoDriver = GlobalCryptoDriver;
 
@@ -137,44 +137,44 @@ let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | '
         // set an item
         await storage1.setConfig('a', 'aa');
 
-        // destroy, then reopen the same workspace.  this should also close it.
-        await storage1.destroy();
-        t.same(storage1.isClosed(), false, 'destroying should not close');
+        // erase, then reopen the same workspace.  this should also close it.
+        await storage1.erase();
+        t.same(storage1.isClosed(), false, 'erase should not close');
         await storage1.close();
         t.same(storage1.isClosed(), true, 'closing should close');
 
         // re-open.  data should be gone
         let storage2 = makeStorageOrDriver(workspace);
-        t.same(await storage2.getConfig('a'), undefined, 'destroy has emptied out the data');
+        t.same(await storage2.getConfig('a'), undefined, 'erase has emptied out the data');
 
-        await storage2.destroy();
+        await storage2.erase();
         await storage2.close();
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': config destroy edge cases', async (t: any) => {
+    t.test(SUBTEST_NAME + ': config erase edge cases', async (t: any) => {
         setGlobalCryptoDriver(scenario.cryptoDriver);
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
 
-        // can destroy then close
+        // can erase then close
         let storage1 = makeStorageOrDriver(workspace);
         await storage1.setConfig('x', 'xx');
-        await storage1.destroy();
+        await storage1.erase();
         await storage1.close();
 
         let storage1b = makeStorageOrDriver(workspace);
-        t.same(await storage1b.getConfig('x'), undefined, 'destroy then close');
-        await storage1b.destroy();
+        t.same(await storage1b.getConfig('x'), undefined, 'erase then close');
+        await storage1b.erase();
         await storage1b.close();
 
-        // can close then destroy
+        // cannot close then erase
         let storage2 = makeStorageOrDriver(workspace);
         await storage2.close();
-        await throws(t, () => storage2.destroy(), 'destroy after close will throw');
+        await throws(t, () => storage2.erase(), 'erase after close will throw');
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();

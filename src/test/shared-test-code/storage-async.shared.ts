@@ -141,7 +141,7 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': storage destroy() and close()', async (t: any) => {
+    t.test(SUBTEST_NAME + ': storage erase() and close()', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
@@ -152,17 +152,17 @@ export let runStorageTests = (subtestName: string, makeStorage: (ws: WorkspaceAd
         t.same(storage.isClosed(), false, 'is not initially closed');
         await doesNotThrow(t, async () => storage.isClosed(), 'isClosed does not throw');
 
-        loggerTest.debug('destroying...');
-        await storage.destroy();
-        loggerTest.debug('...done destroying');
+        loggerTest.debug('erase...');
+        await storage.erase();
+        loggerTest.debug('...done erasing');
 
-        t.same(storage.isClosed(), false, 'is not closed after destroy()');
+        t.same(storage.isClosed(), false, 'is not closed after erase()');
 
         await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
         await doesNotThrow(t, async () => await storage.close(), 'can close() twice');
         t.same(storage.isClosed(), true, 'still closed after calling close() twice');
 
-        await throws(t, async () => await storage.destroy(), 'cannot destroy after closing');
+        await throws(t, async () => await storage.erase(), 'cannot erase after closing');
 
         // storage is already closed
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)

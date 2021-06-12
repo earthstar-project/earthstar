@@ -79,7 +79,7 @@ let docCompareNewestFirst = (a: Doc, b: Doc): Cmp => {
 }
 
 export class StorageAsync implements IStorageAsync {
-    storageId: StorageId;
+    storageId: StorageId;  // todo: reset this when erased; save it to the driver too...
     workspace: WorkspaceAddress;
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
@@ -121,12 +121,13 @@ export class StorageAsync implements IStorageAsync {
         this.bus.sendLater('didClose');
         logger.debug('...closing done');
     }
-    async destroy(): Promise<void> {
+    async erase(): Promise<void> {
         if (this._isClosed) { throw new StorageIsClosedError(); }
-        logger.debug('destroying...');
-        logger.debug('    destroying: driver.destroy()...');
-        await this.storageDriver.destroy();
-        logger.debug('...destroying done');
+        logger.debug('erase...');
+        logger.debug('    erase: driver.erase()...');
+        await this.storageDriver.erase();
+        // TODO: emit an Erase event on this.bus
+        logger.debug('...erase done');
     }
 
     //--------------------------------------------------

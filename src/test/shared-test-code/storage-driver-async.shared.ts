@@ -52,7 +52,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': destroy', async (t: any) => {
+    t.test(SUBTEST_NAME + ': erase', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
@@ -61,8 +61,8 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(driver.getMaxLocalIndex(), -1, 'maxLocalIndex starts at -1');
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
 
-        await driver.destroy();
-        t.same(driver.isClosed(), false, 'not isClosed after destroy');
+        await driver.erase();
+        t.same(driver.isClosed(), false, 'not isClosed after erase');
         await driver.close();
         t.same(driver.isClosed(), true, 'isClosed after close');
 

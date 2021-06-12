@@ -88,12 +88,13 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         logger.debug('close');
         this._isClosed = true;
     }
-    async destroy(): Promise<void> {
-        logger.debug('destroy');
+    async erase(): Promise<void> {
+        logger.debug('erase');
         if (this._isClosed) { throw new StorageIsClosedError(); }
         // this is an in-memory store so we don't really need to delete anything,
         // but this might help free up memory for the garbage collector
         this._configKv = {};
+        this._maxLocalIndex = -1;
         this.docsByPathNewestFirst.clear();
         this.docByPathAndAuthor.clear();
     }
