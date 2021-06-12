@@ -23,7 +23,6 @@ import {
 import {
     IStorageAsync,
     IStorageDriverAsync,
-    QueryResult,
     StorageBusChannel,
     StorageId,
     IngestEvent,
@@ -123,9 +122,8 @@ export class StorageAsync implements IStorageAsync {
         logger.debug('...closing done');
     }
     async destroy(): Promise<void> {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         logger.debug('destroying...');
-        logger.debug('    destroying: close()...');
-        await this.close();
         logger.debug('    destroying: driver.destroy()...');
         await this.storageDriver.destroy();
         logger.debug('...destroying done');
@@ -156,6 +154,7 @@ export class StorageAsync implements IStorageAsync {
 
     // one of the few that's synchronous
     getMaxLocalIndex(): number {
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return this.storageDriver.getMaxLocalIndex();
     }
 
@@ -212,6 +211,7 @@ export class StorageAsync implements IStorageAsync {
 
     async queryDocs(query: Query = {}): Promise<Doc[]> {
         logger.debug(`queryDocs`, query);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         return await this.storageDriver.queryDocs(query);
     }
 
@@ -282,6 +282,7 @@ export class StorageAsync implements IStorageAsync {
      */
     async liveQuery(query: Query, cb: (event: LiveQueryEvent) => Promise<void>): Promise<Thunk> {
         loggerLiveQuery.debug(`starting live query: ${J(query)}`);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
 
         // enforce rules on supported queries
         if (query.historyMode !== 'all') { throw new NotImplementedError(`live query historyMode must be 'all'`); }
@@ -582,6 +583,7 @@ export class StorageAsync implements IStorageAsync {
     // return the number of docs changed, or -1 if error.
     async overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError> {
         logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
+        if (this._isClosed) { throw new StorageIsClosedError(); }
         // TODO: do this in batches
         let docsToOverwrite = await this.queryDocs({
             filter: { author: keypair.address, },

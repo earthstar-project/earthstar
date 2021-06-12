@@ -8,6 +8,7 @@ import {
     cryptoDrivers_universal,
     storageDriversAsync_universal,
 } from '../universal/platform.universal';
+import { StorageDriverLocalStorage } from '../../storage/storage-driver-local-storage';
 
 //================================================================================
 
@@ -16,6 +17,7 @@ export let cryptoDrivers_browserOnly: ICryptoDriver[] = [
 ];
 
 export let storageDriversAsync_browserOnly: ClassThatImplements<IStorageDriverAsync>[] = [
+    //StorageDriverLocalStorage // can't test this yet because the tests don't expect persistence between runs
 ];
 
 //================================================================================

@@ -62,7 +62,9 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
 
         await driver.destroy();
-        t.same(driver.isClosed(), true, 'isClosed');
+        t.same(driver.isClosed(), false, 'not isClosed after destroy');
+        await driver.close();
+        t.same(driver.isClosed(), true, 'isClosed after close');
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
