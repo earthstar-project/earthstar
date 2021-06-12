@@ -95,6 +95,11 @@ export let runStorageAsyncTests = (scenario: TestScenario) => {
         await throws(t, async () => await storage.getAllDocsAtPath('/a'), 'throws after closed');
         await throws(t, async () => await storage.getLatestDocAtPath('/a'), 'throws after closed');
         await throws(t, async () => await storage.queryDocs(), 'throws after closed');
+        await throws(t, async () => storage.getMaxLocalIndex(), 'throws after closed');
+        await throws(t, async () => await storage.liveQuery({}, async () => {}), 'throws after closed');
+        await throws(t, async () => await storage.set({} as any, {} as any), 'throws after closed');
+        await throws(t, async () => await storage.ingest({} as any), 'throws after closed');
+        await throws(t, async () => await storage.overwriteAllDocsByAuthor({} as any), 'throws after closed');
 
         // TODO: skipping set() and ingest() for now
 
@@ -257,6 +262,33 @@ export let runStorageAsyncTests = (scenario: TestScenario) => {
             content: 'crispy1',
             timestamp: now + 1,
         });
+
+        loggerTest.debug('testing disallowed live queries');
+        await throws(t, async () => {
+            let query: Query = {
+                historyMode: 'latest',
+                orderBy: 'localIndex ASC',
+                startAfter: { localIndex: -1 }, // start at beginning
+            }
+            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
+        }, 'liveQuery does not allow historyMode latest');
+        await throws(t, async () => {
+            let query: Query = {
+                historyMode: 'all',
+                orderBy: 'localIndex DESC',
+                startAfter: { localIndex: -1 }, // start at beginning
+            }
+            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
+        }, 'liveQuery requires orderBy localIndex ASC');
+        await throws(t, async () => {
+            let query: Query = {
+                historyMode: 'all',
+                orderBy: 'localIndex ASC',
+                startAfter: { localIndex: -1 }, // start at beginning
+                limit: 123,
+            }
+            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
+        }, 'liveQuery may not have a limit');
 
         loggerTest.debug('starting live query');
         let query: Query = {

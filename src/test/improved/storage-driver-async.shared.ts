@@ -1,5 +1,6 @@
 import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
+import { throws } from '../test-utils';
 //t.runOnly = true;
 
 import { Doc } from '../../util/doc-types';
@@ -40,6 +41,10 @@ export let runStorageDriverTests = (scenario: TestScenario) => {
 
         await driver.close(true);
         t.same(driver.isClosed(), true, 'isClosed');
+
+        await throws(t, async () => driver.getMaxLocalIndex(), 'getMaxLocalIndex throws when closed');
+        await throws(t, async () => await driver.queryDocs({}), 'queryDocs throws when closed');
+        await throws(t, async () => await driver.upsert({} as any), 'upsert throws when closed');
 
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();

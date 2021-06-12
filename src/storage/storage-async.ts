@@ -416,7 +416,6 @@ export class StorageAsync implements IStorageAsync {
         if (this._isClosed) { throw new StorageIsClosedError(); }
 
         loggerSet.debug('...deciding timestamp: getting latest doc at the same path (from any author)');
-        if (this._isClosed) { throw new StorageIsClosedError(); }
 
         let timestamp: number;
         if (typeof docToSet.timestamp === 'number') {
