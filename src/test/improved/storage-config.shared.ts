@@ -6,8 +6,10 @@ import { throws } from '../test-utils';
 import { WorkspaceAddress } from '../../util/doc-types';
 import { IStorageAsync, IStorageDriverAsync } from '../../storage/storage-types';
 import { GlobalCryptoDriver, setGlobalCryptoDriver } from '../../crypto/global-crypto-driver';
+import { FormatValidatorEs4 } from '../../format-validators/format-validator-es4';
+import { StorageAsync } from '../../storage/storage-async';
 
-import { StorageTestScenario } from './storage.utils';
+import { TestScenario } from './test-scenario-types';
 
 //================================================================================
 
@@ -25,18 +27,18 @@ let J = JSON.stringify;
 // so we run the entire thing twice -- once running the tests on a Storage, and once
 // on its StorageDriver directly.
 
-export let runStorageConfigTests = (scenario: StorageTestScenario) => {
+export let runStorageConfigTests = (scenario: TestScenario) => {
     _runStorageConfigTests(scenario, 'storage');
     _runStorageConfigTests(scenario, 'storageDriver');
 }
 
-let _runStorageConfigTests = (scenario: StorageTestScenario, mode: 'storage' | 'storageDriver') => {
+let _runStorageConfigTests = (scenario: TestScenario, mode: 'storage' | 'storageDriver') => {
     let TEST_NAME = 'storage config tests';
     let SUBTEST_NAME = `${scenario.name} (${mode} mode)`;
 
     let makeStorageOrDriver = (ws: WorkspaceAddress): IStorageAsync | IStorageDriverAsync => {
-        let storage = scenario.makeStorage(ws);
-        return mode === 'storage' ? storage : storage.storageDriver;
+        let driver = scenario.makeDriver(ws);
+        return mode === 'storage' ? new StorageAsync(ws, FormatValidatorEs4, driver) : driver;
     }
 
     // Boilerplate to help browser-run know when this test is completed.

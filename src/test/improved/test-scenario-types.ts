@@ -1,8 +1,8 @@
 import { WorkspaceAddress } from '../../util/doc-types';
 import { ICryptoDriver } from '../../crypto/crypto-types';
-import { IStorageAsync } from '../../storage/storage-types';
+import { IStorageDriverAsync } from '../../storage/storage-types';
 
-export interface StorageTestScenario {
+export interface TestScenario {
     // name of test, to show in list of tests
     name: string,
 
@@ -21,5 +21,5 @@ export interface StorageTestScenario {
 
     // in here you will instantiate a StorageDriver and then
     // use it to instantiate a Storage:
-    makeStorage: (ws: WorkspaceAddress) => IStorageAsync;
+    makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync;
 }

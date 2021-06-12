@@ -2,17 +2,11 @@ import t = require('tap');
 import { onFinishOneTest } from '../browser-run-exit';
 //t.runOnly = true;
 
-import {
-    Doc,
-    WorkspaceAddress,
-} from '../../util/doc-types';
-import {
-    Query,
-} from '../../query/query-types';
-import {
-    IStorageDriverAsync,
-} from '../../storage/storage-types';
+import { Doc } from '../../util/doc-types';
+import { Query } from '../../query/query-types';
 import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
+
+import { TestScenario } from './test-scenario-types';
 
 //================================================================================
 
@@ -20,16 +14,15 @@ import {
     LogLevel,
     setDefaultLogLevel,
 } from '../../util/log';
-
 //setDefaultLogLevel(LogLevel.Debug);
 let J = JSON.stringify;
 
 //================================================================================
 
-export let runStorageDriverTests = (driverName: string, makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync) => {
+export let runStorageDriverTests = (scenario: TestScenario) => {
 
     let TEST_NAME = 'storage-driver shared tests';
-    let SUBTEST_NAME = driverName;
+    let SUBTEST_NAME = scenario.name;
 
     // Boilerplate to help browser-run know when this test is completed.
     // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
@@ -40,7 +33,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
-        let driver = makeDriver(workspace);
+        let driver = scenario.makeDriver(workspace);
 
         t.same(driver.getMaxLocalIndex(), -1, 'maxLocalIndex starts at -1');
         t.same(await driver.queryDocs({}), [], 'query returns empty array');
@@ -56,7 +49,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
-        let driver = makeDriver(workspace);
+        let driver = scenario.makeDriver(workspace);
 
         // empty...
         t.same(await driver.getConfig('foo'), undefined, `getConfig('nonexistent') --> undefined`);
@@ -84,7 +77,7 @@ export let runStorageDriverTests = (driverName: string, makeDriver: (ws: Workspa
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
-        let driver = makeDriver(workspace);
+        let driver = scenario.makeDriver(workspace);
 
         let doc0: Doc = {
             format: 'es.4',
