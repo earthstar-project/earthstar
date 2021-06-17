@@ -69,6 +69,7 @@
     "test-lock": "tap               -Rspecy --no-bail --jobs=1 build/test/universal/lock.test.js",
     "test-peer-client-server": "tap -Rspecy --no-bail --jobs=1 build/test/node/peer-client-server.node.test.js",
     "test-query-follower": "tap     -Rspecy --no-coverage --no-bail --jobs=1 build/test/node/query-follower.node.test.js",
+    "test-query-follower-3": "tap   -Rspecy --no-coverage --no-bail --jobs=1 build/test/improved/query-follower.node.test.js",
     "test-storage": "tap            -Rspecy --no-bail --jobs=1 build/test/node/storage-async.node.test.js",
     "test-storage-driver": "tap     -Rspecy --no-bail --jobs=1 build/test/node/storage-driver-async.node.test.js",
     "prepublishOnly": "yarn clean && yarn esbuild",

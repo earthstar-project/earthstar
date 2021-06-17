@@ -102,16 +102,26 @@ export interface StorageEventDidClose {
     kind: 'didClose',
 }
 
+export interface QueryFollower3DidClose {
+    kind: 'queryFollower3DidClose',
+}
+
+export interface IdleEvent {
+    kind: 'idle',
+}
+
 export type IngestEvent =
     IngestEventFailure |
     IngestEventNothingHappened |
     IngestEventSuccess;
 
 export type LiveQueryEvent =
-    IngestEvent |
-    DocAlreadyExists |
+    DocAlreadyExists |  // catching up...
+    IdleEvent |  // waiting for an ingest to happen...
+    IngestEvent |  // an ingest happened
     StorageEventWillClose |
-    StorageEventDidClose;
+    StorageEventDidClose |
+    QueryFollower3DidClose;
 
 //================================================================================
 
