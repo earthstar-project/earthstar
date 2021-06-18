@@ -183,8 +183,6 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
 
     queryDocs(query?: Query): Promise<Doc[]>;
 
-    liveQuery(query: Query, cb: (event: LiveQueryEvent) => Promise<void>): Promise<Thunk>;  // unsub
-
 //    queryPaths(query?: Query): Path[];
 //    queryAuthors(query?: Query): AuthorAddress[];
 

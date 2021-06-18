@@ -17,7 +17,7 @@ import {
     Crypto,
 } from './crypto/crypto';
 import {
-    QueryFollower,
+    QueryFollower3,
 } from './query-follower/query-follower';
 import {
     Peer
@@ -31,6 +31,7 @@ import {
     setDefaultLogLevel,
     setLogLevel
 } from './util/log';
+import { LiveQueryEvent } from './storage/storage-types';
 
 let loggerMain = new Logger('main', 'whiteBright');
 let loggerBusEvents = new Logger('main storage bus events', 'white');
@@ -81,19 +82,25 @@ let main = async () => {
     loggerMain.info('-----------\\')
     loggerMain.info('adding a queryFollower');
     // add a QueryFollower
-    let qf1 = new QueryFollower(
+    let qf1 = new QueryFollower3(
         storage,
         {
             historyMode: 'all', orderBy: 'localIndex ASC',
             //startAfter: { localIndex: 1 },
             //filter: { path: '/posts/post-0001.txt' },
-        },
-        async (doc): Promise<void> => {
-            loggerQueryFollowerCallbacks1.debug('got a doc', doc);
         }
     );
-    qf1.bus.on('caught-up', () => loggerQueryFollowerCallbacks1.debug('caught-up'));
-    qf1.bus.on('close', () => loggerQueryFollowerCallbacks1.debug('close'));
+    qf1.bus.on(async (event: LiveQueryEvent) => {
+        if (event.kind === 'existing') {
+            loggerQueryFollowerCallbacks1.debug('got an existing doc', event.doc);
+        } else if (event.kind === 'idle') {
+            loggerQueryFollowerCallbacks1.debug('query follower is caught up, switching to live mode');
+        } else if (event.kind === 'success') {
+            loggerQueryFollowerCallbacks1.debug('got a new doc', event.doc);
+        } else if (event.kind === 'queryFollower3DidClose') {
+            loggerQueryFollowerCallbacks1.debug('query follower closed');
+        }
+    });
     loggerMain.info('hatching it');
     await qf1.hatch();
     loggerMain.info('-----------/')
@@ -136,19 +143,25 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.info('-----------\\')
     loggerMain.info('adding a queryFollower');
-    let qf2 = new QueryFollower(
+    let qf2 = new QueryFollower3(
         storage,
         {
             historyMode: 'all', orderBy: 'localIndex ASC',
             //startAfter: { localIndex: 1 },
             //filter: { path: '/posts/post-0000.txt' },
-        },
-        async (doc): Promise<void> => {
-            loggerQueryFollowerCallbacks2.debug('got a doc', doc);
         }
     );
-    qf2.bus.on('caught-up', () => loggerQueryFollowerCallbacks2.debug('caught-up'));
-    qf2.bus.on('close', () => loggerQueryFollowerCallbacks2.debug('close'));
+    qf2.bus.on(async (event: LiveQueryEvent) => {
+        if (event.kind === 'existing') {
+            loggerQueryFollowerCallbacks2.debug('got an existing doc', event.doc);
+        } else if (event.kind === 'idle') {
+            loggerQueryFollowerCallbacks2.debug('query follower is caught up, switching to live mode');
+        } else if (event.kind === 'success') {
+            loggerQueryFollowerCallbacks2.debug('got a new doc', event.doc);
+        } else if (event.kind === 'queryFollower3DidClose') {
+            loggerQueryFollowerCallbacks2.debug('query follower closed');
+        }
+    });
     loggerMain.info('hatching it');
     await qf2.hatch();
     loggerMain.info('-----------/')

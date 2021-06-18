@@ -26,8 +26,8 @@ let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
 
-setLogLevel('test', LogLevel.Debug);
-setLogLevel('test cb', LogLevel.Debug);
+//setLogLevel('test', LogLevel.Debug);
+//setLogLevel('test cb', LogLevel.Debug);
 
 //================================================================================
 
@@ -45,6 +45,41 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
         let driver = scenario.makeDriver(ws);
         return new StorageAsync(ws, FormatValidatorEs4, driver);
     }
+
+    t.test(SUBTEST_NAME + ': QueryFollower3 query rules', async (t: any) => {
+        let initialCryptoDriver = GlobalCryptoDriver;
+
+        let workspace = '+gardening.abcde';
+        let storage = makeStorage(workspace);
+        let author1 = Crypto.generateAuthorKeypair('onee');
+        if (isErr(author1)) { t.ok(false, 'generate author failed'); await storage.close(true); t.end(); return }
+
+        interface Vector { query: Query, isValid: Boolean, note?: string };
+        let vectors: Vector[] = [
+            { isValid: true,  query: { historyMode: 'all',    orderBy: 'localIndex ASC' } },
+            { isValid: true,  query: { historyMode: 'all',    orderBy: 'localIndex ASC', startAfter: { localIndex: 123 }  } },
+            { isValid: true,  query: { historyMode: 'all',    orderBy: 'localIndex ASC', filter: { path: '/foo/' }  } },
+
+            { isValid: false, query: { historyMode: 'latest', orderBy: 'localIndex ASC' } },
+            { isValid: false, query: { historyMode: 'all',    orderBy: 'localIndex DESC' } },
+            { isValid: false, query: { historyMode: 'all',    orderBy: 'localIndex ASC', limit: 123 } },
+            { isValid: false, query: {                        orderBy: 'localIndex ASC' } },
+            { isValid: false, query: { historyMode: 'all',                              } },
+            { isValid: false, query: {                                                  } },
+        ];
+
+        for (let { query, isValid, note } of vectors) {
+            let makeFollower = async () => {
+                let qf = new QueryFollower3(storage, query);
+            };
+            if (isValid) { doesNotThrow(t, makeFollower, 'valid:   ' + (note || J(query))); }
+            else         { throws(      t, makeFollower, 'invalid: ' + (note || J(query))); }
+        }
+
+        await storage.close(true);
+        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
+        t.end();
+    });
 
     t.test(SUBTEST_NAME + ': QueryFollower3 basics', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
@@ -72,7 +107,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
                 orderBy: 'localIndex ASC',
                 startAfter: { localIndex: -1 }, // start at beginning
             }
-            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
+            let qf = new QueryFollower3(storage, query);
         }, 'liveQuery does not allow historyMode latest');
         await throws(t, async () => {
             let query: Query = {
@@ -80,7 +115,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
                 orderBy: 'localIndex DESC',
                 startAfter: { localIndex: -1 }, // start at beginning
             }
-            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
+            let qf = new QueryFollower3(storage, query);
         }, 'liveQuery requires orderBy localIndex ASC');
         await throws(t, async () => {
             let query: Query = {
@@ -89,7 +124,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
                 startAfter: { localIndex: -1 }, // start at beginning
                 limit: 123,
             }
-            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
+            let qf = new QueryFollower3(storage, query);
         }, 'liveQuery may not have a limit');
 
 
