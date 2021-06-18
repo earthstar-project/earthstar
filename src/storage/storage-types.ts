@@ -102,8 +102,8 @@ export interface StorageEventDidClose {
     kind: 'didClose',
 }
 
-export interface QueryFollower3DidClose {
-    kind: 'queryFollower3DidClose',
+export interface QueryFollowerDidClose {
+    kind: 'queryFollowerDidClose',
 }
 
 export interface IdleEvent {
@@ -121,7 +121,7 @@ export type LiveQueryEvent =
     IngestEvent |  // an ingest happened
     StorageEventWillClose |
     StorageEventDidClose |
-    QueryFollower3DidClose;
+    QueryFollowerDidClose;
 
 //================================================================================
 

@@ -5,7 +5,7 @@ import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types";
 import { isErr, StorageIsClosedError } from "../util/errors";
 import { microsecondNow } from "../util/misc";
 import { docMatchesFilter, cleanUpQuery } from "../query/query";
-import { QueryFollower3 } from "../query-follower/query-follower";
+import { QueryFollower } from "../query-follower/query-follower";
 import { Query } from "../query/query-types";
 import { IngestEvent, IStorageAsync, LiveQueryEvent } from "./storage-types";
 import { Crypto } from '../crypto/crypto';
@@ -88,7 +88,7 @@ export class StorageCache {
 
   _docCache = new Map<
     string,
-    { docs: Doc[]; follower: QueryFollower3; expires: number }
+    { docs: Doc[]; follower: QueryFollower; expires: number }
   >();
 
   _timeToLive: number;
@@ -183,7 +183,7 @@ export class StorageCache {
       return cachedResult.docs;
     }
 
-    let follower = new QueryFollower3(
+    let follower = new QueryFollower(
       this._storage,
       { ...query, historyMode: "all", orderBy: "localIndex ASC" },
     );

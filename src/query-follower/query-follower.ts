@@ -11,7 +11,7 @@ import {
     IStorageAsync,
     IdleEvent,
     LiveQueryEvent,
-    QueryFollower3DidClose,
+    QueryFollowerDidClose,
     StorageBusChannel,
     StorageEventDidClose,
     StorageEventWillClose,
@@ -20,8 +20,8 @@ import {
     docMatchesFilter,
 } from '../query/query';
 import {
-    IQueryFollower3,
-    QueryFollower3State,
+    IQueryFollower,
+    QueryFollowerState,
 } from './query-follower-types';
 
 //================================================================================
@@ -37,11 +37,11 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export class QueryFollower3 implements IQueryFollower3 {
+export class QueryFollower implements IQueryFollower {
     storage: IStorageAsync;
     query: Query;
     bus: Simplebus<LiveQueryEvent>;
-    _state: QueryFollower3State = 'new';
+    _state: QueryFollowerState = 'new';
     _unsub: Thunk | null = null; // to unsub from storage events
 
     constructor(storage: IStorageAsync, query: Query) {
@@ -52,18 +52,18 @@ export class QueryFollower3 implements IQueryFollower3 {
 
         // enforce rules on supported queries
         logger.debug('...enforcing rules on supported queries');
-        if (query.historyMode !== 'all') { throw new NotImplementedError(`QueryFollower3 historyMode must be 'all'`); }
-        if (query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`QueryFollower3 orderBy must be 'localIndex ASC'`); }
-        if (query.limit !== undefined) { throw new NotImplementedError(`QueryFollower3 must not have a limit`); }
+        if (query.historyMode !== 'all') { throw new NotImplementedError(`QueryFollower historyMode must be 'all'`); }
+        if (query.orderBy !== 'localIndex ASC') { throw new NotImplementedError(`QueryFollower orderBy must be 'localIndex ASC'`); }
+        if (query.limit !== undefined) { throw new NotImplementedError(`QueryFollower must not have a limit`); }
     }
 
-    _expectState(states: QueryFollower3State[]) {
+    _expectState(states: QueryFollowerState[]) {
         if (states.indexOf(this._state) === -1) {
-            throw new Error(`QueryFollower3 expected state to be one of ${J(states)} but instead found ${this._state}`);
+            throw new Error(`QueryFollower expected state to be one of ${J(states)} but instead found ${this._state}`);
         }
     }
 
-    state(): QueryFollower3State {
+    state(): QueryFollowerState {
         logger.debug('state() => ' + this._state);
         return this._state;
     }
@@ -109,7 +109,7 @@ export class QueryFollower3 implements IQueryFollower3 {
 
         // catch up if needed
         this._state = 'catching-up';
-        logger.debug(`QueryFollower3 has a startAfter already; catching up.`);
+        logger.debug(`QueryFollower has a startAfter already; catching up.`);
         while (true) {
             let asOf1: number = -100;  // before query
             let asOf2: number = -100;  // after query; before callbacks, doesn't really matter
@@ -198,14 +198,14 @@ export class QueryFollower3 implements IQueryFollower3 {
         if (query.startAfter !== undefined && query.startAfter.localIndex !== undefined) {
             queryStartAfter = query.startAfter.localIndex;
         }
-        logger.debug(`OK: QueryFollower3 is switching to subscription mode:`);
+        logger.debug(`QueryFollower is switching to subscription mode:`);
         logger.debug(`...queryFilter: ${J(queryFilter)}`);
         logger.debug(`...start paying attention after local index ${queryStartAfter}.  subscribing...`);
 
         this._unsub = this.storage.bus.on('*', async (channel: StorageBusChannel | '*', data: any) => {
             this._expectState(['live']);  // make sure the query follower itself has not been closed
 
-            loggerSub.debug(`--- QueryFollower3 subscription: got an event on channel ${channel}`);
+            loggerSub.debug(`--- QueryFollower subscription: got an event on channel ${channel}`);
             let event = data as LiveQueryEvent;
             if (channel === 'willClose') {
                 let event: StorageEventWillClose = {
@@ -266,7 +266,7 @@ export class QueryFollower3 implements IQueryFollower3 {
         this._state = 'closed';
         if (this._unsub) { this._unsub; }
 
-        let event: QueryFollower3DidClose = { kind: 'queryFollower3DidClose' };
+        let event: QueryFollowerDidClose = { kind: 'queryFollowerDidClose' };
         await this.bus.send(event);
 
         logger.debug('...close is done.');

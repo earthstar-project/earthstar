@@ -21,7 +21,7 @@ import { TestScenario } from './test-scenario-types';
 import {
     Logger, LogLevel, setLogLevel,
 } from '../../util/log';
-import { QueryFollower3 } from '../../query-follower/query-follower';
+import { QueryFollower } from '../../query-follower/query-follower';
 let loggerTest = new Logger('test', 'whiteBright');
 let loggerTestCb = new Logger('test cb', 'white');
 let J = JSON.stringify;
@@ -31,9 +31,9 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export let runQueryFollower3Tests = (scenario: TestScenario) => {
+export let runQueryFollowerTests = (scenario: TestScenario) => {
 
-    let TEST_NAME = 'QueryFollower3 tests';
+    let TEST_NAME = 'QueryFollower tests';
     let SUBTEST_NAME = scenario.name;
 
     // Boilerplate to help browser-run know when this test is completed.
@@ -46,7 +46,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
         return new StorageAsync(ws, FormatValidatorEs4, driver);
     }
 
-    t.test(SUBTEST_NAME + ': QueryFollower3 query rules', async (t: any) => {
+    t.test(SUBTEST_NAME + ': query rules', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         let workspace = '+gardening.abcde';
@@ -70,7 +70,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
 
         for (let { query, isValid, note } of vectors) {
             let makeFollower = async () => {
-                let qf = new QueryFollower3(storage, query);
+                let qf = new QueryFollower(storage, query);
             };
             if (isValid) { doesNotThrow(t, makeFollower, 'valid:   ' + (note || J(query))); }
             else         { throws(      t, makeFollower, 'invalid: ' + (note || J(query))); }
@@ -81,7 +81,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': QueryFollower3 basics', async (t: any) => {
+    t.test(SUBTEST_NAME + ': basics', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         loggerTest.debug('begin');
@@ -107,7 +107,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
                 orderBy: 'localIndex ASC',
                 startAfter: { localIndex: -1 }, // start at beginning
             }
-            let qf = new QueryFollower3(storage, query);
+            let qf = new QueryFollower(storage, query);
         }, 'liveQuery does not allow historyMode latest');
         await throws(t, async () => {
             let query: Query = {
@@ -115,7 +115,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
                 orderBy: 'localIndex DESC',
                 startAfter: { localIndex: -1 }, // start at beginning
             }
-            let qf = new QueryFollower3(storage, query);
+            let qf = new QueryFollower(storage, query);
         }, 'liveQuery requires orderBy localIndex ASC');
         await throws(t, async () => {
             let query: Query = {
@@ -124,7 +124,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
                 startAfter: { localIndex: -1 }, // start at beginning
                 limit: 123,
             }
-            let qf = new QueryFollower3(storage, query);
+            let qf = new QueryFollower(storage, query);
         }, 'liveQuery may not have a limit');
 
 
@@ -157,7 +157,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
             //filter: { path: '/apple' },
             startAfter: { localIndex: -1 }, // start at beginning
         }
-        let qf = new QueryFollower3(storage, query);
+        let qf = new QueryFollower(storage, query);
         t.same(qf.state(), 'new', 'state should be "new" before hatching');
 
         //--------------------------------------------------
@@ -229,7 +229,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
             '> success: /peach = orange4 (index 4)',
             '> willClose',
             '> didClose',
-            '> queryFollower3DidClose',
+            '> queryFollowerDidClose',
             '-end',
         ];
         t.same(logs, expectedLogs, 'logs match');
@@ -238,7 +238,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
         t.end();
     });
 
-    t.test(SUBTEST_NAME + ': QueryFollower3 fuzz test', async (t: any) => {
+    t.test(SUBTEST_NAME + ': fuzz test', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
         loggerTest.debug('begin');
@@ -275,7 +275,7 @@ export let runQueryFollower3Tests = (scenario: TestScenario) => {
 
         // set up a query follower...
         let itemsFound: number[] = [];
-        let qf = new QueryFollower3(storage, {
+        let qf = new QueryFollower(storage, {
             historyMode: 'all',
             orderBy: 'localIndex ASC',
             startAfter: { localIndex: -1 },

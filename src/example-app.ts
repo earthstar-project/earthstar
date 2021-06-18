@@ -17,7 +17,7 @@ import {
     Crypto,
 } from './crypto/crypto';
 import {
-    QueryFollower3,
+    QueryFollower,
 } from './query-follower/query-follower';
 import {
     Peer
@@ -82,7 +82,7 @@ let main = async () => {
     loggerMain.info('-----------\\')
     loggerMain.info('adding a queryFollower');
     // add a QueryFollower
-    let qf1 = new QueryFollower3(
+    let qf1 = new QueryFollower(
         storage,
         {
             historyMode: 'all', orderBy: 'localIndex ASC',
@@ -97,7 +97,7 @@ let main = async () => {
             loggerQueryFollowerCallbacks1.debug('query follower is caught up, switching to live mode');
         } else if (event.kind === 'success') {
             loggerQueryFollowerCallbacks1.debug('got a new doc', event.doc);
-        } else if (event.kind === 'queryFollower3DidClose') {
+        } else if (event.kind === 'queryFollowerDidClose') {
             loggerQueryFollowerCallbacks1.debug('query follower closed');
         }
     });
@@ -143,7 +143,7 @@ let main = async () => {
     loggerMain.blank()
     loggerMain.info('-----------\\')
     loggerMain.info('adding a queryFollower');
-    let qf2 = new QueryFollower3(
+    let qf2 = new QueryFollower(
         storage,
         {
             historyMode: 'all', orderBy: 'localIndex ASC',
@@ -158,7 +158,7 @@ let main = async () => {
             loggerQueryFollowerCallbacks2.debug('query follower is caught up, switching to live mode');
         } else if (event.kind === 'success') {
             loggerQueryFollowerCallbacks2.debug('got a new doc', event.doc);
-        } else if (event.kind === 'queryFollower3DidClose') {
+        } else if (event.kind === 'queryFollowerDidClose') {
             loggerQueryFollowerCallbacks2.debug('query follower closed');
         }
     });

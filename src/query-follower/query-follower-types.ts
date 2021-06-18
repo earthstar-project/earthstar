@@ -10,7 +10,7 @@ import {
 
 //================================================================================
 
-export type QueryFollower3State = 'new' | 'catching-up' | 'live' | 'closed' | 'error';
+export type QueryFollowerState = 'new' | 'catching-up' | 'live' | 'closed' | 'error';
 
 /**
  * Subscribe to the ongoing results of a query,
@@ -31,7 +31,7 @@ export type QueryFollower3State = 'new' | 'catching-up' | 'live' | 'closed' | 'e
  *   -     IngestEventNothingHappened -- ingested an obsolete or duplicate doc
  *   - StorageEventWillClose -- the storage is about to close
  *   - StorageEventDidClose -- the storage has closed
- *   - QueryFollower3DidClose -- the query follower was closed
+ *   - QueryFollowerDidClose -- the query follower was closed
  *                               (can happen on its own or after the storage closes)
  * 
  * The query has some limitations:
@@ -52,7 +52,7 @@ export type QueryFollower3State = 'new' | 'catching-up' | 'live' | 'closed' | 'e
  *    1. catching up with the backlog
  *    2. caught up; processing new events as they happen.
  * 
- * A QueryFollower has a "state" (a QueryFollower3State).
+ * A QueryFollower has a "state" (a QueryFollowerState).
  * Read it with queryFollower.state().  You cannot set it.
  * It can be:
  * 
@@ -65,9 +65,9 @@ export type QueryFollower3State = 'new' | 'catching-up' | 'live' | 'closed' | 'e
  * You can manually close a query follower with close(), and it will also
  * automatically close if the storage closes.
  * 
- * To use a QueryFollower3, do this:
+ * To use a QueryFollower, do this:
  * 
- *     let qf = new QueryFollower3(storage, your_query_here)
+ *     let qf = new QueryFollower(storage, your_query_here)
  *     qf.bus.on(async (event: LiveQueryEvent) => {
  *         // handle events here
  *         if (event.kind === 'existing' || event.kind === 'success') {
@@ -102,13 +102,13 @@ export type QueryFollower3State = 'new' | 'catching-up' | 'live' | 'closed' | 'e
  * (...because you can't send an event from inside an event handler)
  * 
  */
-export interface IQueryFollower3 {
+export interface IQueryFollower {
     storage: IStorageAsync;
     query: Query;
 
     bus: Simplebus<LiveQueryEvent>;
 
-    state(): QueryFollower3State;
+    state(): QueryFollowerState;
 
     /**
      * This begins the process of catching up (if needed), then
