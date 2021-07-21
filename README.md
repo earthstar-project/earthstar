@@ -1,6 +1,6 @@
 # Earthstar
 
-![](docs/earthstar-wordmark.png)
+![](docs/earthstar-box.png)
 
 ## An offline-first, distributed, syncable, embedded document database for use in p2p software -- in browsers and outside of browsers
 
