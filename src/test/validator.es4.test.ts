@@ -417,7 +417,7 @@ t.test('_checkPathIsValid', (t: any) => {
         { valid: true, path: '/FOO', note: 'uppercase' },
         { valid: true, path: '/1234/5678', note: 'digits' },
         { valid: true, path: '/a/b/c/d/e/f/g/h' },
-        { valid: true, path: '/about/~@suzy.abc/name' },
+        { valid: true, path: '/about/~@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/name' },
         { valid: true, path: '/wiki/shared/Garden%20Gnome' },
         { valid: true, path: '/\'()-._~!$&+,:=@%', note: 'all allowed punctuation characters' },
 
