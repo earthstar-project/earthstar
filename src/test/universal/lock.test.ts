@@ -273,7 +273,7 @@ t.test('lock error handling', async (t: any) => {
             throw new Error('kaboom');
         });
         t.ok(false, 'error was not caught');
-    } catch (err) {
+    } catch (err: any) {
         t.ok(true, 'error was caught');
         t.same(err.message, 'kaboom', 'it was the same error');
     }
@@ -283,7 +283,7 @@ t.test('lock error handling', async (t: any) => {
             throw new Error('kaboom');
         }, { bypass: true });
         t.ok(false, 'error was not caught with bypass');
-    } catch (err) {
+    } catch (err: any) {
         t.ok(true, 'error was caught with bypass');
         t.same(err.message, 'kaboom', 'it was the same error');
     }

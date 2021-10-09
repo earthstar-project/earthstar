@@ -79,7 +79,7 @@ export const Crypto: ICrypto = class {
             let keypairBytes = decodeAuthorKeypairToBytes(keypair);
             if (isErr(keypairBytes)) { return keypairBytes; }
             return base32BytesToString(GlobalCryptoDriver.sign(keypairBytes, msg));
-        } catch (err) {
+        } catch (err: any) {
             /* istanbul ignore next */
             return new ValidationError('unexpected error while signing: ' + err.message);
         }
@@ -141,7 +141,7 @@ export const Crypto: ICrypto = class {
             if (isValid === false) { return new ValidationError('pubkey does not match secret'); }
 
             return true;
-        } catch (err) {
+        } catch (err: any) {
             /* istanbul ignore next */
             return new ValidationError('unexpected error in checkAuthorKeypairIsValid: ' + err.message);
         }

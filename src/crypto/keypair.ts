@@ -45,7 +45,7 @@ export let decodeAuthorKeypairToBytes = (pair: AuthorKeypair): KeypairBytes | Va
             return new ValidationError(`secret bytes should be 32 bytes long, not ${bytes.secret.length} after base32 decoding.  ${pair.secret}`);
         }
         return bytes;
-    } catch (err) {
+    } catch (err: any) {
         return new ValidationError('crash while decoding author keypair: ' + err.message);
     }
 };
