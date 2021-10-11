@@ -102,16 +102,26 @@ export interface StorageEventDidClose {
     kind: 'didClose',
 }
 
+export interface QueryFollowerDidClose {
+    kind: 'queryFollowerDidClose',
+}
+
+export interface IdleEvent {
+    kind: 'idle',
+}
+
 export type IngestEvent =
     IngestEventFailure |
     IngestEventNothingHappened |
     IngestEventSuccess;
 
 export type LiveQueryEvent =
-    IngestEvent |
-    DocAlreadyExists |
+    DocAlreadyExists |  // catching up...
+    IdleEvent |  // waiting for an ingest to happen...
+    IngestEvent |  // an ingest happened
     StorageEventWillClose |
-    StorageEventDidClose;
+    StorageEventDidClose |
+    QueryFollowerDidClose;
 
 //================================================================================
 
@@ -172,8 +182,6 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
     getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
 
     queryDocs(query?: Query): Promise<Doc[]>;
-
-    liveQuery(query: Query, cb: (event: LiveQueryEvent) => Promise<void>): Promise<Thunk>;  // unsub
 
 //    queryPaths(query?: Query): Path[];
 //    queryAuthors(query?: Query): AuthorAddress[];

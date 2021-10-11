@@ -2,12 +2,12 @@ import isEqual from "fast-deep-equal";
 import stringify from "fast-json-stable-stringify";
 
 import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types";
-import { isErr, StorageIsClosedError, ValidationError } from "../util/errors";
+import { isErr, StorageIsClosedError } from "../util/errors";
 import { microsecondNow } from "../util/misc";
 import { docMatchesFilter, cleanUpQuery } from "../query/query";
 import { QueryFollower } from "../query-follower/query-follower";
 import { Query } from "../query/query-types";
-import { IngestEvent, IStorageAsync } from "./storage-types";
+import { IngestEvent, IStorageAsync, LiveQueryEvent } from "./storage-types";
 import { Crypto } from '../crypto/crypto';
 
 //--------------------------------------------------
@@ -186,14 +186,13 @@ export class StorageCache {
     let follower = new QueryFollower(
       this._storage,
       { ...query, historyMode: "all", orderBy: "localIndex ASC" },
-      (doc) => {
-        return new Promise((resolve) => {
-          logger.debug("🐣");
-          this._updateCacheOptimistically(doc);
-          return resolve();
-        });
-      }
     );
+    follower.bus.on(async (event: LiveQueryEvent) => {
+      if (event.kind === 'existing' || event.kind === 'success') {
+          logger.debug("🐣");
+          this._updateCacheOptimistically(event.doc);
+      }
+    });
 
     // Add an entry to the cache.
     this._docCache.set(queryString, {

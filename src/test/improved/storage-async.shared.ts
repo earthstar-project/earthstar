@@ -4,8 +4,7 @@ import { doesNotThrow, throws } from '../test-utils';
 //t.runOnly = true;
 
 import { WorkspaceAddress } from '../../util/doc-types';
-import { IStorageAsync, LiveQueryEvent } from '../../storage/storage-types';
-import { Query } from '../../query/query-types';
+import { IStorageAsync } from '../../storage/storage-types';
 import { isErr } from '../../util/errors';
 import { microsecondNow, sleep } from '../../util/misc';
 import { Crypto } from '../../crypto/crypto';
@@ -96,7 +95,6 @@ export let runStorageAsyncTests = (scenario: TestScenario) => {
         await throws(t, async () => await storage.getLatestDocAtPath('/a'), 'throws after closed');
         await throws(t, async () => await storage.queryDocs(), 'throws after closed');
         await throws(t, async () => storage.getMaxLocalIndex(), 'throws after closed');
-        await throws(t, async () => await storage.liveQuery({}, async () => {}), 'throws after closed');
         await throws(t, async () => await storage.set({} as any, {} as any), 'throws after closed');
         await throws(t, async () => await storage.ingest({} as any), 'throws after closed');
         await throws(t, async () => await storage.overwriteAllDocsByAuthor({} as any), 'throws after closed');
@@ -224,140 +222,6 @@ export let runStorageAsyncTests = (scenario: TestScenario) => {
         t.same(docsB_actualAuthorAndContent, docsB_expectedAuthorAndContent, '/pathB docs are as expected');
 
         await storage.close(true);
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
-
-    t.test(SUBTEST_NAME + ': storage liveQuery', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
-
-        loggerTest.debug('begin');
-
-        let logs: string[] = ['-begin'];
-
-        let workspace = '+gardening.abcde';
-        let storage = makeStorage(workspace);
-
-        let keypair1 = Crypto.generateAuthorKeypair('aaaa');
-        let keypair2 = Crypto.generateAuthorKeypair('bbbb');
-        if (isErr(keypair1) || isErr(keypair2)) {
-            t.ok(false, 'error making keypair');
-            t.end();
-            return;
-        }
-
-        let now = microsecondNow();
-        loggerTest.debug('write doc 0');
-        await storage.set(keypair1, {
-            format: 'es.4',
-            path: '/apple',
-            content: 'crunchy0',
-            timestamp: now + 0,
-        });
-
-        loggerTest.debug('write doc 1');
-        await storage.set(keypair1, {
-            format: 'es.4',
-            path: '/cherry',
-            content: 'crispy1',
-            timestamp: now + 1,
-        });
-
-        loggerTest.debug('testing disallowed live queries');
-        await throws(t, async () => {
-            let query: Query = {
-                historyMode: 'latest',
-                orderBy: 'localIndex ASC',
-                startAfter: { localIndex: -1 }, // start at beginning
-            }
-            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
-        }, 'liveQuery does not allow historyMode latest');
-        await throws(t, async () => {
-            let query: Query = {
-                historyMode: 'all',
-                orderBy: 'localIndex DESC',
-                startAfter: { localIndex: -1 }, // start at beginning
-            }
-            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
-        }, 'liveQuery requires orderBy localIndex ASC');
-        await throws(t, async () => {
-            let query: Query = {
-                historyMode: 'all',
-                orderBy: 'localIndex ASC',
-                startAfter: { localIndex: -1 }, // start at beginning
-                limit: 123,
-            }
-            await storage.liveQuery(query, async (event: LiveQueryEvent) => {});
-        }, 'liveQuery may not have a limit');
-
-        loggerTest.debug('starting live query');
-        let query: Query = {
-            historyMode: 'all',
-            orderBy: 'localIndex ASC',
-            //filter: { path: '/apple' },
-            startAfter: { localIndex: -1 }, // start at beginning
-        }
-        storage.liveQuery(query, async (event: LiveQueryEvent) => {
-            loggerTestCb.debug('>>>>>>>>>>>>>>>>', event);
-            if (event.kind && event.kind === 'existing') {
-                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
-            } else if (event.kind && event.kind === 'success') {
-                logs.push(`${event.kind}: ${event.doc.path} index ${event.doc._localIndex}`);
-            } else if (event.kind) {
-                logs.push(`${event.kind}`);
-            } else {
-                logs.push(`???`);
-            }
-        });
-
-        loggerTest.debug('write doc 2');
-        await storage.set(keypair2, {
-            format: 'es.4',
-            path: '/apple',
-            content: 'juicy2',
-            timestamp: now + 2,
-        });
-
-        loggerTest.debug('write doc 3');
-        await storage.set(keypair2, {
-            format: 'es.4',
-            path: '/banana',
-            content: 'yellow3',
-            timestamp: now + 3,
-        });
-
-        loggerTest.debug('sleep so live query can catch up');
-        await sleep(10);
-
-        loggerTest.debug('write doc 4');
-        await storage.set(keypair2, {
-            format: 'es.4',
-            path: '/peach',
-            content: 'orange4',
-            timestamp: now + 4,
-        });
-
-        loggerTest.debug('sleep so live query can catch up');
-        await sleep(10);
-
-        loggerTest.debug('close');
-        await storage.close(true);
-
-        await sleep(100);
-        logs.push('-end');
-        let expectedLogs = [
-            '-begin',
-            'existing: /apple index 0',
-            'existing: /cherry index 1',
-            'existing: /apple index 2',
-            'existing: /banana index 3',
-            'success: /peach index 4',
-            'willClose',
-            'didClose',
-            '-end',
-        ];
-        t.same(logs, expectedLogs, 'logs match');
-
         t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
         t.end();
     });
