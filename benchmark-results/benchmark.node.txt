@@ -1,55 +1,73 @@
-2021-12-08T10:40:10.594Z
+2021-12-08T11:13:51.869Z
 
 > CryptoDriverFake 
   > ops/sec
-  >     463,142:  sha256
-  >     642,947:  generateAuthorKeypair
-  >     597,745:  sign
-  >   4,902,151:  validate
+  >     437,519:  sha256
+  >     595,523:  generateAuthorKeypair
+  >     587,440:  sign
+  >   5,080,820:  validate
 
 > CryptoDriverNode 
   > ops/sec
-  >     246,058:  sha256
-  >      27,594:  generateAuthorKeypair
-  >      15,872:  sign
-  >      10,147:  validate
+  >     263,524:  sha256
+  >      28,674:  generateAuthorKeypair
+  >      14,158:  sign
+  >      10,194:  validate
 
 > CryptoDriverTweetnacl 
   > ops/sec
-  >     356,144:  sha256
-  >         388:  generateAuthorKeypair
-  >         382:  sign
-  >         194:  validate
+  >     368,428:  sha256
+  >         393:  generateAuthorKeypair
+  >         394:  sign
+  >         201:  validate
+
+> CryptoDriverNoble 
+  > ops/sec
+  >     368,091:  sha256
+  >       3,215:  generateAuthorKeypair
+  >       2,271:  sign
+  >         517:  validate
 
 > StorageDriverAsyncMemory w/ CryptoDriverFake
   > ops/sec
-  >       3,030:  add 100 docs (docs/sec)
-  >       3,226:  sync 100 docs to empty storage (docs/sec)
-  >       3,448:  sync 100 docs again to full storage (docs/sec)
+  >       3,125:  add 100 docs (docs/sec)
+  >       3,448:  sync 100 docs to empty storage (docs/sec)
+  >       4,167:  sync 100 docs again to full storage (docs/sec)
 
-  >       4,098:  add 500 docs (docs/sec)
-  >       3,378:  sync 500 docs to empty storage (docs/sec)
-  >       3,247:  sync 500 docs again to full storage (docs/sec)
+  >       4,237:  add 500 docs (docs/sec)
+  >       3,571:  sync 500 docs to empty storage (docs/sec)
+  >       3,497:  sync 500 docs again to full storage (docs/sec)
 
 
 > StorageDriverAsyncMemory w/ CryptoDriverNode
   > ops/sec
-  >       2,222:  add 100 docs (docs/sec)
-  >       1,786:  sync 100 docs to empty storage (docs/sec)
-  >       1,961:  sync 100 docs again to full storage (docs/sec)
+  >       2,381:  add 100 docs (docs/sec)
+  >       2,041:  sync 100 docs to empty storage (docs/sec)
+  >       2,083:  sync 100 docs again to full storage (docs/sec)
 
-  >       2,262:  add 500 docs (docs/sec)
-  >       1,792:  sync 500 docs to empty storage (docs/sec)
-  >       1,818:  sync 500 docs again to full storage (docs/sec)
+  >       2,381:  add 500 docs (docs/sec)
+  >       1,748:  sync 500 docs to empty storage (docs/sec)
+  >       1,866:  sync 500 docs again to full storage (docs/sec)
 
 
 > StorageDriverAsyncMemory w/ CryptoDriverTweetnacl
   > ops/sec
-  >         123:  add 100 docs (docs/sec)
-  >          94:  sync 100 docs to empty storage (docs/sec)
+  >         125:  add 100 docs (docs/sec)
+  >          95:  sync 100 docs to empty storage (docs/sec)
   >          95:  sync 100 docs again to full storage (docs/sec)
 
-  >         111:  add 500 docs (docs/sec)
+  >         123:  add 500 docs (docs/sec)
   >          89:  sync 500 docs to empty storage (docs/sec)
-  >          92:  sync 500 docs again to full storage (docs/sec)
+  >          94:  sync 500 docs again to full storage (docs/sec)
+
+
+> StorageDriverAsyncMemory w/ CryptoDriverNoble
+  > ops/sec
+  >         368:  add 100 docs (docs/sec)
+  >         233:  sync 100 docs to empty storage (docs/sec)
+  >         240:  sync 100 docs again to full storage (docs/sec)
+
+  >         376:  add 500 docs (docs/sec)
+  >         224:  sync 500 docs to empty storage (docs/sec)
+  >         232:  sync 500 docs again to full storage (docs/sec)
 
