@@ -20,31 +20,31 @@ export let runCryptoDriverBenchmark = async (runner: BenchmarkRunner, cryptoDriv
     //==================================================
     // setup
 
-    let keypairBytes = cryptoDriver.generateKeypairBytes() as KeypairBytes;
+    let keypairBytes = await cryptoDriver.generateKeypairBytes() as KeypairBytes;
     if (isErr(keypairBytes)) { console.warn(keypairBytes); }
 
     let msgToSign = 'hello' + randomId() + randomId();
-    let sigBytes = cryptoDriver.sign(keypairBytes, msgToSign);
+    let sigBytes = await cryptoDriver.sign(keypairBytes, msgToSign);
 
     //==================================================
     // benchmarks
 
     await runner.runMany('sha256', {minDuration: 1234}, async () => {
         let msgToHash = 'hello' + randomId() + randomId();
-        cryptoDriver.sha256(msgToHash);
+        await cryptoDriver.sha256(msgToHash);
     });
 
     await runner.runMany('generateAuthorKeypair', {minDuration: 1234}, async () => {
-        let thisKeypair = cryptoDriver.generateKeypairBytes();
+        let thisKeypair = await cryptoDriver.generateKeypairBytes();
         if (isErr(thisKeypair)) { console.warn(thisKeypair); }
     });
 
     await runner.runMany('sign', {minDuration: 1234}, async () => {
-        cryptoDriver.sign(keypairBytes, msgToSign);
+        await cryptoDriver.sign(keypairBytes, msgToSign);
     });
 
     await runner.runMany('validate', {minDuration: 1234}, async () => {
-        cryptoDriver.verify(keypairBytes.pubkey, sigBytes, msgToSign);
+        await cryptoDriver.verify(keypairBytes.pubkey, sigBytes, msgToSign);
     });
 
     //==================================================

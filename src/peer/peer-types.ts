@@ -70,8 +70,8 @@ export interface IPeer {
  */
 
 // ok this isn't a type, but I put it here anyway since it's shared code for client and server
-export let saltAndHashWorkspace = (salt: string, workspace: WorkspaceAddress): string =>
-    Crypto.sha256base32(salt + workspace + salt);
+export let saltAndHashWorkspace = async (salt: string, workspace: WorkspaceAddress): Promise<string> =>
+   await Crypto.sha256base32(salt + workspace + salt);
 
 //--------------------------------------------------
 // SALTY HANDSHAKE

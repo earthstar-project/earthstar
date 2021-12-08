@@ -121,7 +121,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
         return this._setConfigSync(key, value);
     }
     async listConfigKeys(): Promise<string[]> {
-        return await this._listConfigKeysSync();
+        return this._listConfigKeysSync();
     }
     async deleteConfig(key: string): Promise<boolean> {
         return this._deleteConfigSync(key);

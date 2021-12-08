@@ -75,7 +75,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
     static format: 'es.4' = 'es.4';
 
     /** Deterministic hash of this version of the document */
-    static hashDocument(doc: Doc): Base32String | ValidationError {
+    static async hashDocument(doc: Doc): Promise<Base32String | ValidationError> {
         // Deterministic hash of the document.
         // Can return a ValidationError, but only checks for very basic document validity.
 
@@ -119,15 +119,15 @@ export const FormatValidatorEs4: IFormatValidator = class {
      * it will be overwritten here, so you may as well just set signature: '' on the input.
      * Return a copy of the original document with the signature field changed, or return a ValidationError.
      */
-    static signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError {
+    static async signDocument(keypair: AuthorKeypair, doc: Doc): Promise<Doc | ValidationError> {
         if (keypair.address !== doc.author) {
             return new ValidationError('when signing a document, keypair address must match document author');
         }
 
-        let hash = this.hashDocument(doc);
+        let hash = await this.hashDocument(doc);
         if (isErr(hash)) { return hash; }
 
-        let sig = Crypto.sign(keypair, hash);
+        let sig = await Crypto.sign(keypair, hash);
         if (isErr(sig)) { return sig; }
 
         return { ...doc, signature: sig };
@@ -295,25 +295,25 @@ export const FormatValidatorEs4: IFormatValidator = class {
 
         return true;
     }
-    static _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError {
+    static async _checkAuthorSignatureIsValid(doc: Doc): Promise<true | ValidationError> {
         // Check if the signature is good.
         // return a ValidationError, or return true on success.
         try {
-            let hash = this.hashDocument(doc);
+            let hash = await this.hashDocument(doc);
             if (isErr(hash)) { return hash; }
-            let verified = Crypto.verify(doc.author, doc.signature, hash);
+            let verified = await Crypto.verify(doc.author, doc.signature, hash);
             if (verified !== true) { return new ValidationError('signature is invalid'); }
             return true;
         } catch (err) {
             return new ValidationError('signature is invalid (unexpected exception)');
         }
     }
-    static _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError {
+    static async _checkContentMatchesHash(content: string, contentHash: Base32String): Promise<true | ValidationError> {
         // Ensure the contentHash matches the actual content.
         // return a ValidationError, or return true on success.
 
         // TODO: if content is null, skip this check
-        if (Crypto.sha256base32(content) !== contentHash) {
+        if (await Crypto.sha256base32(content) !== contentHash) {
             return new ValidationError('content does not match contentHash');
         }
         return true;

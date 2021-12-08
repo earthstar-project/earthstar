@@ -91,8 +91,8 @@ export let runQueryFollowerTests = (scenario: TestScenario) => {
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
 
-        let keypair1 = Crypto.generateAuthorKeypair('aaaa');
-        let keypair2 = Crypto.generateAuthorKeypair('bbbb');
+        let keypair1 = await Crypto.generateAuthorKeypair('aaaa');
+        let keypair2 = await Crypto.generateAuthorKeypair('bbbb');
         if (isErr(keypair1) || isErr(keypair2)) {
             t.ok(false, 'error making keypair');
             t.end();
@@ -248,8 +248,8 @@ export let runQueryFollowerTests = (scenario: TestScenario) => {
         let workspace = '+gardening.abcde';
         let storage = makeStorage(workspace);
 
-        let keypair1 = Crypto.generateAuthorKeypair('aaaa');
-        let keypair2 = Crypto.generateAuthorKeypair('bbbb');
+        let keypair1 = await Crypto.generateAuthorKeypair('aaaa');
+        let keypair2 = await Crypto.generateAuthorKeypair('bbbb');
         if (isErr(keypair1) || isErr(keypair2)) {
             t.ok(false, 'error making keypair');
             t.end();

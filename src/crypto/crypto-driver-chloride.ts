@@ -36,13 +36,13 @@ export let waitUntilChlorideIsReady = async () => {
  * Works in the browser.
  */
 export const CryptoDriverChloride: ICryptoDriver = class {
-    static sha256(input: string | Uint8Array): Uint8Array {
+    static async sha256(input: string | Uint8Array): Promise<Uint8Array> {
         if (typeof input === 'string') { input = stringToBuffer(input); }
         if (identifyBufOrBytes(input) === 'bytes') { input = bytesToBuffer(input); }
         let resultBuf = sodium.crypto_hash_sha256(input);
         return bufferToBytes(resultBuf);
     }
-    static generateKeypairBytes(seed?: Uint8Array): KeypairBytes {
+    static async generateKeypairBytes(seed?: Uint8Array): Promise<KeypairBytes> {
         // If provided, the seed is used as the secret key.
         // If omitted, a random secret key is generated.
         logger.debug('generateKeypairBytes');
@@ -59,7 +59,7 @@ export const CryptoDriverChloride: ICryptoDriver = class {
             secret: bufferToBytes((keys.privateKey || keys.secretKey).slice(0, 32)),
         };
     };
-    static sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+    static async sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Promise<Uint8Array> {
         logger.debug('sign');
         let secretBuf = bytesToBuffer(concatBytes(keypairBytes.secret, keypairBytes.pubkey));
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }
@@ -69,7 +69,7 @@ export const CryptoDriverChloride: ICryptoDriver = class {
             sodium.crypto_sign_detached(msg, secretBuf)
         );
     }
-    static verify(publicKey: Buffer, sig: Uint8Array, msg: string | Uint8Array): boolean {
+    static async verify(publicKey: Buffer, sig: Uint8Array, msg: string | Uint8Array): Promise<boolean> {
         logger.debug('verify');
         try {
             if (typeof msg === 'string') { msg = stringToBuffer(msg); }

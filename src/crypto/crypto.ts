@@ -39,8 +39,10 @@ export const Crypto: ICrypto = class {
     /**
      * Do a sha256 hash, then return the output bytes encoded as base32.
      */
-    static sha256base32(input: string | Uint8Array): Base32String {
-        return base32BytesToString(GlobalCryptoDriver.sha256(input));
+    static async sha256base32(input: string | Uint8Array): Promise<Base32String> {
+        const b32 = await GlobalCryptoDriver.sha256(input)
+        
+        return base32BytesToString(b32);
     }
 
     /**
@@ -53,9 +55,9 @@ export const Crypto: ICrypto = class {
      * 
      * @param name A 4-character nickname to make the address easier to remember and identify.
      */
-    static generateAuthorKeypair(name: string): AuthorKeypair | ValidationError {
+    static async generateAuthorKeypair(name: string): Promise<AuthorKeypair | ValidationError> {
         logger.debug(`generateAuthorKeypair("${name}")`);
-        let keypairBytes: KeypairBytes = GlobalCryptoDriver.generateKeypairBytes();
+        let keypairBytes: KeypairBytes = await GlobalCryptoDriver.generateKeypairBytes();
         let keypairFormatted = {
             address: assembleAuthorAddress(name, base32BytesToString(keypairBytes.pubkey)),
             secret: base32BytesToString(keypairBytes.secret),
@@ -73,12 +75,15 @@ export const Crypto: ICrypto = class {
      * Can return a ValidationError if the keypair is bad
      * or something goes unexpectedly wrong with signing.
      */
-    static sign(keypair: AuthorKeypair, msg: string | Uint8Array): Base32String | ValidationError {
+    static async sign(keypair: AuthorKeypair, msg: string | Uint8Array): Promise<Base32String | ValidationError> {
         logger.debug(`sign`);
         try {
             let keypairBytes = decodeAuthorKeypairToBytes(keypair);
             if (isErr(keypairBytes)) { return keypairBytes; }
-            return base32BytesToString(GlobalCryptoDriver.sign(keypairBytes, msg));
+            
+            const signed = await GlobalCryptoDriver.sign(keypairBytes, msg)
+            
+            return base32BytesToString(signed);
         } catch (err: any) {
             /* istanbul ignore next */
             return new ValidationError('unexpected error while signing: ' + err.message);
@@ -94,7 +99,7 @@ export const Crypto: ICrypto = class {
      *   * signature base32 format is valid but signature itself is invalid
      *   * unexpected failure from crypto library
      */
-    static verify(authorAddress: AuthorAddress, sig: Base32String, msg: string | Uint8Array): boolean {
+    static async verify(authorAddress: AuthorAddress, sig: Base32String, msg: string | Uint8Array): Promise<boolean> {
         logger.debug(`verify`);
         try {
             let authorParsed = parseAuthorAddress(authorAddress);
@@ -116,7 +121,7 @@ export const Crypto: ICrypto = class {
      * - a ValidationError if the author address or secret are not validly formatted strings.
      * - a ValidationError if anything else goes wrong
      */
-    static checkAuthorKeypairIsValid(keypair: AuthorKeypair): true | ValidationError {
+    static async checkAuthorKeypairIsValid(keypair: AuthorKeypair): Promise<true | ValidationError> {
         // We check if the secret matches the pubkey by signing something and then validating the signature.
         // However, key generation is deterministic, so it would be more direct to just do this:
         //
@@ -134,10 +139,10 @@ export const Crypto: ICrypto = class {
             if (isErr(addressErr)) { return addressErr; }
 
             let msg = 'a test message to sign. ' + randomId();
-            let sig = this.sign(keypair, msg);
+            let sig = await this.sign(keypair, msg);
             if (isErr(sig)) { return sig; }
 
-            let isValid = this.verify(keypair.address, sig, msg);
+            let isValid = await this.verify(keypair.address, sig, msg);
             if (isValid === false) { return new ValidationError('pubkey does not match secret'); }
 
             return true;
