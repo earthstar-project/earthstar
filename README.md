@@ -13,21 +13,21 @@ Join our community on the [Earthstar Discord](https://discord.gg/FuaAnNqUfZ)
 ## Links and docs
 
 Docs for everyone:
-* **[A Guided Tour of Earthstar](docs/tour.md)** -- Slides and diagrams explaining how it works
+* **[A Guided Tour of Earthstar](https://earthstar-docs.netlify.app/docs/)** -- Slides and diagrams explaining how it works
 
 Docs for app developers:
-* [Overview for developers](docs/overview.md) -- A quick comparison between Earthstar, CouchDB, and SSB
-* [Rules of Earthstar](docs/rules-of-earthstar.md) -- The scope of the project, and details of the technical invariants of the distributed system.
-* [Tutorial](docs/tutorial.md) -- Make a Todo list app, step by step
+* [Overview for developers](https://earthstar-docs.netlify.app/docs/intro/overview-for-developers) -- A quick comparison between Earthstar, CouchDB, and SSB
+* [Rules of Earthstar](https://earthstar-docs.netlify.app/docs/intro/rules-of-earthstar) -- The scope of the project, and details of the technical invariants of the distributed system.
+* [Tutorial](https://earthstar-docs.netlify.app/docs/tutorials/making-an-app) -- Make a Todo list app, step by step
 * [Invite code format](https://github.com/earthstar-project/earthstar/wiki/Invite-code-format)
 * [Standard paths and data formats used by apps](https://github.com/earthstar-project/earthstar/wiki/Standard-paths-and-data-formats-used-by-apps) for their Earthstar documents, so apps can interoperate
 
 Docs for core Earthstar developers:
-* [Earthstar Specification](docs/specification.md) -- All you need to know to write an Earthstar implementation from scratch
-* [About syncing](docs/syncing.md) -- Exploring this topic in more detail
-* [About fancy conflict resolution](docs/fancy-conflict-resolution.md) -- How to add more complex conflict tracking on top of Earthstar
-* [About timestamps](docs/timestamps.md) -- Exploring the limits of Earthstar's assumptions about timestamps
-* [Urls](docs/urls.md) -- How to build URLs related to Earthstar
+* [Earthstar Specification](https://earthstar-docs.netlify.app/docs/reference/earthstar-specification) -- All you need to know to write an Earthstar implementation from scratch
+* [About syncing](https://earthstar-docs.netlify.app/docs/articles/syncing) -- Exploring this topic in more detail
+* [About fancy conflict resolution](https://earthstar-docs.netlify.app/docs/articles/fancier-conflict-resolution) -- How to add more complex conflict tracking on top of Earthstar
+* [About timestamps](https://earthstar-docs.netlify.app/docs/articles/timestamps) -- Exploring the limits of Earthstar's assumptions about timestamps
+* [Urls](https://earthstar-docs.netlify.app/docs/_old/urls) -- How to build URLs related to Earthstar
 
 Related repos:
 * [earthstar-cli](https://github.com/earthstar-project/earthstar-cli) -- Command line utility
@@ -128,7 +128,7 @@ Each database instance can hold a subset of the entire data, specified by a quer
 
 The universe of data is divided into **workspaces** -- collections of documents accessed by certain users.  Syncing happens one workspace at a time.
 
-Read the [vocabulary and concepts](docs/vocabulary.md) documentation for more about workspaces.
+Read the [vocabulary and concepts](https://earthstar-docs.netlify.app/docs/intro/concepts-and-vocabulary) documentation for more about workspaces.
 
 ## Editing data; multiple users and devices; conflicts
 
