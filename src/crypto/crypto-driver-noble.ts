@@ -39,7 +39,6 @@ export const CryptoDriverNoble: ICryptoDriver = class {
     };
     static async sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Promise<Uint8Array> {
         logger.debug('sign');
-        let secret = concatBytes(keypairBytes.secret, keypairBytes.pubkey);
         if (typeof msg === 'string') { msg = stringToBytes(msg); }
         return ed.sign(msg, keypairBytes.secret);
     }
@@ -47,7 +46,8 @@ export const CryptoDriverNoble: ICryptoDriver = class {
         logger.debug('verify');
         try {
             if (typeof msg === 'string') { msg = stringToBytes(msg); }
-            return ed.verify(sig, msg, publicKey);
+            const result = await ed.verify(sig, msg, publicKey);            
+            return result;
         } catch (e) {
             /* istanbul ignore next */
             return false;
