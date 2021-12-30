@@ -99,6 +99,12 @@ export class StorageCache {
     this._storage = storage;
     this._timeToLive = timeToLive || 1000;
   }
+  
+  // SET - just pass along to the backing storage
+  
+  set(keypair: AuthorKeypair, docToSet: DocToSet) {
+    return this._storage.set(keypair, docToSet)
+  }
 
   // GET
 
