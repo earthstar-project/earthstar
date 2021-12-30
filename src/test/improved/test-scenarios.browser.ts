@@ -7,6 +7,7 @@ import { CryptoDriverTweetnacl } from '../../crypto/crypto-driver-tweetnacl';
 import { CryptoDriverChloride } from '../../crypto/crypto-driver-chloride';
 import { StorageDriverAsyncMemory } from '../../storage/storage-driver-async-memory';
 import { StorageDriverLocalStorage } from '../../storage/storage-driver-local-storage';
+import { StorageDriverIndexedDB } from '../../storage/storage-driver-indexeddb'
 
 // test types
 import { TestScenario } from './test-scenario-types';
@@ -37,6 +38,14 @@ export let testScenarios: TestScenario[] = [
         platforms: { browser: true, node: false, deno: false },
         makeDriver: (ws: WorkspaceAddress): IStorageDriverAsync =>
             new StorageDriverLocalStorage(ws),
+    },
+    {
+        name: 'StorageDriverIndexedDB + CryptoDriverTweetnacl',
+        cryptoDriver: CryptoDriverTweetnacl,
+        persistent: true,
+        platforms: { browser: true, node: false, deno: false },
+        makeDriver: (ws: WorkspaceAddress): IStorageDriverAsync =>
+            new StorageDriverIndexedDB(ws),
     }
 ]
 
