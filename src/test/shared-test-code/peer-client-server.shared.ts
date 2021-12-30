@@ -55,7 +55,7 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
     /* istanbul ignore next */ 
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    let setupTest = () => {
+    let setupTest = async () => {
         let clientWorkspaces = [
             '+common.one',
             '+common.two',
@@ -88,9 +88,9 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
         }
 
         // make some identities
-        let author1 = Crypto.generateAuthorKeypair('onee');
-        let author2 = Crypto.generateAuthorKeypair('twoo');
-        let author3 = Crypto.generateAuthorKeypair('thre');
+        let author1 = await Crypto.generateAuthorKeypair('onee');
+        let author2 = await Crypto.generateAuthorKeypair('twoo');
+        let author3 = await Crypto.generateAuthorKeypair('thre');
 
         if (isErr(author1)) { throw author1; }
         if (isErr(author2)) { throw author2; }
@@ -109,7 +109,7 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
     t.test(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let { peerOnClient, peerOnServer } = setupTest();
+        let { peerOnClient, peerOnServer } = await setupTest();
         t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same, as expected');
         let server = new PeerServer(peerOnServer);
         let client = new PeerClient(peerOnClient, server);
@@ -141,7 +141,7 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
             author1,
             author2,
             author3,
-        } = setupTest();
+        } = await setupTest();
         let server = new PeerServer(peerOnServer);
         let client = new PeerClient(peerOnClient, server);
         let workspace0 = expectedCommonWorkspaces[0];
@@ -254,7 +254,7 @@ export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: Wo
     t.test(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = setupTest();
+        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = await setupTest();
 
         // create Client and Server instances
         let serverLocal = new PeerServer(peerOnServer);

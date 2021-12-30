@@ -120,7 +120,7 @@ export class PeerClient implements IPeerClient {
         let serverSaltedSet = new Set<string>(saltedWorkspaces);
         let commonWorkspaceSet = new Set<WorkspaceAddress>();
         for (let plainWs of this.peer.workspaces()) {
-            let saltedWs = saltAndHashWorkspace(salt, plainWs);
+            let saltedWs = await saltAndHashWorkspace(salt, plainWs);
             if (serverSaltedSet.has(saltedWs)) {
                 commonWorkspaceSet.add(plainWs);
             }

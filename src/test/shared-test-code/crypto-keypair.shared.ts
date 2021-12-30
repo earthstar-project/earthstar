@@ -35,11 +35,11 @@ export let runCryptoKeypairTests = (driver: ICryptoDriver) => {
     /* istanbul ignore next */ 
     (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
 
-    t.test(SUBTEST_NAME + ': encode/decode author keypair: from bytes to string and back', (t: any) => {
+    t.test(SUBTEST_NAME + ': encode/decode author keypair: from bytes to string and back', async (t: any) => {
         setGlobalCryptoDriver(driver);
 
         let shortname = 'test';
-        let keypair = Crypto.generateAuthorKeypair(shortname);
+        let keypair = await Crypto.generateAuthorKeypair(shortname);
         if (isErr(keypair)) {
             t.ok(false, 'keypair 1 is an error');
             t.end();

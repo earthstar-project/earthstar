@@ -99,6 +99,12 @@ export class StorageCache {
     this._storage = storage;
     this._timeToLive = timeToLive || 1000;
   }
+  
+  // SET - just pass along to the backing storage
+  
+  set(keypair: AuthorKeypair, docToSet: DocToSet) {
+    return this._storage.set(keypair, docToSet)
+  }
 
   // GET
 
@@ -175,7 +181,7 @@ export class StorageCache {
             docs,
             expires: Date.now() + this._timeToLive,
           });
-          logger.debug("⌛️");
+          
           this._fireOnCacheUpdateds();
         });
       }
@@ -189,8 +195,8 @@ export class StorageCache {
     );
     follower.bus.on(async (event: LiveQueryEvent) => {
       if (event.kind === 'existing' || event.kind === 'success') {
-          logger.debug("🐣");
-          this._updateCacheOptimistically(event.doc);
+          
+          this._updateCache(event.doc);
       }
     });
 
@@ -210,7 +216,7 @@ export class StorageCache {
         docs,
         expires: Date.now() + this._timeToLive,
       });
-      logger.debug("👹");
+      
       this._fireOnCacheUpdateds();
     });
 
@@ -218,54 +224,7 @@ export class StorageCache {
     return [];
   }
 
-  // SET
-
-  // Do a version of set which assumes this will be latest, and add that doc to the cache.
-  // In the meantime, call set on the backing storage, and update results after.
-  set(keypair: AuthorKeypair, docToSet: DocToSet): IngestEvent {
-    if (this._storage.isClosed()) {
-      throw new StorageIsClosedError();
-    }
-
-    let doc: Doc = {
-      format: "es.4",
-      author: keypair.address,
-      content: docToSet.content,
-      contentHash: Crypto.sha256base32(docToSet.content),
-      deleteAfter: null,
-      path: docToSet.path,
-      timestamp: microsecondNow(),
-      workspace: this._storage.workspace,
-      signature: "?",
-    };
-
-    let signedDoc = this._storage.formatValidator.signDocument(keypair, doc);
-    if (isErr(signedDoc)) {
-      return {
-          kind: 'failure',
-          reason: 'invalid_document',
-          err: signedDoc,
-          maxLocalIndex: this._storage.storageDriver.getMaxLocalIndex(),
-      }
-    }
-
-    // Update the cache optimistically
-    logger.debug("🚂");
-    this._updateCacheOptimistically(signedDoc);
-
-    // Set with actual storage.
-    this._storage.set(keypair, docToSet);
-
-    // Assume this is accepted and latest for the moment.
-    return {
-        kind: 'success',
-        maxLocalIndex: this._storage.storageDriver.getMaxLocalIndex(),
-        doc: signedDoc,  // this is missing _localIndex for now
-        docIsLatest: true,
-        prevDocFromSameAuthor: null, // we don't actually know this
-        prevLatestDoc: null, // we don't actually know this
-    };
-  }
+  
 
   // OVERWRITE
   
@@ -281,7 +240,7 @@ export class StorageCache {
   // CACHE
 
   // Update cache entries as best as we can until results from the backing storage arrive.
-  _updateCacheOptimistically(doc: Doc): void {
+  _updateCache(doc: Doc): void {
     this._docCache.forEach((entry, key) => {
       const query: Query = JSON.parse(key);
 
@@ -313,7 +272,7 @@ export class StorageCache {
      */
 
       const appendDoc = () => {
-        logger.debug("🥞");
+        
         let nextDocs = [...entry.docs, doc];
         this._docCache.set(key, {
           ...entry,
@@ -323,7 +282,7 @@ export class StorageCache {
       };
 
       const replaceDoc = ({ exact }: { exact: boolean }) => {
-        logger.debug("🔄");
+        
         const nextDocs = entry.docs.map((existingDoc) => {
           if (
             exact &&
@@ -372,7 +331,7 @@ export class StorageCache {
           return;
         }
 
-        logger.debug("🕰");
+        
         replaceDoc({ exact: true });
         return;
       }
@@ -387,7 +346,7 @@ export class StorageCache {
       const docIsLater = doc.timestamp > latestDoc.timestamp;
 
       if (docIsDifferent && docIsLater) {
-        logger.debug("⌚️");
+        
         replaceDoc({ exact: false });
         return;
       }

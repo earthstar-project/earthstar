@@ -42,8 +42,8 @@ export class PeerServer implements IPeerServer {
         // request is empty and unused
         loggerServe.debug('serve_saltyHandshake...');
         let salt = randomId();
-        let saltedWorkspaces = this.peer.workspaces().map(ws =>
-            saltAndHashWorkspace(salt, ws));
+        let saltedWorkspaces = await Promise.all(this.peer.workspaces().map(ws =>
+             saltAndHashWorkspace(salt, ws)));
         loggerServe.debug(`...serve_saltyHandshake is done.  found ${saltedWorkspaces.length} workspaces.`);
         return {
             serverPeerId: this.peer.peerId,

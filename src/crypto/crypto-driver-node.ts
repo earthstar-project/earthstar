@@ -65,16 +65,16 @@ let _lengthenDerSecret = (b: Uint8Array): Uint8Array =>
  * Does not work in the browser.
  */
 export const CryptoDriverNode: ICryptoDriver = class {
-    static sha256(input: string | Uint8Array): Uint8Array {
+    static async sha256(input: string | Uint8Array): Promise<Uint8Array> {
         return bufferToBytes(
             crypto.createHash('sha256').update(input).digest()
         );
     }
-    static generateKeypairBytes(): KeypairBytes {
+    static async generateKeypairBytes(): Promise<KeypairBytes> {
         logger.debug('generateKeypairBytes');
         return _shortenDer(_generateKeypairDerBytes());
     };
-    static sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Uint8Array {
+    static async sign(keypairBytes: KeypairBytes, msg: string | Uint8Array): Promise<Uint8Array> {
         logger.debug('sign');
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }
         return bufferToBytes(crypto.sign(
@@ -87,7 +87,7 @@ export const CryptoDriverNode: ICryptoDriver = class {
             }
         ));
     }
-    static verify(publicKey: Uint8Array, sig: Uint8Array, msg: string | Uint8Array): boolean {
+    static async verify(publicKey: Uint8Array, sig: Uint8Array, msg: string | Uint8Array): Promise<boolean> {
         logger.debug('verif');
         // TODO: convert uint8arrays to Buffers?
         if (typeof msg === 'string') { msg = stringToBuffer(msg); }

@@ -68,7 +68,7 @@ let main = async () => {
     peer.addStorage(storage);
 
     loggerMain.info('generate a keypair')
-    let keypair = Crypto.generateAuthorKeypair('suzy');
+    let keypair = await Crypto.generateAuthorKeypair('suzy');
     if (isErr(keypair)) {
         console.error(keypair);
         process.exit(1);

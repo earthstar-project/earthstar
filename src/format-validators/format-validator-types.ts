@@ -26,7 +26,7 @@ export interface IFormatValidator {
     format: FormatName;
 
     /** Deterministic hash of this version of the document */
-    hashDocument(doc: Doc): Base32String | ValidationError;
+    hashDocument(doc: Doc): Promise<Base32String | ValidationError>;
 
     /**
      * Add an author signature to the document.
@@ -34,7 +34,7 @@ export interface IFormatValidator {
      * it will be overwritten here, so you may as well just set signature: '' on the input.
      * Return a copy of the original document with the signature field changed, or return a ValidationError.
      */
-    signDocument(keypair: AuthorKeypair, doc: Doc): Doc | ValidationError;
+    signDocument(keypair: AuthorKeypair, doc: Doc): Promise<Doc | ValidationError>;
 
     /**
      * Return a copy of the doc without extra fields, plus the extra fields
@@ -58,8 +58,8 @@ export interface IFormatValidator {
     _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError;
     _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError;
     _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError;
-    _checkAuthorSignatureIsValid(doc: Doc): true | ValidationError;
-    _checkContentMatchesHash(content: string, contentHash: Base32String): true | ValidationError;
+    _checkAuthorSignatureIsValid(doc: Doc): Promise<true | ValidationError>;
+    _checkContentMatchesHash(content: string, contentHash: Base32String): Promise<true | ValidationError>;
 
     // TODO: add these methods for building addresses
     // and remove them from crypto.ts and encoding.ts

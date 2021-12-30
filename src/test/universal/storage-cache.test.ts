@@ -23,6 +23,7 @@ import {
     LogLevel,
     setDefaultLogLevel,
 } from '../../util/log';
+import { sleep } from "../../util/misc";
 
 //setDefaultLogLevel(LogLevel.Debug);
 
@@ -30,9 +31,9 @@ import {
 
 const WORKSPACE_ADDR = "+test.a123";
 
-t.test("works", (t: any) => {
-  const keypair = Crypto.generateAuthorKeypair("test") as AuthorKeypair;
-  const keypairB = Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
+t.test("works", async (t: any) => {
+  const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+  const keypairB = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 
   const storage = new StorageAsync(
     WORKSPACE_ADDR,
@@ -58,34 +59,38 @@ t.test("works", (t: any) => {
   t.same(values.latestDocs, []);
   t.equals(values.orangesDoc, undefined);
 
-  cache.set(keypair, {
+  cache._storage.set(keypair, {
     content: "Hello!",
     path: "/test/hello.txt",
     format: "es.4",
   });
 
-  cache.set(keypair, {
+  cache._storage.set(keypair, {
     content: "Apples!",
     path: "/test/apples.txt",
     format: "es.4",
   });
 
-  cache.set(keypair, {
+  cache._storage.set(keypair, {
     content: "Oranges!",
     path: "/test/oranges.txt",
     format: "es.4",
   });
+  
+  await sleep(100);
 
   t.equals(values.allDocs.length, 3);
   t.equals(values.latestDocs.length, 3);
   t.equals(values.orangesDoc?.path, "/test/oranges.txt");
   t.equals(values.orangesDoc?.author, keypair.address);
 
-  cache.set(keypairB, {
+  cache._storage.set(keypairB, {
     content: "Suzy's Oranges!",
     path: "/test/oranges.txt",
     format: "es.4",
   });
+  
+  await sleep(100);
 
   t.equals(values.allDocs.length, 4);
   t.equals(values.latestDocs.length, 3);

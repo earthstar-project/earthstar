@@ -36,9 +36,9 @@ export let runStorageDriverBenchmark = async (runner: BenchmarkRunner, cryptoDri
     let workspace = '+gardening.pals';
     let validator = FormatValidatorEs4;
 
-    let keypair1 = Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
-    let keypair2 = Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
-    let keypair3 = Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair1 = await Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair2 = await Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
+    let keypair3 = await Crypto.generateAuthorKeypair('aaaa') as AuthorKeypair;
 
     //==================================================
     // benchmarks

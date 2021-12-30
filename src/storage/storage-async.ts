@@ -237,7 +237,7 @@ export class StorageAsync implements IStorageAsync {
             format: 'es.4',
             author: keypair.address,
             content: docToSet.content,
-            contentHash: Crypto.sha256base32(docToSet.content),
+            contentHash: await Crypto.sha256base32(docToSet.content),
             deleteAfter: docToSet.deleteAfter ?? null,
             path: docToSet.path,
             timestamp,
@@ -247,7 +247,7 @@ export class StorageAsync implements IStorageAsync {
         }
 
         loggerSet.debug('...signing doc');
-        let signedDoc = this.formatValidator.signDocument(keypair, doc);
+        let signedDoc = await this.formatValidator.signDocument(keypair, doc);
         if (isErr(signedDoc)) {
             return {
                 kind: 'failure',
@@ -396,13 +396,13 @@ export class StorageAsync implements IStorageAsync {
             let emptyDoc: Doc = {
                 ...cleanedDoc,
                 content: '',
-                contentHash: Crypto.sha256base32(''),
+                contentHash: await Crypto.sha256base32(''),
                 timestamp: doc.timestamp + 1,
                 signature: '?',
             }
 
             // sign and ingest it
-            let signedDoc = this.formatValidator.signDocument(keypair, emptyDoc)
+            let signedDoc = await this.formatValidator.signDocument(keypair, emptyDoc)
             if (isErr(signedDoc)) { return signedDoc }
 
             let ingestEvent = await this.ingest(signedDoc);
