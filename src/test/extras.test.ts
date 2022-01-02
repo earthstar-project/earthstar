@@ -18,11 +18,13 @@ import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/storageMemory';
 
 import { deleteMyDocuments } from '../extras';
+import { copyMyDocsToOtherWorkspace } from '..';
 
 //================================================================================
 // prepare for test scenarios
 
 let WORKSPACE = '+gardenclub.xxxxxxxxxxxxxxxxxxxx';
+let OTHER_WORKSPACE = '+mycoclub.xxxxxxxxxxxxxxxxxxxx';
 
 let VALIDATORS : IValidator[] = [ValidatorEs4];
 let FORMAT : FormatName = VALIDATORS[0].format;
@@ -133,4 +135,57 @@ for (let scenario of scenarios) {
         t.end();
     });
 
+    t.test(scenario.description + ': copyMyDocsToOtherWorkspace', async (t: any) => {
+        let now = Date.now() * 1000;
+        let sourceStorage = scenario.makeStorage(WORKSPACE);
+        let destStorage = scenario.makeStorage(OTHER_WORKSPACE);
+
+        // scenarios:
+
+        // A lone document
+        t.same(sourceStorage.set(keypair1, { format: FORMAT, path: '/path1', content: 'val1 keypair1', timestamp: now - 60 }), WriteResult.Accepted, 'make doc 1...');
+        t.equal(sourceStorage.getContent('/path1'), 'val1 keypair1');
+
+        // an ephemeral document
+        t.same(sourceStorage.set(keypair1, { format: FORMAT, path: '/path2!', content: 'val2 keypair1', timestamp: now - 10, deleteAfter: now + DAY }), WriteResult.Accepted, 'make ephemeral doc 2');
+        t.equal(sourceStorage.getContent('/path2!'), 'val2 keypair1');
+
+        // check that writes worked as expected
+        t.same(sourceStorage.paths(), ['/path1', '/path2!'], 'paths() are correct');
+        t.same(sourceStorage.paths({ contentLengthGt: 0 }), ['/path1', '/path2!'], 'two paths have non-empty content');
+        t.same(sourceStorage.authors(), [keypair1.address], 'authors() are correct');
+
+        // copy the documents
+        let { numCopied, numErrors } = await copyMyDocsToOtherWorkspace(sourceStorage, destStorage, keypair1);
+
+        // check that copy succeeded
+        t.same(numCopied, 2, '2 documents were copied');
+        t.same(numErrors, 0, '0 errors');
+
+        // Check that the lone doc was copied
+        t.equal(destStorage.getContent('/path1'), 'val1 keypair1', 'lone document was copied to dest storage');
+        
+        // Check that the original lone document remains in the source storage
+        t.equal(sourceStorage.getContent('/path1'), 'val1 keypair1', 'original lone document still exists in source storage');
+
+        // Check that the ephemeral doc was copied
+        t.equal(destStorage.getContent('/path2!'), 'val2 keypair1', 'ephemeral document was copied to dest storage');
+
+        // Check that the original ephemeral document still exists in the source storage
+        t.equal(sourceStorage.getContent('/path2!'), 'val2 keypair1', 'original ephemeral document still exists in source storage');
+
+        // check that copy worked as expected
+        t.same(destStorage.paths(), sourceStorage.paths(), 'dest paths() match source paths()');
+        t.same(destStorage.paths({ contentLengthGt: 0 }), ['/path1', '/path2!'], 'two paths have non-empty content in dest');
+        t.same(destStorage.authors(), sourceStorage.authors(), 'dest authors() match sourc authors()');
+        
+        // check that timestamps were preserved
+        t.same(destStorage.getDocument('/path1')?.timestamp, sourceStorage.getDocument('/path1')?.timestamp, '/path1 timestamps were preserved');
+        t.same(destStorage.getDocument('/path2!')?.timestamp, sourceStorage.getDocument('/path2!')?.timestamp, '/path2! timestamps were preserved');
+
+        sourceStorage.close();
+        destStorage.close();
+        
+        t.end();
+    });
 }

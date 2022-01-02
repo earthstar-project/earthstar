@@ -89,3 +89,47 @@ export let deleteMyDocumentsAsync = async (storage: IStorage | IStorageAsync, ke
         numErrors,
     };
 }
+
+export let copyMyDocsToOtherWorkspace = async (sourceStorage: IStorage | IStorageAsync, destStorage: IStorage | IStorageAsync, keypair: AuthorKeypair) => {
+    
+    // Get all docs by Author from sourceStorage
+    let myDocs = await sourceStorage.documents({
+        author: keypair.address,
+        history: 'all',
+    });
+
+    storageLogger.log(`copying ${myDocs.length} docs authored by ${keypair.address} from ${sourceStorage.workspace} to ${destStorage.workspace}...`);
+
+    let numErrors = 0;
+    let numCopied = 0;
+
+    // Write them to destStorage.  Modify the workspace property but preserve timestamps.
+    for(let doc of myDocs) {
+        let copiedDoc: DocToSet = {
+            format: doc.format,
+            path: doc.path,
+            content: doc.content,
+            timestamp: doc.timestamp,
+            deleteAfter: doc.deleteAfter
+        };
+
+        let result = await destStorage.set(keypair, copiedDoc);
+
+        if(isErr(result)) {
+            storageLogger.error(`copying ${doc.path}... error`);
+            numErrors += 1;
+        } else if(result === WriteResult.Ignored) {
+            storageLogger.log(`copying ${doc.path}... ignored`);
+            numErrors += 1;
+        } else {
+            storageLogger.log(`copying ${doc.path}... success`);
+            numCopied += 1;
+        }
+    }
+
+    // Check each write for errors and count how many succeed and fail.
+    return {
+        numCopied,
+        numErrors
+    }
+}
