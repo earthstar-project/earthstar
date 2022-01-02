@@ -18,7 +18,7 @@ import { ValidatorEs4 } from '../validator/es4';
 import { StorageMemory } from '../storage/storageMemory';
 
 import { deleteMyDocuments } from '../extras';
-import { copyMyDocsToOtherWorkspace } from '..';
+import { copyMyDocsToOtherWorkspace } from '../extras';
 
 //================================================================================
 // prepare for test scenarios
@@ -185,7 +185,7 @@ for (let scenario of scenarios) {
 
         sourceStorage.close();
         destStorage.close();
-        
+
         t.end();
     });
 }
