@@ -100,8 +100,9 @@ export let copyMyDocsToOtherWorkspace = async (sourceStorage: IStorage | IStorag
 
     storageLogger.log(`copying ${myDocs.length} docs authored by ${keypair.address} from ${sourceStorage.workspace} to ${destStorage.workspace}...`);
 
-    let numErrors = 0;
-    let numCopied = 0;
+    let numErrors   = 0;
+    let numIgnored  = 0;
+    let numCopied   = 0;
 
     // Write them to destStorage.  Modify the workspace property but preserve timestamps.
     for(let doc of myDocs) {
@@ -120,7 +121,7 @@ export let copyMyDocsToOtherWorkspace = async (sourceStorage: IStorage | IStorag
             numErrors += 1;
         } else if(result === WriteResult.Ignored) {
             storageLogger.log(`copying ${doc.path}... ignored`);
-            numErrors += 1;
+            numIgnored += 1;
         } else {
             storageLogger.log(`copying ${doc.path}... success`);
             numCopied += 1;
@@ -130,6 +131,7 @@ export let copyMyDocsToOtherWorkspace = async (sourceStorage: IStorage | IStorag
     // Check each write for errors and count how many succeed and fail.
     return {
         numCopied,
+        numIgnored,
         numErrors
     }
 }
