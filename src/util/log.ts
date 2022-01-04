@@ -24,7 +24,7 @@
  * The environment variable wins over the numbers set by setLogLevels.
  */
 
-import chalk from 'chalk';
+import { chalk } from "../../deps.ts";
 
 //================================================================================
 // TYPES
@@ -32,13 +32,13 @@ import chalk from 'chalk';
 type LogSource = string;
 
 export enum LogLevel {
-    None = -1,
-    Error = 0,  // default
-    Warn = 1,
-    Log = 2,
-    Info = 3,
-    Debug = 4,  // most verbose
-};
+  None = -1,
+  Error = 0, // default
+  Warn = 1,
+  Log = 2,
+  Info = 3,
+  Debug = 4, // most verbose
+}
 export const DEFAULT_LOG_LEVEL = LogLevel.Error;
 
 type LogLevels = Record<LogSource, LogLevel>;
@@ -67,72 +67,98 @@ const ENV_LOG_LEVEL = readEnvLogLevel();
 
 // make global singleton to hold log levels
 let globalLogLevels: LogLevels = {
-    // result is the min of (_env) and anything else
-    _default: DEFAULT_LOG_LEVEL,
+  // result is the min of (_env) and anything else
+  _default: DEFAULT_LOG_LEVEL,
 };
 
 export const updateLogLevels = (newLogLevels: LogLevels): void => {
-    globalLogLevels = {
-        ...globalLogLevels,
-        ...newLogLevels
-    };
+  globalLogLevels = {
+    ...globalLogLevels,
+    ...newLogLevels,
+  };
 };
 
 export const setLogLevel = (source: LogSource, level: LogLevel) => {
-    globalLogLevels[source] = level;
-}
+  globalLogLevels[source] = level;
+};
 
 export const setDefaultLogLevel = (level: LogLevel) => {
-    globalLogLevels._default = level;
-}
+  globalLogLevels._default = level;
+};
 
 export const getLogLevel = (source: LogSource): LogLevel => {
-    if (source in globalLogLevels) {
-        return globalLogLevels[source];
-    } else {
-        return globalLogLevels._default;
-    }
-}
+  if (source in globalLogLevels) {
+    return globalLogLevels[source];
+  } else {
+    return globalLogLevels._default;
+  }
+};
 
-export const getLogLevels = (): LogLevels =>
-    globalLogLevels;
+export const getLogLevels = (): LogLevels => globalLogLevels;
 
 //================================================================================
 // Logger class
 
-type ChalkColor = 'blue' | 'blueBright' | 'bold' | 'cyan' | 'cyanBright'
-    | 'dim' | 'gray' | 'green' | 'greenBright'
-    | 'grey' | 'magenta' | 'magentaBright' | 'red' | 'redBright' | 'white' | 'whiteBright'
-    | 'yellow' | 'yellowBright';
+type ChalkColor =
+  | "blue"
+  | "blueBright"
+  | "bold"
+  | "cyan"
+  | "cyanBright"
+  | "dim"
+  | "gray"
+  | "green"
+  | "greenBright"
+  | "grey"
+  | "magenta"
+  | "magentaBright"
+  | "red"
+  | "redBright"
+  | "white"
+  | "whiteBright"
+  | "yellow"
+  | "yellowBright";
 
 export class Logger {
-    source: LogSource;
-    color: ChalkColor | undefined = undefined;
+  source: LogSource;
+  color: ChalkColor | undefined = undefined;
 
-    constructor(source: LogSource, color?: ChalkColor) {
-        this.source = source;
-        this.color = color || 'blueBright';
-    }
+  constructor(source: LogSource, color?: ChalkColor) {
+    this.source = source;
+    this.color = color || "blueBright";
+  }
 
-    _print(level: LogLevel, showTag: boolean, indent: string, ...args: any[]) {
-        if (level <= getLogLevel(this.source)) {
-            if (showTag) {
-                let tag = `[${this.source}]`;
-                if (this.color !== undefined) {
-                    tag = chalk[this.color](tag);
-                }
-                console.log(indent, tag, ...args);
-            } else {
-                console.log(indent, ...args);
-            }
+  _print(level: LogLevel, showTag: boolean, indent: string, ...args: any[]) {
+    if (level <= getLogLevel(this.source)) {
+      if (showTag) {
+        let tag = `[${this.source}]`;
+        if (this.color !== undefined) {
+          tag = (chalk as any)[this.color](tag);
         }
+        console.log(indent, tag, ...args);
+      } else {
+        console.log(indent, ...args);
+      }
     }
+  }
 
-    error(...args: any[]) { this._print(LogLevel.Error, true, '!!', ...args); }
-    warn( ...args: any[]) { this._print(LogLevel.Warn,  true, '! ', ...args); }
-    log(  ...args: any[]) { this._print(LogLevel.Log,   true, '  ', ...args); }
-    info( ...args: any[]) { this._print(LogLevel.Info,  true, '    ', ...args); }
-    debug(...args: any[]) { this._print(LogLevel.Debug, true, '      ', ...args); }
+  error(...args: any[]) {
+    this._print(LogLevel.Error, true, "!!", ...args);
+  }
+  warn(...args: any[]) {
+    this._print(LogLevel.Warn, true, "! ", ...args);
+  }
+  log(...args: any[]) {
+    this._print(LogLevel.Log, true, "  ", ...args);
+  }
+  info(...args: any[]) {
+    this._print(LogLevel.Info, true, "    ", ...args);
+  }
+  debug(...args: any[]) {
+    this._print(LogLevel.Debug, true, "      ", ...args);
+  }
 
-    blank() { this._print(LogLevel.Info,  false, ''); }
-};
+  blank() {
+    this._print(LogLevel.Info, false, "");
+  }
+}

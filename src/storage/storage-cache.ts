@@ -1,18 +1,20 @@
-import isEqual from "fast-deep-equal";
-import stringify from "fast-json-stable-stringify";
+import {
+  fast_deep_equal as isEqual,
+  fast_json_stable_stringify as stringify,
+} from "../../deps.ts";
 
-import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types";
-import { isErr, StorageIsClosedError } from "../util/errors";
-import { microsecondNow } from "../util/misc";
-import { docMatchesFilter, cleanUpQuery } from "../query/query";
-import { QueryFollower } from "../query-follower/query-follower";
-import { Query } from "../query/query-types";
-import { IngestEvent, IStorageAsync, LiveQueryEvent } from "./storage-types";
-import { Crypto } from '../crypto/crypto';
+import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types.ts";
+import { isErr, StorageIsClosedError } from "../util/errors.ts";
+import { microsecondNow } from "../util/misc.ts";
+import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
+import { QueryFollower } from "../query-follower/query-follower.ts";
+import { Query } from "../query/query-types.ts";
+import { IngestEvent, IStorageAsync, LiveQueryEvent } from "./storage-types.ts";
+import { Crypto } from "../crypto/crypto.ts";
 
 //--------------------------------------------------
 
-import { Logger } from "../util/log";
+import { Logger } from "../util/log.ts";
 let logger = new Logger("storage cache", "cyan");
 
 //================================================================================
@@ -99,11 +101,11 @@ export class StorageCache {
     this._storage = storage;
     this._timeToLive = timeToLive || 1000;
   }
-  
+
   // SET - just pass along to the backing storage
-  
+
   set(keypair: AuthorKeypair, docToSet: DocToSet) {
-    return this._storage.set(keypair, docToSet)
+    return this._storage.set(keypair, docToSet);
   }
 
   // GET
@@ -181,7 +183,7 @@ export class StorageCache {
             docs,
             expires: Date.now() + this._timeToLive,
           });
-          
+
           this._fireOnCacheUpdateds();
         });
       }
@@ -194,9 +196,8 @@ export class StorageCache {
       { ...query, historyMode: "all", orderBy: "localIndex ASC" },
     );
     follower.bus.on(async (event: LiveQueryEvent) => {
-      if (event.kind === 'existing' || event.kind === 'success') {
-          
-          this._updateCache(event.doc);
+      if (event.kind === "existing" || event.kind === "success") {
+        this._updateCache(event.doc);
       }
     });
 
@@ -216,7 +217,7 @@ export class StorageCache {
         docs,
         expires: Date.now() + this._timeToLive,
       });
-      
+
       this._fireOnCacheUpdateds();
     });
 
@@ -224,12 +225,10 @@ export class StorageCache {
     return [];
   }
 
-  
-
   // OVERWRITE
-  
+
   // We just call the backing storage's implementation
-  // A user calling this method probably wants to be sure 
+  // A user calling this method probably wants to be sure
   // that their docs are _really_ deleted,
   // so we don't do a quick and dirty version in the cache here.
 
@@ -259,20 +258,19 @@ export class StorageCache {
             REPLACE one with same a
           OR doc has different author
             REPLACE
-          
-       
+
+
       OR zero documents with the same path
         AND query has a filter
           AND doc matches filter
             APPEND
           OR does not match filter
             NOOP
-        OR query has no filter 
+        OR query has no filter
           APPEND
      */
 
       const appendDoc = () => {
-        
         let nextDocs = [...entry.docs, doc];
         this._docCache.set(key, {
           ...entry,
@@ -282,7 +280,6 @@ export class StorageCache {
       };
 
       const replaceDoc = ({ exact }: { exact: boolean }) => {
-        
         const nextDocs = entry.docs.map((existingDoc) => {
           if (
             exact &&
@@ -305,12 +302,12 @@ export class StorageCache {
       };
 
       const documentsWithSamePath = entry.docs.filter(
-        (existingDoc) => existingDoc.path === doc.path
+        (existingDoc) => existingDoc.path === doc.path,
       );
 
       const documentsWithSamePathAndAuthor = entry.docs.filter(
         (existingDoc) =>
-          existingDoc.path === doc.path && existingDoc.author === doc.author
+          existingDoc.path === doc.path && existingDoc.author === doc.author,
       );
 
       if (documentsWithSamePath.length === 0) {
@@ -331,7 +328,6 @@ export class StorageCache {
           return;
         }
 
-        
         replaceDoc({ exact: true });
         return;
       }
@@ -340,13 +336,12 @@ export class StorageCache {
 
       // console.log({latestDoc, doc})
 
-      const docIsDifferent =
-        doc.author !== latestDoc?.author || !isEqual(doc, latestDoc);
+      const docIsDifferent = doc.author !== latestDoc?.author ||
+        !isEqual(doc, latestDoc);
 
       const docIsLater = doc.timestamp > latestDoc.timestamp;
 
       if (docIsDifferent && docIsLater) {
-        
         replaceDoc({ exact: false });
         return;
       }
@@ -359,7 +354,7 @@ export class StorageCache {
     return Promise.all(
       Array.from(this._onCacheUpdatedCallbacks.values()).map((callback) => {
         return callback();
-      })
+      }),
     );
   }
 

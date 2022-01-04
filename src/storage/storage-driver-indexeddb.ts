@@ -1,10 +1,10 @@
-import { Doc, WorkspaceAddress } from "../util/doc-types";
-import { StorageIsClosedError } from "../util/errors";
-import { StorageDriverAsyncMemory } from "./storage-driver-async-memory";
+import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
+import { StorageIsClosedError } from "../util/errors.ts";
+import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
 
 //--------------------------------------------------
 
-import { Logger } from "../util/log";
+import { Logger } from "../util/log.ts";
 let logger = new Logger("storage driver indexeddb", "yellowBright");
 
 //================================================================================
@@ -32,7 +32,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
       const request = window.indexedDB.open(
         `stonesoup:database:${this.workspace}`,
-        1
+        1,
       );
 
       request.onerror = () => {
@@ -64,10 +64,10 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
           }
 
           this.docByPathAndAuthor = new Map(
-            Object.entries(docs.byPathAndAuthor)
+            Object.entries(docs.byPathAndAuthor),
           );
           this.docsByPathNewestFirst = new Map(
-            Object.entries(docs.byPathNewestFirst)
+            Object.entries(docs.byPathNewestFirst),
           );
 
           return resolve(request.result);
@@ -75,7 +75,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
         retrieval.onerror = () => {
           logger.debug(
-            `StorageIndexedDB constructing: No existing DB for ${this.workspace}`
+            `StorageIndexedDB constructing: No existing DB for ${this.workspace}`,
           );
           reject();
         };
