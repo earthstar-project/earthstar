@@ -10,3 +10,4 @@ dist/*
 node/*
 node_modules/
 yarn-error.log
+npm/*

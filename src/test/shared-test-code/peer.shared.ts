@@ -1,20 +1,17 @@
-import t = require('tap');
-import { onFinishOneTest } from '../browser-run-exit';
+import { assert, assertEquals } from "../asserts.ts";
 
-import { WorkspaceAddress, } from '../../util/doc-types';
-import { IStorageAsync } from '../../storage/storage-types';
-import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
-import { compareByFn, sortedInPlace } from '../../storage/compare';
-import { Peer } from '../../peer/peer';
+import { WorkspaceAddress } from "../../util/doc-types.ts";
+import { IStorageAsync } from "../../storage/storage-types.ts";
+import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
+import { compareByFn, sortedInPlace } from "../../storage/compare.ts";
+import { Peer } from "../../peer/peer.ts";
 
 //================================================================================
 
-import {
-    Logger,
-} from '../../util/log';
+import { Logger } from "../../util/log.ts";
 
-let loggerTest = new Logger('test', 'whiteBright');
-let loggerTestCb = new Logger('test cb', 'white');
+let loggerTest = new Logger("test", "whiteBright");
+let loggerTestCb = new Logger("test cb", "white");
 let J = JSON.stringify;
 
 //setDefaultLogLevel(LogLevel.None);
@@ -22,62 +19,95 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export let runPeerTests = (subtestName: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
+export let runPeerTests = (
+  subtestName: string,
+  makeStorage: (ws: WorkspaceAddress) => IStorageAsync,
+) => {
+  let TEST_NAME = "peer shared tests";
+  let SUBTEST_NAME = subtestName;
 
-    let TEST_NAME = 'peer shared tests';
-    let SUBTEST_NAME = subtestName;
+  Deno.test(SUBTEST_NAME + ": peer basics", async () => {
+    let initialCryptoDriver = GlobalCryptoDriver;
 
-    // Boilerplate to help browser-run know when this test is completed.
-    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
-    /* istanbul ignore next */ 
-    (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
+    let workspaces = [
+      "+one.ws",
+      "+two.ws",
+      "+three.ws",
+    ];
+    let storages = workspaces.map((ws) => makeStorage(ws));
 
-    t.test(SUBTEST_NAME + ': peer basics', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
+    let sortedWorkspaces = sortedInPlace([...workspaces]);
+    let sortedStorages = [...storages];
+    sortedStorages.sort(compareByFn((storage) => storage.workspace));
 
-        let workspaces = [
-            '+one.ws',
-            '+two.ws',
-            '+three.ws',
-        ]
-        let storages = workspaces.map(ws => makeStorage(ws));
+    let peer = new Peer();
 
-        let sortedWorkspaces = sortedInPlace([...workspaces]);
-        let sortedStorages = [...storages];
-        sortedStorages.sort(compareByFn(storage => storage.workspace));
+    assert(
+      typeof peer.peerId === "string" && peer.peerId.length > 5,
+      "peer has a peerId",
+    );
 
-        let peer = new Peer();
+    assertEquals(
+      peer.hasWorkspace("+two.ws"),
+      false,
+      "does not yet have +two.ws",
+    );
+    assertEquals(peer.workspaces(), [], "has no workspaces");
+    assertEquals(peer.storages(), [], "has no storages");
+    assertEquals(peer.size(), 0, "size is zero");
 
-        t.ok(typeof peer.peerId === 'string' && peer.peerId.length > 5, 'peer has a peerId');
+    for (let storage of storages) {
+      await peer.addStorage(storage);
+    }
 
-        t.same(peer.hasWorkspace('+two.ws'), false, 'does not yet have +two.ws');
-        t.same(peer.workspaces(), [], 'has no workspaces');
-        t.same(peer.storages(), [], 'has no storages');
-        t.same(peer.size(), 0, 'size is zero');
+    assertEquals(
+      peer.hasWorkspace("nope"),
+      false,
+      "does not have invalid workspace address",
+    );
+    assertEquals(
+      peer.hasWorkspace("+nope.ws"),
+      false,
+      "does not have +nope.ws workspace",
+    );
+    assertEquals(
+      peer.hasWorkspace("+two.ws"),
+      true,
+      "now it does have +two.ws",
+    );
 
-        for (let storage of storages) {
-            await peer.addStorage(storage);
-        }
+    assertEquals(
+      peer.workspaces(),
+      sortedWorkspaces,
+      "has all 3 workspaces, sorted",
+    );
+    assertEquals(
+      peer.storages(),
+      sortedStorages,
+      "has all 3 storages sorted by workspace",
+    );
+    assertEquals(peer.size(), 3, "size is 3");
 
-        t.same(peer.hasWorkspace('nope'), false, 'does not have invalid workspace address');
-        t.same(peer.hasWorkspace('+nope.ws'), false, 'does not have +nope.ws workspace');
-        t.same(peer.hasWorkspace('+two.ws'), true, 'now it does have +two.ws');
+    await peer.removeStorageByWorkspace("+one.ws");
+    assertEquals(
+      peer.workspaces(),
+      ["+three.ws", "+two.ws"],
+      "removed by workspace address",
+    );
+    assertEquals(peer.size(), 2, "size is 2");
 
-        t.same(peer.workspaces(), sortedWorkspaces, 'has all 3 workspaces, sorted');
-        t.same(peer.storages(), sortedStorages, 'has all 3 storages sorted by workspace');
-        t.same(peer.size(), 3, 'size is 3');
+    await peer.removeStorage(storages[1]); // that's two.ws
+    assertEquals(peer.workspaces(), ["+three.ws"], "removed storage instance");
+    assertEquals(peer.size(), 1, "size is 1");
 
-        await peer.removeStorageByWorkspace('+one.ws');
-        t.same(peer.workspaces(), ['+three.ws', '+two.ws'], 'removed by workspace address');
-        t.same(peer.size(), 2, 'size is 2');
+    assertEquals(
+      initialCryptoDriver,
+      GlobalCryptoDriver,
+      `GlobalCryptoDriver has not changed unexpectedly.  started as ${
+        (initialCryptoDriver as any).name
+      }, ended as ${(GlobalCryptoDriver as any).name}`,
+    );
 
-        await peer.removeStorage(storages[1]);  // that's two.ws
-        t.same(peer.workspaces(), ['+three.ws'], 'removed storage instance');
-        t.same(peer.size(), 1, 'size is 1');
-
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-
-        // TODO: eventually test peer.bus events when we have them
-    });
+    // TODO: eventually test peer.bus events when we have them
+  });
 };

@@ -117,6 +117,8 @@ export class StorageAsync implements IStorageAsync {
     logger.debug("    sending didClose nonblockingly...");
     this.bus.sendLater("didClose");
     logger.debug("...closing done");
+
+    return Promise.resolve();
   }
 
   //--------------------------------------------------

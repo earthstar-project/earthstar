@@ -1,4 +1,4 @@
-import { testScenarios } from "./test-scenarios.browser.ts";
+import { testScenarios } from "./test-scenarios.node.ts";
 import { runStorageConfigTests } from "./storage-config.shared.ts";
 
 for (let scenario of testScenarios) {

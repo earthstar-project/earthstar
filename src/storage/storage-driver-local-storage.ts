@@ -63,7 +63,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
   // LIFECYCLE
 
   // isClosed(): inherited
-  async close(erase: boolean): Promise<void> {
+  close(erase: boolean) {
     logger.debug("close");
     if (this._isClosed) throw new StorageIsClosedError();
     if (erase) {
@@ -82,6 +82,8 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     }
     this._isClosed = true;
     logger.debug("...close is done.");
+
+    return Promise.resolve();
   }
 
   //--------------------------------------------------

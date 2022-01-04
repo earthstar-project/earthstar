@@ -1,10 +1,10 @@
-import { fast_deep_equal as equal, rfdc } from "../../deps.ts";
-
-export let deepEqual = equal;
-export let deepCopy = rfdc.clone();
+import { rfdc } from "../../deps.ts";
+export { fast_deep_equal as deepEqual } from "../../deps.ts";
 
 //================================================================================
 // TIME
+
+export const deepCopy = rfdc();
 
 export let microsecondNow = () => Date.now() * 1000;
 

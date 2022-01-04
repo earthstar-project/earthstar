@@ -314,5 +314,7 @@ export class QueryFollower implements IQueryFollower {
     await this.bus.send(event);
 
     logger.debug("...close is done.");
+
+    return Promise.resolve();
   }
 }

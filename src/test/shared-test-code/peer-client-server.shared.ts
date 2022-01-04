@@ -1,37 +1,39 @@
-import t = require('tap');
-import { onFinishOneTest } from '../browser-run-exit';
+import { assert, assertEquals, assertNotEquals } from "../asserts.ts";
 
-import { WorkspaceAddress, } from '../../util/doc-types';
-import { IStorageAsync, } from '../../storage/storage-types';
+import { WorkspaceAddress } from "../../util/doc-types.ts";
+import { IStorageAsync } from "../../storage/storage-types.ts";
 
-import { isErr, NotImplementedError } from '../../util/errors';
-import { Crypto } from '../../crypto/crypto';
-import { GlobalCryptoDriver } from '../../crypto/global-crypto-driver';
+import { isErr, NotImplementedError } from "../../util/errors.ts";
+import { Crypto } from "../../crypto/crypto.ts";
+import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 
-import { WorkspaceQuery_Request } from '../../peer/peer-types';
-import { Peer } from '../../peer/peer';
-import { PeerClient } from '../../peer/peer-client';
-import { PeerServer } from '../../peer/peer-server';
+import { WorkspaceQuery_Request } from "../../peer/peer-types.ts";
+import { Peer } from "../../peer/peer.ts";
+import { PeerClient } from "../../peer/peer-client.ts";
+import { PeerServer } from "../../peer/peer-server.ts";
 
 import {
-    evaluator,
-    makeProxy,
-    ERROR_CLASSES,
-} from '@earthstar-project/mini-rpc';
+  ERROR_CLASSES,
+  evaluator,
+  makeProxy,
+} from "https://cdn.skypack.dev/@earthstar-project/mini-rpc?dts";
 
 // tell mini-rpc which errors to treat specially
 ERROR_CLASSES.concat([
-    NotImplementedError,
+  NotImplementedError,
 ]);
 
 //================================================================================
 
 import {
-    Logger, LogLevel, setDefaultLogLevel, setLogLevel,
-} from '../../util/log';
+  Logger,
+  LogLevel,
+  setDefaultLogLevel,
+  setLogLevel,
+} from "../../util/log.ts";
 
-let loggerTest = new Logger('test', 'whiteBright');
-let loggerTestCb = new Logger('test cb', 'white');
+let loggerTest = new Logger("test", "whiteBright");
+let loggerTestCb = new Logger("test cb", "white");
 let J = JSON.stringify;
 
 setDefaultLogLevel(LogLevel.None);
@@ -46,242 +48,309 @@ setDefaultLogLevel(LogLevel.None);
 
 //================================================================================
 
-export let runPeerClientServerTests = (subtestName: string, makeStorage: (ws: WorkspaceAddress) => IStorageAsync) => {
-    let TEST_NAME = 'peerClient + peerServer shared tests';
-    let SUBTEST_NAME = subtestName;
+export let runPeerClientServerTests = (
+  subtestName: string,
+  makeStorage: (ws: WorkspaceAddress) => IStorageAsync,
+) => {
+  let TEST_NAME = "peerClient + peerServer shared tests";
+  let SUBTEST_NAME = subtestName;
 
-    // Boilerplate to help browser-run know when this test is completed.
-    // When run in the browser we'll be running tape, not tap, so we have to use tape's onFinish function.
-    /* istanbul ignore next */ 
-    (t.test as any)?.onFinish?.(() => onFinishOneTest(TEST_NAME, SUBTEST_NAME));
+  let setupTest = async () => {
+    let clientWorkspaces = [
+      "+common.one",
+      "+common.two",
+      "+common.three",
+      "+onlyclient.club",
+    ];
+    let serverWorkspaces = [
+      "+common.one",
+      "+onlyserver.club",
+      "+common.two",
+      "+common.three",
+    ];
+    let expectedCommonWorkspaces = [
+      // sorted
+      "+common.one",
+      "+common.three",
+      "+common.two",
+    ];
 
-    let setupTest = async () => {
-        let clientWorkspaces = [
-            '+common.one',
-            '+common.two',
-            '+common.three',
-            '+onlyclient.club',
-        ];
-        let serverWorkspaces = [
-            '+common.one',
-            '+onlyserver.club',
-            '+common.two',
-            '+common.three',
-        ]
-        let expectedCommonWorkspaces = [
-            // sorted
-            '+common.one',
-            '+common.three',
-            '+common.two',
-        ];
+    // make Peers
+    let peerOnClient = new Peer();
+    let peerOnServer = new Peer();
 
-        // make Peers
-        let peerOnClient = new Peer();
-        let peerOnServer = new Peer();
-
-        // make Storages and add them to the Peers
-        for (let ws of clientWorkspaces) {
-            peerOnClient.addStorage(makeStorage(ws));
-        }
-        for (let ws of serverWorkspaces) {
-            peerOnServer.addStorage(makeStorage(ws));
-        }
-
-        // make some identities
-        let author1 = await Crypto.generateAuthorKeypair('onee');
-        let author2 = await Crypto.generateAuthorKeypair('twoo');
-        let author3 = await Crypto.generateAuthorKeypair('thre');
-
-        if (isErr(author1)) { throw author1; }
-        if (isErr(author2)) { throw author2; }
-        if (isErr(author3)) { throw author3; }
-
-        return {
-            peerOnClient,
-            peerOnServer,
-            expectedCommonWorkspaces,
-            author1,
-            author2,
-            author3,
-        }
+    // make Storages and add them to the Peers
+    for (let ws of clientWorkspaces) {
+      peerOnClient.addStorage(makeStorage(ws));
+    }
+    for (let ws of serverWorkspaces) {
+      peerOnServer.addStorage(makeStorage(ws));
     }
 
-    t.test(SUBTEST_NAME + ': getServerPeerId', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
+    // make some identities
+    let author1 = await Crypto.generateAuthorKeypair("onee");
+    let author2 = await Crypto.generateAuthorKeypair("twoo");
+    let author3 = await Crypto.generateAuthorKeypair("thre");
 
-        let { peerOnClient, peerOnServer } = await setupTest();
-        t.notSame(peerOnClient.peerId, peerOnServer.peerId, 'peerIds are not the same, as expected');
-        let server = new PeerServer(peerOnServer);
-        let client = new PeerClient(peerOnClient, server);
+    if (isErr(author1)) throw author1;
+    if (isErr(author2)) throw author2;
+    if (isErr(author3)) throw author3;
 
-        // let them talk to each other
-        t.ok(true, '------ getServerPeerId ------');
-        loggerTest.debug(true, '------ getServerPeerId ------');
-        let serverPeerId = await client.do_getServerPeerId();
-        loggerTest.debug(true, '------ /getServerPeerId ------');
+    return {
+      peerOnClient,
+      peerOnServer,
+      expectedCommonWorkspaces,
+      author1,
+      author2,
+      author3,
+    };
+  };
 
-        t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
-        t.same(client.state.serverPeerId, peerOnServer.peerId, 'setState worked');
+  Deno.test(SUBTEST_NAME + ": getServerPeerId", async () => {
+    let initialCryptoDriver = GlobalCryptoDriver;
 
-        // close Storages
-        for (let storage of peerOnClient.storages()) { await storage.close(true); }
-        for (let storage of peerOnServer.storages()) { await storage.close(true); }
+    let { peerOnClient, peerOnServer } = await setupTest();
+    assertNotEquals(
+      peerOnClient.peerId,
+      peerOnServer.peerId,
+      "peerIds are not the same, as expected",
+    );
+    let server = new PeerServer(peerOnServer);
+    let client = new PeerClient(peerOnClient, server);
 
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
+    // let them talk to each other
+    assert(true, "------ getServerPeerId ------");
+    loggerTest.debug(true, "------ getServerPeerId ------");
+    let serverPeerId = await client.do_getServerPeerId();
+    loggerTest.debug(true, "------ /getServerPeerId ------");
 
-    t.test(SUBTEST_NAME + ': SaltyHandshake + AllWorkspaceState + WorkspaceQuery', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
+    assertEquals(serverPeerId, peerOnServer.peerId, "getServerPeerId works");
+    assertEquals(
+      client.state.serverPeerId,
+      peerOnServer.peerId,
+      "setState worked",
+    );
 
-        let {
-            peerOnClient,
-            peerOnServer,
-            expectedCommonWorkspaces,
-            author1,
-            author2,
-            author3,
-        } = await setupTest();
-        let server = new PeerServer(peerOnServer);
-        let client = new PeerClient(peerOnClient, server);
-        let workspace0 = expectedCommonWorkspaces[0];
-        let storage0peer = server.peer.getStorage(workspace0) as IStorageAsync;
-        await storage0peer.set(author1, {
-            format: 'es.4',
-            path: '/author1',
-            content: 'a1',
-        });
-        // this doc will be overwritten
-        // the total number of docs will be 2
-        await storage0peer.set(author2, {
-            format: 'es.4',
-            path: '/author2',
-            content: 'a2',
-        });
-        await storage0peer.set(author2, {
-            format: 'es.4',
-            path: '/author2',
-            content: 'a2.1',
-        });
+    // close Storages
+    for (let storage of peerOnClient.storages()) await storage.close(true);
+    for (let storage of peerOnServer.storages()) await storage.close(true);
 
-        // let them talk to each other
-        t.ok(true, '------ saltyHandshake ------');
-        loggerTest.debug(true, '------ saltyHandshake ------');
-        await client.do_saltyHandshake();
-        loggerTest.debug(true, '------ /saltyHandshake ------');
+    assertEquals(
+      initialCryptoDriver,
+      GlobalCryptoDriver,
+      `GlobalCryptoDriver has not changed unexpectedly.  started as ${
+        (initialCryptoDriver as any).name
+      }, ended as ${(GlobalCryptoDriver as any).name}`,
+    );
+  });
 
-        t.same(client.state.serverPeerId, server.peer.peerId, `client knows server's peer id`);
-        t.notSame(client.state.lastSeenAt, null, 'client state lastSeeenAt is not null');
-        t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
+  Deno.test(
+    SUBTEST_NAME + ": SaltyHandshake + AllWorkspaceState + WorkspaceQuery",
+    async () => {
+      let initialCryptoDriver = GlobalCryptoDriver;
 
-        t.ok(true, '------ allWorkspaceStates ------');
-        loggerTest.debug(true, '------ allWorkspaceStates ------');
-        await client.do_allWorkspaceStates();
-        loggerTest.debug(true, '------ /allWorkspaceStates ------');
+      let {
+        peerOnClient,
+        peerOnServer,
+        expectedCommonWorkspaces,
+        author1,
+        author2,
+        author3,
+      } = await setupTest();
+      let server = new PeerServer(peerOnServer);
+      let client = new PeerClient(peerOnClient, server);
+      let workspace0 = expectedCommonWorkspaces[0];
+      let storage0peer = server.peer.getStorage(workspace0) as IStorageAsync;
+      await storage0peer.set(author1, {
+        format: "es.4",
+        path: "/author1",
+        content: "a1",
+      });
+      // this doc will be overwritten
+      // the total number of docs will be 2
+      await storage0peer.set(author2, {
+        format: "es.4",
+        path: "/author2",
+        content: "a2",
+      });
+      await storage0peer.set(author2, {
+        format: "es.4",
+        path: "/author2",
+        content: "a2.1",
+      });
 
-        t.same(
-            Object.keys(client.state.workspaceStates).length,
-            expectedCommonWorkspaces.length,
-            'we now have info on the expected number of storages from the server'
-        );
-        let workspaceState0 = client.state.workspaceStates[workspace0];
-        t.ok(true, 'for the first of the common workspaces...');
-        t.same(workspaceState0.workspace, expectedCommonWorkspaces[0], 'workspace matches between key and value');
-        t.same(workspaceState0.serverStorageId, server.peer.getStorage(workspace0)?.storageId, 'storageId matches server');
-        t.same(workspaceState0.serverMaxLocalIndexSoFar, -1, 'server max local index so far starts at -1');
-        t.same(workspaceState0.clientMaxLocalIndexSoFar, -1, 'client max local index so far starts at -1');
+      // let them talk to each other
+      assert(true, "------ saltyHandshake ------");
+      loggerTest.debug(true, "------ saltyHandshake ------");
+      await client.do_saltyHandshake();
+      loggerTest.debug(true, "------ /saltyHandshake ------");
 
-        t.ok(true, '------ workspaceQuery ------');
-        loggerTest.debug(true, '------ workspaceQuery ------');
-        let workspace: WorkspaceAddress = expectedCommonWorkspaces[0];
-        let workspaceState = client.state.workspaceStates[workspace];
-        let storageId = workspaceState.serverStorageId;
-        let startAfter = workspaceState.serverMaxLocalIndexSoFar;
-        let queryRequest: WorkspaceQuery_Request = {
-            workspace,
-            storageId,
-            query: {
-                historyMode: 'all',
-                orderBy: 'localIndex ASC',
-                startAfter: { localIndex: startAfter },
-                // filter
-                // limit
-            }
-        }
-        let numPulled = await client.do_workspaceQuery(queryRequest);
-        loggerTest.debug(true, '------ /workspaceQuery ------');
+      assertEquals(
+        client.state.serverPeerId,
+        server.peer.peerId,
+        `client knows server's peer id`,
+      );
+      assertNotEquals(
+        client.state.lastSeenAt,
+        null,
+        "client state lastSeeenAt is not null",
+      );
+      assertEquals(
+        client.state.commonWorkspaces,
+        expectedCommonWorkspaces,
+        "client knows the correct common workspaces (and in sorted order)",
+      );
 
-        t.same(numPulled, 2, 'pulled all 2 docs');
-        workspaceState0 = client.state.workspaceStates[workspace0];
-        t.ok(true, 'for the first of the common workspaces...');
-        t.same(workspaceState0.workspace, workspace0);
-        t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
-        t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
+      assert(true, "------ allWorkspaceStates ------");
+      loggerTest.debug(true, "------ allWorkspaceStates ------");
+      await client.do_allWorkspaceStates();
+      loggerTest.debug(true, "------ /allWorkspaceStates ------");
 
-        t.ok(true, '------ workspaceQuery again ------');
-        loggerTest.debug(true, '------ workspaceQuery again ------');
-        // continue where we left off
-        workspaceState = client.state.workspaceStates[workspace];
-        startAfter = workspaceState.serverMaxLocalIndexSoFar;
-        queryRequest = {
-            workspace,
-            storageId,
-            query: {
-                historyMode: 'all',
-                orderBy: 'localIndex ASC',
-                startAfter: { localIndex: startAfter },
-                // filter
-                // limit
-            }
-        }
-        numPulled = await client.do_workspaceQuery(queryRequest);
-        loggerTest.debug(true, '------ /workspaceQuery again ------');
+      assertEquals(
+        Object.keys(client.state.workspaceStates).length,
+        expectedCommonWorkspaces.length,
+        "we now have info on the expected number of storages from the server",
+      );
+      let workspaceState0 = client.state.workspaceStates[workspace0];
+      assert(true, "for the first of the common workspaces...");
+      assertEquals(
+        workspaceState0.workspace,
+        expectedCommonWorkspaces[0],
+        "workspace matches between key and value",
+      );
+      assertEquals(
+        workspaceState0.serverStorageId,
+        server.peer.getStorage(workspace0)?.storageId,
+        "storageId matches server",
+      );
+      assertEquals(
+        workspaceState0.serverMaxLocalIndexSoFar,
+        -1,
+        "server max local index so far starts at -1",
+      );
+      assertEquals(
+        workspaceState0.clientMaxLocalIndexSoFar,
+        -1,
+        "client max local index so far starts at -1",
+      );
 
-        t.same(numPulled, 0, 'pulled 0 docs this time');
-        t.ok(true, 'no changes to workspaceState for this workspace');
-        t.same(workspaceState0.workspace, workspace0);
-        t.same(workspaceState0.serverMaxLocalIndexOverall, 2);
-        t.same(workspaceState0.serverMaxLocalIndexSoFar, 2);
+      assert(true, "------ workspaceQuery ------");
+      loggerTest.debug(true, "------ workspaceQuery ------");
+      let workspace: WorkspaceAddress = expectedCommonWorkspaces[0];
+      let workspaceState = client.state.workspaceStates[workspace];
+      let storageId = workspaceState.serverStorageId;
+      let startAfter = workspaceState.serverMaxLocalIndexSoFar;
+      let queryRequest: WorkspaceQuery_Request = {
+        workspace,
+        storageId,
+        query: {
+          historyMode: "all",
+          orderBy: "localIndex ASC",
+          startAfter: { localIndex: startAfter },
+          // filter
+          // limit
+        },
+      };
+      let numPulled = await client.do_workspaceQuery(queryRequest);
+      loggerTest.debug(true, "------ /workspaceQuery ------");
 
-        // close Storages
-        for (let storage of peerOnClient.storages()) { await storage.close(true); }
-        for (let storage of peerOnServer.storages()) { await storage.close(true); }
+      assertEquals(numPulled, 2, "pulled all 2 docs");
+      workspaceState0 = client.state.workspaceStates[workspace0];
+      assert(true, "for the first of the common workspaces...");
+      assertEquals(workspaceState0.workspace, workspace0);
+      assertEquals(workspaceState0.serverMaxLocalIndexOverall, 2);
+      assertEquals(workspaceState0.serverMaxLocalIndexSoFar, 2);
 
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
+      assert(true, "------ workspaceQuery again ------");
+      loggerTest.debug(true, "------ workspaceQuery again ------");
+      // continue where we left off
+      workspaceState = client.state.workspaceStates[workspace];
+      startAfter = workspaceState.serverMaxLocalIndexSoFar;
+      queryRequest = {
+        workspace,
+        storageId,
+        query: {
+          historyMode: "all",
+          orderBy: "localIndex ASC",
+          startAfter: { localIndex: startAfter },
+          // filter
+          // limit
+        },
+      };
+      numPulled = await client.do_workspaceQuery(queryRequest);
+      loggerTest.debug(true, "------ /workspaceQuery again ------");
 
-    t.test(SUBTEST_NAME + ': saltyHandshake with mini-rpc', async (t: any) => {
-        let initialCryptoDriver = GlobalCryptoDriver;
+      assertEquals(numPulled, 0, "pulled 0 docs this time");
+      assert(true, "no changes to workspaceState for this workspace");
+      assertEquals(workspaceState0.workspace, workspace0);
+      assertEquals(workspaceState0.serverMaxLocalIndexOverall, 2);
+      assertEquals(workspaceState0.serverMaxLocalIndexSoFar, 2);
 
-        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = await setupTest();
+      // close Storages
+      for (let storage of peerOnClient.storages()) await storage.close(true);
+      for (let storage of peerOnServer.storages()) await storage.close(true);
 
-        // create Client and Server instances
-        let serverLocal = new PeerServer(peerOnServer);
-        let serverProxy = makeProxy(serverLocal, evaluator);
+      assertEquals(
+        initialCryptoDriver,
+        GlobalCryptoDriver,
+        `GlobalCryptoDriver has not changed unexpectedly.  started as ${
+          (initialCryptoDriver as any).name
+        }, ended as ${(GlobalCryptoDriver as any).name}`,
+      );
+    },
+  );
 
-        // make a client that uses the proxy
-        let client = new PeerClient(peerOnClient, serverProxy);
+  Deno.test(SUBTEST_NAME + ": saltyHandshake with mini-rpc", async () => {
+    let initialCryptoDriver = GlobalCryptoDriver;
 
-        // let them talk to each other
-        t.ok(true, '------ saltyHandshake ------');
-        let serverPeerId = await client.do_getServerPeerId();
-        t.same(serverPeerId, peerOnServer.peerId, 'getServerPeerId works');
-        t.same(client.state.serverPeerId, peerOnServer.peerId, 'setState worked');
+    let { peerOnClient, peerOnServer, expectedCommonWorkspaces } =
+      await setupTest();
 
-        await client.do_saltyHandshake();
+    // create Client and Server instances
+    let serverLocal = new PeerServer(peerOnServer);
+    let serverProxy = makeProxy(serverLocal, evaluator);
 
-        t.same(client.state.serverPeerId, serverLocal.peer.peerId, `client knows server's peer id`);
-        t.notSame(client.state.lastSeenAt, null, 'client state lastSeeenAt is not null');
-        t.same(client.state.commonWorkspaces, expectedCommonWorkspaces, 'client knows the correct common workspaces (and in sorted order)');
+    // make a client that uses the proxy
+    let client = new PeerClient(peerOnClient, serverProxy);
 
-        // close Storages
-        for (let storage of peerOnClient.storages()) { await storage.close(true); }
-        for (let storage of peerOnServer.storages()) { await storage.close(true); }
+    // let them talk to each other
+    assert(true, "------ saltyHandshake ------");
+    let serverPeerId = await client.do_getServerPeerId();
+    assertEquals(serverPeerId, peerOnServer.peerId, "getServerPeerId works");
+    assertEquals(
+      client.state.serverPeerId,
+      peerOnServer.peerId,
+      "setState worked",
+    );
 
-        t.same(initialCryptoDriver, GlobalCryptoDriver, `GlobalCryptoDriver has not changed unexpectedly.  started as ${(initialCryptoDriver as any).name}, ended as ${(GlobalCryptoDriver as any).name}`)
-        t.end();
-    });
+    await client.do_saltyHandshake();
 
+    assertEquals(
+      client.state.serverPeerId,
+      serverLocal.peer.peerId,
+      `client knows server's peer id`,
+    );
+    assertNotEquals(
+      client.state.lastSeenAt,
+      null,
+      "client state lastSeeenAt is not null",
+    );
+    assertEquals(
+      client.state.commonWorkspaces,
+      expectedCommonWorkspaces,
+      "client knows the correct common workspaces (and in sorted order)",
+    );
+
+    // close Storages
+    for (let storage of peerOnClient.storages()) await storage.close(true);
+    for (let storage of peerOnServer.storages()) await storage.close(true);
+
+    assertEquals(
+      initialCryptoDriver,
+      GlobalCryptoDriver,
+      `GlobalCryptoDriver has not changed unexpectedly.  started as ${
+        (initialCryptoDriver as any).name
+      }, ended as ${(GlobalCryptoDriver as any).name}`,
+    );
+  });
 };
-

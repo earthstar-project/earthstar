@@ -54,3 +54,9 @@ export let isBuffer = (buf: any): boolean =>
   // to avoid bringing in the Buffer polyfill
   buf?.constructor?.name === "Buffer";
 //buf instanceof Buffer;
+
+export let identifyBufOrBytes = (bufOrBytes: any | Uint8Array): string => {
+  if (isBytes(bufOrBytes)) return "bytes";
+  if (isBuffer(bufOrBytes)) return "buffer";
+  return "?";
+};
