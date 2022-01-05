@@ -5,6 +5,7 @@ import { Query } from "../../query/query-types.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 
 import { TestScenario } from "./test-scenario-types.ts";
+import { testScenarios } from "./test-scenarios.ts";
 
 //================================================================================
 
@@ -393,3 +394,7 @@ export let runStorageDriverTests = (scenario: TestScenario) => {
     },
   );
 };
+
+for (let scenario of testScenarios) {
+  runStorageDriverTests(scenario);
+}

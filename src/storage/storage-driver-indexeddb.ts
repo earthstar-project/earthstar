@@ -3,6 +3,7 @@ import { StorageIsClosedError } from "../util/errors.ts";
 import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
 
 //--------------------------------------------------
+// @deno-types="./indexeddb-types.deno.ts"
 
 import { Logger } from "../util/log.ts";
 let logger = new Logger("storage driver indexeddb", "yellowBright");
@@ -24,13 +25,18 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     this.docsByPathNewestFirst = new Map();
   }
 
-  async getIndexedDb(): Promise<IDBDatabase> {
+  getIndexedDb(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       if (this._db) {
         return resolve(this._db);
       }
 
-      const request = window.indexedDB.open(
+      if (!(window as any).indexedDB) {
+        return reject();
+      }
+
+      // Deno doesn't have indexedDB yet, so we need to cast as any.
+      const request = (window as any).indexedDB.open(
         `stonesoup:database:${this.workspace}`,
         1,
       );
@@ -51,7 +57,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
       request.onsuccess = () => {
         this._db = request.result;
 
-        const transaction = this._db.transaction([DOC_STORE], "readonly");
+        const transaction = request.result.transaction([DOC_STORE], "readonly");
 
         const store = transaction.objectStore(DOC_STORE);
         const retrieval = store.get(DOCUMENTS_ID);

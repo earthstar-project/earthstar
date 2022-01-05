@@ -15,6 +15,7 @@ import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4
 import { StorageAsync } from "../../storage/storage-async.ts";
 
 import { TestScenario } from "./test-scenario-types.ts";
+import { testScenarios } from "./test-scenarios.ts";
 
 //================================================================================
 
@@ -238,3 +239,7 @@ let _runStorageConfigTests = (
     },
   );
 };
+
+for (let scenario of testScenarios) {
+  runStorageConfigTests(scenario);
+}

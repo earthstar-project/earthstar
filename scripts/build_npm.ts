@@ -1,12 +1,16 @@
-// ex. scripts/build_npm.ts
 import { build } from "https://deno.land/x/dnt/mod.ts";
+
+await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
   entryPoints: ["./mod.ts"],
   outDir: "./npm",
   shims: {
-    // see JS docs for overview and more options
     deno: true,
+  },
+  redirects: {
+    "./src/storage/indexeddb-types.deno.ts":
+      "./src/storage/indexeddb-types.node.ts",
   },
   package: {
     // package.json properties

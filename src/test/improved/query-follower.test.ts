@@ -10,6 +10,7 @@ import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4
 import { StorageAsync } from "../../storage/storage-async.ts";
 
 import { TestScenario } from "./test-scenario-types.ts";
+import { testScenarios } from "./test-scenarios.ts";
 
 //================================================================================
 
@@ -24,7 +25,9 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export let runQueryFollowerTests = (scenario: TestScenario) => {
+//======
+
+let runQueryFollowerTests = (scenario: TestScenario) => {
   let TEST_NAME = "QueryFollower tests";
   let SUBTEST_NAME = scenario.name;
 
@@ -375,3 +378,7 @@ export let runQueryFollowerTests = (scenario: TestScenario) => {
 
   // TODO: try closing the queryfollower from inside its own bus event handler -- this might cause a deadlock
 };
+
+for (let scenario of testScenarios) {
+  runQueryFollowerTests(scenario);
+}

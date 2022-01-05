@@ -12,13 +12,6 @@ export interface TestScenario {
   // is this storage scenario expected to persist (to disk, etc)?
   persistent: boolean;
 
-  // which platforms should this test run on?
-  platforms: {
-    browser: boolean;
-    node: boolean;
-    deno: boolean;
-  };
-
   // in here you will instantiate a StorageDriver and then
   // use it to instantiate a Storage:
   makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync;
