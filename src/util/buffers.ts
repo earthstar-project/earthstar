@@ -1,9 +1,12 @@
+import { Buffer } from "https://deno.land/std@0.119.0/node/buffer.ts";
+
 /**
  * This file provides common operations on Buffer.
  * Any util function that uses a Buffer should be here, not in bytes.ts.
  */
-
 //--------------------------------------------------
+
+import { isBuffer, isBytes } from "./bytes.ts";
 
 export let bytesToBuffer = (bytes: Uint8Array): Buffer => Buffer.from(bytes);
 

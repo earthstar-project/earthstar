@@ -1,3 +1,12 @@
+// This is because we are using non-default lib in compiler options
+// https://github.com/denoland/deno/issues/12754
+
+declare global {
+  interface Crypto {
+    randomUUID: () => string;
+  }
+}
+
 import { ICryptoDriver, KeypairBytes } from "./crypto-types.ts";
 import { stringToBytes } from "../util/bytes.ts";
 import { nobleEd25519 as ed, sha256_uint8array } from "../../deps.ts";
@@ -32,7 +41,7 @@ export const CryptoDriverNoble: ICryptoDriver = class {
       secret,
     };
   }
-  static async sign(
+  static sign(
     keypairBytes: KeypairBytes,
     msg: string | Uint8Array,
   ): Promise<Uint8Array> {

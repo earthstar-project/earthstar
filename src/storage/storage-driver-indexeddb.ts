@@ -3,7 +3,6 @@ import { StorageIsClosedError } from "../util/errors.ts";
 import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
 
 //--------------------------------------------------
-// @deno-types="./indexeddb-types.deno.ts"
 
 import { Logger } from "../util/log.ts";
 let logger = new Logger("storage driver indexeddb", "yellowBright");

@@ -1,10 +1,10 @@
 import { isDeno, isNode } from "https://deno.land/x/which_runtime/mod.ts";
 
-// basic earthstar types
-import { ICryptoDriver } from "../crypto/crypto-types.ts";
-
-// specific drivers
+// specific crypto drivers
 import { CryptoDriverNoble } from "../crypto/crypto-driver-noble.ts";
+import { CryptoDriverNode } from "../crypto/crypto-driver-node.js";
+
+// specific storage drivers
 import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
 import { StorageDriverLocalStorage } from "../storage/storage-driver-local-storage.ts";
 import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
@@ -52,6 +52,13 @@ const universalCryptoScenarios: CryptoScenario[] = [
   },
 ];
 
+const nodeCryptoScenarios: CryptoScenario[] = [
+  {
+    name: "CryptoDriverNode",
+    driver: CryptoDriverNode,
+  },
+];
+
 // ----------------------------------------------------------
 // Zip them all together into platforms
 
@@ -89,7 +96,7 @@ const nodeScenarios = makeScenarios(
   [
     ...universalStorageScenarios,
   ],
-  [...universalCryptoScenarios],
+  [...universalCryptoScenarios, ...nodeCryptoScenarios],
 );
 
 function getScenarios() {
@@ -106,7 +113,7 @@ function getCryptoScenarios() {
   if (isDeno) {
     return [...universalCryptoScenarios];
   } else if (isNode) {
-    return [...universalCryptoScenarios];
+    return [...universalCryptoScenarios, ...nodeCryptoScenarios];
   }
 
   return [...universalCryptoScenarios];

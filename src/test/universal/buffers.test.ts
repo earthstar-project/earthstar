@@ -1,4 +1,5 @@
-import {} from "../asserts.ts";
+import { Buffer } from "https://deno.land/std@0.119.0/node/buffer.ts";
+import { assert, assertEquals } from "../asserts.ts";
 import { snowmanBytes, snowmanString } from "../test-utils.ts";
 //t.runOnly = true;
 
@@ -15,7 +16,7 @@ import {
   stringToBuffer,
 } from "../../util/buffers.ts";
 
-import { identifyBufOrBytes, isBuffer, isBytes } from "../../util/bytes";
+import { identifyBufOrBytes, isBuffer, isBytes } from "../../util/bytes.ts";
 
 //================================================================================
 
@@ -26,41 +27,54 @@ let simpleBuffer = Buffer.from([97, 97]);
 
 //================================================================================
 
-Deno.test("bytesToBuffer", (t: any) => {
-  assertEquals(bytesToBuffer(snowmanBytes), snowmanBuffer, "snowman bytes to buffer");
+Deno.test("bytesToBuffer", () => {
+  assertEquals(
+    bytesToBuffer(snowmanBytes),
+    snowmanBuffer,
+    "snowman bytes to buffer",
+  );
   assertEquals(
     identifyBufOrBytes(bytesToBuffer(snowmanBytes)),
     "buffer",
     "returns buffer",
   );
-  t.end();
 });
 
-Deno.test("bufferToBytes", (t: any) => {
-  assertEquals(bufferToBytes(snowmanBuffer), snowmanBytes, "snowman buffer to bytes");
+Deno.test("bufferToBytes", () => {
+  assertEquals(
+    bufferToBytes(snowmanBuffer),
+    snowmanBytes,
+    "snowman buffer to bytes",
+  );
   assertEquals(
     identifyBufOrBytes(bufferToBytes(snowmanBuffer)),
     "bytes",
     "returns bytes",
   );
-  t.end();
 });
 
 //--------------------------------------------------
 
-Deno.test("bufferToString", (t: any) => {
-  assertEquals(bufferToString(simpleBuffer), simpleString, "simple buffer to string");
+Deno.test("bufferToString", () => {
+  assertEquals(
+    bufferToString(simpleBuffer),
+    simpleString,
+    "simple buffer to string",
+  );
   assertEquals(
     bufferToString(snowmanBuffer),
     snowmanString,
     "snowman buffer to string",
   );
   assert(typeof bufferToString(snowmanBuffer) === "string", "returns a string");
-  t.end();
 });
 
-Deno.test("stringToBuffer", (t: any) => {
-  assertEquals(stringToBuffer(simpleString), simpleBuffer, "simple string to buffer");
+Deno.test("stringToBuffer", () => {
+  assertEquals(
+    stringToBuffer(simpleString),
+    simpleBuffer,
+    "simple string to buffer",
+  );
   assertEquals(
     stringToBuffer(snowmanString),
     snowmanBuffer,
@@ -71,10 +85,9 @@ Deno.test("stringToBuffer", (t: any) => {
     "buffer",
     "returns buffer",
   );
-  t.end();
 });
 
-Deno.test("buffer: identifyBufOrBytes, isBuffer, isBytes", (t: any) => {
+Deno.test("buffer: identifyBufOrBytes, isBuffer, isBytes", () => {
   let buf = Buffer.from([1]);
   let bytes = Uint8Array.from([1]);
   let other = [1, 2, 3];
@@ -94,6 +107,4 @@ Deno.test("buffer: identifyBufOrBytes, isBuffer, isBytes", (t: any) => {
   );
   assertEquals(isBuffer(other), false, "isBuffer false on other");
   assertEquals(isBytes(other), false, "isBytes false on other");
-
-  t.end();
 });

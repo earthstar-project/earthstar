@@ -8,10 +8,6 @@ await build({
   shims: {
     deno: true,
   },
-  redirects: {
-    "./src/storage/indexeddb-types.deno.ts":
-      "./src/storage/indexeddb-types.node.ts",
-  },
   package: {
     // package.json properties
     name: "stone-soup",
