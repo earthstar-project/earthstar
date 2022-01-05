@@ -1,5 +1,8 @@
 .PHONY: test test-watch npm
 
+example:
+	deno run --import-map=import_map.json --config  deno.json --allow-env ./src/example-app.ts
+
 test:
 	deno test --import-map=import_map.json --allow-env --config deno.json src
   
