@@ -1,22 +1,19 @@
 import { isDeno, isNode } from "https://deno.land/x/which_runtime/mod.ts";
 
 // basic earthstar types
-import { WorkspaceAddress } from "../../util/doc-types.ts";
-import { IStorageDriverAsync } from "../../storage/storage-types.ts";
-import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import { ICryptoDriver } from "../crypto/crypto-types.ts";
 
 // specific drivers
-import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
-import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory.ts";
-import { StorageDriverLocalStorage } from "../../storage/storage-driver-local-storage.ts";
-import { StorageDriverIndexedDB } from "../../storage/storage-driver-indexeddb.ts";
+import { CryptoDriverNoble } from "../crypto/crypto-driver-noble.ts";
+import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
+import { StorageDriverLocalStorage } from "../storage/storage-driver-local-storage.ts";
+import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
 
 // test types
-import { TestScenario } from "./test-scenario-types.ts";
+import { CryptoScenario, TestScenario } from "./test-scenario-types.ts";
 
 // A version of test scenario without crypto specified yet.
 type JustStorageScenario = Omit<TestScenario, "cryptoDriver">;
-type CryptoScenario = { name: string; driver: ICryptoDriver };
 
 // ----------------------------------------------------------
 // Storage only scenarios, grouped by capability
@@ -105,6 +102,17 @@ function getScenarios() {
   return browserScenarios;
 }
 
+function getCryptoScenarios() {
+  if (isDeno) {
+    return [...universalCryptoScenarios];
+  } else if (isNode) {
+    return [...universalCryptoScenarios];
+  }
+
+  return [...universalCryptoScenarios];
+}
+
 //================================================================================
 
 export const testScenarios: TestScenario[] = getScenarios();
+export const testCryptoScenarios: CryptoScenario[] = getCryptoScenarios();

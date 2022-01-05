@@ -14,8 +14,8 @@ import {
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { StorageAsync } from "../../storage/storage-async.ts";
 
-import { TestScenario } from "./test-scenario-types.ts";
-import { testScenarios } from "./test-scenarios.ts";
+import { TestScenario } from "../test-scenario-types.ts";
+import { testScenarios } from "../test-scenarios.ts";
 
 //================================================================================
 

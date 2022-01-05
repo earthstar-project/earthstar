@@ -2,6 +2,7 @@ import { assert, assertEquals } from "../asserts.ts";
 
 import { ICryptoDriver, KeypairBytes } from "../../crypto/crypto-types.ts";
 import { identifyBufOrBytes } from "../../util/bytes.ts";
+import { testCryptoScenarios } from "../test-scenarios.ts";
 
 //================================================================================
 
@@ -57,3 +58,7 @@ export let runCryptoDriverInteropTests = (drivers: ICryptoDriver[]) => {
     },
   );
 };
+
+runCryptoDriverInteropTests(
+  testCryptoScenarios.map((scenario) => scenario.driver),
+);

@@ -2,6 +2,8 @@ import { assert, assertEquals, assertNotEquals } from "../asserts.ts";
 
 import { WorkspaceAddress } from "../../util/doc-types.ts";
 import { IStorageAsync } from "../../storage/storage-types.ts";
+import { StorageAsync } from "../../storage/storage-async.ts";
+import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 
 import { isErr, NotImplementedError } from "../../util/errors.ts";
 import { Crypto } from "../../crypto/crypto.ts";
@@ -12,11 +14,15 @@ import { Peer } from "../../peer/peer.ts";
 import { PeerClient } from "../../peer/peer-client.ts";
 import { PeerServer } from "../../peer/peer-server.ts";
 
+// TODO-DENO: Update mini-rpc to provide types
 import {
   ERROR_CLASSES,
   evaluator,
   makeProxy,
 } from "https://cdn.skypack.dev/@earthstar-project/mini-rpc?dts";
+
+import { testScenarios } from "../test-scenarios.ts";
+import { TestScenario } from "../test-scenario-types.ts";
 
 // tell mini-rpc which errors to treat specially
 ERROR_CLASSES.concat([
@@ -49,11 +55,18 @@ setDefaultLogLevel(LogLevel.None);
 //================================================================================
 
 export let runPeerClientServerTests = (
-  subtestName: string,
-  makeStorage: (ws: WorkspaceAddress) => IStorageAsync,
+  scenario: TestScenario,
 ) => {
+  const { makeDriver, name } = scenario;
+
+  let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
+    let stDriver = makeDriver(ws);
+    let storage = new StorageAsync(ws, FormatValidatorEs4, stDriver);
+    return storage;
+  };
+
   let TEST_NAME = "peerClient + peerServer shared tests";
-  let SUBTEST_NAME = subtestName;
+  let SUBTEST_NAME = name;
 
   let setupTest = async () => {
     let clientWorkspaces = [

@@ -1,6 +1,6 @@
-import { WorkspaceAddress } from "../../util/doc-types.ts";
-import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { IStorageDriverAsync } from "../../storage/storage-types.ts";
+import { WorkspaceAddress } from "../util/doc-types.ts";
+import { ICryptoDriver } from "../crypto/crypto-types.ts";
+import { IStorageDriverAsync } from "../storage/storage-types.ts";
 
 export interface TestScenario {
   // name of test, to show in list of tests
@@ -15,4 +15,9 @@ export interface TestScenario {
   // in here you will instantiate a StorageDriver and then
   // use it to instantiate a Storage:
   makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync;
+}
+
+export interface CryptoScenario {
+  name: string;
+  driver: ICryptoDriver;
 }

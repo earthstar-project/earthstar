@@ -20,12 +20,15 @@ import {
   GlobalCryptoDriver,
   setGlobalCryptoDriver,
 } from "../../crypto/global-crypto-driver.ts";
+import { testCryptoScenarios } from "../test-scenarios.ts";
+import { CryptoScenario } from "../test-scenario-types.ts";
 
 //================================================================================
 
-export let runCryptoTests = (driver: ICryptoDriver) => {
+export let runCryptoTests = (scenario: CryptoScenario) => {
+  const { driver, name } = scenario;
   let TEST_NAME = "crypto shared tests";
-  let SUBTEST_NAME = (driver as any).name;
+  let SUBTEST_NAME = name;
 
   Deno.test(SUBTEST_NAME + ": sha256 of strings", async () => {
     setGlobalCryptoDriver(driver);
@@ -595,3 +598,7 @@ export let runCryptoTests = (driver: ICryptoDriver) => {
     },
   );
 };
+
+for (const scenario of testCryptoScenarios) {
+  runCryptoTests(scenario);
+}

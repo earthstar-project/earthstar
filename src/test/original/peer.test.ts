@@ -4,7 +4,11 @@ import { WorkspaceAddress } from "../../util/doc-types.ts";
 import { IStorageAsync } from "../../storage/storage-types.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { compareByFn, sortedInPlace } from "../../storage/compare.ts";
+import { StorageAsync } from "../../storage/storage-async.ts";
+import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { Peer } from "../../peer/peer.ts";
+import { testScenarios } from "../test-scenarios.ts";
+import { TestScenario } from "../test-scenario-types.ts";
 
 //================================================================================
 
@@ -20,11 +24,18 @@ let J = JSON.stringify;
 //================================================================================
 
 export let runPeerTests = (
-  subtestName: string,
-  makeStorage: (ws: WorkspaceAddress) => IStorageAsync,
+  scenario: TestScenario,
 ) => {
+  const { name, makeDriver } = scenario;
+
   let TEST_NAME = "peer shared tests";
-  let SUBTEST_NAME = subtestName;
+  let SUBTEST_NAME = name;
+
+  let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
+    let stDriver = makeDriver(ws);
+    let storage = new StorageAsync(ws, FormatValidatorEs4, stDriver);
+    return storage;
+  };
 
   Deno.test(SUBTEST_NAME + ": peer basics", async () => {
     let initialCryptoDriver = GlobalCryptoDriver;
@@ -111,3 +122,7 @@ export let runPeerTests = (
     // TODO: eventually test peer.bus events when we have them
   });
 };
+
+for (const scenario of testScenarios) {
+  runPeerTests(scenario);
+}

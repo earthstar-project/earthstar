@@ -13,11 +13,15 @@ import {
   setGlobalCryptoDriver,
 } from "../../crypto/global-crypto-driver.ts";
 
+import { testCryptoScenarios } from "../test-scenarios.ts";
+import { CryptoScenario } from "../test-scenario-types.ts";
+
 //================================================================================
 
-export let runCryptoKeypairTests = (driver: ICryptoDriver) => {
+export let runCryptoKeypairTests = (scenario: CryptoScenario) => {
+  const { driver, name } = scenario;
   let TEST_NAME = "crypto-keypair shared tests";
-  let SUBTEST_NAME = (driver as any).name;
+  let SUBTEST_NAME = name;
 
   Deno.test(
     SUBTEST_NAME +
@@ -196,3 +200,7 @@ export let runCryptoKeypairTests = (driver: ICryptoDriver) => {
     },
   );
 };
+
+for (const scenario of testCryptoScenarios) {
+  runCryptoKeypairTests(scenario);
+}

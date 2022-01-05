@@ -4,8 +4,8 @@ import { Doc } from "../../util/doc-types.ts";
 import { Query } from "../../query/query-types.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 
-import { TestScenario } from "./test-scenario-types.ts";
-import { testScenarios } from "./test-scenarios.ts";
+import { TestScenario } from "../test-scenario-types.ts";
+import { testScenarios } from "../test-scenarios.ts";
 
 //================================================================================
 

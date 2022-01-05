@@ -5,17 +5,19 @@ import { snowmanBytes, snowmanString } from "../test-utils.ts";
 import { identifyBufOrBytes, stringToBytes } from "../../util/bytes.ts";
 
 import { base32StringToBytes } from "../../crypto/base32.ts";
-import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import { testCryptoScenarios } from "../test-scenarios.ts";
+import { CryptoScenario } from "../test-scenario-types.ts";
 
 //================================================================================
 
-export let runCryptoDriverTests = (driver: ICryptoDriver) => {
+export let runCryptoDriverTests = (scenario: CryptoScenario) => {
+  const { driver, name } = scenario;
   let TEST_NAME = "crypto-driver shared tests";
-  let SUBTEST_NAME = (driver as any).name;
+  let SUBTEST_NAME = name;
 
   Deno.test(
     SUBTEST_NAME + ": sha256(bytes | string) --> bytes",
-    async (t: any) => {
+    async () => {
       let vectors: [Uint8Array | string, Uint8Array][] = [
         // input, output
         [
@@ -75,11 +77,10 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
           `hash of bytes or string: ${JSON.stringify(input)}`,
         );
       }
-      t.end();
     },
   );
 
-  Deno.test(SUBTEST_NAME + ": generateKeypairBytes", async (t: any) => {
+  Deno.test(SUBTEST_NAME + ": generateKeypairBytes", async () => {
     let keypair = await driver.generateKeypairBytes();
     assertEquals(
       identifyBufOrBytes(keypair.pubkey),
@@ -106,8 +107,6 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
       keypair2.secret,
       "generateKeypairBytes is non-deterministic (secret)",
     );
-
-    t.end();
   });
 
   Deno.test(SUBTEST_NAME + ": sign and verify", async () => {
@@ -142,3 +141,7 @@ export let runCryptoDriverTests = (driver: ICryptoDriver) => {
     );
   });
 };
+
+for (const scenario of testCryptoScenarios) {
+  runCryptoDriverTests(scenario);
+}
