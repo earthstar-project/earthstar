@@ -2,7 +2,39 @@
 
 **WIP** April 2021
 
-This is a reimplmenetation of [Earthstar](https://github.com/earthstar-project/earthstar), either an experiment or a fresh rewrite.
+This is a reimplmenetation of [Earthstar](https://github.com/earthstar-project/earthstar), maintaining compatability with the data format (see the specification) but changing the Typescript API and the networking protocol.
+
+## Deno, Node, browsers
+
+This repo works in Deno, Node, and browsers.  It takes a Deno-first approach; the Deno code is then transformed into an npm package using [dnt](https://github.com/denoland/dnt).
+
+### Important files and how they work
+
+* `Makefile` - replacement for `package.json` scripts
+* `mod.ts` - convention for entry point of a package in Deno.  Says which things are exported.  Similar to `index.js` in Node.
+* `deno.json` - Similar to `tsconfig.json` but simpler, specifies which core libs to use (dom, etc).  Passed to the Deno executable with `--config`.
+    * deno.ns - basic Deno stuff
+    * dom - to get indexeddb types
+    * dom.asynciterable
+* `import_map.json` - tells Deno how to convert bare import specifiers like `import 'crypto'` with more specific URLs.  Passed to the Deno executable with `--import-map`.
+* `deps.ts` - centralize all the URL imports into one file, then most src files import from deps.ts to get their dependencies.
+* `scripts/build_npm.ts` - uses **dnt** to convert everything to a Node package in the `npm` folder, then runs the tests using Node.  Run this using `make npm`.
+
+## How to...
+
+Run the example Earthstar code: `make example`
+
+Run tests in Deno: `make test` or `make test-watch`
+
+Run tests in Node: `make npm`.  This currently only works with Node 16.
+
+Edit dependency versions: edit `deps.ts`.
+
+> ---
+>
+> ### Text below this point in the README might be outdated now that we're doing the Deno-first approach.
+>
+> ---
 
 ## Log control
 
@@ -42,7 +74,7 @@ EARTHSTAR_LOG_LEVEL=3 yarn start
 We aim to support:
 * browser
 * node 12, 14, 16
-* deno (⏳ eventually, not started yet)
+* deno
 
 ### Buffers and Uint8Arrays
 
@@ -212,6 +244,8 @@ EVERYTHING AVAILABLE IN...
      universal - StorageDriverAsyncMemory
 ```
 ## Source code dependency chart
+
+> This is deprecated now that we're doing the Deno-first approach.  Need to regenerate these diagrams.
 
 A --> B means "file A imports file B".
 
