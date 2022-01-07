@@ -11,6 +11,7 @@ export { SuperbusMap } from "./src/superbus_map/superbus_map.ts";
 export * as nobleEd25519 from "https://deno.land/x/ed25519@1.3.3/mod.ts";
 export { default as Heap } from "http://esm.sh/heap@0.2.7?dts";
 export { Lock } from "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts";
+export { isDeno, isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 // Stubs of node-only libraries
 
