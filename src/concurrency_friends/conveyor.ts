@@ -38,84 +38,84 @@ import { Deferred, makeDeferred } from "./deferred.ts";
 
 export type ConveyorHandlerFn<T, R> = (item: T) => R | Promise<R>;
 type QueueItem<T, R> = {
-  item: T;
-  deferred: Deferred<R>;
-  priority: number | string;
+    item: T;
+    deferred: Deferred<R>;
+    priority: number | string;
 };
 
 export class Conveyor<T, R> {
-  _queue: Heap<QueueItem<T, R>>;
-  _threadIsRunning: boolean = false;
-  _handlerFn: ConveyorHandlerFn<T, R>;
-  _ii: number = 1000;
+    _queue: Heap<QueueItem<T, R>>;
+    _threadIsRunning: boolean = false;
+    _handlerFn: ConveyorHandlerFn<T, R>;
+    _ii: number = 1000;
 
-  constructor(handler: ConveyorHandlerFn<T, R>) {
-    // Create a new Conveyor with a sync or async handler function.
+    constructor(handler: ConveyorHandlerFn<T, R>) {
+        // Create a new Conveyor with a sync or async handler function.
 
-    this._handlerFn = handler;
-    this._queue = new Heap<QueueItem<T, R>>(
-      (a: QueueItem<T, R>, b: QueueItem<T, R>) => {
-        if (a.priority < b.priority) return -1;
-        if (a.priority > b.priority) return 1;
-        return 0;
-      },
-    );
-  }
-
-  async push(item: T, priority?: number | string): Promise<R> {
-    // Add an item into the conveyor.
-    // After the handler finishes running on this item,
-    // this promise will resolve with the return value of the handler,
-    // or with an exception thrown by the handler.
-
-    // If priority is provided, it will control the order in which
-    // items are handled (if many are waiting).  Lower priorities run
-    // first.  Items not given an explicit priority are given an auto-incrementing
-    // priority starting at 1000.
-
-    // push item into the queue
-    let deferred = makeDeferred<R>(); // this will resolve when the item is done being handled
-    this._queue.push({ item, deferred, priority: priority ?? this._ii });
-    if (priority === undefined) {
-      this._ii += 1;
+        this._handlerFn = handler;
+        this._queue = new Heap<QueueItem<T, R>>(
+            (a: QueueItem<T, R>, b: QueueItem<T, R>) => {
+                if (a.priority < b.priority) return -1;
+                if (a.priority > b.priority) return 1;
+                return 0;
+            },
+        );
     }
 
-    // wake up the thread
-    queueMicrotask(this._thread.bind(this));
+    async push(item: T, priority?: number | string): Promise<R> {
+        // Add an item into the conveyor.
+        // After the handler finishes running on this item,
+        // this promise will resolve with the return value of the handler,
+        // or with an exception thrown by the handler.
 
-    return deferred.promise;
-  }
+        // If priority is provided, it will control the order in which
+        // items are handled (if many are waiting).  Lower priorities run
+        // first.  Items not given an explicit priority are given an auto-incrementing
+        // priority starting at 1000.
 
-  async _thread(): Promise<void> {
-    // don't run a second copy of the thread
-    if (this._threadIsRunning) return;
-    this._threadIsRunning = true;
-
-    while (true) {
-      // process next item in queue.
-      //let nextItem = this._queue.dequeue();
-      let nextItem: QueueItem<T, R> | undefined;
-      nextItem = this._queue.pop();
-      if (nextItem === undefined) {
-        // queue is empty; stop thread
-        this._threadIsRunning = false;
-        return;
-      }
-      // else, queue is not empty
-      let { item, deferred, priority } = nextItem;
-      try {
-        // run the handler function on the item...
-        let result = this._handlerFn(item);
-        if (result instanceof Promise) {
-          result = await result;
+        // push item into the queue
+        let deferred = makeDeferred<R>(); // this will resolve when the item is done being handled
+        this._queue.push({ item, deferred, priority: priority ?? this._ii });
+        if (priority === undefined) {
+            this._ii += 1;
         }
-        // then resolve or reject the promise for whoever added this item to the queue
-        deferred.resolve(result);
-      } catch (err) {
-        deferred.reject(err);
-      }
+
+        // wake up the thread
+        queueMicrotask(this._thread.bind(this));
+
+        return deferred.promise;
     }
-  }
+
+    async _thread(): Promise<void> {
+        // don't run a second copy of the thread
+        if (this._threadIsRunning) return;
+        this._threadIsRunning = true;
+
+        while (true) {
+            // process next item in queue.
+            //let nextItem = this._queue.dequeue();
+            let nextItem: QueueItem<T, R> | undefined;
+            nextItem = this._queue.pop();
+            if (nextItem === undefined) {
+                // queue is empty; stop thread
+                this._threadIsRunning = false;
+                return;
+            }
+            // else, queue is not empty
+            let { item, deferred, priority } = nextItem;
+            try {
+                // run the handler function on the item...
+                let result = this._handlerFn(item);
+                if (result instanceof Promise) {
+                    result = await result;
+                }
+                // then resolve or reject the promise for whoever added this item to the queue
+                deferred.resolve(result);
+            } catch (err) {
+                deferred.reject(err);
+            }
+        }
+    }
 }
 
 // TODO: allow the handler to return false to close the conveyor?

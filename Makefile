@@ -15,3 +15,5 @@ test-watch:
 npm:
 	deno run --import-map=import_map.json --allow-all scripts/build_npm.ts
 
+fmt:
+	deno fmt --options-indent-width=4 src/ scripts/

@@ -19,104 +19,104 @@ type JustStorageScenario = Omit<TestScenario, "cryptoDriver">;
 // Storage only scenarios, grouped by capability
 
 const universalStorageScenarios: JustStorageScenario[] = [
-  {
-    name: "StorageDriverAsyncMemory",
-    persistent: false,
-    makeDriver: (ws) => new StorageDriverAsyncMemory(ws),
-  },
+    {
+        name: "StorageDriverAsyncMemory",
+        persistent: false,
+        makeDriver: (ws) => new StorageDriverAsyncMemory(ws),
+    },
 ];
 
 const browserStorageScenarios: JustStorageScenario[] = [
-  {
-    name: "StorageDriverLocalStorage",
-    persistent: true,
-    makeDriver: (ws) => new StorageDriverLocalStorage(ws),
-  },
+    {
+        name: "StorageDriverLocalStorage",
+        persistent: true,
+        makeDriver: (ws) => new StorageDriverLocalStorage(ws),
+    },
 ];
 
 const browserOnlyStorageScenarios: JustStorageScenario[] = [
-  {
-    name: "StorageDriverIndexedDB",
-    persistent: true,
-    makeDriver: (ws) => new StorageDriverIndexedDB(ws),
-  },
+    {
+        name: "StorageDriverIndexedDB",
+        persistent: true,
+        makeDriver: (ws) => new StorageDriverIndexedDB(ws),
+    },
 ];
 
 // ----------------------------------------------------------
 // Crypto scenarios, grouped by platform
 
 const universalCryptoScenarios: CryptoScenario[] = [
-  {
-    name: "CryptoDriverNoble",
-    driver: CryptoDriverNoble,
-  },
+    {
+        name: "CryptoDriverNoble",
+        driver: CryptoDriverNoble,
+    },
 ];
 
 const nodeCryptoScenarios: CryptoScenario[] = [
-  {
-    name: "CryptoDriverNode",
-    driver: CryptoDriverNode,
-  },
+    {
+        name: "CryptoDriverNode",
+        driver: CryptoDriverNode,
+    },
 ];
 
 // ----------------------------------------------------------
 // Zip them all together into platforms
 
 function makeScenarios(
-  storageScenarios: JustStorageScenario[],
-  cryptoScenarios: CryptoScenario[],
+    storageScenarios: JustStorageScenario[],
+    cryptoScenarios: CryptoScenario[],
 ): TestScenario[] {
-  return storageScenarios.flatMap((storageScenario) => {
-    return cryptoScenarios.map((cryptoScenario) => ({
-      ...storageScenario,
-      name: `${storageScenario.name} + ${cryptoScenario.name}`,
-      cryptoDriver: cryptoScenario.driver,
-    }));
-  });
+    return storageScenarios.flatMap((storageScenario) => {
+        return cryptoScenarios.map((cryptoScenario) => ({
+            ...storageScenario,
+            name: `${storageScenario.name} + ${cryptoScenario.name}`,
+            cryptoDriver: cryptoScenario.driver,
+        }));
+    });
 }
 
 const browserScenarios = makeScenarios(
-  [
-    ...universalStorageScenarios,
-    ...browserStorageScenarios,
-    ...browserOnlyStorageScenarios,
-  ],
-  [...universalCryptoScenarios],
+    [
+        ...universalStorageScenarios,
+        ...browserStorageScenarios,
+        ...browserOnlyStorageScenarios,
+    ],
+    [...universalCryptoScenarios],
 );
 
 const denoScenarios = makeScenarios(
-  [
-    ...universalStorageScenarios,
-    ...browserStorageScenarios,
-  ],
-  [...universalCryptoScenarios],
+    [
+        ...universalStorageScenarios,
+        ...browserStorageScenarios,
+    ],
+    [...universalCryptoScenarios],
 );
 
 const nodeScenarios = makeScenarios(
-  [
-    ...universalStorageScenarios,
-  ],
-  [...universalCryptoScenarios, ...nodeCryptoScenarios],
+    [
+        ...universalStorageScenarios,
+    ],
+    [...universalCryptoScenarios, ...nodeCryptoScenarios],
 );
 
 function getScenarios() {
-  if (isDeno) {
-    return denoScenarios;
-  } else if (isNode) {
-    return nodeScenarios;
-  }
+    if (isDeno) {
+        return denoScenarios;
+    } else if (isNode) {
+        return nodeScenarios;
+    }
 
-  return browserScenarios;
+    return browserScenarios;
 }
 
 function getCryptoScenarios() {
-  if (isDeno) {
-    return [...universalCryptoScenarios];
-  } else if (isNode) {
-    return [...universalCryptoScenarios, ...nodeCryptoScenarios];
-  }
+    if (isDeno) {
+        return [...universalCryptoScenarios];
+    } else if (isNode) {
+        return [...universalCryptoScenarios, ...nodeCryptoScenarios];
+    }
 
-  return [...universalCryptoScenarios];
+    return [...universalCryptoScenarios];
 }
 
 //================================================================================

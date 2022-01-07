@@ -1,25 +1,25 @@
 import { stringToBytes } from "../util/bytes.ts";
 
 export let onlyHasChars = (str: string, allowedChars: string): boolean => {
-  for (let s of str) {
-    if (allowedChars.indexOf(s) === -1) return false;
-  }
-  return true;
+    for (let s of str) {
+        if (allowedChars.indexOf(s) === -1) return false;
+    }
+    return true;
 };
 
 export let isOnlyPrintableAscii = (s: string): boolean => {
-  let bytes = stringToBytes(s);
-  for (let byte of bytes) {
-    // char must be between ' ' (space) and '~' inclusive
-    if (byte < 32 || byte > 126) return false;
-  }
-  return true;
+    let bytes = stringToBytes(s);
+    for (let byte of bytes) {
+        // char must be between ' ' (space) and '~' inclusive
+        if (byte < 32 || byte > 126) return false;
+    }
+    return true;
 };
 
 // is ch exactly one digit?
 export let isDigit = (ch: string): boolean => {
-  if (ch === "") return false;
-  return digits.indexOf(ch) !== -1;
+    if (ch === "") return false;
+    return digits.indexOf(ch) !== -1;
 };
 
 export const alphaLower = "abcdefghijklmnopqrstuvwxyz";

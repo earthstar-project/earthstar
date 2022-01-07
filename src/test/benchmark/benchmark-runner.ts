@@ -1,4 +1,4 @@
-import { sleep } from '../../util/misc';
+import { sleep } from "../../util/misc";
 
 // run node with --expose-gc to make this do anything
 let gc = global.gc || (() => {});
@@ -11,9 +11,9 @@ type ScenarioNameToTests = Record<string, TestNameToMsPerIter>;
 type Log = (...args: any[]) => void;
 
 export class BenchmarkRunner {
-    data: ScenarioNameToTests = {};  // scenario --> testName --> ms per iter
-    currentScenario: string = '';
-    log: Log
+    data: ScenarioNameToTests = {}; // scenario --> testName --> ms per iter
+    currentScenario: string = "";
+    log: Log;
     constructor(log: Log) {
         this.log = log;
         let timestampString = (new Date()).toISOString();
@@ -23,7 +23,7 @@ export class BenchmarkRunner {
         this.log(msg);
     }
     setScenario(scenario: ScenarioName) {
-        this.log('');
+        this.log("");
         this.log(`> ${scenario}`);
         this.log(`  > ops/sec`);
         this.currentScenario = scenario;
@@ -33,12 +33,13 @@ export class BenchmarkRunner {
     _finishRun(testName: TestName, msPerOp: number, err?: any) {
         let maxChars = 11;
         if (err) {
-            let result = 'ERROR'.padStart(maxChars, ' ');
+            let result = "ERROR".padStart(maxChars, " ");
             this.log(`  > ${result}: ${testName}`);
             this.log(err);
         } else {
             let opsPerSec = 1000 / msPerOp;
-            let result = Number(Math.round(opsPerSec)).toLocaleString('en-US').padStart(maxChars, ' ');
+            let result = Number(Math.round(opsPerSec)).toLocaleString("en-US")
+                .padStart(maxChars, " ");
             this.log(`  > ${result}:  ${testName}`);
         }
 
@@ -47,7 +48,11 @@ export class BenchmarkRunner {
         }
         this.data[this.currentScenario][testName] = msPerOp;
     }
-    async runOnce(testName: TestName, opts: {actualIters?: number}, fn: () => void | Promise<void>): Promise<void> {
+    async runOnce(
+        testName: TestName,
+        opts: { actualIters?: number },
+        fn: () => void | Promise<void>,
+    ): Promise<void> {
         await sleep(1);
         this._startRun(testName);
         gc();
@@ -64,7 +69,11 @@ export class BenchmarkRunner {
             this._finishRun(testName, -1, err);
         }
     }
-    async runMany(testName: TestName, opts: {minDuration?: number}, fn: () => void | Promise<void>): Promise<void> {
+    async runMany(
+        testName: TestName,
+        opts: { minDuration?: number },
+        fn: () => void | Promise<void>,
+    ): Promise<void> {
         await sleep(1);
         this._startRun(testName);
         gc();
@@ -79,7 +88,7 @@ export class BenchmarkRunner {
                     await prom;
                 }
                 let now = Date.now();
-                if (ii >= minIters && now - start > minDuration) { break; }
+                if (ii >= minIters && now - start > minDuration) break;
                 ii++;
             }
             let end = Date.now();

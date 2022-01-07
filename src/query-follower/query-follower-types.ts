@@ -6,11 +6,11 @@ import { IStorageAsync, LiveQueryEvent } from "../storage/storage-types.ts";
 //================================================================================
 
 export type QueryFollowerState =
-  | "new"
-  | "catching-up"
-  | "live"
-  | "closed"
-  | "error";
+    | "new"
+    | "catching-up"
+    | "live"
+    | "closed"
+    | "error";
 
 /**
  * Subscribe to the ongoing results of a query,
@@ -102,24 +102,24 @@ export type QueryFollowerState =
  * (...because you can't send an event from inside an event handler)
  */
 export interface IQueryFollower {
-  storage: IStorageAsync;
-  query: Query;
+    storage: IStorageAsync;
+    query: Query;
 
-  bus: Simplebus<LiveQueryEvent>;
+    bus: Simplebus<LiveQueryEvent>;
 
-  state(): QueryFollowerState;
+    state(): QueryFollowerState;
 
-  /**
-   * This begins the process of catching up (if needed), then
-   * switches to live mode.
-   */
-  hatch(): Promise<void>;
+    /**
+     * This begins the process of catching up (if needed), then
+     * switches to live mode.
+     */
+    hatch(): Promise<void>;
 
-  /**
-   * Shut down the QueryFollower; unhook from the Storage; process no more events.
-   * This is permanent.
-   * This happens when the storage closes (we've subscribed to storage willClose)
-   * and it can also be called manually if you just want to destroy this queryFollower.
-   */
-  close(): Promise<void>;
+    /**
+     * Shut down the QueryFollower; unhook from the Storage; process no more events.
+     * This is permanent.
+     * This happens when the storage closes (we've subscribed to storage willClose)
+     * and it can also be called manually if you just want to destroy this queryFollower.
+     */
+    close(): Promise<void>;
 }

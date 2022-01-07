@@ -40,42 +40,44 @@ import { makeDeferred } from "./deferred.ts";
 
 type FnToRun<R> = () => R | Promise<R>;
 interface LockOpts {
-  priority?: number | string;
-  bypass?: boolean;
+    priority?: number | string;
+    bypass?: boolean;
 }
 
 export class Lock<R> {
-  _conveyor: Conveyor<FnToRun<R>, R>;
-  constructor() {
-    // A conveyor full of functions, to run one at a time.
-    // At the end of the conveyor, this handler just runs the functions.
-    let handlerFn = async (fnToRun: FnToRun<R>) => {
-      let result = fnToRun();
-      if (result instanceof Promise) result = await result;
-      return result;
-    };
-    this._conveyor = new Conveyor<FnToRun<R>, R>(handlerFn);
-  }
-  async run(fnToRun: FnToRun<R>, opts?: LockOpts): Promise<R> {
-    // priority defaults to undefined
-    let priority: number | string | undefined = opts === undefined
-      ? undefined
-      : opts.priority;
-    // bypass defaults to false
-    let bypass: boolean = opts === undefined ? false : (opts.bypass === true);
-    if (bypass) {
-      let d = makeDeferred<R>();
-      queueMicrotask(async () => {
-        try {
-          d.resolve(await fnToRun());
-        } catch (err) {
-          d.reject(err);
-        }
-      });
-      return d.promise;
-    } else {
-      // This will resolve when the fnToRun has finished running.
-      return await this._conveyor.push(fnToRun, priority);
+    _conveyor: Conveyor<FnToRun<R>, R>;
+    constructor() {
+        // A conveyor full of functions, to run one at a time.
+        // At the end of the conveyor, this handler just runs the functions.
+        let handlerFn = async (fnToRun: FnToRun<R>) => {
+            let result = fnToRun();
+            if (result instanceof Promise) result = await result;
+            return result;
+        };
+        this._conveyor = new Conveyor<FnToRun<R>, R>(handlerFn);
     }
-  }
+    async run(fnToRun: FnToRun<R>, opts?: LockOpts): Promise<R> {
+        // priority defaults to undefined
+        let priority: number | string | undefined = opts === undefined
+            ? undefined
+            : opts.priority;
+        // bypass defaults to false
+        let bypass: boolean = opts === undefined
+            ? false
+            : (opts.bypass === true);
+        if (bypass) {
+            let d = makeDeferred<R>();
+            queueMicrotask(async () => {
+                try {
+                    d.resolve(await fnToRun());
+                } catch (err) {
+                    d.reject(err);
+                }
+            });
+            return d.promise;
+        } else {
+            // This will resolve when the fnToRun has finished running.
+            return await this._conveyor.push(fnToRun, priority);
+        }
+    }
 }

@@ -1,20 +1,22 @@
-
 //================================================================================
 // prepare for test scenarios
 
-import { Crypto } from '../crypto/crypto';
-import { CryptoDriverChloride, waitUntilChlorideIsReady } from '../crypto/crypto-driver-chloride';
-import { CryptoDriverNode } from '../crypto/crypto-driver-node';
-import { CryptoDriverTweetnacl } from '../crypto/crypto-driver-tweetnacl';
-import { ICrypto, ICryptoDriver } from '../crypto/crypto-types';
-import { FormatValidatorEs4 } from '../format-validators/format-validator-es4';
-import { IFormatValidator } from '../format-validators/format-validator-types';
-import { StorageAsync } from '../storage/storage-async';
-import { StorageDriverAsyncMemory } from '../storage/storage-driver-async-memory';
-import { IStorageAsync, IStorageDriverAsync } from '../storage/storage-types';
-import { ClassThatImplements } from '../storage/util-types';
-import { AuthorKeypair, FormatName, WorkspaceAddress } from '../util/doc-types';
-import { isErr, notErr } from '../util/errors';
+import { Crypto } from "../crypto/crypto";
+import {
+    CryptoDriverChloride,
+    waitUntilChlorideIsReady,
+} from "../crypto/crypto-driver-chloride";
+import { CryptoDriverNode } from "../crypto/crypto-driver-node";
+import { CryptoDriverTweetnacl } from "../crypto/crypto-driver-tweetnacl";
+import { ICrypto, ICryptoDriver } from "../crypto/crypto-types";
+import { FormatValidatorEs4 } from "../format-validators/format-validator-es4";
+import { IFormatValidator } from "../format-validators/format-validator-types";
+import { StorageAsync } from "../storage/storage-async";
+import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory";
+import { IStorageAsync, IStorageDriverAsync } from "../storage/storage-types";
+import { ClassThatImplements } from "../storage/util-types";
+import { AuthorKeypair, FormatName, WorkspaceAddress } from "../util/doc-types";
+import { isErr, notErr } from "../util/errors";
 
 //================================================================================
 
@@ -22,27 +24,35 @@ let log = console.log;
 let randInt = (lo: number, hi: number) =>
     Math.floor(Math.random() * (hi - lo) + lo);
 
-let pushLocal = async (storageFrom: IStorageAsync, storageTo: IStorageAsync): Promise<void> => {
+let pushLocal = async (
+    storageFrom: IStorageAsync,
+    storageTo: IStorageAsync,
+): Promise<void> => {
     let docs = await storageFrom.getAllDocs();
     for (let doc of docs) {
         await storageTo.ingest(doc);
     }
-}
-let syncLocal = async (storage1: IStorageAsync, storage2: IStorageAsync): Promise<void> => {
+};
+let syncLocal = async (
+    storage1: IStorageAsync,
+    storage2: IStorageAsync,
+): Promise<void> => {
     await pushLocal(storage1, storage2);
     await pushLocal(storage2, storage1);
-}
+};
 
 //================================================================================
 
 let makeParts = ({ cryptoDriver, storageDriverClass }: PartsInput): Parts => {
-    let description = `${(cryptoDriver as any).name} & ${(storageDriverClass as any).name}`;
+    let description = `${(cryptoDriver as any).name} & ${
+        (storageDriverClass as any).name
+    }`;
     let crypto = new Crypto(cryptoDriver);
     let validator = new FormatValidatorEs4(crypto);
     let makeStorage = (workspace: WorkspaceAddress): IStorageAsync => {
         let storageDriver = new storageDriverClass(workspace);
-        return new StorageAsync(workspace, validator, storageDriver)
-    }
+        return new StorageAsync(workspace, validator, storageDriver);
+    };
     return {
         description,
         cryptoDriver,
@@ -50,26 +60,32 @@ let makeParts = ({ cryptoDriver, storageDriverClass }: PartsInput): Parts => {
         validator,
         makeStorage,
     };
-}
+};
 
 let makeDemoAuthors = (crypto: Crypto) => {
-    let keypair1 = crypto.generateAuthorKeypair('test') as AuthorKeypair;
-    let keypair2 = crypto.generateAuthorKeypair('twoo') as AuthorKeypair;
-    let keypair3 = crypto.generateAuthorKeypair('thre') as AuthorKeypair;
-    let keypair4 = crypto.generateAuthorKeypair('four') as AuthorKeypair;
-    if (isErr(keypair1)) { throw "oops"; }
-    if (isErr(keypair2)) { throw "oops"; }
-    if (isErr(keypair3)) { throw "oops"; }
-    if (isErr(keypair4)) { throw "oops"; }
+    let keypair1 = crypto.generateAuthorKeypair("test") as AuthorKeypair;
+    let keypair2 = crypto.generateAuthorKeypair("twoo") as AuthorKeypair;
+    let keypair3 = crypto.generateAuthorKeypair("thre") as AuthorKeypair;
+    let keypair4 = crypto.generateAuthorKeypair("four") as AuthorKeypair;
+    if (isErr(keypair1)) throw "oops";
+    if (isErr(keypair2)) throw "oops";
+    if (isErr(keypair3)) throw "oops";
+    if (isErr(keypair4)) throw "oops";
     let author1 = keypair1.address;
     let author2 = keypair2.address;
     let author3 = keypair3.address;
     let author4 = keypair4.address;
     return {
-        keypair1, keypair2, keypair3, keypair4,
-        author1, author2, author3, author4,
+        keypair1,
+        keypair2,
+        keypair3,
+        keypair4,
+        author1,
+        author2,
+        author3,
+        author4,
     };
-}
+};
 
 let now = 1500000000000000;
 let SEC = 1000000;
@@ -78,9 +94,9 @@ let HOUR = MIN * 60;
 let DAY = HOUR * 24;
 
 interface Scenario {
-    partsInput: PartsInput,
+    partsInput: PartsInput;
 }
-let scenarios : Scenario[] = [
+let scenarios: Scenario[] = [
     {
         partsInput: {
             cryptoDriver: CryptoDriverTweetnacl,
@@ -104,8 +120,8 @@ let scenarios : Scenario[] = [
 //================================================================================
 
 class Runner {
-    data: Record<string, Record<string, number | null>> = {};  // scenario --> testName --> ms per iter
-    scenario: string = '';
+    data: Record<string, Record<string, number | null>> = {}; // scenario --> testName --> ms per iter
+    scenario: string = "";
     constructor() {
     }
     setScenario(scenario: string) {
@@ -118,7 +134,11 @@ class Runner {
         }
         this.data[this.scenario][testName] = ms;
     }
-    async runOnce(testName: string, opts: {actualIters?: number}, fn: () => void | Promise<void>) {
+    async runOnce(
+        testName: string,
+        opts: { actualIters?: number },
+        fn: () => void | Promise<void>,
+    ) {
         log(`    ${testName}`);
         let start = Date.now();
         let prom = fn();
@@ -129,7 +149,11 @@ class Runner {
         let ms = (end - start) / (opts.actualIters || 1);
         this._finishRun(testName, ms);
     }
-    async runMany(testName: string, opts: {minDuration?: number}, fn: () => void | Promise<void>) {
+    async runMany(
+        testName: string,
+        opts: { minDuration?: number },
+        fn: () => void | Promise<void>,
+    ) {
         log(`    ${testName}`);
         let start = Date.now();
         let ii = 1;
@@ -141,7 +165,7 @@ class Runner {
                 await prom;
             }
             now = Date.now();
-            if (ii >= minIters && now - start > minDuration) { break; }
+            if (ii >= minIters && now - start > minDuration) break;
             ii++;
         }
         let end = Date.now();
@@ -150,7 +174,7 @@ class Runner {
     }
     note(testName: string) {
         log(`    ${testName}`);
-        this._finishRun(testName + '|' + Math.random(), null);
+        this._finishRun(testName + "|" + Math.random(), null);
     }
     report() {
         let report: string[] = [];
@@ -158,33 +182,37 @@ class Runner {
             report.push(`${scenario}`);
             for (let [testName, ms] of Object.entries(this.data[scenario])) {
                 if (ms === null) {
-                    report.push(`    ${''.padStart(8, ' ')} ${testName.split('|')[0]}`);
+                    report.push(
+                        `    ${"".padStart(8, " ")} ${testName.split("|")[0]}`,
+                    );
                 } else {
                     let opsPerSec = 1000 / ms;
                     //report.push(`    ${testName}: ${Math.floor(ms*100)/100} ms = ${Math.floor(opsPerSec*100)/100} ops / sec`);
-                    report.push(`    ${('' + Math.round(opsPerSec)).padStart(8, ' ')} ops / sec: ${testName}`);
+                    report.push(
+                        `    ${
+                            ("" + Math.round(opsPerSec)).padStart(8, " ")
+                        } ops / sec: ${testName}`,
+                    );
                 }
             }
-            report.push('');
+            report.push("");
         }
-        return report.join('\n');
+        return report.join("\n");
     }
 }
 
 let gc = global.gc || (() => {});
 
 let main = async () => {
-
     if (CryptoDriverChloride !== undefined) {
         await waitUntilChlorideIsReady();
     }
 
     let runner = new Runner();
     for (let scenario of scenarios) {
-
         let parts = makeParts(scenario.partsInput);
         let authors = makeDemoAuthors(parts.crypto);
-        let WORKSPACE = '+gardening.pals';
+        let WORKSPACE = "+gardening.pals";
 
         runner.setScenario(parts.description);
 
@@ -193,30 +221,40 @@ let main = async () => {
         let storageAdd = parts.makeStorage(WORKSPACE);
         gc();
 
-        for (let n of [100]){ // , 101, 102, 103, 1000, 1001, 10000]) {
-            await runner.runOnce(`storage: add ${n} docs (each)`, {actualIters: n}, async () => {
+        for (let n of [100]) { // , 101, 102, 103, 1000, 1001, 10000]) {
+            await runner.runOnce(`storage: add ${n} docs (each)`, {
+                actualIters: n,
+            }, async () => {
                 for (let ii = 0; ii < n; ii++) {
                     await storageAdd.set(authors.keypair1, {
-                        format: 'es.4',
+                        format: "es.4",
                         workspace: WORKSPACE,
-                        path: '/test/' + ii,
-                        content: 'hello' + ii,
+                        path: "/test/" + ii,
+                        content: "hello" + ii,
                     });
                 }
             });
             gc();
 
             let storageSyncToMe = parts.makeStorage(WORKSPACE);
-            await runner.runOnce(`storage: sync ${n} docs to empty storage (each)`, {actualIters: n}, async () => {
-                await syncLocal(storageAdd, storageSyncToMe);
-            });
+            await runner.runOnce(
+                `storage: sync ${n} docs to empty storage (each)`,
+                { actualIters: n },
+                async () => {
+                    await syncLocal(storageAdd, storageSyncToMe);
+                },
+            );
             gc();
 
-            await runner.runOnce(`storage: sync ${n} docs to full storage (each)`, {actualIters: n}, async () => {
-                await syncLocal(storageAdd, storageSyncToMe);
-            });
+            await runner.runOnce(
+                `storage: sync ${n} docs to full storage (each)`,
+                { actualIters: n },
+                async () => {
+                    await syncLocal(storageAdd, storageSyncToMe);
+                },
+            );
 
-            runner.note('');
+            runner.note("");
 
             storageSyncToMe.close();
             storageSyncToMe = null as any;
@@ -357,6 +395,6 @@ let main = async () => {
     log();
     log();
     log(runner.report());
-}
+};
 log(new Date());
 main();

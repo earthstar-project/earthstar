@@ -10,10 +10,10 @@ let TEST_NAME = "buffers";
 /* istanbul ignore next */
 
 import {
-  bufferToBytes,
-  bufferToString,
-  bytesToBuffer,
-  stringToBuffer,
+    bufferToBytes,
+    bufferToString,
+    bytesToBuffer,
+    stringToBuffer,
 } from "../../util/buffers.ts";
 
 import { identifyBufOrBytes, isBuffer, isBytes } from "../../util/bytes.ts";
@@ -28,83 +28,86 @@ let simpleBuffer = Buffer.from([97, 97]);
 //================================================================================
 
 Deno.test("bytesToBuffer", () => {
-  assertEquals(
-    bytesToBuffer(snowmanBytes),
-    snowmanBuffer,
-    "snowman bytes to buffer",
-  );
-  assertEquals(
-    identifyBufOrBytes(bytesToBuffer(snowmanBytes)),
-    "buffer",
-    "returns buffer",
-  );
+    assertEquals(
+        bytesToBuffer(snowmanBytes),
+        snowmanBuffer,
+        "snowman bytes to buffer",
+    );
+    assertEquals(
+        identifyBufOrBytes(bytesToBuffer(snowmanBytes)),
+        "buffer",
+        "returns buffer",
+    );
 });
 
 Deno.test("bufferToBytes", () => {
-  assertEquals(
-    bufferToBytes(snowmanBuffer),
-    snowmanBytes,
-    "snowman buffer to bytes",
-  );
-  assertEquals(
-    identifyBufOrBytes(bufferToBytes(snowmanBuffer)),
-    "bytes",
-    "returns bytes",
-  );
+    assertEquals(
+        bufferToBytes(snowmanBuffer),
+        snowmanBytes,
+        "snowman buffer to bytes",
+    );
+    assertEquals(
+        identifyBufOrBytes(bufferToBytes(snowmanBuffer)),
+        "bytes",
+        "returns bytes",
+    );
 });
 
 //--------------------------------------------------
 
 Deno.test("bufferToString", () => {
-  assertEquals(
-    bufferToString(simpleBuffer),
-    simpleString,
-    "simple buffer to string",
-  );
-  assertEquals(
-    bufferToString(snowmanBuffer),
-    snowmanString,
-    "snowman buffer to string",
-  );
-  assert(typeof bufferToString(snowmanBuffer) === "string", "returns a string");
+    assertEquals(
+        bufferToString(simpleBuffer),
+        simpleString,
+        "simple buffer to string",
+    );
+    assertEquals(
+        bufferToString(snowmanBuffer),
+        snowmanString,
+        "snowman buffer to string",
+    );
+    assert(
+        typeof bufferToString(snowmanBuffer) === "string",
+        "returns a string",
+    );
 });
 
 Deno.test("stringToBuffer", () => {
-  assertEquals(
-    stringToBuffer(simpleString),
-    simpleBuffer,
-    "simple string to buffer",
-  );
-  assertEquals(
-    stringToBuffer(snowmanString),
-    snowmanBuffer,
-    "snowman string to buffer",
-  );
-  assertEquals(
-    identifyBufOrBytes(stringToBuffer(snowmanString)),
-    "buffer",
-    "returns buffer",
-  );
+    assertEquals(
+        stringToBuffer(simpleString),
+        simpleBuffer,
+        "simple string to buffer",
+    );
+    assertEquals(
+        stringToBuffer(snowmanString),
+        snowmanBuffer,
+        "snowman string to buffer",
+    );
+    assertEquals(
+        identifyBufOrBytes(stringToBuffer(snowmanString)),
+        "buffer",
+        "returns buffer",
+    );
 });
 
 Deno.test("buffer: identifyBufOrBytes, isBuffer, isBytes", () => {
-  let buf = Buffer.from([1]);
-  let bytes = Uint8Array.from([1]);
-  let other = [1, 2, 3];
+    let buf = Buffer.from([1]);
+    let bytes = Uint8Array.from([1]);
+    let other = [1, 2, 3];
 
-  assertEquals(identifyBufOrBytes(buf), "buffer", "can identify Buffer");
-  assertEquals(isBuffer(buf), true, "isBuffer true");
-  assertEquals(isBytes(buf), false, "isBytes false");
+    assertEquals(identifyBufOrBytes(buf), "buffer", "can identify Buffer");
+    assertEquals(isBuffer(buf), true, "isBuffer true");
+    assertEquals(isBytes(buf), false, "isBytes false");
 
-  assertEquals(identifyBufOrBytes(bytes), "bytes", "can identify bytes");
-  assertEquals(isBuffer(bytes), false, "isBuffer false");
-  assertEquals(isBytes(bytes), true, "isBytes true");
+    assertEquals(identifyBufOrBytes(bytes), "bytes", "can identify bytes");
+    assertEquals(isBuffer(bytes), false, "isBuffer false");
+    assertEquals(isBytes(bytes), true, "isBytes true");
 
-  assertEquals(
-    identifyBufOrBytes(other as any),
-    "?",
-    "is not tricked by other kinds of object",
-  );
-  assertEquals(isBuffer(other), false, "isBuffer false on other");
-  assertEquals(isBytes(other), false, "isBytes false on other");
+    assertEquals(
+        identifyBufOrBytes(other as any),
+        "?",
+        "is not tricked by other kinds of object",
+    );
+    assertEquals(isBuffer(other), false, "isBuffer false on other");
+    assertEquals(isBytes(other), false, "isBytes false on other");
 });

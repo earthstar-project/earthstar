@@ -7,7 +7,7 @@ mini-rpc with streams?
     how do functions return values?  maybe they push into a Chan?
 */
 
-import { sleep } from '../util/misc';
+import { sleep } from "../util/misc";
 
 class Chan<T> {
     constructor() {
@@ -55,16 +55,5 @@ let fns = {
             await chan.send(x * 2);
             await chan.close();
         });
-    }
-}
-
-
-
-
-
-
-
-
-
-
-
+    },
+};

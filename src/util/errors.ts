@@ -2,8 +2,8 @@
 /* istanbul ignore next */
 export class EarthstarError extends Error {
     constructor(message?: string) {
-        super(message || '');
-        this.name = 'EarthstarError';
+        super(message || "");
+        this.name = "EarthstarError";
     }
 }
 
@@ -11,8 +11,8 @@ export class EarthstarError extends Error {
 /* istanbul ignore next */
 export class ValidationError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'Validation error');
-        this.name = 'ValidationError';
+        super(message || "Validation error");
+        this.name = "ValidationError";
     }
 }
 
@@ -20,8 +20,10 @@ export class ValidationError extends EarthstarError {
 /* istanbul ignore next */
 export class StorageIsClosedError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'a Storage or StorageDriver was used after being closed');
-        this.name = 'StorageIsClosedError';
+        super(
+            message || "a Storage or StorageDriver was used after being closed",
+        );
+        this.name = "StorageIsClosedError";
     }
 }
 
@@ -29,16 +31,16 @@ export class StorageIsClosedError extends EarthstarError {
 /* istanbul ignore next */
 export class QueryFollowerIsClosedError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'a QueryFollower was used after being closed');
-        this.name = 'QueryFollowerIsClosedError';
+        super(message || "a QueryFollower was used after being closed");
+        this.name = "QueryFollowerIsClosedError";
     }
 }
 
 /* istanbul ignore next */
 export class NotFoundError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'not found');
-        this.name = 'NotFoundError';
+        super(message || "not found");
+        this.name = "NotFoundError";
     }
 }
 
@@ -46,16 +48,16 @@ export class NotFoundError extends EarthstarError {
 /* istanbul ignore next */
 export class NetworkError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'network error');
-        this.name = 'NetworkError';
+        super(message || "network error");
+        this.name = "NetworkError";
     }
 }
 
 /* istanbul ignore next */
 export class TimeoutError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'timeout error');
-        this.name = 'TimeoutError';
+        super(message || "timeout error");
+        this.name = "TimeoutError";
     }
 }
 
@@ -63,16 +65,16 @@ export class TimeoutError extends EarthstarError {
 /* istanbul ignore next */
 export class ConnectionRefusedError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'connection refused');
-        this.name = 'ConnectionRefused';
+        super(message || "connection refused");
+        this.name = "ConnectionRefused";
     }
 }
 
 /* istanbul ignore next */
 export class NotImplementedError extends EarthstarError {
     constructor(message?: string) {
-        super(message || 'not implemented yet');
-        this.name = 'NotImplementedError';
+        super(message || "not implemented yet");
+        this.name = "NotImplementedError";
     }
 }
 
@@ -81,5 +83,4 @@ export let isErr = <T>(x: T | Error): x is EarthstarError =>
     x instanceof EarthstarError;
 
 /** Check if any value is a subclass of EarthstarError (return false) or not (return true) */
-export let notErr = <T>(x: T | Error): x is T =>
-    !(x instanceof EarthstarError);
+export let notErr = <T>(x: T | Error): x is T => !(x instanceof EarthstarError);
