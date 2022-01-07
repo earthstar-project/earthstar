@@ -3,6 +3,7 @@
 // https://tools.ietf.org/html/rfc8032, https://en.wikipedia.org/wiki/EdDSA
 // Includes Ristretto https://ristretto.group
 
+// TODO: we're using node crypto to avoid a crash that comes from using Deno's main crypto module
 import * as nodeCrypto from 'https://deno.land/std@0.119.0/node/crypto.ts';
 
 // Be friendly to bad ECMAScript parsers by not using bigint literals like 123n
