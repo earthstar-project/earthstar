@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, esm-first]
   pull_request:
-    branches: [main]
+    branches: [main, esm-first]
 
 jobs:
   build:
@@ -12,13 +12,13 @@ jobs:
 
     strategy:
       matrix:
-        deno-version: ["1.17.1"]
+        deno-version: ["1.17.2"]
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: denoland/setup-deno@v1
         with:
-          deno-version: ${{ matrix. deno-version}}
+          deno-version: ${{ matrix.deno-version}}
 
       - run: make test
