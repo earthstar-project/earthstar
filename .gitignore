@@ -5,7 +5,9 @@
 browser/*
 browserify-tests
 build/
+cov.lcov
 coverage/
+coverage_html/
 dist/*
 node/*
 node_modules/

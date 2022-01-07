@@ -1,7 +1,7 @@
 .PHONY: test test-watch npm fmt clean bundle
 
 clean:
-	rm -rf npm build .nyc_output coverage earthstar.bundle.js
+	rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html
 
 example:
 	deno run --import-map=import_map.json --no-check=remote --config deno.json --allow-env ./src/example-app.ts
@@ -11,6 +11,16 @@ test:
 
 test-watch:
 	deno test --import-map=import_map.json --no-check=remote --config deno.json --watch src
+
+test-coverage:
+	deno test --import-map=import_map.json --no-check=remote --config deno.json --coverage=coverage src
+
+show-coverage:
+	deno coverage coverage
+# deno coverage --lcov coverage > cov.lcov
+# genhtml -o coverage_html cov.lcov
+
+coverage: test-coverage show-coverage
 
 npm:
 	deno run --import-map=import_map.json --allow-all scripts/build_npm.ts
