@@ -796,9 +796,15 @@ Point.BASE._setWindowSize(8);
 
 // Global symbol available in browsers only. Ensure we do not depend on @types/dom
 declare const self: Record<string, any> | undefined;
+
+const isDeno = globalThis.Deno !== undefined;
+const isNode = globalThis.process !== undefined;
+const isWeb = !isDeno && !isNode;
+
 const crypto: { node?: any; web?: any } = {
   node: nodeCrypto,
-  web: typeof self === 'object' && 'crypto' in self ? self.crypto : undefined,
+  web: isWeb ? self.crypto : undefined,
+  //web: undefined, //typeof self === 'object' && 'crypto' in self ? self.crypto : undefined,
 };
 
 export const utils = {
