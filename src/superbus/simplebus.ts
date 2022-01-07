@@ -1,4 +1,4 @@
-import { Lock } from "../concurrency_friends/lock.ts";
+import { Lock } from "../../deps.ts";
 
 export type SimplebusCallback<T> = (data: T) => void | Promise<void>;
 
