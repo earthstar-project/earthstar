@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, esm-first]
   pull_request:
-    branches: [main]
+    branches: [main, esm-first]
 
 jobs:
   build:
@@ -12,9 +12,8 @@ jobs:
 
     strategy:
       matrix:
-        node-version: ["12", "14", "16"]
-        deno-version: ["1.17.1"]
-        
+        node-version: ["16"]
+        deno-version: ["1.17.2"]
 
     steps:
       - uses: actions/checkout@v2
