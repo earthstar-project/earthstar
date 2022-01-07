@@ -3,6 +3,7 @@ import { isDeno, isNode } from "https://deno.land/x/which_runtime/mod.ts";
 // specific crypto drivers
 import { CryptoDriverNoble } from "../crypto/crypto-driver-noble.ts";
 import { CryptoDriverNode } from "../crypto/crypto-driver-node.js";
+import { CryptoDriverChloride } from "../crypto/crypto-driver-chloride.ts";
 
 // specific storage drivers
 import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
@@ -56,6 +57,10 @@ const nodeCryptoScenarios: CryptoScenario[] = [
     {
         name: "CryptoDriverNode",
         driver: CryptoDriverNode,
+    },
+    {
+        name: "CryptoDriverChloride",
+        driver: CryptoDriverChloride,
     },
 ];
 

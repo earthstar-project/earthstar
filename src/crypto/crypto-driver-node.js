@@ -1,3 +1,5 @@
+// This file has no type annotations because we can't get the typings for Node's crypto library here.
+
 import crypto from "https://deno.land/std@0.119.0/node/crypto.ts";
 
 import { b64StringToBytes, concatBytes } from "../util/bytes.ts";

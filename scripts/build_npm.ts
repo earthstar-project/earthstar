@@ -3,37 +3,50 @@ import { build } from "https://deno.land/x/dnt@0.13.0/mod.ts";
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
-  entryPoints: ["./mod.ts"],
-  outDir: "./npm",
-  shims: {
-    deno: {
-      test: "dev",
+    entryPoints: ["./mod.ts"],
+    outDir: "./npm",
+    shims: {
+        deno: {
+            test: "dev",
+        },
+        customDev: [
+            {
+                package: {
+                    name: "@types/chloride",
+                    version: "2.4.0",
+                },
+                globalNames: [],
+            },
+        ],
     },
-  },
-  mappings: {
-    "https://deno.land/x/chalk_deno@v4.1.1-deno/source/index.js": {
-      name: "chalk",
-      version: "4.1.1",
+    mappings: {
+        "https://deno.land/x/chalk_deno@v4.1.1-deno/source/index.js": {
+            name: "chalk",
+            version: "4.1.1",
+        },
+        "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts": {
+            name: "concurrency-friends",
+            version: "5.2.0",
+        },
+        "./src/node/chloride.ts": {
+            name: "chloride",
+            version: "2.4.1",
+        },
     },
-    "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts": {
-      name: "concurrency-friends",
-      version: "5.2.0",
+    package: {
+        // package.json properties
+        name: "stone-soup",
+        version: Deno.args[0],
+        description: "Your package.",
+        license: "MIT",
+        repository: {
+            type: "git",
+            url: "git+https://github.com/username/package.git",
+        },
+        bugs: {
+            url: "https://github.com/username/package/issues",
+        },
     },
-  },
-  package: {
-    // package.json properties
-    name: "stone-soup",
-    version: Deno.args[0],
-    description: "Your package.",
-    license: "MIT",
-    repository: {
-      type: "git",
-      url: "git+https://github.com/username/package.git",
-    },
-    bugs: {
-      url: "https://github.com/username/package/issues",
-    },
-  },
 });
 
 // post build steps
