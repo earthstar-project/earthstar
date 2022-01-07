@@ -9,7 +9,8 @@ declare global {
 
 import { ICryptoDriver, KeypairBytes } from "./crypto-types.ts";
 import { stringToBytes } from "../util/bytes.ts";
-import { nobleEd25519 as ed, sha256_uint8array } from "../../deps.ts";
+import { sha256_uint8array } from "../../deps.ts";
+import * as ed from "../noble-ed25519/noble-ed25519.ts";
 
 const { createHash } = sha256_uint8array;
 
