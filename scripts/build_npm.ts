@@ -20,9 +20,9 @@ await build({
         ],
     },
     mappings: {
-        "https://deno.land/x/crayon_chalk_aliases/index.ts": {
+        "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts": {
             name: "chalk",
-            version: "4.1.1",
+            version: "4.1.2",
         },
         "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts": {
             name: "concurrency-friends",
