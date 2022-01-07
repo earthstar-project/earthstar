@@ -245,8 +245,6 @@ EVERYTHING AVAILABLE IN...
 ```
 ## Source code dependency chart
 
-> This is deprecated now that we're doing the Deno-first approach.  Need to regenerate these diagrams.
-
 A --> B means "file A imports file B".
 
 For readability this hides `/test/` and `/util/` and `*-types.ts`.
