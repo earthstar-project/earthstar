@@ -15,6 +15,10 @@ await build({
       name: "chalk",
       version: "4.1.1",
     },
+    "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts": {
+      name: "concurrency-friends",
+      version: "5.2.0",
+    },
   },
   package: {
     // package.json properties
