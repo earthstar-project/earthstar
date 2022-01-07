@@ -1,4 +1,4 @@
-export { default as chalk } from "https://deno.land/x/chalk_deno@v4.1.1-deno/source/index.js";
+export { default as chalk } from "https://deno.land/x/crayon_chalk_aliases/index.ts";
 export { default as fast_deep_equal } from "https://esm.sh/fast-deep-equal@3.1.3";
 export { default as rfdc } from "https://esm.sh/rfdc@1.3.0?dts";
 export * as dbly_linked_list from "https://cdn.skypack.dev/dbly-linked-list@0.3.5";

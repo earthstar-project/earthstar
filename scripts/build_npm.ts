@@ -3,7 +3,7 @@ import { build } from "https://deno.land/x/dnt@0.13.0/mod.ts";
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
-    entryPoints: ["./mod.ts"],
+    entryPoints: ["./mod.ts", "./src/entries/node.ts"],
     outDir: "./npm",
     shims: {
         deno: {
@@ -20,7 +20,7 @@ await build({
         ],
     },
     mappings: {
-        "https://deno.land/x/chalk_deno@v4.1.1-deno/source/index.js": {
+        "https://deno.land/x/crayon_chalk_aliases/index.ts": {
             name: "chalk",
             version: "4.1.1",
         },

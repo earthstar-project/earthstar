@@ -1,5 +1,5 @@
 {
-  compilerOptions: {
-    lib: ['deno.ns', 'dom', 'dom.asynciterable']
+  "compilerOptions": {
+    "lib": ["deno.ns", "dom", "dom.asynciterable"]
   }
 }

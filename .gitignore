@@ -11,3 +11,4 @@ node/*
 node_modules/
 yarn-error.log
 npm/*
+earthstar.bundle.js
