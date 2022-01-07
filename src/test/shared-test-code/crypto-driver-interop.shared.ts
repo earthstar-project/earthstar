@@ -34,7 +34,7 @@ export let runCryptoDriverInteropTests = (drivers: ICryptoDriver[]) => {
         for (let ii = 0; ii < sigs.length-1; ii++) {
             let sigs0 = sigs[ii];
             let sigs1 = sigs[ii+1];
-            t.same(sigs0.sig, sigs1.sig, `keypair by ${keypairName}; signature by ${sigs0.name} matches signature by ${sigs1.name}`);
+            t.same(sigs0.sig, sigs1.sig, `keypair by ${keypairName}; signature by ${sigs0.name} matches signature by ${sigs1.name} -- ${sigs0.sig}  ...vs...  ${sigs1.sig}`);
         };
         t.end();
     });
@@ -46,8 +46,9 @@ export let runCryptoDriverInteropTests = (drivers: ICryptoDriver[]) => {
             let sig = await signer.sign(keypairBytes, msg);
             let signerName = (signer as any).name;
             for (let verifier of drivers) {
+                let verified = await verifier.verify(keypairBytes.pubkey, sig, msg);
                 let verifierName = (verifier as any).name;
-                t.ok(verifier.verify(keypairBytes.pubkey, sig, msg), `keypair and signature by ${signerName} was verified by ${verifierName}`);
+                t.ok(verified, `keypair and signature by ${signerName} was verified by ${verifierName} (${verified})`);
             }
         }
 
