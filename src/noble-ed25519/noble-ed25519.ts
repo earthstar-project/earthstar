@@ -795,17 +795,17 @@ export async function verify(sig: SigType, msgHash: Hex, publicKey: PubKey): Pro
 Point.BASE._setWindowSize(8);
 
 // Global symbol available in browsers only. Ensure we do not depend on @types/dom
-declare const self: Record<string, any> | undefined;
 
-const isDeno = globalThis.Deno !== undefined;
-const isNode = globalThis.process !== undefined;
+// HACK: change the sniffing to handle deno too
+const isDeno = (globalThis as any).Deno !== undefined;
+const isNode = (globalThis as any).process !== undefined;
 const isWeb = !isDeno && !isNode;
-
 const crypto: { node?: any; web?: any } = {
   node: nodeCrypto,
-  web: isWeb ? self.crypto : undefined,
+  web: isWeb ? (globalThis as any).crypto : undefined,
   //web: undefined, //typeof self === 'object' && 'crypto' in self ? self.crypto : undefined,
 };
+// END HACK
 
 export const utils = {
   // The 8-torsion subgroup ℰ8.
