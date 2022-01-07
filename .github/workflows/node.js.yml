@@ -21,7 +21,7 @@ jobs:
       
       - uses: denoland/setup-deno@v1
         with:
-        deno-version: ${{ matrix. deno-version}}
+          deno-version: ${{ matrix.deno-version}}
 
       - name: Use Node.js version ${{ matrix.node-version }}
         uses: actions/setup-node@v2
