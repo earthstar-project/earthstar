@@ -71,7 +71,7 @@
     "test-query-follower": "tap     -Rspec --no-coverage --no-bail --jobs=1 build/test/improved/query-follower.node.test.js",
     "test-storage": "tap            -Rspec --no-bail --jobs=1 build/test/node/storage-async.node.test.js",
     "test-storage-driver": "tap     -Rspec --no-bail --jobs=1 build/test/node/storage-driver-async.node.test.js",
-    "prepublishOnly": "yarn clean && yarn esbuild",
+    "prepublishOnly": "yarn clean-run-test && yarn tsc && yarn esbuild",
     "depchart-main": "mkdir     -p depchart && depchart `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts src/shims/*.ts src/entries/*.ts `find src | grep '/test/'` `find src | grep '/util/'` `find src | grep '/experimental/'` --rankdir LR -o depchart/depchart-main --node_modules omit",
     "depchart-no-types": "mkdir -p depchart && depchart `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts src/shims/*.ts src/entries/*.ts `find src | grep '/test/'` `find src | grep '/util/'` `find src | grep '/experimental/'` `find src | grep types.ts` --rankdir LR -o depchart/depchart-no-types --node_modules omit",
     "depchart-deps": "mkdir     -p depchart && depchart `find src | grep .ts` --exclude src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts src/shims/*.ts src/entries/*.ts `find src | grep '/test/'` `find src | grep '/util/'` `find src | grep '/experimental/'` `find src | grep types.ts` --rankdir LR -o depchart/depchart-deps --node_modules integrated",
