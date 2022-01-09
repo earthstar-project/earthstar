@@ -5,6 +5,7 @@ export * from "../core-validators/checkers";
 export * from "../crypto/base32";
 // TODO: where does chloride go?   it's a browser-only thing
 // skip: crypto-driver-node, it's not universal
+export * from "../crypto/crypto-driver-noble";
 export * from "../crypto/crypto-driver-tweetnacl";
 export * from "../crypto/crypto-types";
 export * from "../crypto/crypto";
