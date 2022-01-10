@@ -8,7 +8,7 @@ export * as sha256_uint8array from "https://esm.sh/sha256-uint8array@0.10.3";
 export { Superbus } from "./src/superbus/superbus.ts";
 export { Simplebus } from "./src/superbus/simplebus.ts";
 export { SuperbusMap } from "./src/superbus_map/superbus_map.ts";
-export * as ed from "https://deno.land/x/ed25519/mod.ts";
+export * as ed from "https://raw.githubusercontent.com/sgwilym/noble-ed25519/main/mod.ts";
 export { default as Heap } from "http://esm.sh/heap@0.2.7?dts";
 export { Lock } from "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts";
 export { isDeno, isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";

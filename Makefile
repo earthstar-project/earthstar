@@ -4,32 +4,30 @@ clean:
 	rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html
 
 example:
-	deno run --import-map=import_map.json --no-check=remote --config deno.json --allow-env ./src/example-app.ts
+	deno run --no-check=remote  --allow-env ./src/example-app.ts
 
 test:
-	deno test --import-map=import_map.json --no-check=remote --config deno.json src
+	deno test --no-check=remote  src
 
 test-watch:
-	deno test --import-map=import_map.json --no-check=remote --config deno.json --watch src
+	deno test --no-check=remote  --watch src
 
 test-coverage:
-	deno test --import-map=import_map.json --no-check=remote --config deno.json --coverage=coverage src
+	deno test --no-check --coverage=cov_profile src
 
 show-coverage:
-	deno coverage coverage
-# deno coverage --lcov coverage > cov.lcov
-# genhtml -o coverage_html cov.lcov
+	deno coverage cov_profile --lcov > cov.lcov && genhtml -o cov_html cov.lcov
 
 coverage: test-coverage show-coverage
 
 npm:
-	deno run --import-map=import_map.json --allow-all scripts/build_npm.ts
+	deno run --allow-all scripts/build_npm.ts
 
 fmt:
 	deno fmt --options-indent-width=4 src/ scripts/
 	
 bundle:
-	deno bundle --import-map=import_map.json --no-check=remote --config deno.json ./mod.ts ./earthstar.bundle.js
+	deno bundle --no-check=remote ./mod.ts ./earthstar.bundle.js
 
 # to make dependency charts,
 # you have to have the "depchart" package to be globally installed:
