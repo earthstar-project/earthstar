@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster4987092070 {
+    subgraph cluster8732429133 {
         label=<<b>root</b>>;
         style="rounded";
         color=bisque4;
@@ -20,7 +20,7 @@ digraph G {
                     
         "deps.ts" [label="deps.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster3301597960 {
+        subgraph cluster2176416923 {
             label=<<b>src</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -29,7 +29,7 @@ digraph G {
                     
             "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
     
-            subgraph cluster4947650830 {
+            subgraph cluster388545849 {
                 label=<<b>core-validators</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -41,7 +41,7 @@ digraph G {
                 "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster4160465302 {
+            subgraph cluster687908156 {
                 label=<<b>crypto</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -58,7 +58,7 @@ digraph G {
                 "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster8159908971 {
+            subgraph cluster5370943029 {
                 label=<<b>format-validators</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -69,7 +69,17 @@ digraph G {
                 "src/format-validators/format-validator-types.ts" [label="format-validator-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster4338305989 {
+            subgraph cluster2337331339 {
+                label=<<b>noble-ed25519</b>>;
+                style="rounded,filled";
+                fillcolor=bisque;
+                color=bisque4;
+                penwidth=2;
+                        
+                "src/noble-ed25519/noble-ed25519.ts" [label="noble-ed25519.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+            }
+    
+            subgraph cluster3421778553 {
                 label=<<b>node</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -80,7 +90,7 @@ digraph G {
                 "src/node/chloride.ts" [label="chloride.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster6526622887 {
+            subgraph cluster9316937339 {
                 label=<<b>peer</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -93,7 +103,7 @@ digraph G {
                 "src/peer/peer.ts" [label="peer.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster8338674442 {
+            subgraph cluster6414178744 {
                 label=<<b>query-follower</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -104,7 +114,7 @@ digraph G {
                 "src/query-follower/query-follower.ts" [label="query-follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster6772640789 {
+            subgraph cluster1263765594 {
                 label=<<b>query</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -115,7 +125,7 @@ digraph G {
                 "src/query/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster5602951009 {
+            subgraph cluster5258755697 {
                 label=<<b>storage</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -132,7 +142,7 @@ digraph G {
                 "src/storage/util-types.ts" [label="util-types.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster6043231154 {
+            subgraph cluster6282179383 {
                 label=<<b>superbus</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -143,7 +153,7 @@ digraph G {
                 "src/superbus/superbus.ts" [label="superbus.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
             }
     
-            subgraph cluster2013896882 {
+            subgraph cluster6755505253 {
                 label=<<b>superbus_map</b>>;
                 style="rounded,filled";
                 fillcolor=bisque;
@@ -156,17 +166,18 @@ digraph G {
     }
 
     // packages not in their own cluster
-        "https://deno.land/x/crayon_chalk_aliases/index.ts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://esm.sh/fast-deep-equal@3.1.3" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://esm.sh/rfdc@1.3.0?dts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://cdn.skypack.dev/dbly-linked-list@0.3.5" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://esm.sh/fast-json-stable-stringify@2.1.0" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://esm.sh/rfc4648@1.5.0" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://esm.sh/sha256-uint8array@0.10.3" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
-        "https://deno.land/x/ed25519@1.3.3/mod.ts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "http://esm.sh/heap@0.2.7?dts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "https://deno.land/x/which_runtime@0.2.0/mod.ts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
         "https://deno.land/std@0.119.0/node/buffer.ts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
+        "https://deno.land/std@0.119.0/node/crypto.ts" [shape=box3d, style=filled, fillcolor=cornsilk3, color=cornsilk4];
 
     // edges between files
     "deps.ts" -> "src/superbus/superbus.ts" [penwidth=2; color=darkslategray4];
@@ -182,6 +193,7 @@ digraph G {
     "src/crypto/crypto-driver-fake.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto-driver-noble.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto-driver-noble.ts" -> "deps.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto-driver-noble.ts" -> "src/noble-ed25519/noble-ed25519.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/crypto-types.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/keypair.ts" [penwidth=2; color=darkslategray4];
@@ -255,17 +267,18 @@ digraph G {
     "src/superbus_map/superbus_map.ts" -> "deps.ts" [penwidth=2; color=darkslategray4];
 
     // edges from files to packages
-    "deps.ts" -> "https://deno.land/x/crayon_chalk_aliases/index.ts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "deps.ts" -> "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "https://esm.sh/fast-deep-equal@3.1.3" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "https://esm.sh/rfdc@1.3.0?dts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "https://cdn.skypack.dev/dbly-linked-list@0.3.5" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "https://esm.sh/fast-json-stable-stringify@2.1.0" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "https://esm.sh/rfc4648@1.5.0" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "https://esm.sh/sha256-uint8array@0.10.3" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
-    "deps.ts" -> "https://deno.land/x/ed25519@1.3.3/mod.ts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "http://esm.sh/heap@0.2.7?dts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "deps.ts" -> "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "deps.ts" -> "https://deno.land/x/which_runtime@0.2.0/mod.ts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/crypto/crypto-driver-chloride.ts" -> "https://deno.land/std@0.119.0/node/buffer.ts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
+    "src/noble-ed25519/noble-ed25519.ts" -> "https://deno.land/std@0.119.0/node/crypto.ts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
     "src/node/chloride.d.ts" -> "https://deno.land/std@0.119.0/node/buffer.ts" [penwidth=1.5; style=dashed, color=cornsilk4, weight=1];
 
 }
