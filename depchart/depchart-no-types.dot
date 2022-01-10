@@ -12,7 +12,7 @@ digraph G {
     
     // files in their folder clusters
 
-    subgraph cluster4502094404 {
+    subgraph cluster4626744552 {
         label=<<b>src</b>>;
         style="rounded";
         color=bisque4;
@@ -20,7 +20,7 @@ digraph G {
                     
         "src/example-app.ts" [label="example-app.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
 
-        subgraph cluster1715079597 {
+        subgraph cluster8076274598 {
             label=<<b>core-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -32,7 +32,7 @@ digraph G {
             "src/core-validators/checkers.ts" [label="checkers.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster2209333628 {
+        subgraph cluster5335403904 {
             label=<<b>crypto</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -48,7 +48,7 @@ digraph G {
             "src/crypto/keypair.ts" [label="keypair.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster8623678458 {
+        subgraph cluster5510426513 {
             label=<<b>format-validators</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -58,7 +58,17 @@ digraph G {
             "src/format-validators/format-validator-es4.ts" [label="format-validator-es4.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster4594799959 {
+        subgraph cluster5479328081 {
+            label=<<b>noble-ed25519</b>>;
+            style="rounded,filled";
+            fillcolor=bisque;
+            color=bisque4;
+            penwidth=2;
+                    
+            "src/noble-ed25519/noble-ed25519.ts" [label="noble-ed25519.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
+        }
+
+        subgraph cluster8937915439 {
             label=<<b>node</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -69,7 +79,7 @@ digraph G {
             "src/node/chloride.ts" [label="chloride.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster1250985308 {
+        subgraph cluster984634690 {
             label=<<b>peer</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -81,7 +91,7 @@ digraph G {
             "src/peer/peer.ts" [label="peer.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster5237210782 {
+        subgraph cluster7939876572 {
             label=<<b>query-follower</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -91,7 +101,7 @@ digraph G {
             "src/query-follower/query-follower.ts" [label="query-follower.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster8569878923 {
+        subgraph cluster4555387081 {
             label=<<b>query</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -101,7 +111,7 @@ digraph G {
             "src/query/query.ts" [label="query.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster2163770692 {
+        subgraph cluster8885075284 {
             label=<<b>storage</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -116,7 +126,7 @@ digraph G {
             "src/storage/storage-driver-local-storage.ts" [label="storage-driver-local-storage.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster1071581800 {
+        subgraph cluster3081911620 {
             label=<<b>superbus</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -127,7 +137,7 @@ digraph G {
             "src/superbus/superbus.ts" [label="superbus.ts", shape=rectangle; style="rounded,filled"; color=darkslategray3];
         }
 
-        subgraph cluster5118522266 {
+        subgraph cluster4986110711 {
             label=<<b>superbus_map</b>>;
             style="rounded,filled";
             fillcolor=bisque;
@@ -142,6 +152,7 @@ digraph G {
     "src/core-validators/addresses.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/core-validators/checkers.ts" -> "src/core-validators/characters.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto-driver-fake.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
+    "src/crypto/crypto-driver-noble.ts" -> "src/noble-ed25519/noble-ed25519.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/base32.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/crypto/keypair.ts" [penwidth=2; color=darkslategray4];
     "src/crypto/crypto.ts" -> "src/core-validators/addresses.ts" [penwidth=2; color=darkslategray4];
