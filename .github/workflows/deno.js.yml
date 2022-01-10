@@ -2,7 +2,7 @@ name: Deno CI
 
 on:
   push:
-    branches: [main, esm-first]
+    branches: [main, esm-first, noble-investigation]
   pull_request:
     branches: [main, esm-first]
 

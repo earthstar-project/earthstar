@@ -36,6 +36,10 @@ await build({
       name: "chloride",
       version: "2.4.1",
     },
+    "https://raw.githubusercontent.com/sgwilym/noble-ed25519/main/mod.ts": {
+      name: "@noble/ed25519",
+      version: "1.4.0",
+    },
   },
   package: {
     // package.json properties
@@ -50,6 +54,11 @@ await build({
     bugs: {
       url: "https://github.com/username/package/issues",
     },
+  },
+  // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
+  redirects: {
+    "./src/storage/indexeddb-types.deno.d.ts":
+      "./src/storage/indexeddb-types.node.d.ts",
   },
 });
 

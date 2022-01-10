@@ -2,15 +2,8 @@
 .DS_Store
 .nyc_output/
 .vscode/
-browser/*
-browserify-tests
-build/
 cov.lcov
-coverage/
-coverage_html/
-dist/*
-node/*
-node_modules/
-yarn-error.log
+cov_profile/
+cov_html/
 npm/*
 earthstar.bundle.js
