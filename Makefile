@@ -1,20 +1,21 @@
 .PHONY: test test-watch npm fmt clean bundle
 
 clean:
-	rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html
+	rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html cov_profile
 
 example:
-	deno run --no-check=remote  --allow-env ./src/example-app.ts
+	deno run ./src/example-app.ts
 
 test:
-	deno test --no-check=remote  src
+	deno test src
 
 test-watch:
-	deno test --no-check=remote  --watch src
+	deno test --watch src
 
 test-coverage:
 	deno test --no-check --coverage=cov_profile src
 
+# to get "genhtml", run "sudo apt-get install lcov" (on linux) or "brew install lcov" (on mac)
 show-coverage:
 	deno coverage cov_profile --lcov > cov.lcov && genhtml -o cov_html cov.lcov
 
