@@ -36,7 +36,7 @@ await build({
       name: "chloride",
       version: "2.4.1",
     },
-    "https://raw.githubusercontent.com/sgwilym/noble-ed25519/main/mod.ts": {
+    "https://raw.githubusercontent.com/sgwilym/noble-ed25519/6e05e960522e6def6974769d5bff032eaed68685/mod.ts": {
       name: "@noble/ed25519",
       version: "1.4.0",
     },
