@@ -29,6 +29,9 @@ fmt:
 	
 bundle:
 	deno bundle --no-check=remote ./mod.ts ./earthstar.bundle.js
+	
+run-bundle:
+	deno run --allow-all ./earthstar.bundle.js --help
 
 depchart-no-types:
 	mkdir -p depchart && npx depchart `find src | grep .ts` --exclude deps.ts src/print-platform-support.ts src/decls.d.ts src/index.ts src/index.browser.ts src/shims/*.ts src/entries/*.ts `find src | grep '/test/'` `find src | grep '/util/'` `find src | grep '/experimental/'` `find src | grep types.ts` --rankdir LR -o depchart/depchart-no-types --node_modules omit
