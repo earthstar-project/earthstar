@@ -11,7 +11,3 @@ export { SuperbusMap } from "./src/superbus_map/superbus_map.ts";
 export * as ed from "https://raw.githubusercontent.com/sgwilym/noble-ed25519/6e05e960522e6def6974769d5bff032eaed68685/mod.ts";
 export { Lock } from "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts";
 export { isDeno, isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
-
-// Stubs of node-only libraries
-
-export { default as sodium } from "./src/node/chloride.ts";
