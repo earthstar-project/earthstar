@@ -207,7 +207,7 @@ export let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
     }
     if (
         filter.pathEndsWith !== undefined &&
-        !doc.path.startsWith(filter.pathEndsWith)
+        !doc.path.endsWith(filter.pathEndsWith)
     ) {
         return false;
     }
@@ -225,7 +225,7 @@ export let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
     }
     if (
         filter.timestampLt !== undefined &&
-        !(doc.timestamp > filter.timestampLt)
+        !(doc.timestamp < filter.timestampLt)
     ) {
         return false;
     }
@@ -244,7 +244,7 @@ export let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
     }
     if (
         filter.contentLengthLt !== undefined &&
-        !(contentLength > filter.contentLengthLt)
+        !(contentLength < filter.contentLengthLt)
     ) {
         return false;
     }
