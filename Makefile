@@ -1,10 +1,10 @@
 .PHONY: test test-watch npm fmt clean bundle
 
 clean:
-	rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html cov_profile
+	rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html cov_profile node_modules
 
 example:
-	deno run ./src/example-app.ts
+	deno run ./example-app.ts
 
 test:
 	deno test src
