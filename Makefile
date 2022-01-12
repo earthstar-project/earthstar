@@ -22,7 +22,7 @@ show-coverage:
 coverage: test-coverage show-coverage
 
 npm:
-	deno run --allow-all scripts/build_npm.ts
+	deno run --allow-all scripts/build_npm.ts $(VERSION)
 
 fmt:
 	deno fmt --options-indent-width=4 src/ scripts/

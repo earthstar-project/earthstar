@@ -112,6 +112,12 @@ And again with 3rd party dependencies as brown boxes with dotted lines, and incl
 
 Run `yarn depchart` to regenerate this. You'll need graphviz installed.
 
+### Publishing to NPM
+
+1. Run `make VERSION="version.number.here" npm`, where `version.number.here` is the desired version number for the package.
+2. `cd npm`
+3. `npm publish`
+
 ## Changes from Earthstar v1
 
 ### Splitting `IStorage` into `Storage` and `StorageDriver` classes
