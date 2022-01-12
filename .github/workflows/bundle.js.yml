@@ -1,4 +1,4 @@
-name: Deno CI
+name: Bundle CI
 
 on:
   push:
@@ -21,4 +21,4 @@ jobs:
         with:
           deno-version: ${{ matrix.deno-version}}
 
-      - run: make test
+      - run: make bundle && make run-bundle
