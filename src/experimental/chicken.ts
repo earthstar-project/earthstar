@@ -1,4 +1,4 @@
-import { sleep } from '../util/misc';
+import { sleep } from "../util/misc";
 
 /*
     Experiments in lifecycle management for classes.
@@ -14,12 +14,11 @@ import { sleep } from '../util/misc';
     Here are some ways to do it:
 */
 
-
 // This is the async setup we need to do for each of our chickens
 let makeChickenName = async (): Promise<string> => {
     await sleep(1000);
-    return 'chickie';
-}
+    return "chickie";
+};
 
 //--------------------------------------------------
 // VERSION 1
@@ -30,28 +29,28 @@ let makeChickenName = async (): Promise<string> => {
 // - throw an error if you use it before hatching
 
 class Chicken1 {
-    name: string | undefined;  // it's annoying that this can be undefined
+    name: string | undefined; // it's annoying that this can be undefined
     numEggs: number;
     isHatched: boolean = false;
     constructor(numEggs: number) {
         this.numEggs = numEggs;
     }
     async hatch() {
-        if (this.isHatched) { return; }  // hatching twice does nothing
+        if (this.isHatched) return; // hatching twice does nothing
         this.name = await makeChickenName();
         this.isHatched = true;
     }
     squawk() {
-        if (!this.isHatched) { throw new Error('not hatched yet'); }
+        if (!this.isHatched) throw new Error("not hatched yet");
         console.log(this.name);
     }
 }
 
 let main1 = async () => {
     let myChickie = new Chicken1(123);
-    await myChickie.hatch();  // don't forget this!
-    myChickie.squawk();       // or this will throw an error
-}
+    await myChickie.hatch(); // don't forget this!
+    myChickie.squawk(); // or this will throw an error
+};
 
 //--------------------------------------------------
 // VERSION 2
@@ -65,12 +64,12 @@ let makeChicken2 = async (numEggs: number): Promise<Chicken1> => {
     let chicken = new Chicken1(numEggs);
     await chicken.hatch();
     return chicken;
-}
+};
 
 let main2 = async () => {
     let myChickie = await makeChicken2(123);
     myChickie.squawk();
-}
+};
 
 //--------------------------------------------------
 // VERSION 3
@@ -80,8 +79,8 @@ let main2 = async () => {
 class Chicken3 {
     name: string | undefined;
     numEggs: number;
-    isHatched: boolean = false;;
-    hatched: Promise<void>;  // promise that resolves when hatched
+    isHatched: boolean = false;
+    hatched: Promise<void>; // promise that resolves when hatched
     _resolve: () => void;
     constructor(numEggs: number) {
         this.numEggs = numEggs;
@@ -92,7 +91,7 @@ class Chicken3 {
         });
     }
     async hatch() {
-        if (this.isHatched) { return; }  // hatching twice does nothing
+        if (this.isHatched) return; // hatching twice does nothing
         this.name = await makeChickenName();
         this._resolve();
         this.isHatched = true;
@@ -106,7 +105,7 @@ class Chicken3 {
     squawkSync() {
         // or we can keep using the boolean isHatched and just
         // throw errors if not hatched
-        if (!this.isHatched) { throw new Error('not hatched yet'); }
+        if (!this.isHatched) throw new Error("not hatched yet");
         console.log(this.name);
     }
 }
@@ -123,7 +122,7 @@ let main3 = async () => {
     await myChickie.squawkAsync();
     // but this one will throw an error if not hatched
     myChickie.squawkSync();
-}
+};
 
 //--------------------------------------------------
 // VERSION 4
@@ -142,17 +141,17 @@ let main3 = async () => {
 enum LifecycleCh {
     // a linear sequence of states for the state machine
     NEW = 0,
-    HATCHING = 1,  // temporary, while hatch() is in progress
+    HATCHING = 1, // temporary, while hatch() is in progress
     READY = 2,
-    CLOSING = 3,   // temporary, while close() is in progress
+    CLOSING = 3, // temporary, while close() is in progress
     CLOSED = 4,
-                   // once CLOSED there's no going back
+    // once CLOSED there's no going back
 }
 
 interface HatchableCh {
     hatch(): Promise<void>;
     isReady(): boolean;
-    ready: Promise<void>;  // is resolved when lifecycle is READY, rejects otherwise
+    ready: Promise<void>; // is resolved when lifecycle is READY, rejects otherwise
 }
 interface ClosableCh {
     close(): Promise<void>;
@@ -182,7 +181,7 @@ class Chicken4 implements HatchableCh, ClosableCh {
     //----------------------------------------
     // LIFECYCLE MANAGEMENT
     async hatch() {
-        if (this.lifecycle !== LifecycleCh.NEW) { return; }  // hatching twice does nothing
+        if (this.lifecycle !== LifecycleCh.NEW) return; // hatching twice does nothing
 
         this.lifecycle = LifecycleCh.HATCHING;
         this.name = await makeChickenName();
@@ -194,7 +193,7 @@ class Chicken4 implements HatchableCh, ClosableCh {
     async close() {
         // closing twice does nothing
         // TODO: can you close something that's NEW or HATCHING?
-        if (this.lifecycle !== LifecycleCh.READY) { return; }
+        if (this.lifecycle !== LifecycleCh.READY) return;
 
         // make a new promise that is always rejected
         this.ready = Promise.reject();
@@ -207,18 +206,29 @@ class Chicken4 implements HatchableCh, ClosableCh {
         this.lifecycle = LifecycleCh.CLOSED;
     }
 
-    isReady() { return this.lifecycle === LifecycleCh.READY; }
-    isClosed() { return this.lifecycle === LifecycleCh.CLOSED; }
+    isReady() {
+        return this.lifecycle === LifecycleCh.READY;
+    }
+    isClosed() {
+        return this.lifecycle === LifecycleCh.CLOSED;
+    }
     isSortofReady() {
         // some of our functions might also need to run
         // during the HATCHING or CLOSING phases...
-        return this.lifecycle !== LifecycleCh.NEW && this.lifecycle !== LifecycleCh.CLOSED;
+        return this.lifecycle !== LifecycleCh.NEW &&
+            this.lifecycle !== LifecycleCh.CLOSED;
     }
     _throwIfNotReady() {
-        if (!this.isReady()) { throw new Error(`lifecycle is ${this.lifecycle} instead of READY`); }
+        if (!this.isReady()) {
+            throw new Error(`lifecycle is ${this.lifecycle} instead of READY`);
+        }
     }
     _throwIfNotSortofReady() {
-        if (!this.isSortofReady()) { throw new Error(`lifecycle is ${this.lifecycle} but must be HATCHING, READY, or CLOSING.`); }
+        if (!this.isSortofReady()) {
+            throw new Error(
+                `lifecycle is ${this.lifecycle} but must be HATCHING, READY, or CLOSING.`,
+            );
+        }
     }
 
     //----------------------------------------
@@ -246,4 +256,4 @@ let main4 = async () => {
     // this will wait until the chicken is READY
     // or it will reject if the chicken is CLOSING or CLOSED
     //   await myChickie.ready;
-}
+};

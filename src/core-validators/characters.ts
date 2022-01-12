@@ -1,41 +1,39 @@
-import {
-    stringToBytes
-} from '../util/bytes';
+import { stringToBytes } from "../util/bytes.ts";
 
 export let onlyHasChars = (str: string, allowedChars: string): boolean => {
     for (let s of str) {
-        if (allowedChars.indexOf(s) === -1) { return false; }
+        if (allowedChars.indexOf(s) === -1) return false;
     }
     return true;
-}
+};
 
-export let isOnlyPrintableAscii = (s: string) : boolean => {
+export let isOnlyPrintableAscii = (s: string): boolean => {
     let bytes = stringToBytes(s);
     for (let byte of bytes) {
         // char must be between ' ' (space) and '~' inclusive
-        if (byte < 32 || byte > 126) { return false; }
+        if (byte < 32 || byte > 126) return false;
     }
     return true;
-}
+};
 
 // is ch exactly one digit?
 export let isDigit = (ch: string): boolean => {
-    if (ch === '') { return false; }
+    if (ch === "") return false;
     return digits.indexOf(ch) !== -1;
-}
+};
 
-export const alphaLower = 'abcdefghijklmnopqrstuvwxyz';
+export const alphaLower = "abcdefghijklmnopqrstuvwxyz";
 export const alphaUpper = alphaLower.toUpperCase();
-export const digits = '0123456789';
-export const b32chars = alphaLower + '234567';
+export const digits = "0123456789";
+export const b32chars = alphaLower + "234567";
 
 export const authorNameChars = alphaLower + digits;
 export const authorKeyChars = b32chars;
-export const authorAddressChars = authorNameChars + b32chars + '@.';
+export const authorAddressChars = authorNameChars + b32chars + "@.";
 
 export const workspaceNameChars = alphaLower + digits;
 export const workspaceKeyChars = alphaLower + digits;
-export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
+export const workspaceAddressChars = workspaceNameChars + b32chars + "+.";
 
 // Characters allowed in Earthstar paths
 //---------------------------------------------
@@ -72,7 +70,5 @@ export const workspaceAddressChars = workspaceNameChars + b32chars + '+.';
 //      for display to users again, run decodeURI(earthstarPath)
 //
 
-export const pathPunctuation = "/'()-._~!$&+,:=@%";  // note double quotes are not included
+export const pathPunctuation = "/'()-._~!$&+,:=@%"; // note double quotes are not included
 export const pathChars = alphaLower + alphaUpper + digits + pathPunctuation;
-
-

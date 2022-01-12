@@ -1,144 +1,88 @@
-# Stone Soup
+# Stone Soup - Earthstar v2
 
-**WIP** April 2021
+This is a re-implementation of [Earthstar](https://github.com/earthstar-project/earthstar), maintaining compatability with the data format (see the specification) but changing the Typescript API and the networking protocol.
 
-This is a reimplmenetation of [Earthstar](https://github.com/earthstar-project/earthstar), either an experiment or a fresh rewrite.
+## Usage
 
-## Log control
-
-Use this global setting in your app code:
+To use in Deno, add the following:
 
 ```ts
-import {
-    LogLevel,
-    setDefaultLogLevel,
-    setLogLevel
-} from './util/log';
+import * as Earthstar from "https://setthisup.com/earthstar/mod.ts"
+```;
 
-setDefaultLogLevel(LogLevel.None);  // set overall log amount
-setLogLevel('main', LogLevel.Info);  // or customize a certain part of the logs
-```
+To use with Node or apps built with NPM dependencies:
 
-The available levels are:
+`npm i stone-soup`
+
+And then import in your code:
+
 ```ts
-enum LogLevel {
-    None = -1,
-    Error = 0,  // default
-    Warn = 1,
-    Log = 2,
-    Info = 3,
-    Debug = 4,  // most verbose
-};
+import * as Earthstar from "stone-soup";
 ```
-
-⏳ Soon you will also be able to use this environment variable, but we're not sure how it will interact with the above settings.
-
-```
-EARTHSTAR_LOG_LEVEL=3 yarn start
-```
-
-## Multi-platform support
-
-We aim to support:
-* browser
-* node 12, 14, 16
-* deno (⏳ eventually, not started yet)
-
-### Buffers and Uint8Arrays
-
-We use Uint8Arrays throughout the code to maximize platform support.  Some of the node-specific drivers use Buffers internally but the Buffers are converted to Uint8Arrays before leaving those drivers.
-
-For convenience, variables that hold Uint8Arrays are called "bytes", like `bytesToHash` instead of `uint8ArrayToHash`.
-
-`util/bytes.ts` has a bunch of helper code to do common operations on Uint8Arrays and to convert them back and forth to strings and to Buffers.
 
 ### Platform-specific drivers
 
 There are two parts of stone-soup which are swappable to support different platforms or backends: `ICryptoDriver` and `IStorageDriverAsync`.  Everything else should work on all platforms.
 
 Crypto drivers:
-* `CryptoDriverChloride` -- only in browser
-* `CryptoDriverNode` -- only in node 12+
-* `CryptoDriverTweetnacl` -- universal
+* `CryptoDriverChloride` - only in browser, Node
+* `CryptoDriverNode` - only in Node
+* `CryptoDriverNoble` - universal
 
 Storage drivers:
-* `StorageDriverAsyncMemory` -- univeral
-* `StorageDriverLocalStorage` -- browser (⏳ coming soon)
-* `StorageDriverSqlite` -- node (⏳ coming soon)
+* `StorageDriverAsyncMemory` - univeral
+* `StorageDriverLocalStorage` - browser 
+* `StorageDriverIndexedDB` - browser
+* `StorageDriverSqlite` - Node, Deno (⏳ coming soon)
 
-Users of this library have to decide which of these drivers to import and use in their app.  Hopefully your app is using some build system that does tree-shaking and will discard the unused drivers.
+Users of this library have to decide which of these drivers to import and use in their app. Hopefully your app is using some build system that does tree-shaking and will discard the unused drivers.
+
+## Development
+
+### Setup
+
+You will need Deno installed. [Instructions for installation can be found here](https://deno.land/#installation). You may also want type-checking and linting from Deno for your IDE, which you can get with extensions [like this one for VSCode](https://deno.land/manual@v1.17.2/vscode_deno).
+
+To check that you've got everything set up correctly:
+
+`make example`
+
+This will run the example script at `example-app.ts`, and you will see a lot of colourful log messages from the app.
+
+### Scripts
+
+Scripts are run with the `make` command.
+
+- `make test` - Run all tests
+- `make test-watch` - Run all tests in watch mode
+- `make fmt` - Format all code in the codebase
+- `make npm` - Create a NPM package in `npm` and run tests against it (requires Node v14 or v16 to be installed).
+- `make bundle` - Create a bundled browser script at `earthstar.bundle.js`
+- `make depchart` - Regenerate the dependency chart images
+- `make coverage` - Generate code test coverage statistics
+- `make clean` - Delete generated files
+
+### Orientation
+
+- The entry for the package can be found at `mod.ts`.
+- Most external dependencies can be found in `deps.ts`. All other files import external dependencies from this file.
+- Script definitions can be found in `Makefile`.
+- Tests are all in `src/test/`
+- The script for building the NPM package can be found in `scripts/build_npm.ts`
+
+### Uint8Arrays and Buffers
+
+We use Uint8Arrays throughout the code to maximize platform support. Some of the node-specific drivers use Buffers internally but the Buffers are converted to Uint8Arrays before leaving those drivers.
+
+For convenience, variables that hold Uint8Arrays are called "bytes", like `bytesToHash` instead of `uint8ArrayToHash`.
+
+`util/bytes.ts` has a bunch of helper code to do common operations on Uint8Arrays and to convert them back and forth to strings and to Buffers.
 
 ### Platform-specific tests
 
-The tests are split into folders:
-* `test/universal/*.test.ts` -- tests that run everywhere
-* `test/browser/*.test.ts` -- tests that only run in browsers
-* `test/node/*.test.ts` -- tests that only run in node
+Drivers are tested against the runtimes they're intended for. When tests are run, they pull the correct scenarios from 'src/test/test-scenarios.ts', where the current runtime is inferred during runtime.
 
-And also
-* `test/shared-test/code/*.shared.ts` -- collections of tests that are imported and run by the actual test files, mostly used to test drivers and invoked by the platform-specific tests
-
-The platform-specific tests import these files to get access to the appropriate drivers:
-* `test/browser/platform.browser.ts` -- exports an array of drivers that work in browsers
-* `test/node/platform.node.ts` -- drivers that work in node
-* `test/universal/platform.universal.ts` -- drivers that work everywhere
-
-When we run tests in different platforms, we do this (except the `run-tests-somehow` command is actually different on each platform):
-
-* In node: `run-tests-somehow build/test/universal/*.test.js build/test/node/*.test.js`
-* In browser: `run-tests-somehow build/test/universal/*.test.js build/test/browser/*.test.js`
-
-### To see an up-to-date list of drivers for different platforms
-
-This data comes from `platform.*.ts`.
-
-```sh
-yarn print-platform-support
-```
-
-```
-CRYPTO DRIVERS
-  UNIVERSAL:
-    CryptoDriverTweetnacl
-  BROWSER ONLY:
-    CryptoDriverChloride
-  NODE ONLY:
-    CryptoDriverNode
-
-  BROWSER + UNIVERSAL:
-    CryptoDriverChloride
-    CryptoDriverTweetnacl
-  NODE + UNIVERSAL:
-    CryptoDriverNode
-    CryptoDriverTweetnacl
-
-STORAGE DRIVERS
-  UNIVERSAL:
-    StorageDriverAsyncMemory
-  BROWSER ONLY:
-  NODE ONLY:
-
-  BROWSER + UNIVERSAL:
-    StorageDriverAsyncMemory
-  NODE + UNIVERSAL:
-    StorageDriverAsyncMemory
-```
-
-### Building the library for multiple platforms
-
-Currently we use `tsc` to build typescript from `/src/*` into javascript in `/build/*`.  This may change to esbuild in the future.
-
-Right now everything is in a single package, `stone-soup`.
-
-⏳ Soon we will have subpackages, and your app will do this:
-
-```ts
-// soon...
-import { MostThings } from 'stone-soup';
-import { NodeStuff } from 'stone-soup/node';
-```
-
-## Classes
+### Classes
 
 The `IStorageAsync` is the main star of the show.  Classes to the right are used internally for its implementation.  Classes to the left stack on top of an `IStorageAsync` to do extra things to it (subscribe to changes, cache data, etc).
 
@@ -154,64 +98,7 @@ Blue arrows show which functions call each other.
 
 Thick black arrows show which classes have pointers to other classes when they're running.
 
-**TODO** -- we have not added any networking or synchronization code yet.  Some of that is in [`stone-soup-pub`](https://github.com/earthstar-project/stone-soup-pub) using the old style of a REST API serving JSON, always sending every doc during a sync.  We have a more efficient sync algorithm planned, and also might set up RPC calls using [mini-rpc](https://github.com/earthstar-project/mini-rpc) to make it easier to sync over different transports than just HTTP.
-
-## How to plug the classes together
-
-The classes are small and modular, so it takes a bit of work to put them all together:
-
-```ts
-let workspace = '+gardening.foafhq2o8fh';
-
-// choose a cryptoDriver based on your platform: node or browser
-let cryptoDriver = CryptoDriverTweetnacl;
-
-// choose a storageDriver based on your platform and your
-// specific needs (speed, max storage, etc):
-let storageDriver = new StorageDriverAsyncMemory(workspace);
-
-let crypto = new Crypto(cryptoDriver);
-let validator = new FormatValidatorEs4(crypto);
-let storage = new StorageAsync(workspace, validator, storageDriver);
-
-// now you have a storage for a specific workspace.
-// make sure to close it when you're done with it:
-await storage.close();
-```
-
-## Platform support of crypto and storage drivers
-
-To get an up-to-date version of this list, run:
-
-```sh
-yarn print-platform-support
-```
-
-```
-BY DRIVER TYPE
-
-  CRYPTO
-     universal - CryptoDriverTweetnacl
-       browser - CryptoDriverChloride
-          node - CryptoDriverNode
-
-  STORAGE
-     universal - StorageDriverAsyncMemory
-
-
-EVERYTHING AVAILABLE IN...
-
-  BROWSER
-     universal - CryptoDriverTweetnacl
-       browser - CryptoDriverChloride
-     universal - StorageDriverAsyncMemory
-
-  NODE
-     universal - CryptoDriverTweetnacl
-          node - CryptoDriverNode
-     universal - StorageDriverAsyncMemory
-```
-## Source code dependency chart
+### Source code dependency chart
 
 A --> B means "file A imports file B".
 
@@ -223,9 +110,17 @@ And again with 3rd party dependencies as brown boxes with dotted lines, and incl
 
 ![](depchart/depchart-deps.png)
 
-Run `yarn depchart` to regenerate this.  You'll need graphviz installed.
+Run `yarn depchart` to regenerate this. You'll need graphviz installed.
 
-## Splitting `IStorage` into `Storage` and `StorageDriver` classes
+### Publishing to NPM
+
+1. Run `make VERSION="version.number.here" npm`, where `version.number.here` is the desired version number for the package.
+2. `cd npm`
+3. `npm publish`
+
+## Changes from Earthstar v1
+
+### Splitting `IStorage` into `Storage` and `StorageDriver` classes
 
 Think of this as `IStorageNiceAPIFullOfComplexity` and `IStorageSimpleLowLevelDriver`.
 
@@ -246,11 +141,11 @@ The StorageDriver does:
 
 Possibly even you can have multiple Storages for one Driver, for example when you're using multiple tabs with indexedDb or localStorage.
 
-## "Reliable indexing / streaming"
+### "Reliable indexing / streaming"
 
 This shows an implementation of the "reliable indexing" idea discussed in [this issue](https://github.com/earthstar-project/earthstar/issues/66).
 
-### The problem
+#### The problem
 
 We have livestreaming now, over the network and also to local subscribers, all based on `onWrite` events.
 
@@ -258,7 +153,7 @@ If you miss some events, you can't recover -- you have to do a full batch downlo
 
 Events also don't tell you what was overwritten, which you might need to know to update a Layer or index.
 
-### The solution: `localIndex`
+#### The solution: `localIndex`
 
 Each Storage keeps track of the order that it receives documents, and assignes each doc a `localIndex` value which starts at 1 and increments from there with every newly written doc.
 
@@ -268,7 +163,7 @@ When we get a new version of a document, it gets a new `localIndex` and goes at 
 
 The `localIndex` is particular to a certain IStorage.  It's kept in the `Doc` object but it's not really part of it; it's not included in the signature.  It's this IStorage's metadata about that document.  When syncing, it's sent as one of the "extra fields" [(newly added to the specification)](https://earthstar-docs.netlify.app/docs/reference/earthstar-specification/#extra-fields-for-syncing), observed by the receiving peer, then discarded and overwritten with the receiving peer's own latest `localIndex` number.
 
-### Use cases
+#### Use cases
 
 1. Streaming sync between peers, which can be interrupted and resumed
 1. Layers and indexes that use a QueryFollower to subscribe to changes in a Storage.  These might store their indexes in localStorage, for example, and would therefore want to resume indexing instead of starting over from scratch.
@@ -276,7 +171,7 @@ The `localIndex` is particular to a certain IStorage.  It's kept in the `Doc` ob
 
 For use cases where the listener will never have any downtime, they don't really need to be able to resume, they can just listen for events from the Storage instead and it may be more efficient.  For example a React component could listen for events about a particular document instead of making a whole QueryFollower that has to go through every single change to find changes to that particular document.
 
-### Properties of the `localIndex` sequence
+#### Properties of the `localIndex` sequence
 
 The docs, sorted by `localIndex` on a particular peer, have these properties:
 
@@ -301,7 +196,7 @@ There are not really any other nice properties about this sequence:
 1. QueryFollowers should always progress in the direction of increasing `localIndex`.  (They can start at 0, or the latest number, or anywhere in between).  This makes it simple to keep track of where to resume next time.  However this means we always process the oldest-received docs first, but the user probably cares more about the recently-received docs.
     * It would be possible with fancier bookeeping to make QueryFollowers that track which intervals of the sequence they've visited, so they can work from newest-to-oldest.  But sometimes the oldest-received docs are the most important (like usernames)...
 
-### Querying by `localIndex`
+#### Querying by `localIndex`
 
 This lets you easily resume where you left off.  You can get batches of N docs at a time if you want, using the `limit` option.
 
@@ -345,7 +240,7 @@ Peers will remember, for each other peer, which is the latest `localIndex` they'
 
 This is similar to how append-only logs are synced in Scuttlebutt and Hyper, except our logs have gaps.
 
-## Slightly different querying
+### Slightly different querying
 
 Querying has been made more organized -- see the Query type in `types.ts`.  It looks a bit more like an SQL query but the pieces are written in the order they actually happen, so it's easier to understand.
 
@@ -369,20 +264,3 @@ Also, the `cleanUpQuery` function is fancier and will also figure out if the que
 ## Other small improvements
 
 * The `Document` type is now named `Doc` to avoid collision with an existing built-in Typescript type
-
-## Silly new vocabulary ideas
-
-Very tentative idea to rename Earthstar to Stone Soup.
-
-It's probably a bad idea to use cute names, but:
-
-```
-Earthstar       Stone Soup
-
-Workspace       Soup?
-Author          Chef?
-Storage         Bowl, Pot, Cauldron, Crockpot, Saucepan
-Document        Doc
-Pub
-Peer / Node     
-```

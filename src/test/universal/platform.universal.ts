@@ -1,11 +1,11 @@
-import { ClassThatImplements } from '../../storage/util-types';
-import { ICryptoDriver } from '../../crypto/crypto-types';
-import { IStorageDriverAsync } from '../../storage/storage-types';
+import { ClassThatImplements } from "../../storage/util-types.ts";
+import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import { IStorageDriverAsync } from "../../storage/storage-types.ts";
 
-import { CryptoDriverTweetnacl } from '../../crypto/crypto-driver-tweetnacl';
-import { CryptoDriverNoble} from '../../crypto/crypto-driver-noble';
+import { CryptoDriverTweetnacl } from "../../crypto/crypto-driver-tweetnacl.ts";
+import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 
-import { StorageDriverAsyncMemory } from '../../storage/storage-driver-async-memory';
+import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory.ts";
 
 //================================================================================
 
@@ -14,7 +14,8 @@ export let cryptoDrivers_universal: ICryptoDriver[] = [
     CryptoDriverNoble,
 ];
 
-export let storageDriversAsync_universal: ClassThatImplements<IStorageDriverAsync>[] = [
+export let storageDriversAsync_universal: ClassThatImplements<
+    IStorageDriverAsync
+>[] = [
     StorageDriverAsyncMemory,
 ];
-

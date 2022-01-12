@@ -1,4 +1,4 @@
-//================================================================================ 
+//================================================================================
 // PRIMITIVE DATA TYPES SPECIFIC TO OUR CODE
 
 export type AuthorAddress = string;
@@ -13,30 +13,30 @@ export type Base32String = string;
 export type FormatName = string;
 
 export interface AuthorKeypair {
-    address: AuthorAddress,
-    secret: string,
+    address: AuthorAddress;
+    secret: string;
 }
 
 export type ParsedAddress = {
-    address: AuthorAddress,
-    name: AuthorShortname,
-    pubkey: Base32String,
+    address: AuthorAddress;
+    name: AuthorShortname;
+    pubkey: Base32String;
 };
 
-//================================================================================ 
+//================================================================================
 // DOCUMENTS
 
 export interface Doc {
-    format: string,
-    author: AuthorAddress,
-    content: string,  // TODO: | null, when we have sparse mode
-    contentHash: string,
+    format: string;
+    author: AuthorAddress;
+    content: string; // TODO: | null, when we have sparse mode
+    contentHash: string;
     //contentLength: number,  // TODO: add for sparse mode, and enforce in the format validator
-    deleteAfter: number | null,
-    path: Path,
-    signature: Signature,
-    timestamp: Timestamp,
-    workspace: WorkspaceAddress,
+    deleteAfter: number | null;
+    path: Path;
+    signature: Signature;
+    timestamp: Timestamp;
+    workspace: WorkspaceAddress;
     // workspaceSignature: Signature,  // TODO: add for sparse mode
 
     // Local Index:
@@ -60,15 +60,15 @@ export interface Doc {
     // and replace it with our own localIndex.
     //
     // The localIndex is not included in the doc's signature.
-    _localIndex?: LocalIndex,
+    _localIndex?: LocalIndex;
 }
 
 // A partial doc that is about to get written.
 // The rest of the properties will be filled in by storage.write().
 export interface DocToSet {
-    format: string,
-    path: Path,
-    content: string,
-    timestamp?: number,
-    deleteAfter?: number | null,
+    format: string;
+    path: Path;
+    content: string;
+    timestamp?: number;
+    deleteAfter?: number | null;
 }

@@ -1,11 +1,11 @@
-import { Doc, Path, WorkspaceAddress } from "../util/doc-types";
-import { StorageIsClosedError } from '../util/errors';
-import { StorageDriverAsyncMemory } from "./storage-driver-async-memory";
+import { Doc, Path, WorkspaceAddress } from "../util/doc-types.ts";
+import { StorageIsClosedError } from "../util/errors.ts";
+import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
 
 //--------------------------------------------------
 
-import { Logger } from '../util/log';
-let logger = new Logger('storage driver localStorage', 'yellowBright');
+import { Logger } from "../util/log.ts";
+let logger = new Logger("storage driver localStorage", "yellowBright");
 
 //================================================================================
 type SerializedDriverDocs = {
@@ -27,54 +27,64 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
 
     constructor(workspace: WorkspaceAddress) {
         super(workspace);
-        logger.debug('constructor');
+        logger.debug("constructor");
 
         // each config item starts with this prefix and gets its own entry in localstorage
-        this._localStorageKeyConfig = `stonesoup:config:${workspace}`;  // TODO: change this to "earthstar:..." later
+        this._localStorageKeyConfig = `stonesoup:config:${workspace}`; // TODO: change this to "earthstar:..." later
         // but all docs are stored together inside this one item, as a giant JSON object
         this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${workspace}`;
 
         let existingData = localStorage.getItem(this._localStorageKeyDocs);
         if (existingData !== null) {
-            logger.debug('...constructor: loading data from localStorage');
+            logger.debug("...constructor: loading data from localStorage");
             let parsed = JSON.parse(existingData);
 
             if (!isSerializedDriverDocs(parsed)) {
-                console.warn(`localStorage data could not be parsed for workspace ${workspace}`);
+                console.warn(
+                    `localStorage data could not be parsed for workspace ${workspace}`,
+                );
                 return;
             }
 
-            this.docByPathAndAuthor = new Map(Object.entries(parsed.byPathAndAuthor));
-            this.docsByPathNewestFirst = new Map(Object.entries(parsed.byPathNewestFirst));
+            this.docByPathAndAuthor = new Map(
+                Object.entries(parsed.byPathAndAuthor),
+            );
+            this.docsByPathNewestFirst = new Map(
+                Object.entries(parsed.byPathNewestFirst),
+            );
         } else {
-            logger.debug('...constructor: there was no existing data in localStorage');
+            logger.debug(
+                "...constructor: there was no existing data in localStorage",
+            );
         }
-        logger.debug('...constructor is done.');
+        logger.debug("...constructor is done.");
     }
 
     //--------------------------------------------------
     // LIFECYCLE
 
     // isClosed(): inherited
-    async close(erase: boolean): Promise<void> {
-        logger.debug('close');
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+    close(erase: boolean) {
+        logger.debug("close");
+        if (this._isClosed) throw new StorageIsClosedError();
         if (erase) {
-            logger.debug('...close: and erase');
+            logger.debug("...close: and erase");
             this._configKv = {};
             this._maxLocalIndex = -1;
             this.docsByPathNewestFirst.clear();
             this.docByPathAndAuthor.clear();
 
-            logger.debug('...close: erasing localStorage');
+            logger.debug("...close: erasing localStorage");
             localStorage.removeItem(this._localStorageKeyDocs);
             for (let key of this._listConfigKeysSync()) {
                 this._deleteConfigSync(key);
             }
-            logger.debug('...close: erasing is done');
+            logger.debug("...close: erasing is done");
         }
         this._isClosed = true;
-        logger.debug('...close is done.');
+        logger.debug("...close is done.");
+
+        return Promise.resolve();
     }
 
     //--------------------------------------------------
@@ -83,29 +93,29 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     // synchronous versions for internal use
 
     _getConfigSync(key: string): string | undefined {
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+        if (this._isClosed) throw new StorageIsClosedError();
         key = `${this._localStorageKeyConfig}:${key}`;
         let result = localStorage.getItem(key);
         return result === null ? undefined : result;
     }
-    
+
     _setConfigSync(key: string, value: string): void {
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+        if (this._isClosed) throw new StorageIsClosedError();
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.setItem(key, value);
     }
 
     _listConfigKeysSync(): string[] {
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+        if (this._isClosed) throw new StorageIsClosedError();
         let keys = Object.keys(localStorage)
-            .filter(key => key.startsWith(this._localStorageKeyConfig + ':'))
-            .map(key => key.slice(this._localStorageKeyConfig.length + 1));
+            .filter((key) => key.startsWith(this._localStorageKeyConfig + ":"))
+            .map((key) => key.slice(this._localStorageKeyConfig.length + 1));
         keys.sort();
         return keys;
     }
 
     _deleteConfigSync(key: string): boolean {
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+        if (this._isClosed) throw new StorageIsClosedError();
         let hadIt = this._getConfigSync(key);
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.removeItem(key);
@@ -137,7 +147,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     // SET
 
     async upsert(doc: Doc): Promise<Doc> {
-        if (this._isClosed) { throw new StorageIsClosedError(); }
+        if (this._isClosed) throw new StorageIsClosedError();
         let upsertedDoc = await super.upsert(doc);
 
         // After every upsert, for now, we save everything
@@ -151,7 +161,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
 
         localStorage.setItem(
             this._localStorageKeyDocs,
-            JSON.stringify(docsToBeSerialised)
+            JSON.stringify(docsToBeSerialised),
         );
 
         return upsertedDoc;

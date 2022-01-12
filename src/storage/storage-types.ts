@@ -1,26 +1,16 @@
 import {
-    Superbus
-} from 'superbus';
-
-import {
     AuthorKeypair,
     Doc,
     DocToSet,
     LocalIndex,
     Path,
     WorkspaceAddress,
-} from '../util/doc-types';
-import {
-    HistoryMode,
-    Query,
-} from '../query/query-types';
-import {
-    IFormatValidator
-} from '../format-validators/format-validator-types';
-import {
-    ValidationError
-} from '../util/errors';
-import { Thunk } from './util-types';
+} from "../util/doc-types.ts";
+import { HistoryMode, Query } from "../query/query-types.ts";
+import { IFormatValidator } from "../format-validators/format-validator-types.ts";
+import { ValidationError } from "../util/errors.ts";
+import { Thunk } from "./util-types.ts";
+import { Superbus } from "../../deps.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -28,62 +18,63 @@ import { Thunk } from './util-types';
 export type StorageId = string;
 
 export type StorageBusChannel =
-    'ingest' |  // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
-    'willClose' |
-    'didClose';
+    | "ingest"
+    | // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
+    "willClose"
+    | "didClose";
 
 export interface QueryResult {
     // the docs from the query...
-    docs: Doc[],
+    docs: Doc[];
     // ...and the storageDriver's maxLocalIndex at the time
     // just before and just after the query was done.
     // This provided a lower and upper bound for the maxLocalIndex
     // associated with the resulting docs.
     // (This is the OVERALL max local index for
     // the whole storage, not just for the resulting docs.)
-    maxLocalIndexBefore: number,
-    maxLocalIndexAfter: number,
+    maxLocalIndexBefore: number;
+    maxLocalIndexAfter: number;
     // The max localIndex out of the returned docs.
     // This could be much smaller than the overall maxLocalIndex
     // if the docs have been filtered.
     // If there are no matching docs, this is -1.
-    maxLocalIndexInResult: number,
+    maxLocalIndexInResult: number;
 }
 
 // IngestEvents are returned from storage.set() and storage.ingest(),
 // and sent as events on the storage.bus 'ingest' channel.
 
 export interface IngestEventFailure {
-    kind: 'failure',
-    reason: 'write_error' | 'invalid_document',
-    maxLocalIndex: number,
-    err: Error | null,
+    kind: "failure";
+    reason: "write_error" | "invalid_document";
+    maxLocalIndex: number;
+    err: Error | null;
 }
 export interface IngestEventNothingHappened {
-    kind: 'nothing_happened',
-    reason: 'obsolete_from_same_author' | 'already_had_it'
-    maxLocalIndex: number,
-    doc: Doc,  // won't have a _localIndex because it was not actually ingested
+    kind: "nothing_happened";
+    reason: "obsolete_from_same_author" | "already_had_it";
+    maxLocalIndex: number;
+    doc: Doc; // won't have a _localIndex because it was not actually ingested
 }
 export interface IngestEventSuccess {
-    kind: 'success',
-    maxLocalIndex: number,
-    doc: Doc,  // the just-written doc, frozen, with updated extra properties like _localIndex
+    kind: "success";
+    maxLocalIndex: number;
+    doc: Doc; // the just-written doc, frozen, with updated extra properties like _localIndex
 
-    docIsLatest: boolean,  // is it the latest at this path (for any author)?
+    docIsLatest: boolean; // is it the latest at this path (for any author)?
 
     // the most recent doc from the same author, at this path, before the new doc was written.
-    prevDocFromSameAuthor: Doc | null,
+    prevDocFromSameAuthor: Doc | null;
 
     // the latest doc from any author at this path, before the new doc was written.
     // note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
-    prevLatestDoc: Doc | null,
+    prevLatestDoc: Doc | null;
 }
 export interface DocAlreadyExists {
     // for a doc that was previously ingested, when a live query is catching up.
-    kind: 'existing',
-    maxLocalIndex: number,
-    doc: Doc,  // the just-written doc, frozen, with updated extra properties like _localIndex
+    kind: "existing";
+    maxLocalIndex: number;
+    doc: Doc; // the just-written doc, frozen, with updated extra properties like _localIndex
 
     //docIsLatest: boolean,  // is it the latest at this path (for any author)?
 
@@ -95,33 +86,36 @@ export interface DocAlreadyExists {
     //prevLatestDoc: Doc | null,
 }
 export interface StorageEventWillClose {
-    kind: 'willClose',
-    maxLocalIndex: number,
+    kind: "willClose";
+    maxLocalIndex: number;
 }
 export interface StorageEventDidClose {
-    kind: 'didClose',
+    kind: "didClose";
 }
 
 export interface QueryFollowerDidClose {
-    kind: 'queryFollowerDidClose',
+    kind: "queryFollowerDidClose";
 }
 
 export interface IdleEvent {
-    kind: 'idle',
+    kind: "idle";
 }
 
 export type IngestEvent =
-    IngestEventFailure |
-    IngestEventNothingHappened |
-    IngestEventSuccess;
+    | IngestEventFailure
+    | IngestEventNothingHappened
+    | IngestEventSuccess;
 
 export type LiveQueryEvent =
-    DocAlreadyExists |  // catching up...
-    IdleEvent |  // waiting for an ingest to happen...
-    IngestEvent |  // an ingest happened
-    StorageEventWillClose |
-    StorageEventDidClose |
-    QueryFollowerDidClose;
+    | DocAlreadyExists
+    | // catching up...
+    IdleEvent
+    | // waiting for an ingest to happen...
+    IngestEvent
+    | // an ingest happened
+    StorageEventWillClose
+    | StorageEventDidClose
+    | QueryFollowerDidClose;
 
 //================================================================================
 
@@ -133,7 +127,7 @@ export interface IStorageAsyncConfigStorage {
     // these methods that call out to the storage driver.
     getConfig(key: string): Promise<string | undefined>;
     setConfig(key: string, value: string): Promise<void>;
-    listConfigKeys(): Promise<string[]>;  // sorted
+    listConfigKeys(): Promise<string[]>; // sorted
     deleteConfig(key: string): Promise<boolean>;
 }
 
@@ -154,15 +148,15 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
      *   * close the IStorage
      *   * close the IStorageDriver and possibly erase it
      *   * send StorageDidClose events and do not wait for event receivers.
-     * 
+     *
      * Any function called after the storage is closed will throw a StorageIsClosedError,
      *  except isClosed() is always allowed.
-     * 
+     *
      * You cannot call close() if the storage is already closed (it will throw a StorageIsClosedError).
-     * 
+     *
      * close() can happen while set() or ingest() are waiting for locks or have pending transactions.
      * In that case, the pending operations will fail and throw a storageIsClosed.
-     * 
+     *
      * If erase is true, actually delete and forget the local data (remove files, etc).
      * Erase defaults to false if not provided.
      */
@@ -175,7 +169,11 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
     getMaxLocalIndex(): number;
 
     // these should all return frozen docs
-    getDocsAfterLocalIndex(historyMode: HistoryMode, startAfter: LocalIndex, limit?: number): Promise<Doc[]>;
+    getDocsAfterLocalIndex(
+        historyMode: HistoryMode,
+        startAfter: LocalIndex,
+        limit?: number,
+    ): Promise<Doc[]>;
     getAllDocs(): Promise<Doc[]>;
     getLatestDocs(): Promise<Doc[]>;
     getAllDocsAtPath(path: Path): Promise<Doc[]>;
@@ -183,8 +181,8 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
 
     queryDocs(query?: Query): Promise<Doc[]>;
 
-//    queryPaths(query?: Query): Path[];
-//    queryAuthors(query?: Query): AuthorAddress[];
+    //    queryPaths(query?: Query): Path[];
+    //    queryAuthors(query?: Query): AuthorAddress[];
 
     //--------------------------------------------------
     // SET
@@ -200,7 +198,9 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
     // Return the number of docs changed, or a ValidationError.
     // Already-empty docs will not be overwritten.
     // If an error occurs this will stop early.
-    overwriteAllDocsByAuthor(keypair: AuthorKeypair): Promise<number | ValidationError>;
+    overwriteAllDocsByAuthor(
+        keypair: AuthorKeypair,
+    ): Promise<number | ValidationError>;
 }
 
 /**
@@ -238,7 +238,7 @@ export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
 
     // these should return frozen docs
     queryDocs(query: Query): Promise<Doc[]>;
-//    queryPaths(query: Query): Doc[];
+    //    queryPaths(query: Query): Doc[];
 
     // TODO: add a special getAllDocsAtPath for use by ingest?
 

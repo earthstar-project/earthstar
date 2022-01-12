@@ -5,10 +5,8 @@ import {
     Doc,
     FormatName,
     Path,
-} from '../util/doc-types';
-import {
-    ValidationError
-} from '../util/errors';
+} from "../util/doc-types.ts";
+import { ValidationError } from "../util/errors.ts";
 
 /**
  * Validators are each responsible for one document format such as "es.4".
@@ -19,7 +17,6 @@ import {
  * According to the rules of Earthstar: documents are validated statelessly,
  * one document at a time, without knowing about any other documents
  * or what's in the Storage.
- *
  */
 export interface IFormatValidator {
     /** The string name of the format, like "es.4" */
@@ -34,7 +31,10 @@ export interface IFormatValidator {
      * it will be overwritten here, so you may as well just set signature: '' on the input.
      * Return a copy of the original document with the signature field changed, or return a ValidationError.
      */
-    signDocument(keypair: AuthorKeypair, doc: Doc): Promise<Doc | ValidationError>;
+    signDocument(
+        keypair: AuthorKeypair,
+        doc: Doc,
+    ): Promise<Doc | ValidationError>;
 
     /**
      * Return a copy of the doc without extra fields, plus the extra fields
@@ -43,7 +43,9 @@ export interface IFormatValidator {
      * This should be run before checkDocumentIsValid.  The output doc will be
      * more likely to be valid once the extra fields have been removed.
      */
-    removeExtraFields(doc: Doc): {doc: Doc, extras: Record<string, any> } | ValidationError;
+    removeExtraFields(
+        doc: Doc,
+    ): { doc: Doc; extras: Record<string, any> } | ValidationError;
 
     /**
      * This calls all the more detailed functions which start with underscores.
@@ -54,12 +56,25 @@ export interface IFormatValidator {
     // These are broken out for easier unit testing.
     // They will not normally be used directly; use the main assertDocumentIsValid instead.
     // Return true on success.
-    _checkBasicDocumentValidity(doc: Doc): true | ValidationError;  // check for correct fields and datatypes
-    _checkAuthorCanWriteToPath(author: AuthorAddress, path: Path): true | ValidationError;
-    _checkTimestampIsOk(timestamp: number, deleteAfter: number | null, now: number): true | ValidationError;
-    _checkPathIsValid(path: Path, deleteAfter?: number | null): true | ValidationError;
+    _checkBasicDocumentValidity(doc: Doc): true | ValidationError; // check for correct fields and datatypes
+    _checkAuthorCanWriteToPath(
+        author: AuthorAddress,
+        path: Path,
+    ): true | ValidationError;
+    _checkTimestampIsOk(
+        timestamp: number,
+        deleteAfter: number | null,
+        now: number,
+    ): true | ValidationError;
+    _checkPathIsValid(
+        path: Path,
+        deleteAfter?: number | null,
+    ): true | ValidationError;
     _checkAuthorSignatureIsValid(doc: Doc): Promise<true | ValidationError>;
-    _checkContentMatchesHash(content: string, contentHash: Base32String): Promise<true | ValidationError>;
+    _checkContentMatchesHash(
+        content: string,
+        contentHash: Base32String,
+    ): Promise<true | ValidationError>;
 
     // TODO: add these methods for building addresses
     // and remove them from crypto.ts and encoding.ts

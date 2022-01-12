@@ -1,14 +1,12 @@
-import equal from 'fast-deep-equal';
-import clone from 'rfdc';
-
-export let deepEqual = equal;
-export let deepCopy = clone();
+import { rfdc } from "../../deps.ts";
+export { fast_deep_equal as deepEqual } from "../../deps.ts";
 
 //================================================================================
 // TIME
 
-export let microsecondNow = () =>
-    Date.now() * 1000;
+export const deepCopy = rfdc();
+
+export let microsecondNow = () => Date.now() * 1000;
 
 export let sleep = (ms: number) =>
     new Promise((res, rej) => {
@@ -16,5 +14,4 @@ export let sleep = (ms: number) =>
     });
 
 // TODO: better randomness here
-export let randomId = (): string =>
-    '' + Math.random() + Math.random();
+export let randomId = (): string => "" + Math.random() + Math.random();
