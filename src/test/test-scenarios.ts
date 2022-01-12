@@ -1,4 +1,4 @@
-import { isDeno, isNode } from "../../deps.ts";
+import { isDeno, isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 // specific crypto drivers
 import { CryptoDriverNoble } from "../crypto/crypto-driver-noble.ts";
