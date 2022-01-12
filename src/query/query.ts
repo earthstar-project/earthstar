@@ -102,9 +102,7 @@ export let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
     // WILLMATCH
 
     // start with everything, then narrow down
-    let willMatch: WillMatch = query.historyMode === "all"
-        ? "all"
-        : "all-latest";
+    let willMatch: WillMatch = query.historyMode === "all" ? "all" : "all-latest";
 
     // if there are filters, match some
     if (query.filter !== undefined && !deepEqual(query.filter, {})) {

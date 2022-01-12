@@ -23,9 +23,7 @@ let main = async () => {
             let makeStorageDriver = (): IStorageDriverAsync => {
                 return new storageDriverClass();
             };
-            let scenarioName = `${storageDriverClass.name} w/ ${
-                (cryptoDriver as any).name
-            }`;
+            let scenarioName = `${storageDriverClass.name} w/ ${(cryptoDriver as any).name}`;
             await runStorageDriverBenchmark(
                 runner,
                 cryptoDriver,

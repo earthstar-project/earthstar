@@ -59,8 +59,7 @@ await build({
     },
     // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
     redirects: {
-        "./src/storage/indexeddb-types.deno.d.ts":
-            "./src/storage/indexeddb-types.node.d.ts",
+        "./src/storage/indexeddb-types.deno.d.ts": "./src/storage/indexeddb-types.node.d.ts",
     },
 });
 

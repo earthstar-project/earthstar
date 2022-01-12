@@ -20,9 +20,7 @@ import {
     StorageEventWillClose,
     StorageId,
 } from "./storage-types.ts";
-import {
-    IFormatValidator,
-} from "../format-validators/format-validator-types.ts";
+import { IFormatValidator } from "../format-validators/format-validator-types.ts";
 
 import {
     isErr,
@@ -38,12 +36,7 @@ import { docMatchesFilter } from "../query/query.ts";
 
 //--------------------------------------------------
 
-import {
-    Logger,
-    LogLevel,
-    setDefaultLogLevel,
-    setLogLevel,
-} from "../util/log.ts";
+import { Logger, LogLevel, setDefaultLogLevel, setLogLevel } from "../util/log.ts";
 let J = JSON.stringify;
 let logger = new Logger("storage async", "yellowBright");
 let loggerSet = new Logger("storage async set", "yellowBright");
@@ -341,9 +334,8 @@ export class StorageAsync implements IStorageAsync {
             loggerIngest.debug("  > getting prevLatest and prevSameAuthor");
             let prevLatest: Doc | null = existingDocsSamePath[0] ?? null;
             let prevSameAuthor: Doc | null =
-                existingDocsSamePath.filter((d) =>
-                    d.author === docToIngest.author
-                )[0] ?? null;
+                existingDocsSamePath.filter((d) => d.author === docToIngest.author)[0] ??
+                    null;
 
             loggerIngest.debug(
                 "  > checking if new doc is latest at this path",

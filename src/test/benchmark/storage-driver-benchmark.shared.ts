@@ -1,15 +1,9 @@
 import { AuthorKeypair } from "../../util/doc-types";
 import { ICryptoDriver } from "../../crypto/crypto-types";
-import {
-    IStorageAsync,
-    IStorageDriverAsync,
-} from "../../storage/storage-types";
+import { IStorageAsync, IStorageDriverAsync } from "../../storage/storage-types";
 
 import { Crypto } from "../../crypto/crypto";
-import {
-    GlobalCryptoDriver,
-    setGlobalCryptoDriver,
-} from "../../crypto/global-crypto-driver";
+import { GlobalCryptoDriver, setGlobalCryptoDriver } from "../../crypto/global-crypto-driver";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4";
 import { StorageAsync } from "../../storage/storage-async";
 

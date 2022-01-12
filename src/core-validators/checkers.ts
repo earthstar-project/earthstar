@@ -129,13 +129,9 @@ export let checkObj = (opts: CheckObjOpts = {}): Checker => {
             if (opts.allowExtraKeys === false) {
                 let objKeys = Object.keys(x);
                 let schemaKeys = Object.keys(opts.objSchema);
-                let extraObjKeys = objKeys.filter((k) =>
-                    schemaKeys.indexOf(k) === -1
-                );
+                let extraObjKeys = objKeys.filter((k) => schemaKeys.indexOf(k) === -1);
                 if (extraObjKeys.length > 0) {
-                    return `object has extra keys not in the schema: ${
-                        extraObjKeys.join(", ")
-                    }`;
+                    return `object has extra keys not in the schema: ${extraObjKeys.join(", ")}`;
                 }
             }
             // check the individual schemas of each key

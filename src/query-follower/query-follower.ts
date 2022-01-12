@@ -18,12 +18,7 @@ import { IQueryFollower, QueryFollowerState } from "./query-follower-types.ts";
 
 //================================================================================
 
-import {
-    Logger,
-    LogLevel,
-    setDefaultLogLevel,
-    setLogLevel,
-} from "../util/log.ts";
+import { Logger, LogLevel, setDefaultLogLevel, setLogLevel } from "../util/log.ts";
 import { deepCopy, sleep } from "../util/misc.ts";
 let logger = new Logger("QueryFollower", "redBright");
 let loggerSub = new Logger("QueryFollowerSub", "red");

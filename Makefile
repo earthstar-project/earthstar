@@ -25,7 +25,7 @@ npm:
 	deno run --allow-all scripts/build_npm.ts $(VERSION)
 
 fmt:
-	deno fmt --options-indent-width=4 src/ scripts/
+	deno fmt --options-indent-width=4 --options-line-width=100 src/ scripts/
 	
 bundle:
 	deno bundle --no-check=remote ./mod.ts ./earthstar.bundle.js

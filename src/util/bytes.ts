@@ -40,13 +40,11 @@ export let concatBytes = (a: Uint8Array, b: Uint8Array): Uint8Array => {
 
 //--------------------------------------------------
 
-export let b64StringToBytes = (b64string: string): Uint8Array =>
-    rfc4648.base64.parse(b64string);
+export let b64StringToBytes = (b64string: string): Uint8Array => rfc4648.base64.parse(b64string);
 
 //--------------------------------------------------
 
-export let isBytes = (bytes: any): bytes is Uint8Array =>
-    bytes?.constructor?.name === "Uint8Array";
+export let isBytes = (bytes: any): bytes is Uint8Array => bytes?.constructor?.name === "Uint8Array";
 //return bytes.writeUInt8 === undefined && bytes instanceof Uint8Array;
 
 export let isBuffer = (buf: any): boolean =>

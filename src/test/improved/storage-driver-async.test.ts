@@ -132,11 +132,9 @@ export let runStorageDriverTests = (scenario: TestScenario) => {
 
             let doc0: Doc = {
                 format: "es.4",
-                author:
-                    "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
+                author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
                 content: "Hello 0",
-                contentHash:
-                    "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+                contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
                 deleteAfter: null,
                 path: "/posts/post-0000.txt",
                 timestamp: 1619627796035000,
@@ -153,8 +151,7 @@ export let runStorageDriverTests = (scenario: TestScenario) => {
             // second author, newer still
             let doc2 = {
                 ...doc0,
-                author:
-                    "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
+                author: "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
                 content: "Hello 2",
                 timestamp: doc0.timestamp + 2, // make sure this one wins
                 signature: "whatever2", // everything assumes different docs have different sigs
@@ -162,8 +159,7 @@ export let runStorageDriverTests = (scenario: TestScenario) => {
             // second author, older
             let doc3 = {
                 ...doc0,
-                author:
-                    "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
+                author: "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
                 content: "Hello 3",
                 timestamp: doc0.timestamp - 3, // make sure this one wins
                 signature: "whatever3", // everything assumes different docs have different sigs
@@ -171,8 +167,7 @@ export let runStorageDriverTests = (scenario: TestScenario) => {
             // third author, oldest
             let doc4 = {
                 ...doc0,
-                author:
-                    "@bobo.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxnr7zyef2hvpftw45clq",
+                author: "@bobo.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxnr7zyef2hvpftw45clq",
                 content: "Hello 4",
                 timestamp: doc0.timestamp - 4, // make sure this one wins
                 signature: "whatever4", // everything assumes different docs have different sigs

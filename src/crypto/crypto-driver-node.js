@@ -3,11 +3,7 @@
 import crypto from "https://deno.land/std@0.119.0/node/crypto.ts";
 
 import { b64StringToBytes, concatBytes } from "../util/bytes.ts";
-import {
-    bufferToBytes,
-    bytesToBuffer,
-    stringToBuffer,
-} from "../util/buffers.ts";
+import { bufferToBytes, bytesToBuffer, stringToBuffer } from "../util/buffers.ts";
 
 //--------------------------------------------------
 

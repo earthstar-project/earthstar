@@ -31,12 +31,7 @@ ERROR_CLASSES.concat([
 
 //================================================================================
 
-import {
-    Logger,
-    LogLevel,
-    setDefaultLogLevel,
-    setLogLevel,
-} from "../../util/log.ts";
+import { Logger, LogLevel, setDefaultLogLevel, setLogLevel } from "../../util/log.ts";
 
 let loggerTest = new Logger("test", "whiteBright");
 let loggerTestCb = new Logger("test cb", "white");
@@ -326,8 +321,7 @@ export let runPeerClientServerTests = (
     Deno.test(SUBTEST_NAME + ": saltyHandshake with mini-rpc", async () => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } =
-            await setupTest();
+        let { peerOnClient, peerOnServer, expectedCommonWorkspaces } = await setupTest();
 
         // create Client and Server instances
         let serverLocal = new PeerServer(peerOnServer);

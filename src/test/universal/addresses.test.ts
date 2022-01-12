@@ -1,11 +1,7 @@
 import { assert, assertEquals } from "../asserts.ts";
 import { snowmanString } from "../test-utils.ts";
 
-import {
-    AuthorAddress,
-    ParsedAddress,
-    WorkspaceAddress,
-} from "../../util/doc-types.ts";
+import { AuthorAddress, ParsedAddress, WorkspaceAddress } from "../../util/doc-types.ts";
 import { isErr, notErr } from "../../util/errors.ts";
 import {
     assembleAuthorAddress,
@@ -42,11 +38,9 @@ Deno.test("parseAuthorAddress", () => {
     let vectors: AuthorAddressVector[] = [
         {
             valid: true,
-            address:
-                "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             parsed: {
-                address:
-                    "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                address: "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                 name: "suzy",
                 pubkey: "bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             },
@@ -54,16 +48,13 @@ Deno.test("parseAuthorAddress", () => {
         },
         {
             valid: true,
-            address:
-                "@s999.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@s999.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             parsed: {
-                address:
-                    "@s999.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                address: "@s999.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                 name: "s999",
                 pubkey: "bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             },
-            note:
-                "normal address, name contains number but does not start with number",
+            note: "normal address, name contains number but does not start with number",
         },
         { valid: false, address: "", note: "empty string" },
         { valid: false, address: "@", note: "just a @" },
@@ -85,206 +76,172 @@ Deno.test("parseAuthorAddress", () => {
 
         {
             valid: false,
-            address:
-                "@suzy@bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy@bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "@ instead of .",
         },
         {
             valid: false,
-            address:
-                "suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "no @",
         },
         {
             valid: false,
-            address:
-                "+suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "starts with +",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "key too short (52 chars)",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "key too long (54 chars)",
         },
         {
             valid: false,
-            address:
-                "@suzybxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzybxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "no period",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.extra",
+            address: "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.extra",
             note: "too many periods (and too long)",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxx",
+            address: "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.xxxxxxxx",
             note: "too many periods (53 chars)",
         },
         {
             valid: false,
-            address:
-                "@suz.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suz.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "name too short",
         },
         {
             valid: false,
-            address:
-                "@suzyy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzyy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "name too long",
         },
         {
             valid: false,
-            address:
-                " @suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: " @suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "leading space",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
+            address: "@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
             note: "trailing space",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "space in the middle",
         },
         {
             valid: false,
-            address:
-                "@SUZY.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@SUZY.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "capital name",
         },
         {
             valid: false,
-            address:
-                "@suzy.bXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "capital key",
         },
         {
             valid: false,
-            address:
-                "@suzy.7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "key starts with a number (53 chars)",
         },
         {
             valid: false,
-            address:
-                "@suzy.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "key without leading b (53 chars)",
         },
         {
             valid: false,
-            address:
-                "@suzy.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "key without leading b (52 chars)",
         },
         {
             valid: false,
-            address:
-                "@1uzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@1uzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "name starts with number",
         },
         {
             valid: false,
-            address:
-                "@su?y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@su?y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "question mark in name",
         },
         {
             valid: false,
-            address:
-                "@su y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@su y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "space in name",
         },
         {
             valid: false,
-            address:
-                "@su\ny.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@su\ny.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "newline in name",
         },
         {
             valid: false,
-            address:
-                "@su-y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@su-y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "dash in name",
         },
         {
             valid: false,
-            address:
-                "@su_y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@su_y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "underscore in name",
         },
         {
             valid: false,
-            address:
-                "@su+y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@su+y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "+ in middle of name",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxx+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bxxxxxx+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "+ in middle of key",
         },
         {
             valid: false,
-            address:
-                "@su@y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@su@y.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "@ in middle of name",
         },
         {
             valid: false,
-            address:
-                "@suzy.bxxxxxx@xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bxxxxxx@xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "@ in middle of key",
         },
         {
             valid: false,
-            address:
-                "@suzy.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "question mark in key",
         },
         {
             valid: false,
-            address:
-                "@@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@@suzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "double @ + 4 letter name",
         },
         {
             valid: false,
-            address:
-                "@@uzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@@uzy.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "double @ + 3 letter name",
         },
         {
             valid: false,
-            address:
-                `@suz${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
+            address: `@suz${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
             note: "snowman in name + 3 letters",
         },
         {
             valid: false,
-            address:
-                `@su${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
+            address: `@su${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
             note: "snowman in name + 2 letters",
         },
         {
             valid: false,
-            address:
-                `@s${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
+            address: `@s${snowmanString}.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`,
             note: "snowman in name + 1 letter",
         },
         { valid: false, address: 123 as any as string, note: "a number" },
@@ -298,8 +255,7 @@ Deno.test("parseAuthorAddress", () => {
         // TODO: more carefully check b32 characters -- should we try to decode the b32 just to make sure it's ok?
         {
             valid: false,
-            address:
-                "@suzy.b01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@suzy.b01xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "invalid b32 characters in key (0, 1)",
         },
     ];
@@ -337,11 +293,9 @@ Deno.test("parseWorkspaceAddress", () => {
     let vectors: WorkspaceAddressVector[] = [
         {
             valid: true,
-            address:
-                "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             parsed: {
-                address:
-                    "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                address: "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                 name: "gardening",
                 pubkey: "bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             },
@@ -365,8 +319,7 @@ Deno.test("parseWorkspaceAddress", () => {
                 name: "a",
                 pubkey: "b",
             },
-            note:
-                "normal address with 1 character name and 1 character key starting with b",
+            note: "normal address with 1 character name and 1 character key starting with b",
         },
         {
             valid: true,
@@ -376,8 +329,7 @@ Deno.test("parseWorkspaceAddress", () => {
                 name: "a",
                 pubkey: "x",
             },
-            note:
-                "normal address with 1 character name and 1 character key not starting with b",
+            note: "normal address with 1 character name and 1 character key not starting with b",
         },
         {
             valid: true,
@@ -401,11 +353,9 @@ Deno.test("parseWorkspaceAddress", () => {
         },
         {
             valid: true,
-            address:
-                "+garden2000.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+garden2000.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             parsed: {
-                address:
-                    "+garden2000.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+                address: "+garden2000.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
                 name: "garden2000",
                 pubkey: "bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             },
@@ -416,38 +366,32 @@ Deno.test("parseWorkspaceAddress", () => {
         { valid: false, address: "+", note: "just a +" },
         {
             valid: false,
-            address:
-                "gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "no +",
         },
         {
             valid: false,
-            address:
-                "@gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "@gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "starts with @",
         },
         {
             valid: false,
-            address:
-                "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "key too long (54 chars)",
         },
         {
             valid: false,
-            address:
-                "+gardeningbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gardeningbxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "no period",
         },
         {
             valid: false,
-            address:
-                "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.extra",
+            address: "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.extra",
             note: "too many periods",
         },
         {
             valid: false,
-            address:
-                "+aaaaabbbbbcccccd.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+aaaaabbbbbcccccd.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "name too long (16 characters)",
         },
         {
@@ -465,104 +409,87 @@ Deno.test("parseWorkspaceAddress", () => {
         { valid: false, address: "gardening", note: "just a word" },
         {
             valid: false,
-            address:
-                " +gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: " +gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "leading space",
         },
         {
             valid: false,
-            address:
-                "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
+            address: "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx ",
             note: "trailing space",
         },
         {
             valid: false,
-            address:
-                "+gardening.bxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gardening.bxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "space in the middle",
         },
         {
             valid: false,
-            address:
-                "+GARDENING.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+GARDENING.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "capital name",
         },
         {
             valid: false,
-            address:
-                "+gardening.bXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gardening.bXXXXXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "capital key",
         },
         {
             valid: false,
-            address:
-                "+1garden.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+1garden.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "name starts with number",
         },
         {
             valid: false,
-            address:
-                "+gar?dening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gar?dening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "question mark in name",
         },
         {
             valid: false,
-            address:
-                "+gar den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gar den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "space in name",
         },
         {
             valid: false,
-            address:
-                "+gar\nden.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gar\nden.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "newline in name",
         },
         {
             valid: false,
-            address:
-                "+gar-den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gar-den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "dash in name",
         },
         {
             valid: false,
-            address:
-                "+gar_den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gar_den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "underscore in name",
         },
         {
             valid: false,
-            address:
-                "+gar+den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gar+den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "+ in middle of name",
         },
         {
             valid: false,
-            address:
-                "+garden.bxx+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+garden.bxx+xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "+ in middle of key",
         },
         {
             valid: false,
-            address:
-                "+gar@den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gar@den.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "@ in middle of name",
         },
         {
             valid: false,
-            address:
-                "+garden.bxx@xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+garden.bxx@xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "@ in middle of key",
         },
         {
             valid: false,
-            address:
-                "+gardening.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "+gardening.bx?xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "question mark in key",
         },
         {
             valid: false,
-            address:
-                "++gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            address: "++gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
             note: "double +",
         },
         {

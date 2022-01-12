@@ -3,14 +3,8 @@ import { throws } from "../test-utils.ts";
 //t.runOnly = true;
 
 import { WorkspaceAddress } from "../../util/doc-types.ts";
-import {
-    IStorageAsync,
-    IStorageDriverAsync,
-} from "../../storage/storage-types.ts";
-import {
-    GlobalCryptoDriver,
-    setGlobalCryptoDriver,
-} from "../../crypto/global-crypto-driver.ts";
+import { IStorageAsync, IStorageDriverAsync } from "../../storage/storage-types.ts";
+import { GlobalCryptoDriver, setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { StorageAsync } from "../../storage/storage-async.ts";
 
@@ -47,9 +41,7 @@ let _runStorageConfigTests = (
         ws: WorkspaceAddress,
     ): IStorageAsync | IStorageDriverAsync => {
         let driver = scenario.makeDriver(ws);
-        return mode === "storage"
-            ? new StorageAsync(ws, FormatValidatorEs4, driver)
-            : driver;
+        return mode === "storage" ? new StorageAsync(ws, FormatValidatorEs4, driver) : driver;
     };
 
     Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {

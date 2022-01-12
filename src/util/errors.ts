@@ -79,8 +79,7 @@ export class NotImplementedError extends EarthstarError {
 }
 
 /** Check if any value is a subclass of EarthstarError (return true) or not (return false) */
-export let isErr = <T>(x: T | Error): x is EarthstarError =>
-    x instanceof EarthstarError;
+export let isErr = <T>(x: T | Error): x is EarthstarError => x instanceof EarthstarError;
 
 /** Check if any value is a subclass of EarthstarError (return false) or not (return true) */
 export let notErr = <T>(x: T | Error): x is T => !(x instanceof EarthstarError);

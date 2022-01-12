@@ -7,9 +7,7 @@ import {
     WorkspaceAddress,
 } from "../util/doc-types.ts";
 import { HistoryMode, Query } from "../query/query-types.ts";
-import {
-    IFormatValidator,
-} from "../format-validators/format-validator-types.ts";
+import { IFormatValidator } from "../format-validators/format-validator-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Thunk } from "./util-types.ts";
 import { Superbus } from "../../deps.ts";

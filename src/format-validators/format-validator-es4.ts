@@ -1,10 +1,4 @@
-import {
-    AuthorAddress,
-    AuthorKeypair,
-    Base32String,
-    Doc,
-    Path,
-} from "../util/doc-types.ts";
+import { AuthorAddress, AuthorKeypair, Base32String, Doc, Path } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 import { IFormatValidator } from "./format-validator-types.ts";
 import { Crypto } from "../crypto/crypto.ts";
@@ -23,10 +17,7 @@ import {
     checkString,
     isPlainObject,
 } from "../core-validators/checkers.ts";
-import {
-    checkAuthorIsValid,
-    checkWorkspaceIsValid,
-} from "../core-validators/addresses.ts";
+import { checkAuthorIsValid, checkWorkspaceIsValid } from "../core-validators/addresses.ts";
 
 //--------------------------------------------------
 
@@ -105,9 +96,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
         return Crypto.sha256base32(
             `author\t${doc.author}\n` +
                 `contentHash\t${doc.contentHash}\n` +
-                (doc.deleteAfter === null
-                    ? ""
-                    : `deleteAfter\t${doc.deleteAfter}\n`) +
+                (doc.deleteAfter === null ? "" : `deleteAfter\t${doc.deleteAfter}\n`) +
                 `format\t${doc.format}\n` +
                 `path\t${doc.path}\n` +
                 `timestamp\t${doc.timestamp}\n` +

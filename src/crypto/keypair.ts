@@ -2,10 +2,7 @@ import { AuthorKeypair, AuthorShortname } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 import { base32BytesToString, base32StringToBytes } from "./base32.ts";
 import { KeypairBytes } from "./crypto-types.ts";
-import {
-    assembleAuthorAddress,
-    parseAuthorAddress,
-} from "../core-validators/addresses.ts";
+import { assembleAuthorAddress, parseAuthorAddress } from "../core-validators/addresses.ts";
 
 //================================================================================
 

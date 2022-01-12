@@ -32,8 +32,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
         // each config item starts with this prefix and gets its own entry in localstorage
         this._localStorageKeyConfig = `stonesoup:config:${workspace}`; // TODO: change this to "earthstar:..." later
         // but all docs are stored together inside this one item, as a giant JSON object
-        this._localStorageKeyDocs =
-            `stonesoup:documents:pathandauthor:${workspace}`;
+        this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${workspace}`;
 
         let existingData = localStorage.getItem(this._localStorageKeyDocs);
         if (existingData !== null) {

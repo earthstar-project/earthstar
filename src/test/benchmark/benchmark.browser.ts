@@ -2,10 +2,7 @@
 // prepare for test scenarios
 
 import { Crypto } from "../crypto/crypto";
-import {
-    CryptoDriverChloride,
-    waitUntilChlorideIsReady,
-} from "../crypto/crypto-driver-chloride";
+import { CryptoDriverChloride, waitUntilChlorideIsReady } from "../crypto/crypto-driver-chloride";
 import { CryptoDriverNode } from "../crypto/crypto-driver-node";
 import { CryptoDriverTweetnacl } from "../crypto/crypto-driver-tweetnacl";
 import { ICrypto, ICryptoDriver } from "../crypto/crypto-types";
@@ -21,8 +18,7 @@ import { isErr, notErr } from "../util/errors";
 //================================================================================
 
 let log = console.log;
-let randInt = (lo: number, hi: number) =>
-    Math.floor(Math.random() * (hi - lo) + lo);
+let randInt = (lo: number, hi: number) => Math.floor(Math.random() * (hi - lo) + lo);
 
 let pushLocal = async (
     storageFrom: IStorageAsync,
@@ -44,9 +40,7 @@ let syncLocal = async (
 //================================================================================
 
 let makeParts = ({ cryptoDriver, storageDriverClass }: PartsInput): Parts => {
-    let description = `${(cryptoDriver as any).name} & ${
-        (storageDriverClass as any).name
-    }`;
+    let description = `${(cryptoDriver as any).name} & ${(storageDriverClass as any).name}`;
     let crypto = new Crypto(cryptoDriver);
     let validator = new FormatValidatorEs4(crypto);
     let makeStorage = (workspace: WorkspaceAddress): IStorageAsync => {

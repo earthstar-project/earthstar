@@ -1,7 +1,4 @@
-import {
-    fast_deep_equal as isEqual,
-    fast_json_stable_stringify as stringify,
-} from "../../deps.ts";
+import { fast_deep_equal as isEqual, fast_json_stable_stringify as stringify } from "../../deps.ts";
 
 import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types.ts";
 import { isErr, StorageIsClosedError } from "../util/errors.ts";

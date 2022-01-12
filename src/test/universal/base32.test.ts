@@ -2,10 +2,7 @@ import { assert, assertEquals, assertThrows } from "../asserts.ts";
 
 let TEST_NAME = "base32";
 
-import {
-    base32BytesToString,
-    base32StringToBytes,
-} from "../../crypto/base32.ts";
+import { base32BytesToString, base32StringToBytes } from "../../crypto/base32.ts";
 import { ValidationError } from "../../util/errors.ts";
 
 //================================================================================
@@ -116,8 +113,7 @@ Deno.test("base32 encoding", () => {
     let exampleBytes = base32StringToBytes(
         "bciqbed3k6ya5i3qqwljochwxdrk5exzqilbckapedujenz5b5hj5r3a",
     );
-    let exampleString =
-        "bciqbed3k6ya5i3qqwljochwxdrk5exzqilbckapedujenz5b5hj5r3a";
+    let exampleString = "bciqbed3k6ya5i3qqwljochwxdrk5exzqilbckapedujenz5b5hj5r3a";
     assertEquals(
         base32BytesToString(exampleBytes),
         exampleString,

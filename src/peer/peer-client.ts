@@ -226,24 +226,20 @@ export class PeerClient implements IPeerClient {
                     `server shenanigans: referenced a workspace we don't have: ${workspace}`,
                 );
             }
-            let existingWorkspaceState =
-                this.state.workspaceStates[workspace] || {};
+            let existingWorkspaceState = this.state.workspaceStates[workspace] || {};
             newWorkspaceStates[workspace] = {
                 workspace,
 
                 serverStorageId: workspaceStateFromServer.serverStorageId,
-                serverMaxLocalIndexOverall:
-                    workspaceStateFromServer.serverMaxLocalIndexOverall,
+                serverMaxLocalIndexOverall: workspaceStateFromServer.serverMaxLocalIndexOverall,
                 // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
-                serverMaxLocalIndexSoFar:
-                    existingWorkspaceState.serverMaxLocalIndexSoFar ?? -1,
+                serverMaxLocalIndexSoFar: existingWorkspaceState.serverMaxLocalIndexSoFar ?? -1,
 
                 // TODO: check if client storage id has changed, and if so reset this state
                 clientStorageId: clientStorage.storageId,
                 clientMaxLocalIndexOverall: clientStorage.getMaxLocalIndex(),
                 // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
-                clientMaxLocalIndexSoFar:
-                    existingWorkspaceState.clientMaxLocalIndexSoFar ?? -1,
+                clientMaxLocalIndexSoFar: existingWorkspaceState.clientMaxLocalIndexSoFar ?? -1,
 
                 lastSeenAt: microsecondNow(),
             };

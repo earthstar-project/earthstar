@@ -1,8 +1,4 @@
-import {
-    AuthorAddress,
-    AuthorKeypair,
-    Base32String,
-} from "../util/doc-types.ts";
+import { AuthorAddress, AuthorKeypair, Base32String } from "../util/doc-types.ts";
 import { ICrypto, KeypairBytes } from "./crypto-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 

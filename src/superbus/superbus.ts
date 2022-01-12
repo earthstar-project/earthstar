@@ -175,9 +175,7 @@ export class Superbus<Ch extends string> {
         }
         channels.push("*");
         log(
-            `${busdebug} _expandChannels "${channel}" -> ${
-                JSON.stringify(channels)
-            }`,
+            `${busdebug} _expandChannels "${channel}" -> ${JSON.stringify(channels)}`,
         );
         return channels;
     }

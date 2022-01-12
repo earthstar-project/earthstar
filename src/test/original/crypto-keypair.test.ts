@@ -3,15 +3,9 @@ import { AuthorKeypair } from "../../util/doc-types.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
 import { isErr, ValidationError } from "../../util/errors.ts";
 
-import {
-    decodeAuthorKeypairToBytes,
-    encodeAuthorKeypairToStrings,
-} from "../../crypto/keypair.ts";
+import { decodeAuthorKeypairToBytes, encodeAuthorKeypairToStrings } from "../../crypto/keypair.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import {
-    GlobalCryptoDriver,
-    setGlobalCryptoDriver,
-} from "../../crypto/global-crypto-driver.ts";
+import { GlobalCryptoDriver, setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 
 import { testCryptoScenarios } from "../test-scenarios.ts";
 import { CryptoScenario } from "../test-scenario-types.ts";
@@ -108,33 +102,28 @@ export let runCryptoKeypairTests = (scenario: CryptoScenario) => {
                 {
                     valid: true,
                     keypair: {
-                        address:
-                            "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
-                        secret:
-                            "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
+                        address: "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
+                        secret: "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
                     },
                 },
                 {
                     valid: false,
                     keypair: {
-                        address:
-                            "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
+                        address: "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
                         secret: "b", // valid base32 but wrong length
                     },
                 },
                 {
                     valid: false,
                     keypair: {
-                        address:
-                            "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
+                        address: "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
                         secret: "b???", // invalid base32
                     },
                 },
                 {
                     valid: false,
                     keypair: {
-                        address:
-                            "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
+                        address: "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
                         secret: "baa", // valid base32 but wrong length
                     },
                 },
@@ -142,42 +131,35 @@ export let runCryptoKeypairTests = (scenario: CryptoScenario) => {
                     valid: false,
                     keypair: {
                         address: "@suzy.b", // valid base32 but wrong length
-                        secret:
-                            "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
+                        secret: "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
                     },
                 },
                 {
                     valid: false,
                     keypair: {
                         address: "@suzy.b???", // invalid base32
-                        secret:
-                            "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
+                        secret: "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
                     },
                 },
                 {
                     valid: false,
                     keypair: {
                         address: "@suzy.baa", // valid base32 but wrong length
-                        secret:
-                            "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
+                        secret: "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
                     },
                 },
                 {
                     valid: false,
                     keypair: {
-                        address:
-                            "@suzy.724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a", // no b
-                        secret:
-                            "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
+                        address: "@suzy.724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a", // no b
+                        secret: "bwgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a",
                     },
                 },
                 {
                     valid: false,
                     keypair: {
-                        address:
-                            "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
-                        secret:
-                            "wgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a", // no b
+                        address: "@suzy.b724w6da6euw2ip7szpxopq2uodagdyswovh4pqd6ptnanz2u362a",
+                        secret: "wgwycyh4gytyw4p2cp55t53wqhbxb7kqnj4assaazroviffuqn7a", // no b
                     },
                 },
             ];
