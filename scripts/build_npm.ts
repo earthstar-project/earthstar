@@ -1,4 +1,4 @@
-import { build } from "https://raw.githubusercontent.com/denoland/dnt/968f16ef0ca9ac9379144654f2edb8e92d46a544/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.15.0/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
@@ -9,6 +9,7 @@ await build({
     deno: {
       test: "dev",
     },
+    weakRef: true,
     customDev: [
       {
         package: {
