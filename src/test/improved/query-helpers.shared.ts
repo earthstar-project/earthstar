@@ -444,11 +444,223 @@ export let runQueryHelpersTests = async (scenario: TestScenario) => {
   // TEMPLATES
 
   t.test(SUBTEST_NAME + ': parseTemplate and extractTemplateVariablesFromPath', (t: any) => {
+    type StringToString = Record<string, string>;
+    interface ValidVector {
+      template: string,
+      glob?: string,
+      varNames: string[],
+      pathsAndExtractedVars: Record<string, StringToString | null>,
+    }
+    interface InvalidVector {
+      template: string,
+      invalid: true;
+    }
+    type Vector = ValidVector | InvalidVector;
+    let vectors: Vector[] = [
+      {
+        template: '',
+        glob: '',
+        varNames: [],
+        pathsAndExtractedVars: {
+          '/novars.json': null,
+          '/nope': null,
+          '': {},
+        },
+      },
+      {
+        template: '/novars.json',
+        glob: '/novars.json',
+        varNames: [],
+        pathsAndExtractedVars: {
+          '/novars.json': {},
+          '/nope': null,
+          '': null,
+        },
+      },
+      {
+        template: '/onevar/{_underscores_CAPS_and_digits_12345}.json',
+        glob: '/onevar/*.json',
+        varNames: ['_underscores_CAPS_and_digits_12345'],
+        pathsAndExtractedVars: {
+          '/onevar/123.json': { '_underscores_CAPS_and_digits_12345': '123' },
+        },
+      },
+      {
+        template: '/onevar/{___}.json',
+        glob: '/onevar/*.json',
+        varNames: ['___'],
+        pathsAndExtractedVars: {
+          '/onevar/123.json': { '___': '123' },
+        },
+      },
+      {
+        template: '/onevar/{_0}.json',
+        glob: '/onevar/*.json',
+        varNames: ['_0'],
+        pathsAndExtractedVars: {
+          '/onevar/123.json': { '_0': '123' },
+        },
+      },
+      {
+        template: '/onevar/{postId}.json',
+        glob: '/onevar/*.json',
+        varNames: ['postId'],
+        pathsAndExtractedVars: {
+          '/onevar/123.json': { postId: '123' },
+          '/onevar/.json': { postId: '' },  // empty matches are ok
+          '/onevar/12/34.json': null, // variable can't span across a path segment ('/')
+          '/nope': null,
+          '': null,
+        },
+      },
+      {
+        template: '/onevar/post:{postId}.json',
+        glob: '/onevar/post:*.json',
+        varNames: ['postId'],
+        pathsAndExtractedVars: {
+          '/onevar/post:123.json': { postId: '123' },
+        },
+      },
+      {
+        template: '/onevar/thisIsPost{postId}yesThatOne.json',
+        glob: '/onevar/thisIsPost*yesThatOne.json',
+        varNames: ['postId'],
+        pathsAndExtractedVars: {
+          '/onevar/thisIsPost123yesThatOne.json': { postId: '123' },
+        },
+      },
+      {
+        template: '/twovars/cat:{category}/{postId}.json',
+        glob: '/twovars/cat:*/*.json',
+        varNames: ['category', 'postId'],
+        pathsAndExtractedVars: {
+          '/twovars/cat:gardening/123.json': { category: 'gardening', postId: '123' },
+          '/twovars/cat:gardening/123.txt': null,
+          '/twovars/cat:/123.json': { category: '', postId: '123' },
+          '/twovars/cat:gardening': null,
+          '/nope': null,
+          '': null,
+        },
+      },
+      {
+        template: '/threevars/{category}/{postId}.{ext}',
+        glob: '/threevars/*/*.*',
+        varNames: ['category', 'postId', 'ext'],
+        pathsAndExtractedVars: {
+          '/threevars/gardening/123.json': { category: 'gardening', postId: '123', ext: 'json' },
+          // (note that this test example is not a valid earthstar path because it contains '//')
+          '/threevars//123.json': { category: '', postId: '123', ext: 'json' },
+          '/threevars/gardening': null,
+          '/nope': null,
+          '': null,
+        },
+      },
+      {
+        template: '**/varsAndStars/*/{id}.json',
+        glob: '**/varsAndStars/*/*.json',
+        varNames: ['id'],
+        pathsAndExtractedVars: {
+          '/a/b/c/varsAndStars/something/id1.json': { id: 'id1' },
+          '/aaa/varsAndStars/something/id1.json': { id: 'id1' },
+          '/aaa/varsAndStars/something/id1.txt': null,
+          '/aaa/varsAndStars/two/parts/id1.json': null,
+          '/nope': null,
+          '': null,
+        },
+      },
+      //--------------------------------------------------
+      // invalid: should throw a Validation Error
+      { invalid: true, template: '/same/var/repeated/twice/{a}/{a}' },
+      { invalid: true, template: '/var/touching/*{star}' },
+      { invalid: true, template: '/two/consecutive/vars/{a}{b}/in/a/row' },
+      { invalid: true, template: '/var/starting/with/number/{0abc}' },
+      { invalid: true, template: '/var/with/no/name/{}' },
+      { invalid: true, template: '/var/with/space/for/name/{ }' },
+      { invalid: true, template: '/var/{ withspaces }' },
+      { invalid: true, template: '/{one}/{ invalid }/{var}/in-the-middle' },
+      { invalid: true, template: '/var/{with-dashes}' },
+      { invalid: true, template: '/var/{with/slash}' },
+      { invalid: true, template: '/var/{only/one/opening/brace' },
+      { invalid: true, template: '/var/only/one/closing}/brace' },
+      { invalid: true, template: '/var/{weirdly{nested}/braces/a' },
+      { invalid: true, template: '/var/{weirdly}nested}/braces/a' },
+      { invalid: true, template: '/var/{recursivly{nested}braces}/a' },
+      { invalid: true, template: '/var/}backwards{/braces' },
+      { invalid: true, template: '/var/{normal}/and/}backwards{/braces' },
+    ];
+
+    for (let vector of vectors) {
+      if ('invalid' in vector) {
+        try {
+          t.true(true, `---  ${vector.template}  ---`);
+          t.true(true, `_parseTemplate...`);
+          // this should throw a ValidationError
+          let _thisShouldThrow = parseTemplate(vector.template);
+          t.true(false, `${vector.template} - should throw a ValidationError but did not (_template...)`);
+        } catch (err: any) {
+          if (err instanceof ValidationError) {
+            t.true(true, `${vector.template} - should throw a ValidationError`);// (message was: ${err.message})`);
+          } else {
+            t.true(false, `${vector.template} - should throw a ValidationError but instead threw a ${err.name}`);
+            console.error(err);
+          }
+        }
+
+        try {
+          t.true(true, `extractTemplateVariablesFromPath`);
+          // this should also throw a ValidationError
+          let _thisShouldThrow = extractTemplateVariablesFromPath(vector.template, '/hello');
+          t.true(false, `${vector.template} - should throw a ValidationError but did not (matchTemplate...)`);
+        } catch (err: any) {
+          if (err instanceof ValidationError) {
+            t.true(true, `${vector.template} - should throw a ValidationError`);// (message was: ${err.message})`);
+          } else {
+            t.true(false, `${vector.template} - should throw a ValidationError but instead threw a ${err.name}`);
+            console.error(err);
+          }
+        }
+      } else {
+        // should be valid
+
+        t.true(true, `---  ${vector.template}  ---`);
+        let { varNames, glob, namedCaptureRegex } = parseTemplate(vector.template);
+        t.same(varNames, vector.varNames, 'varNames should match');
+        if (vector.glob !== undefined) {
+          t.same(glob, vector.glob, 'glob should match');
+        }
+
+        for (let [path, expectedVars] of Object.entries(vector.pathsAndExtractedVars)) {
+          let actualVars = extractTemplateVariablesFromPathUsingRegex(namedCaptureRegex, path);
+          t.same(actualVars, expectedVars, `${path} - extracted variables should match (_matchRegexAndPath)`);
+          t.same(extractTemplateVariablesFromPath(vector.template, path), expectedVars, `${path} - extracted variables should match (matchTemplateAndPath)`);
+        }
+      }
+    }
 
     t.end();
   });
 
   t.test(SUBTEST_NAME + ': insertVariablesIntoTemplate', (t: any) => {
+    interface Vector {
+      vars: Record<string, string>,
+      template: string,
+      expected: string,
+    }
+    let vectors: Vector[] = [
+      { vars: {}, template: '', expected: '' },
+      { vars: {}, template: '{unmatched}', expected: '{unmatched}' },
+      { vars: { extra: 'ok' }, template: '', expected: '' },
+      { vars: { extra: 'ok' }, template: '{unmatched}', expected: '{unmatched}' },
+      { vars: { category: 'gardening', postId: 'abc' }, template: '/posts/{category}/{postId}.json', expected: '/posts/gardening/abc.json' },
+      { vars: { postId: 'abc' }, template: '/posts/{category}/{postId}.json', expected: '/posts/{category}/abc.json' },
+      { vars: { category: 'gardening' }, template: '/posts/{category}/{postId}.json', expected: '/posts/gardening/{postId}.json' },
+      { vars: { category: 'gardening', postId: '*' }, template: '/posts/{category}/{postId}.json', expected: '/posts/gardening/*.json' },
+    ]
+
+    for (let { vars, template, expected } of vectors) {
+      let actual = insertVariablesIntoTemplate(vars, template);
+      t.same(actual, expected, `${JSON.stringify(vars)}, ${JSON.stringify(template)}`);
+    }
 
     t.end();
   });
@@ -456,8 +668,104 @@ export let runQueryHelpersTests = async (scenario: TestScenario) => {
   //================================================================================
   // TEMPLATE: USER-FACING API CALLS
 
-  t.test(SUBTEST_NAME + ': queryByTemplateAsyncSync', async (t) => {
+  let docPathsForTemplateTest = [
+    '/aa',
+    '/aaa',
+    '/a---a',
+    '/aa/aa/aa/aa/aa',
+    '/posts',
+    '/posts/123.json',
+    '/posts/123.txt',
+    '/posts/gardening/123.txt',
+    '/posts/sailing/123.txt',
+  ]
+  interface TemplateQueryVector {
+    template: string,
+    expectedPaths: string[],
+    note?: string,
+  }
+  let templateQueryVectors: TemplateQueryVector[] = [
+    {
+      template: '',
+      expectedPaths: [],
+    },
+    {
+      template: '/posts/{postId}.json',
+      expectedPaths: [
+        '/posts/123.json',
+      ],
+    },
+    {
+      template: '/posts/{postId}.{ext}',
+      expectedPaths: [
+        '/posts/123.json',
+        '/posts/123.txt',
+      ],
+    },
+    {
+      template: '/posts/{category}/{postId}.{ext}',
+      expectedPaths: [
+        '/posts/gardening/123.txt',
+        '/posts/sailing/123.txt',
+      ],
+    },
+    {
+      template: '/{_1}/{_2}/{_3}/{_4}/{_5}',
+      expectedPaths: [
+        '/aa/aa/aa/aa/aa',
+      ],
+    },
+    {
+      template: '/posts',
+      expectedPaths: [
+        '/posts',
+      ],
+    },
+    {
+      template: '/{oneLayerDeepOnly}',
+      expectedPaths: [
+        '/aa',
+        '/aaa',
+        '/a---a',
+        '/posts',
+      ],
+    },
+    {
+      template: '/a{A}a',
+      expectedPaths: [
+        '/aa',  // zero-length matches are allowed
+        '/aaa',
+        '/a---a',
+      ],
+    },
+  ];
 
+  t.test(SUBTEST_NAME + ': queryByTemplateAsyncSync', async (t) => {
+    let workspace = '+gardening.abcde';
+    let storage = makeStorage(workspace);
+    let now = microsecondNow();
+    
+    for (let path of docPathsForTemplateTest) {
+      await storage.set(keypair1, {
+        format: 'es.4',
+        path: path,
+        content: 'content at ' + path,
+      });
+    }
+
+    for (let vector of templateQueryVectors) {
+      let { template, expectedPaths } = vector;
+      let docs = await queryByTemplateAsync(storage, template);
+      let actualPaths = docs.map(doc => doc.path);
+
+      actualPaths.sort();
+      expectedPaths.sort();
+      
+      let note = vector.note ? ` (${vector.note})` : '';
+      t.same(actualPaths, expectedPaths, `template: ${template} should match ${expectedPaths.length} paths.${note}`);
+    }
+
+    await storage.close(true);
     t.end();
   });
 }
