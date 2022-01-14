@@ -15,12 +15,13 @@ let logger = new Logger("query helpers", "yellowBright");
  * (Put a backslash in front of each special regex character
  *  so the string won't trigger any regex behavior).
  */
+const escapeRegex = /[.*+?^${}()|[\]\\]/g;
+
 export let escapeStringForRegex = (s: string): string => {
     // Javascript regex syntax characters:
     // https://tc39.es/ecma262/#prod-SyntaxCharacter
     //    ^ $ \ . * + ? ( ) [ ] { } |
-
-    return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); // $& means the whole matched string
+    return s.replace(escapeRegex, "\\$&"); // $& means the whole matched string
 };
 
 // same as string.matchAll(regex) which is only supported in node 12+
