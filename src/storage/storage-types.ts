@@ -101,11 +101,24 @@ export interface IdleEvent {
     kind: "idle";
 }
 
+/**
+ * - IngestEventSuccess — a new doc was written
+ * - IngestEventFailure — refused an invalid doc
+ * - IngestEventNothingHappened — ingested an obsolete or duplicate doc
+ */
 export type IngestEvent =
     | IngestEventFailure
     | IngestEventNothingHappened
     | IngestEventSuccess;
 
+/**
+ * - DocAlreadyExists — processing an old doc as you catch up
+ * - IdleEvent — reached the end of existing docs; waiting for new docs
+ * - IngestEvent — the result of a storage ingesting a document
+ * - StorageEventWillClose — the storage is about to close
+ * - StorageEventDidClose — the storage has closed
+ * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the storage closes)
+ */
 export type LiveQueryEvent =
     | DocAlreadyExists
     | // catching up...

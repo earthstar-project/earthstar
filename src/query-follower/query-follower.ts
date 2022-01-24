@@ -29,13 +29,39 @@ let J = JSON.stringify;
 
 //================================================================================
 
+/**
+ * Subscribe to the ongoing results of a query, optionally including old existing docs.
+ *  ```
+ * const myFollower = new QueryFollower(storage, myQuery);
+ * myFollower.bus.on(async (event: LiveQueryEvent) => {
+ *     if (event.kind === 'existing' || event.kind === 'success') {
+ *         doSomething(event.doc)
+ *     }
+ * });
+ *
+ * await qf.hatch();
+ * ```
+ */
 export class QueryFollower implements IQueryFollower {
     storage: IStorageAsync;
+    /**
+     * The query being followed. Has some limitations:
+     * - `historyMode` must be `all`
+     * - `orderBy` must be `localIndex ASC`
+     * - limit can NOT be set.
+     */
     query: Query;
+    /**
+     * Use this to subcribe to events with a callback, which will be called blockingly (one event at a time, one callback at a time).
+     */
     bus: Simplebus<LiveQueryEvent>;
     _state: QueryFollowerState = "new";
     _unsub: Thunk | null = null; // to unsub from storage events
 
+    /**
+     * Create a new QueryFollower
+     * @param query - The query to be followed. Has some limitations: `historyMode` must be `all`; `orderBy` must be `localIndex ASC`; `limit` can *not* be set.
+     */
     constructor(storage: IStorageAsync, query: Query) {
         logger.debug("constructor");
         this.storage = storage;
@@ -76,6 +102,8 @@ export class QueryFollower implements IQueryFollower {
         return this._state;
     }
 
+    /** Begins the process of catching up with existing documents (if needed), then switches to live mode.
+     */
     async hatch(): Promise<void> {
         logger.debug("hatch...");
 
@@ -310,6 +338,9 @@ export class QueryFollower implements IQueryFollower {
         );
     }
 
+    /** Permanently shut down the QueryFollower, unhooking from the storage and stopping the processing of events. */
+    // Triggered when the storage closes
+    // Can also be called manually if you just want to destroy this queryFollower.
     async close(): Promise<void> {
         if (this._state === "closed") return;
         logger.debug("close...");
