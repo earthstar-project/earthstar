@@ -112,6 +112,62 @@ And again with 3rd party dependencies as brown boxes with dotted lines, and incl
 
 Run `yarn depchart` to regenerate this. You'll need graphviz installed.
 
+### Documentation
+
+We use JSDoc for user documentation. You can view docs for the whole codebase at https://doc.deno.land/https://deno.land/x/stone_soup@v8.0.0/mod.ts, or by running the following from the root of the project:
+
+```
+deno doc mod.ts
+```
+
+JSDocs are intended for end-users of the library. Comments for contributors working with the codebase — e.g. notes on how something is implemented — are better as standard JS comments.
+
+If possible, use a single line for the JSDoc. Example:
+
+```ts
+/** Does something great */
+export function doSomething() {
+  // ...
+}
+```
+
+You can use markdown inside of JSDoc block. While markdown supports HTML tags, it is forbidden in JSDoc blocks.
+
+Code string literals should be braced with the back-tick (\`) instead of quotes.
+For example:
+
+```ts
+/** Import something from the `earthstar` module. */
+```
+
+It's not necessary to document function arguments unless an extra explanation is warranted.
+Therefore `@param` should generally not be used. If `@param` is used, it should
+not include the `type` as TypeScript is already strongly typed.
+
+```ts
+/**
+ * Function with non obvious param.
+ * @param nonObvious Description of non obvious parameter.
+ */
+```
+
+Code examples should utilize markdown format, like so:
+
+```ts
+/** A straight forward comment and an example:
+ * ```ts
+ * import { Crypto } from "stone-soup";
+ * const keypair = Crypto.generateAuthorKeypair("suzy");
+ * ```
+ */
+```
+
+Code examples should not contain additional comments and must not be indented.
+It is already inside a comment. If it needs further comments it is not a good
+example.
+
+Exported functions should use the `function` keyword, and not be defined as inline functions assigned to variables. The main reason for this being that they are then correctly categorised as functions.
+
 ### Publishing to NPM
 
 1. Run `make VERSION="version.number.here" npm`, where `version.number.here` is the desired version number for the package.
