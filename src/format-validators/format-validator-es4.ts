@@ -59,6 +59,10 @@ const ES4_CORE_SCHEMA: CheckObjOpts = {
     allowExtraKeys: false,
 };
 
+/**
+ * Validator for the 'es.4' format. Checks if documents are spec-compliant before ingesting, and signs them according to spec.
+ * @link https://earthstar-project.org/specs/data-spec
+ */
 export const FormatValidatorEs4: IFormatValidator = class {
     static format: "es.4" = "es.4";
 

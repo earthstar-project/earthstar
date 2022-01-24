@@ -8,16 +8,11 @@ import {
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
 
-/**
- * Validators are each responsible for one document format such as "es.4".
- * They are used by Storage instances to
- * * check if documents are valid before accepting them
- * * sign new documents
- *
- * According to the rules of Earthstar: documents are validated statelessly,
- * one document at a time, without knowing about any other documents
- * or what's in the Storage.
+/** Validators are each responsible for one document format such as "es.4". They are used by Storage instances to check if documents are valid before accepting them and sign new documents.
  */
+// According to the rules of Earthstar: documents are validated statelessly,
+// one document at a time, without knowing about any other documents
+// or what's in the Storage.
 export interface IFormatValidator {
     /** The string name of the format, like "es.4" */
     format: FormatName;
@@ -27,8 +22,7 @@ export interface IFormatValidator {
 
     /**
      * Add an author signature to the document.
-     * The input document needs a signature field to satisfy Typescript, but
-     * it will be overwritten here, so you may as well just set signature: '' on the input.
+     * The input document needs a signature field to satisfy Typescript, but it will be overwritten here, so you may as well just set signature: '' on the input.
      * Return a copy of the original document with the signature field changed, or return a ValidationError.
      */
     signDocument(
@@ -40,8 +34,7 @@ export interface IFormatValidator {
      * Return a copy of the doc without extra fields, plus the extra fields
      * as a separate object.
      * If the input is not a plain javascript object, return a ValidationError.
-     * This should be run before checkDocumentIsValid.  The output doc will be
-     * more likely to be valid once the extra fields have been removed.
+     * This should be run before checkDocumentIsValid.  The output doc will be more likely to be valid once the extra fields have been removed.
      */
     removeExtraFields(
         doc: Doc,
