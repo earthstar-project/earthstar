@@ -21,10 +21,14 @@ function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
     return ("byPathAndAuthor" in value && "byPathNewestFirst" in value);
 }
 
+/** A storage driver which perists to LocalStorage, which stores a maximum of five megabytes. */
 export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     _localStorageKeyConfig: string;
     _localStorageKeyDocs: string;
 
+    /**
+     * @param workspace - The address of the share the replica belongs to.
+     */
     constructor(workspace: WorkspaceAddress) {
         super(workspace);
         logger.debug("constructor");

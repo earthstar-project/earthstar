@@ -246,20 +246,16 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
 }
 
 /**
- * A storageDriver provides low-level access to actual storage and is used by
- * IStorageAsync to actually load and save data.
- * StorageDrivers are not meant to be used directly by users; let the IStorageAsync
- * talk to it for you.
+ * A storage driver provides low-level access to actual storage and is used by IStorageAsync to actually load and save data. StorageDrivers are not meant to be used directly by users; let the StorageAsync talk to it for you.
  */
 export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     workspace: WorkspaceAddress;
-
     //--------------------------------------------------
     // LIFECYCLE
 
-    // TODO: hatch (and load maxLocalIndex)
-
+    /** Returns if the replica has been closed or not. */
     isClosed(): boolean;
+
     /**
      * Close the storageDriver.
      * The Storage will call this.
@@ -272,20 +268,21 @@ export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     //--------------------------------------------------
     // GET
 
-    // The max local index used so far.
+    /** The max local index used so far. */
     // The first doc will increment this and get index 1.
     // This is synchronous because it's expected that the driver will
     // load it once at startup and then keep it in memory.
     getMaxLocalIndex(): number;
 
+    /** Returns a list of Docs given a Query. */
     // these should return frozen docs
-    queryDocs(query: Query): Promise<Doc[]>;
-    //    queryPaths(query: Query): Doc[];
-
+    queryDocs(query: Query): Promise<Doc[]>; //    queryPaths(query: Query): Doc[];
     // TODO: add a special getAllDocsAtPath for use by ingest?
 
     //--------------------------------------------------
     // SET
+
+    /** Add or update a signed document. */
     // do no checks of any kind, just save it to the indexes
     // add a doc.  don't enforce any rules on it.
     // overwrite existing doc even if this doc is older.

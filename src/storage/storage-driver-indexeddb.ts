@@ -15,9 +15,13 @@ const DOC_STORE = "documents";
 const DOCUMENTS_ID = "allDocs";
 const CONFIG_STORE = "config";
 
+/** A storage driver which persists to IndexedDB in the browser, which will limit storage to 250 megabytes by default. */
 export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     _db: IDBDatabase | null = null;
 
+    /**
+     * @param workspace - The address of the share the replica belongs to.
+     */
     constructor(workspace: WorkspaceAddress) {
         super(workspace);
         logger.debug("constructor");

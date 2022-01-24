@@ -40,6 +40,7 @@ let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
     );
 };
 
+/** An in-memory storage driver. Its contents will be lost when it is closed. */
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
     _maxLocalIndex: LocalIndex = -1; // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
@@ -52,6 +53,9 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     docByPathAndAuthor: Map<string, Doc> = new Map(); // path+author --> doc
     docsByPathNewestFirst: Map<Path, Doc[]> = new Map(); // path --> array of docs with that path, sorted newest first
 
+    /**
+     * @param workspace - The address of the share the replica belongs to.
+     */
     constructor(workspace: WorkspaceAddress) {
         logger.debug("constructor");
         this.workspace = workspace;
