@@ -6,10 +6,8 @@ export interface KeypairBytes {
     secret: Uint8Array;
 }
 
-/**
- * The higher-level crypto functions.
- * These all handle base32-encoded strings.
- */
+/** Higher-level crypto functions. Not used directly for the most part, but useful for generating new keypairs. */
+// These all handle base32-encoded strings.
 export interface ICrypto {
     sha256base32(input: string | Uint8Array): Promise<Base32String>;
     generateAuthorKeypair(
@@ -29,12 +27,8 @@ export interface ICrypto {
     ): Promise<true | ValidationError>;
 }
 
-/**
- * These are the basic crypto primitives we need.
- * There are several implementations which provide this interface,
- * e.g. native Node, Chloride, etc.
- * These all handle Uint8Arrays (bytes)
- */
+/** A crypto driver provides low-level access to an implementation providing ed25519 cryptography, e.g. Chloride, noble/ed25519, Node crypto. */
+// These all handle Uint8Arrays (bytes)
 export interface ICryptoDriver {
     sha256(input: string | Uint8Array): Promise<Uint8Array>;
     generateKeypairBytes(): Promise<KeypairBytes>;

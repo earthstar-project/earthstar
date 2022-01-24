@@ -4,20 +4,18 @@ import { ValidationError } from "../util/errors.ts";
 
 const { codec } = rfc4648;
 
-/**
- * For base32 encoding we use rfc4648, no padding, lowercase, prefixed with "b".
- *
- * Base32 character set: `abcdefghijklmnopqrstuvwxyz234567`
- *
- * The Multibase format adds a "b" prefix to specify this particular encoding.
- * We leave the "b" prefix there because we don't want the encoded string
- * to start with a number (so we can use it as a URL location).
- *
- * When decoding, we require it to start with a "b" --
- * no other multibase formats are allowed.
- *
- * The decoding must be strict (it doesn't allow a 1 in place of an i, etc).
- */
+// For base32 encoding we use rfc4648, no padding, lowercase, prefixed with "b".
+//
+// Base32 character set: `abcdefghijklmnopqrstuvwxyz234567`
+//
+// The Multibase format adds a "b" prefix to specify this particular encoding.
+// We leave the "b" prefix there because we don't want the encoded string
+// to start with a number (so we can use it as a URL location).
+//
+// When decoding, we require it to start with a "b" --
+// no other multibase formats are allowed.
+//
+// The decoding must be strict (it doesn't allow a 1 in place of an i, etc).
 
 const myEncoding = {
     // this should match b32chars from characters.ts
@@ -25,15 +23,11 @@ const myEncoding = {
     bits: 5,
 };
 
-/**
- * Encode uint8array bytes to base32 string
- */
+/** Encode uint8array bytes to base32 string */
 export let base32BytesToString = (bytes: Uint8Array): Base32String =>
     "b" + codec.stringify(bytes, myEncoding, { pad: false });
 
-/**
- * Decode base32 string to a uint8array of bytes.  Throw a ValidationError if the string is bad.
- */
+/** Decode base32 string to a uint8array of bytes.  Throw a ValidationError if the string is bad. */
 export let base32StringToBytes = (str: Base32String): Uint8Array => {
     if (!str.startsWith("b")) {
         throw new ValidationError(
