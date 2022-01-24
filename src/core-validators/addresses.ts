@@ -19,6 +19,7 @@ import {
 
 //================================================================================
 
+/** Put a short name and pub key together into an identity address. */
 export let assembleAuthorAddress = (
     name: AuthorShortname,
     encodedPubkey: Base32String,
@@ -26,6 +27,7 @@ export let assembleAuthorAddress = (
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
     `@${name}.${encodedPubkey}`;
 
+/** Put a share name and encoded pub key together into a share address. */
 export let assembleWorkspaceAddress = (
     name: WorkspaceName,
     encodedPubkey: Base32String,
@@ -33,6 +35,7 @@ export let assembleWorkspaceAddress = (
     // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
     `+${name}.${encodedPubkey}`;
 
+/** Check that an identity address is valid. */
 export let checkAuthorIsValid = (
     addr: AuthorAddress,
 ): true | ValidationError => {
@@ -41,6 +44,7 @@ export let checkAuthorIsValid = (
     return parsed;
 };
 
+/** Check that a share address is valid. */
 export let checkWorkspaceIsValid = (
     addr: WorkspaceAddress,
 ): true | ValidationError => {
