@@ -65,9 +65,18 @@ let docCompareNewestFirst = (a: Doc, b: Doc): Cmp => {
     );
 };
 
+/**
+ * A replica of a share's data, used to read, write, and synchronise data to.
+ * Should be closed using the `close` method when no longer being used.
+ * ```
+ * const myReplica = new StorageAsync("+a.a123", Es4Validatior, new StorageDriverMemory());
+ * ```
+ */
 export class StorageAsync implements IStorageAsync {
     storageId: StorageId; // todo: save it to the driver too, and reload it when starting up
+    /** The address of the share this replica belongs to. */
     workspace: WorkspaceAddress;
+    /** The validator used to validate ingested documents. */
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
     bus: Superbus<StorageBusChannel>;
@@ -94,9 +103,16 @@ export class StorageAsync implements IStorageAsync {
     //--------------------------------------------------
     // LIFECYCLE
 
+    /** Returns whether the storage is closed or not. */
     isClosed(): boolean {
         return this._isClosed;
     }
+
+    /**
+     * Closes the replica, preventing new documents from being ingested or events being emitted.
+     * Any methods called after closing will return `StorageIsClosedError`.
+     * @param erase - Erase the contents of the replica. Defaults to `false`.
+     */
     async close(erase: boolean): Promise<void> {
         logger.debug("closing...");
         if (this._isClosed) throw new StorageIsClosedError();
@@ -137,7 +153,7 @@ export class StorageAsync implements IStorageAsync {
     //--------------------------------------------------
     // GET
 
-    // one of the few that's synchronous
+    /** Returns the max local index of all stored documents */
     getMaxLocalIndex(): number {
         if (this._isClosed) throw new StorageIsClosedError();
         return this.storageDriver.getMaxLocalIndex();
@@ -163,6 +179,7 @@ export class StorageAsync implements IStorageAsync {
         return await this.storageDriver.queryDocs(query);
     }
 
+    /** Returns all documents, including historical versions of documents by other identities. */
     async getAllDocs(): Promise<Doc[]> {
         logger.debug(`getAllDocs()`);
         if (this._isClosed) throw new StorageIsClosedError();
@@ -171,6 +188,7 @@ export class StorageAsync implements IStorageAsync {
             orderBy: "path ASC",
         });
     }
+    /** Returns latest document from every path. */
     async getLatestDocs(): Promise<Doc[]> {
         logger.debug(`getLatestDocs()`);
         if (this._isClosed) throw new StorageIsClosedError();
@@ -179,6 +197,7 @@ export class StorageAsync implements IStorageAsync {
             orderBy: "path ASC",
         });
     }
+    /** Returns all versions of a document by different authors from a specific path. */
     async getAllDocsAtPath(path: Path): Promise<Doc[]> {
         logger.debug(`getAllDocsAtPath("${path}")`);
         if (this._isClosed) throw new StorageIsClosedError();
@@ -188,6 +207,7 @@ export class StorageAsync implements IStorageAsync {
             filter: { path: path },
         });
     }
+    /** Returns the most recently written version of a document at a path. */
     async getLatestDocAtPath(path: Path): Promise<Doc | undefined> {
         logger.debug(`getLatestDocsAtPath("${path}")`);
         if (this._isClosed) throw new StorageIsClosedError();
@@ -200,6 +220,18 @@ export class StorageAsync implements IStorageAsync {
         return docs[0];
     }
 
+    /** Returns a collection of docs for a given query.
+    ```
+    const myQuery = {
+      filter: {
+        pathEndsWith: ".txt"
+      },
+      limit: 5,
+    };
+
+    const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
+    ```
+    */
     async queryDocs(query: Query = {}): Promise<Doc[]> {
         logger.debug(`queryDocs`, query);
         if (this._isClosed) throw new StorageIsClosedError();
@@ -212,6 +244,9 @@ export class StorageAsync implements IStorageAsync {
     //--------------------------------------------------
     // SET
 
+    /**
+     * Adds a new document to the replica. If an document signed by the same identity exists at the same path, it will be overwritten.
+     */
     async set(
         keypair: AuthorKeypair,
         docToSet: DocToSet,
@@ -287,6 +322,9 @@ export class StorageAsync implements IStorageAsync {
         return ingestEvent;
     }
 
+    /**
+     * Ingest an existing signed document to the replica.
+     */
     async ingest(docToIngest: Doc): Promise<IngestEvent> {
         loggerIngest.debug(`ingest`, docToIngest);
         if (this._isClosed) throw new StorageIsClosedError();
@@ -414,8 +452,9 @@ export class StorageAsync implements IStorageAsync {
         return ingestEvent;
     }
 
-    // overwrite every doc with an empty one, from this author:
-    // return the number of docs changed, or -1 if error.
+    /**
+     * Overwrite every document from this author, including history versions, with an empty doc.
+     */
     async overwriteAllDocsByAuthor(
         keypair: AuthorKeypair,
     ): Promise<number | ValidationError> {

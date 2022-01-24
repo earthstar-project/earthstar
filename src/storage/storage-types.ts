@@ -131,9 +131,18 @@ export interface IStorageAsyncConfigStorage {
     deleteConfig(key: string): Promise<boolean>;
 }
 
+/**
+ * A replica of a share's data, used to read, write, and synchronise data to.
+ * Should be closed using the `close` method when no longer being used.
+ * ```
+ * const myReplica = new StorageAsync("+a.a123", Es4Validatior, new StorageDriverMemory());
+ * ```
+ */
 export interface IStorageAsync extends IStorageAsyncConfigStorage {
     storageId: StorageId;
+    /** The address of the share this replica belongs to. */
     workspace: WorkspaceAddress;
+    /** The validator used to validate ingested documents. */
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
     bus: Superbus<StorageBusChannel>;
@@ -141,31 +150,39 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
     //--------------------------------------------------
     // LIFECYCLE
 
+    /** Returns whether the storage is closed or not. */
     isClosed(): boolean;
+
     /**
-     * close()
-     *   * send StorageWillClose events and wait for event receivers to finish blocking.
-     *   * close the IStorage
-     *   * close the IStorageDriver and possibly erase it
-     *   * send StorageDidClose events and do not wait for event receivers.
-     *
-     * Any function called after the storage is closed will throw a StorageIsClosedError,
-     *  except isClosed() is always allowed.
-     *
-     * You cannot call close() if the storage is already closed (it will throw a StorageIsClosedError).
-     *
-     * close() can happen while set() or ingest() are waiting for locks or have pending transactions.
-     * In that case, the pending operations will fail and throw a storageIsClosed.
-     *
-     * If erase is true, actually delete and forget the local data (remove files, etc).
-     * Erase defaults to false if not provided.
+     * Closes the replica, preventing new documents from being ingested or events being emitted.
+     * Any methods called after closing will return `StorageIsClosedError`.
+     * @param erase - Erase the contents of the replica. Defaults to `false`.
      */
+    /*
+  More details:
+
+  * send StorageWillClose events and wait for event receivers to finish blocking.
+  * close the IStorage
+  * close the IStorageDriver and possibly erase it
+  * send StorageDidClose events and do not wait for event receivers.
+
+  Any function called after the storage is closed will throw a StorageIsClosedError, except isClosed() is always allowed.
+
+  You cannot call close() if the storage is already closed (it will throw a StorageIsClosedError).
+
+  close() can happen while set() or ingest() are waiting for locks or have pending transactions.
+  In that case, the pending operations will fail and throw a storageIsClosed.
+
+  If erase is true, actually delete and forget the local data (remove files, etc).
+  Erase defaults to false if not provided.
+  */
     close(erase: boolean): Promise<void>;
 
     //--------------------------------------------------
     // GET
 
     // this one is synchronous
+    /** Returns the max local index of all stored documents */
     getMaxLocalIndex(): number;
 
     // these should all return frozen docs
@@ -174,11 +191,27 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
         startAfter: LocalIndex,
         limit?: number,
     ): Promise<Doc[]>;
+    /** Returns all documents, including historical versions of documents by other identities. */
     getAllDocs(): Promise<Doc[]>;
+    /** Returns latest document from every path. */
     getLatestDocs(): Promise<Doc[]>;
+    /** Returns all versions of a document by different authors from a specific path. */
     getAllDocsAtPath(path: Path): Promise<Doc[]>;
+    /** Returns the most recently written version of a document at a path. */
     getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
 
+    /** Returns a collection of docs for a given query.
+  ```
+  const myQuery = {
+    filter: {
+      pathEndsWith: ".txt"
+    },
+    limit: 5,
+  };
+
+  const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
+  ```
+  */
     queryDocs(query?: Query): Promise<Doc[]>;
 
     //    queryPaths(query?: Query): Path[];
@@ -187,12 +220,21 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
     //--------------------------------------------------
     // SET
 
+    /**
+     * Adds a new document to the replica. If an document signed by the same identity exists at the same path, it will be overwritten.
+     */
     set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestEvent>;
 
+    /**
+     * Ingest an existing signed document to the replica.
+     */
     // this should freeze the incoming doc if needed
     ingest(doc: Doc): Promise<IngestEvent>;
 
-    // Overwrite every doc from this author, including history versions, with an empty doc.
+    /**
+     * Overwrite every document from this author, including history versions, with an empty doc.
+     */
+    // More:
     // The new docs will have a timestamp of (oldDoc.timestamp + 1) to prevent them from
     //  jumping to the front of the history and becoming Latest.
     // Return the number of docs changed, or a ValidationError.
