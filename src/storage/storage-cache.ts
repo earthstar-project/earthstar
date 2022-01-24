@@ -16,8 +16,6 @@ let logger = new Logger("storage cache", "cyan");
 
 //================================================================================
 
-// A synchronous, limited version of a storage.
-
 // Lifted from StorageDriverAsyncMemory
 // Slightly different in that it does not check if doc matches the filter,
 // as this has been done beforehand by now.
@@ -82,6 +80,16 @@ function sortAndLimit(query: Query, docs: Doc[]) {
     return filteredDocs;
 }
 
+/** A cached, synchronous interface to a replica, useful for reactive abstractions. Always returns results from its cache, and proxies the query to the backing replica in case of a cache miss.
+ * ```
+ * const cache = new StorageCache(myReplica);
+ * const pngQuery = { filter: { pathEndsWith: ".png" } };
+ * let pngDocs = cache.queryDocs(pngQuery);
+ * cache.onCacheUpdate(() => {
+ *    pngDocs = cache.queryDocs(pngQuery);
+ * });
+ * ```
+ */
 export class StorageCache {
     _storage: IStorageAsync;
 
@@ -94,6 +102,10 @@ export class StorageCache {
 
     _onCacheUpdatedCallbacks = new Set<() => void | (() => Promise<void>)>();
 
+    /**
+     * Create a new StorageCache.
+     * @param timeToLive - The number of milliseconds a cached document is considered valid for.
+     */
     constructor(storage: IStorageAsync, timeToLive?: number) {
         this._storage = storage;
         this._timeToLive = timeToLive || 1000;
@@ -101,12 +113,14 @@ export class StorageCache {
 
     // SET - just pass along to the backing storage
 
+    /** Add a new document directly to the backing replica. */
     set(keypair: AuthorKeypair, docToSet: DocToSet) {
         return this._storage.set(keypair, docToSet);
     }
 
     // GET
 
+    /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getAllDocs(): Doc[] {
         if (this._storage.isClosed()) {
             throw new StorageIsClosedError();
@@ -117,6 +131,7 @@ export class StorageCache {
         });
     }
 
+    /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getLatestDocs(): Doc[] {
         if (this._storage.isClosed()) {
             throw new StorageIsClosedError();
@@ -127,6 +142,7 @@ export class StorageCache {
         });
     }
 
+    /** Fetch all versions of all docs from a certain path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getAllDocsAtPath(path: Path): Doc[] {
         if (this._storage.isClosed()) {
             throw new StorageIsClosedError();
@@ -138,6 +154,7 @@ export class StorageCache {
         });
     }
 
+    /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getLatestDocAtPath(path: Path): Doc | undefined {
         if (this._storage.isClosed()) {
             throw new StorageIsClosedError();
@@ -153,6 +170,7 @@ export class StorageCache {
         return docs[0];
     }
 
+    /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     queryDocs(query: Query = {}): Doc[] {
         // make a deterministic string out of the query
         let cleanUpQueryResult = cleanUpQuery(query);
@@ -229,6 +247,7 @@ export class StorageCache {
     // that their docs are _really_ deleted,
     // so we don't do a quick and dirty version in the cache here.
 
+    /** Call this method on the backing replica. */
     overwriteAllDocsByAuthor(keypair: AuthorKeypair) {
         return this._storage.overwriteAllDocsByAuthor(keypair);
     }
@@ -358,7 +377,7 @@ export class StorageCache {
         );
     }
 
-    // Provide a function to be called when the storage cache knows its caller has stale results.
+    /** Subscribes to the cache, calling a callback when previously returned results can be considered stale. Returns a function for unsubscribing. */
     onCacheUpdated(callback: () => void | (() => Promise<void>)): () => void {
         this._onCacheUpdatedCallbacks.add(callback);
 
