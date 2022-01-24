@@ -31,11 +31,11 @@ export let runPeerTests = (
     let TEST_NAME = "peer shared tests";
     let SUBTEST_NAME = name;
 
-    let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
+    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
         let stDriver = makeDriver(ws);
         let storage = new StorageAsync(ws, FormatValidatorEs4, stDriver);
         return storage;
-    };
+    }
 
     Deno.test(SUBTEST_NAME + ": peer basics", async () => {
         let initialCryptoDriver = GlobalCryptoDriver;

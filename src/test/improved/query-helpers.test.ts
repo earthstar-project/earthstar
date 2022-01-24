@@ -31,10 +31,10 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
     let TEST_NAME = "Query Helpers tests";
     let SUBTEST_NAME = scenario.name;
 
-    let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
+    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
         let driver = scenario.makeDriver(ws);
         return new StorageAsync(ws, FormatValidatorEs4, driver);
-    };
+    }
 
     let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 

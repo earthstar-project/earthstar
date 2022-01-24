@@ -12,7 +12,7 @@ import { CryptoScenario } from "../test-scenario-types.ts";
 
 //================================================================================
 
-export let runCryptoKeypairTests = (scenario: CryptoScenario) => {
+export function runCryptoKeypairTests(scenario: CryptoScenario) {
     const { driver, name } = scenario;
     let TEST_NAME = "crypto-keypair shared tests";
     let SUBTEST_NAME = name;
@@ -190,7 +190,7 @@ export let runCryptoKeypairTests = (scenario: CryptoScenario) => {
             );
         },
     );
-};
+}
 
 for (const scenario of testCryptoScenarios) {
     runCryptoKeypairTests(scenario);

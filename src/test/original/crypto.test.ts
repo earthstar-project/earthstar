@@ -14,7 +14,7 @@ import { CryptoScenario } from "../test-scenario-types.ts";
 
 //================================================================================
 
-export let runCryptoTests = (scenario: CryptoScenario) => {
+export function runCryptoTests(scenario: CryptoScenario) {
     const { driver, name } = scenario;
     let TEST_NAME = "crypto shared tests";
     let SUBTEST_NAME = name;
@@ -604,7 +604,7 @@ export let runCryptoTests = (scenario: CryptoScenario) => {
             );
         },
     );
-};
+}
 
 for (const scenario of testCryptoScenarios) {
     runCryptoTests(scenario);

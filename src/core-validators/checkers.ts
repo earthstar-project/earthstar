@@ -16,24 +16,26 @@ export type CheckerSchema = {
 
 //================================================================================
 
-export let isPlainObject = (obj: any): obj is Ob => {
+export function isPlainObject(obj: any): obj is Ob {
     if (Object.prototype.toString.call(obj) !== "[object Object]") {
         return false;
     }
     // reject class instances
     if (("" + obj.constructor).startsWith("class")) return false;
     return true;
-};
-export let checkIsPlainObject: Checker = (x: any): null | string =>
-    isPlainObject(x) ? null : "expected plain object but got " + x;
+}
+export function checkIsPlainObject(x: any): null | string {
+    return isPlainObject(x) ? null : "expected plain object but got " + x;
+}
 
 //================================================================================
 
-export let checkLiteral = (val: any): Checker =>
-    (x: any): null | string => {
+export function checkLiteral(val: any): Checker {
+    return (x: any): null | string => {
         if (x !== val) return `expected literal value ${JSON.stringify(val)}`;
         return null;
     };
+}
 
 //================================================================================
 
@@ -44,8 +46,8 @@ export interface CheckStringOpts {
     len?: number; // same as setting minLen and maxLen to the same number
     allowedChars?: string; // all the characters that our checked string is allowed to have
 }
-export let checkString = (opts: CheckStringOpts = {}): Checker =>
-    (x: any): null | string => {
+export function checkString(opts: CheckStringOpts = {}): Checker {
+    return ((x: any): null | string => {
         if (opts.optional !== true && x === undefined) return "required";
         if (opts.optional === true && x === undefined) return null; // skip the rest of the checks if it's undefined
 
@@ -70,7 +72,8 @@ export let checkString = (opts: CheckStringOpts = {}): Checker =>
             return "contains disallowed characters";
         }
         return null;
-    };
+    });
+}
 
 //================================================================================
 
@@ -80,8 +83,8 @@ export interface CheckIntOpts {
     min?: number; // inclusive
     max?: number; // inclusive
 }
-export let checkInt = (opts: CheckIntOpts = {}): Checker =>
-    (x: any): null | string => {
+export function checkInt(opts: CheckIntOpts = {}): Checker {
+    return ((x: any): null | string => {
         if (opts.optional !== true && x === undefined) return "required";
         if (opts.optional === true && x === undefined) return null; // skip the rest of the checks if it's undefined
         if (opts.nullable !== true && x === null) return "not nullable";
@@ -100,7 +103,8 @@ export let checkInt = (opts: CheckIntOpts = {}): Checker =>
             return `integer too large (must be <= ${opts.max})`;
         }
         return null;
-    };
+    });
+}
 
 //================================================================================
 
@@ -109,7 +113,7 @@ export interface CheckObjOpts {
     allowExtraKeys?: boolean; // default false.  allow keys not set in objSchema?  to use this, you must also define objSchema
     objSchema?: CheckerSchema; // an object of validators
 }
-export let checkObj = (opts: CheckObjOpts = {}): Checker => {
+export function checkObj(opts: CheckObjOpts = {}): Checker {
     // set defaults
     opts.allowLiteralUndefined = opts.allowLiteralUndefined ?? false;
     opts.allowExtraKeys = opts.allowExtraKeys ?? false;
@@ -142,4 +146,4 @@ export let checkObj = (opts: CheckObjOpts = {}): Checker => {
         }
         return null;
     };
-};
+}

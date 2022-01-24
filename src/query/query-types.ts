@@ -56,7 +56,7 @@ export interface Query {
     // TODO: limitBytes
 }
 
-export let DEFAULT_QUERY: Query = {
+export const DEFAULT_QUERY: Query = {
     historyMode: "latest",
     orderBy: "path ASC",
     startAfter: undefined,

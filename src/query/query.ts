@@ -17,7 +17,7 @@ export interface CleanUpQueryResult {
     isValid: boolean;
     willMatch: WillMatch;
 }
-export let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
+export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
     // check for invalid queries and return null
     // canonicalize and optimize queries
     // check for filters that obviously result in nothing and return a canonical empty query: { limit: 0 }
@@ -194,9 +194,9 @@ export let cleanUpQuery = (inputQuery: Query): CleanUpQueryResult => {
         isValid: true,
         willMatch,
     };
-};
+}
 
-export let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
+export function docMatchesFilter(doc: Doc, filter: QueryFilter): boolean {
     // Does the doc match the filters?
     if (filter.path !== undefined && doc.path !== filter.path) return false;
     if (
@@ -249,4 +249,4 @@ export let docMatchesFilter = (doc: Doc, filter: QueryFilter): boolean => {
         return false;
     }
     return true;
-};
+}

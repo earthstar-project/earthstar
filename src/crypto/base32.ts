@@ -24,11 +24,12 @@ const myEncoding = {
 };
 
 /** Encode uint8array bytes to base32 string */
-export let base32BytesToString = (bytes: Uint8Array): Base32String =>
-    "b" + codec.stringify(bytes, myEncoding, { pad: false });
+export function base32BytesToString(bytes: Uint8Array): Base32String {
+    return "b" + codec.stringify(bytes, myEncoding, { pad: false });
+}
 
 /** Decode base32 string to a uint8array of bytes.  Throw a ValidationError if the string is bad. */
-export let base32StringToBytes = (str: Base32String): Uint8Array => {
+export function base32StringToBytes(str: Base32String): Uint8Array {
     if (!str.startsWith("b")) {
         throw new ValidationError(
             "can't decode base32 string - it should start with a 'b'. " + str,
@@ -49,4 +50,4 @@ export let base32StringToBytes = (str: Base32String): Uint8Array => {
         );
     }
     return codec.parse(str.slice(1), myEncoding, { loose: true });
-};
+}

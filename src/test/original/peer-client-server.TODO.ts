@@ -54,11 +54,11 @@ export let runPeerClientServerTests = (
 ) => {
     const { makeDriver, name } = scenario;
 
-    let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
+    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
         let stDriver = makeDriver(ws);
         let storage = new StorageAsync(ws, FormatValidatorEs4, stDriver);
         return storage;
-    };
+    }
 
     let TEST_NAME = "peerClient + peerServer shared tests";
     let SUBTEST_NAME = name;

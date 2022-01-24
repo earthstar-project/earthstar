@@ -14,13 +14,13 @@ let logger = new Logger("storage driver async memory", "yellow");
 
 //================================================================================
 
-let combinePathAndAuthor = (doc: Doc) => {
+function combinePathAndAuthor(doc: Doc) {
     // This is used as a key into the path&author index
     // It must use a separator character that's not valid in either paths or author addresses
     return `${doc.path}|${doc.author}`;
-};
+}
 
-let docComparePathASCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
+function docComparePathASCthenNewestFirst(a: Doc, b: Doc): Cmp {
     // Sorts docs by path ASC.
     // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
     return compareArrays(
@@ -28,9 +28,9 @@ let docComparePathASCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
         [b.path, b.timestamp, a.signature],
         ["ASC", "DESC", "ASC"],
     );
-};
+}
 
-let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
+function docComparePathDESCthenNewestFirst(a: Doc, b: Doc): Cmp {
     // Sorts docs by path DESC.
     // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
     return compareArrays(
@@ -38,7 +38,7 @@ let docComparePathDESCthenNewestFirst = (a: Doc, b: Doc): Cmp => {
         [b.path, b.timestamp, a.signature],
         ["DESC", "DESC", "ASC"],
     );
-};
+}
 
 /** An in-memory storage driver. Its contents will be lost when it is closed. */
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {

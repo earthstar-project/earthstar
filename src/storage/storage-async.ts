@@ -56,14 +56,14 @@ let loggerLiveQuerySubscription = new Logger(
 
 //================================================================================
 
-let docCompareNewestFirst = (a: Doc, b: Doc): Cmp => {
+function docCompareNewestFirst(a: Doc, b: Doc): Cmp {
     // Sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
     return compareArrays(
         [a.timestamp, a.signature],
         [b.timestamp, a.signature],
         ["DESC", "ASC"],
     );
-};
+}
 
 /**
  * A replica of a share's data, used to read, write, and synchronise data to.

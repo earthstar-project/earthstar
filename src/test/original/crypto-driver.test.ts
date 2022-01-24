@@ -10,7 +10,7 @@ import { CryptoScenario } from "../test-scenario-types.ts";
 
 //================================================================================
 
-export let runCryptoDriverTests = (scenario: CryptoScenario) => {
+export function runCryptoDriverTests(scenario: CryptoScenario) {
     const { driver, name } = scenario;
     let TEST_NAME = "crypto-driver shared tests";
     let SUBTEST_NAME = name;
@@ -144,7 +144,7 @@ export let runCryptoDriverTests = (scenario: CryptoScenario) => {
             "signature is invalid after signature is changed",
         );
     });
-};
+}
 
 for (const scenario of testCryptoScenarios) {
     runCryptoDriverTests(scenario);

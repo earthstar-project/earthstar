@@ -6,7 +6,7 @@ import { testCryptoScenarios } from "../test-scenarios.ts";
 
 //================================================================================
 
-export let runCryptoDriverInteropTests = (drivers: ICryptoDriver[]) => {
+export function runCryptoDriverInteropTests(drivers: ICryptoDriver[]) {
     let TEST_NAME = "crypto-driver-interop shared tests";
     let SUBTEST_NAME = drivers.map((driver) => (driver as any).name).join(
         " + ",
@@ -60,7 +60,7 @@ export let runCryptoDriverInteropTests = (drivers: ICryptoDriver[]) => {
             }
         },
     );
-};
+}
 
 runCryptoDriverInteropTests(
     testCryptoScenarios.map((scenario) => scenario.driver),

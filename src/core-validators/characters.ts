@@ -1,28 +1,28 @@
 import { stringToBytes } from "../util/bytes.ts";
 
 /** Check that a string only contains character from a string of allowed characters. */
-export let onlyHasChars = (str: string, allowedChars: string): boolean => {
+export function onlyHasChars(str: string, allowedChars: string): boolean {
     for (let s of str) {
         if (allowedChars.indexOf(s) === -1) return false;
     }
     return true;
-};
+}
 
 /** Check that a string contains only printable ASCII */
-export let isOnlyPrintableAscii = (s: string): boolean => {
+export function isOnlyPrintableAscii(s: string): boolean {
     let bytes = stringToBytes(s);
     for (let byte of bytes) {
         // char must be between ' ' (space) and '~' inclusive
         if (byte < 32 || byte > 126) return false;
     }
     return true;
-};
+}
 
 /* Check that a string is exactly one digit. */
-export let isDigit = (ch: string): boolean => {
+export function isDigit(ch: string): boolean {
     if (ch === "") return false;
     return digits.indexOf(ch) !== -1;
-};
+}
 
 /** Lowercase alphabetical characters. */
 export const alphaLower = "abcdefghijklmnopqrstuvwxyz";

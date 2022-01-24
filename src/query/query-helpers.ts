@@ -17,12 +17,12 @@ let logger = new Logger("query helpers", "yellowBright");
  */
 const escapeRegex = /[.*+?^${}()|[\]\\]/g;
 
-export let escapeStringForRegex = (s: string): string => {
+export function escapeStringForRegex(s: string): string {
     // Javascript regex syntax characters:
     // https://tc39.es/ecma262/#prod-SyntaxCharacter
     //    ^ $ \ . * + ? ( ) [ ] { } |
     return s.replace(escapeRegex, "\\$&"); // $& means the whole matched string
-};
+}
 
 // same as string.matchAll(regex) which is only supported in node 12+
 // returns [{
@@ -266,7 +266,7 @@ interface ParsedTemplate {
  *  If variable names don't match these rules, a ValidationError will be thrown.
  *
  */
-export let parseTemplate = (template: string): ParsedTemplate => {
+export function parseTemplate(template: string): ParsedTemplate {
     //--------------------------------------------------------------------------------
     // VALIDATE TEMPLATE and extract variable names
 
@@ -361,7 +361,7 @@ export let parseTemplate = (template: string): ParsedTemplate => {
         glob,
         namedCaptureRegex,
     };
-};
+}
 
 /*
  *  This is a low-level helper for the template matching code; probably don't use it directly.

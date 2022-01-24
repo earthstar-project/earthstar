@@ -15,7 +15,7 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export let runStorageDriverTests = (scenario: TestScenario) => {
+export function runStorageDriverTests(scenario: TestScenario) {
     let TEST_NAME = "storage-driver shared tests";
     let SUBTEST_NAME = scenario.name;
 
@@ -445,7 +445,7 @@ export let runStorageDriverTests = (scenario: TestScenario) => {
             );
         },
     );
-};
+}
 
 for (let scenario of testScenarios) {
     runStorageDriverTests(scenario);

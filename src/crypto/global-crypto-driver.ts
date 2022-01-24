@@ -11,7 +11,7 @@ let logger = new Logger("crypto", "cyanBright");
 export let GlobalCryptoDriver: ICryptoDriver = CryptoDriverNoble;
 
 /** Set the crypto driver used for all cryptographic operations. */
-export let setGlobalCryptoDriver = (driver: ICryptoDriver): void => {
+export function setGlobalCryptoDriver(driver: ICryptoDriver): void {
     logger.debug(`set global crypto driver: ${(driver as any).name}`);
     GlobalCryptoDriver = driver;
-};
+}
