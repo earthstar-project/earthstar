@@ -5,13 +5,13 @@ import { deepEqual } from "../util/misc.ts";
 
 export type SortOrder = "ASC" | "DESC";
 
-export let sortedInPlace = <T>(array: T[]): T[] => {
+export function sortedInPlace<T>(array: T[]): T[] {
     array.sort();
     return array;
-};
+}
 
 // myStrings.sort(baseCompare)
-export let compareBasic = (a: any, b: any, order: SortOrder = "ASC"): Cmp => {
+export function compareBasic(a: any, b: any, order: SortOrder = "ASC"): Cmp {
     if (deepEqual(a, b)) return Cmp.EQ;
     if (order === "ASC" || order === undefined) {
         return (a < b) ? Cmp.LT : Cmp.GT;
@@ -22,7 +22,7 @@ export let compareBasic = (a: any, b: any, order: SortOrder = "ASC"): Cmp => {
             "unexpected sort order to compareBasic: " + JSON.stringify(order),
         );
     }
-};
+}
 
 /**
  * example usage: myArrayOfArrays.sort(arrayCompare)
@@ -61,11 +61,11 @@ export let compareBasic = (a: any, b: any, order: SortOrder = "ASC"): Cmp => {
  *  - [1],  // shorter array comes last, because of DESC in this column
  *  - [2],  // but first element is still sorted ASC
  */
-export let compareArrays = (
+export function compareArrays(
     a: any[],
     b: any[],
     sortOrders?: SortOrder[],
-): Cmp => {
+): Cmp {
     let minLen = Math.min(a.length, b.length);
     for (let ii = 0; ii < minLen; ii++) {
         let sortOrder = sortOrders?.[ii] ?? "ASC"; // default to ASC if sortOrders is undefined or too short
@@ -82,17 +82,20 @@ export let compareArrays = (
     let ii = Math.min(a.length, b.length);
     let sortOrder = sortOrders?.[ii] ?? "ASC"; // default to ASC if sortOrders is undefined or too short
     return compareBasic(a.length, b.length, sortOrder);
-};
+}
 
 // myArray.sort(compareByObjKey('signature', 'ASC'));
-export let compareByObjKey = (key: string, sortOrder: SortOrder = "ASC") =>
-    (a: Record<string, any>, b: Record<string, any>): Cmp =>
+export function compareByObjKey(key: string, sortOrder: SortOrder = "ASC") {
+    return (a: Record<string, any>, b: Record<string, any>): Cmp =>
         compareBasic(a[key], b[key], sortOrder);
+}
 
 // myArray.sort(compareByFn((x) => x.signature + x.path));
-export let compareByFn = (fn: (x: any) => any) =>
-    (a: Record<string, any>, b: Record<string, any>): Cmp => compareBasic(fn(a), fn(b));
+export function compareByFn(fn: (x: any) => any) {
+    return (a: Record<string, any>, b: Record<string, any>): Cmp => compareBasic(fn(a), fn(b));
+}
 
 // myArray.sort(compareByObjArrayFn((x) => [x.signature, x.path]));
-export let compareByObjArrayFn = (fn: (x: any) => any[]) =>
-    (a: Record<string, any>, b: Record<string, any>): Cmp => compareArrays(fn(a), fn(b));
+export function compareByObjArrayFn(fn: (x: any) => any[]) {
+    return (a: Record<string, any>, b: Record<string, any>): Cmp => compareArrays(fn(a), fn(b));
+}

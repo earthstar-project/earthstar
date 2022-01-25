@@ -8,6 +8,7 @@ import { Crypto } from "../crypto/crypto.ts";
 
 export type PeerId = string;
 
+/** Holds many shares' replicas and manages their synchronisation with other peers. Recommended as the point of contact between your application and Earthstar shares. */
 export interface IPeer {
     // TODO: oops, or should we have storage IDs instead of peer IDs?
     peerId: PeerId;
@@ -70,10 +71,12 @@ export interface IPeer {
  */
 
 // ok this isn't a type, but I put it here anyway since it's shared code for client and server
-export let saltAndHashWorkspace = async (
+export function saltAndHashWorkspace(
     salt: string,
     workspace: WorkspaceAddress,
-): Promise<string> => await Crypto.sha256base32(salt + workspace + salt);
+): Promise<string> {
+    return Crypto.sha256base32(salt + workspace + salt);
+}
 
 //--------------------------------------------------
 // SALTY HANDSHAKE

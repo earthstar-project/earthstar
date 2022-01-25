@@ -22,14 +22,14 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export let runStorageAsyncTests = (scenario: TestScenario) => {
+export function runStorageAsyncTests(scenario: TestScenario) {
     let TEST_NAME = "storage tests";
     let SUBTEST_NAME = scenario.name;
 
-    let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
+    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
         let driver = scenario.makeDriver(ws);
         return new StorageAsync(ws, FormatValidatorEs4, driver);
-    };
+    }
 
     Deno.test(
         SUBTEST_NAME + ": storage close() and throwing when closed",
@@ -373,7 +373,7 @@ export let runStorageAsyncTests = (scenario: TestScenario) => {
     );
 
     // TODO: more StorageAsync tests
-};
+}
 
 for (let scenario of testScenarios) {
     runStorageAsyncTests(scenario);

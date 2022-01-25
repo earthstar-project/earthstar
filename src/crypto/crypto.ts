@@ -20,10 +20,9 @@ let logger = new Logger("crypto", "cyanBright");
 
 //================================================================================
 
+/** Higher-level crypto functions. Not used directly for the most part, but useful for generating new keypairs. */
 export const Crypto: ICrypto = class {
-    /**
-     * Do a sha256 hash, then return the output bytes encoded as base32.
-     */
+    /** Do a sha256 hash, then return the output bytes encoded as base32. */
     static async sha256base32(
         input: string | Uint8Array,
     ): Promise<Base32String> {
@@ -65,8 +64,7 @@ export const Crypto: ICrypto = class {
      * Sign a message using an Earthstar keypair.
      * Return a signature as base32 string.
      *
-     * Can return a ValidationError if the keypair is bad
-     * or something goes unexpectedly wrong with signing.
+     * Can return a ValidationError if the keypair is bad or something goes unexpectedly wrong with signing.
      */
     static async sign(
         keypair: AuthorKeypair,

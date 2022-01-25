@@ -19,40 +19,46 @@ import {
 
 //================================================================================
 
-export let assembleAuthorAddress = (
+/** Put a short name and pub key together into an identity address. */
+export function assembleAuthorAddress(
     name: AuthorShortname,
     encodedPubkey: Base32String,
-): AuthorAddress =>
-    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
-    `@${name}.${encodedPubkey}`;
+): AuthorAddress // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
+ {
+    return `@${name}.${encodedPubkey}`;
+}
 
-export let assembleWorkspaceAddress = (
+/** Put a share name and encoded pub key together into a share address. */
+export function assembleWorkspaceAddress(
     name: WorkspaceName,
     encodedPubkey: Base32String,
-): WorkspaceAddress =>
-    // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
-    `+${name}.${encodedPubkey}`;
+): WorkspaceAddress // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
+ {
+    return `+${name}.${encodedPubkey}`;
+}
 
-export let checkAuthorIsValid = (
+/** Check that an identity address is valid. */
+export function checkAuthorIsValid(
     addr: AuthorAddress,
-): true | ValidationError => {
+): true | ValidationError {
     let parsed = parseAuthorAddress(addr);
     if (notErr(parsed)) return true;
     return parsed;
-};
+}
 
-export let checkWorkspaceIsValid = (
+/** Check that a share address is valid. */
+export function checkWorkspaceIsValid(
     addr: WorkspaceAddress,
-): true | ValidationError => {
+): true | ValidationError {
     let parsed = parseWorkspaceAddress(addr);
     if (notErr(parsed)) return true;
     return parsed;
-};
+}
 
 /** Parse an author address into its parts. */
-export let parseAuthorAddress = (
+export function parseAuthorAddress(
     address: AuthorAddress,
-): ParsedAddress | ValidationError => {
+): ParsedAddress | ValidationError {
     return parseAddress(address, {
         sigil: "@",
         separator: ".",
@@ -64,12 +70,12 @@ export let parseAuthorAddress = (
         allowedPubkeyCharacters: authorKeyChars,
         pubkeyMustStartWithB: true,
     });
-};
+}
 
 /** Parse a workspace address into its parts. */
-export let parseWorkspaceAddress = (
+export function parseWorkspaceAddress(
     address: WorkspaceAddress,
-): ParsedAddress | ValidationError => {
+): ParsedAddress | ValidationError {
     return parseAddress(address, {
         sigil: "+",
         separator: ".",
@@ -81,7 +87,7 @@ export let parseWorkspaceAddress = (
         allowedPubkeyCharacters: workspaceKeyChars,
         pubkeyMustStartWithB: false,
     });
-};
+}
 
 interface ParseAddressOpts {
     sigil: string; // '+' or '@'
@@ -94,10 +100,10 @@ interface ParseAddressOpts {
     allowedPubkeyCharacters: string;
     pubkeyMustStartWithB: boolean;
 }
-export let parseAddress = (
+export function parseAddress(
     address: string,
     opts: ParseAddressOpts,
-): ParsedAddress | ValidationError => {
+): ParsedAddress | ValidationError {
     let {
         sigil,
         separator,
@@ -169,4 +175,4 @@ export let parseAddress = (
         name,
         pubkey,
     };
-};
+}

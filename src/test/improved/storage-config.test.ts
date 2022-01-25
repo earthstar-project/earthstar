@@ -25,10 +25,10 @@ let J = JSON.stringify;
 // so we run the entire thing twice -- once running the tests on a Storage, and once
 // on its StorageDriver directly.
 
-export let runStorageConfigTests = (scenario: TestScenario) => {
+export function runStorageConfigTests(scenario: TestScenario) {
     _runStorageConfigTests(scenario, "storage");
     _runStorageConfigTests(scenario, "storageDriver");
-};
+}
 
 let _runStorageConfigTests = (
     scenario: TestScenario,

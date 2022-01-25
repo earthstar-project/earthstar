@@ -7,18 +7,20 @@ import { assembleAuthorAddress, parseAuthorAddress } from "../core-validators/ad
 //================================================================================
 
 /** Combine a shortname with a raw KeypairBytes to make an AuthorKeypair */
-export let encodeAuthorKeypairToStrings = (
+export function encodeAuthorKeypairToStrings(
     shortname: AuthorShortname,
     pair: KeypairBytes,
-): AuthorKeypair => ({
-    address: assembleAuthorAddress(shortname, base32BytesToString(pair.pubkey)),
-    secret: base32BytesToString(pair.secret),
-});
+): AuthorKeypair {
+    return ({
+        address: assembleAuthorAddress(shortname, base32BytesToString(pair.pubkey)),
+        secret: base32BytesToString(pair.secret),
+    });
+}
 
 /** Convert an AuthorKeypair back into a raw KeypairBytes for use in crypto operations. */
-export let decodeAuthorKeypairToBytes = (
+export function decodeAuthorKeypairToBytes(
     pair: AuthorKeypair,
-): KeypairBytes | ValidationError => {
+): KeypairBytes | ValidationError {
     try {
         let authorParsed = parseAuthorAddress(pair.address);
         if (isErr(authorParsed)) return authorParsed;
@@ -45,4 +47,4 @@ export let decodeAuthorKeypairToBytes = (
             "crash while decoding author keypair: " + err.message,
         );
     }
-};
+}

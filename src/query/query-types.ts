@@ -2,7 +2,7 @@ import { AuthorAddress, Path, Timestamp } from "../util/doc-types.ts";
 
 //================================================================================
 
-// ways to filter an individual document with no other context
+/** Filters a query by document attributes. */
 export interface QueryFilter {
     path?: Path;
     pathStartsWith?: string;
@@ -17,24 +17,33 @@ export interface QueryFilter {
 }
 
 export type HistoryMode = "latest" | "all";
+
+/** Describes a query for fetching documents from a replica. */
 export interface Query {
     // for each property, the first option is the default if it's omitted
 
     // this is in the order that processing happens:
 
-    // first, limit to latest docs or all docs
+    // first, limit to latest docs or all doc.
+
+    /** Whether to fetch all historical versions of a document or just the latest versions. */
     historyMode?: HistoryMode;
 
     // then iterate in this order
     //   "path ASC" is actually "path ASC then break ties with timestamp DESC"
     //   "path DESC" is the reverse of that
+
+    /** The order to return docs in. Defaults to `path ASC`. */
     orderBy?: "path ASC" | "path DESC" | "localIndex ASC" | "localIndex DESC";
 
     // start iterating immediately after this item (e.g. get items which are > startAfter)
+
+    /** Only fetch documents which come after a certain point. */
     startAfter?: {
-        // only when ordering by localIndex
+        /** Only documents after this localIndex. Only works when ordering by localIndex. */
         localIndex?: number;
-        // only when ordering by path
+
+        /** Only documents after this path. Only works when ordering by path. */
         path?: string;
     };
 
@@ -42,11 +51,12 @@ export interface Query {
     filter?: QueryFilter;
 
     // stop iterating after this number of docs
+    /** The maximum number of documents to return. */
     limit?: number;
     // TODO: limitBytes
 }
 
-export let DEFAULT_QUERY: Query = {
+export const DEFAULT_QUERY: Query = {
     historyMode: "latest",
     orderBy: "path ASC",
     startAfter: undefined,

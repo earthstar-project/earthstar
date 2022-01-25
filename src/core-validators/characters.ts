@@ -1,38 +1,50 @@
 import { stringToBytes } from "../util/bytes.ts";
 
-export let onlyHasChars = (str: string, allowedChars: string): boolean => {
+/** Check that a string only contains character from a string of allowed characters. */
+export function onlyHasChars(str: string, allowedChars: string): boolean {
     for (let s of str) {
         if (allowedChars.indexOf(s) === -1) return false;
     }
     return true;
-};
+}
 
-export let isOnlyPrintableAscii = (s: string): boolean => {
+/** Check that a string contains only printable ASCII */
+export function isOnlyPrintableAscii(s: string): boolean {
     let bytes = stringToBytes(s);
     for (let byte of bytes) {
         // char must be between ' ' (space) and '~' inclusive
         if (byte < 32 || byte > 126) return false;
     }
     return true;
-};
+}
 
-// is ch exactly one digit?
-export let isDigit = (ch: string): boolean => {
+/* Check that a string is exactly one digit. */
+export function isDigit(ch: string): boolean {
     if (ch === "") return false;
     return digits.indexOf(ch) !== -1;
-};
+}
 
+/** Lowercase alphabetical characters. */
 export const alphaLower = "abcdefghijklmnopqrstuvwxyz";
+/** Uppercase alphabetical characters. */
 export const alphaUpper = alphaLower.toUpperCase();
+/** All digits. */
 export const digits = "0123456789";
+/** All characters allowed in base32. */
 export const b32chars = alphaLower + "234567";
 
+/** All characters allowed in an identity's short name. */
 export const authorNameChars = alphaLower + digits;
+/** All characters allowed in an identity's pub key. */
 export const authorKeyChars = b32chars;
+/** All characters allowed in an identity's public address. */
 export const authorAddressChars = authorNameChars + b32chars + "@.";
 
+/** All characters allowed in a share's name. */
 export const workspaceNameChars = alphaLower + digits;
+/** All charaters allowed in a share's key. */
 export const workspaceKeyChars = alphaLower + digits;
+/** All characters allowed in a share's address. */
 export const workspaceAddressChars = workspaceNameChars + b32chars + "+.";
 
 // Characters allowed in Earthstar paths
@@ -70,5 +82,7 @@ export const workspaceAddressChars = workspaceNameChars + b32chars + "+.";
 //      for display to users again, run decodeURI(earthstarPath)
 //
 
+/** All special characters permitted in a document's path. */
 export const pathPunctuation = "/'()-._~!$&+,:=@%"; // note double quotes are not included
+/** All characters permitted in a document's path. */
 export const pathChars = alphaLower + alphaUpper + digits + pathPunctuation;

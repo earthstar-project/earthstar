@@ -1,7 +1,7 @@
 import { fast_deep_equal as deepEqual, Superbus } from "../../deps.ts";
 
 //let log = console.log;
-let log = (...args: any[]) => {};
+function log(...args: any[]) {}
 let mapdebug = "        🗺";
 
 /*

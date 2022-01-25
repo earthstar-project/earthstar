@@ -39,14 +39,20 @@ const _generateKeypairDerBytes = () => {
     };
 };
 
-let _shortenDer = (k) => ({
-    pubkey: k.pubkey.slice(-32),
-    secret: k.secret.slice(-32),
-});
+function _shortenDer(k) {
+    return ({
+        pubkey: k.pubkey.slice(-32),
+        secret: k.secret.slice(-32),
+    });
+}
 let _derPrefixPublic = b64StringToBytes("MCowBQYDK2VwAyEA");
 let _derPrefixSecret = b64StringToBytes("MC4CAQAwBQYDK2VwBCIEIA==");
-let _lengthenDerPublic = (b) => concatBytes(_derPrefixPublic, b);
-let _lengthenDerSecret = (b) => concatBytes(_derPrefixSecret, b);
+function _lengthenDerPublic(b) {
+    return concatBytes(_derPrefixPublic, b);
+}
+function _lengthenDerSecret(b) {
+    return concatBytes(_derPrefixSecret, b);
+}
 
 /**
  * A verison of the ILowLevelCrypto interface backed by native Node crypto functions.

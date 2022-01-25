@@ -18,7 +18,9 @@ import { isErr, notErr } from "../util/errors";
 //================================================================================
 
 let log = console.log;
-let randInt = (lo: number, hi: number) => Math.floor(Math.random() * (hi - lo) + lo);
+function randInt(lo: number, hi: number) {
+    return Math.floor(Math.random() * (hi - lo) + lo);
+}
 
 let pushLocal = async (
     storageFrom: IStorageAsync,
@@ -39,14 +41,14 @@ let syncLocal = async (
 
 //================================================================================
 
-let makeParts = ({ cryptoDriver, storageDriverClass }: PartsInput): Parts => {
+function makeParts({ cryptoDriver, storageDriverClass }: PartsInput): Parts {
     let description = `${(cryptoDriver as any).name} & ${(storageDriverClass as any).name}`;
     let crypto = new Crypto(cryptoDriver);
     let validator = new FormatValidatorEs4(crypto);
-    let makeStorage = (workspace: WorkspaceAddress): IStorageAsync => {
+    function makeStorage(workspace: WorkspaceAddress): IStorageAsync {
         let storageDriver = new storageDriverClass(workspace);
         return new StorageAsync(workspace, validator, storageDriver);
-    };
+    }
     return {
         description,
         cryptoDriver,
@@ -54,9 +56,9 @@ let makeParts = ({ cryptoDriver, storageDriverClass }: PartsInput): Parts => {
         validator,
         makeStorage,
     };
-};
+}
 
-let makeDemoAuthors = (crypto: Crypto) => {
+function makeDemoAuthors(crypto: Crypto) {
     let keypair1 = crypto.generateAuthorKeypair("test") as AuthorKeypair;
     let keypair2 = crypto.generateAuthorKeypair("twoo") as AuthorKeypair;
     let keypair3 = crypto.generateAuthorKeypair("thre") as AuthorKeypair;
@@ -79,7 +81,7 @@ let makeDemoAuthors = (crypto: Crypto) => {
         author3,
         author4,
     };
-};
+}
 
 let now = 1500000000000000;
 let SEC = 1000000;

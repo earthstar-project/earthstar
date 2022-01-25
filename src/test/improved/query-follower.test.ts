@@ -27,14 +27,14 @@ let J = JSON.stringify;
 
 //======
 
-let runQueryFollowerTests = (scenario: TestScenario) => {
+function runQueryFollowerTests(scenario: TestScenario) {
     let TEST_NAME = "QueryFollower tests";
     let SUBTEST_NAME = scenario.name;
 
-    let makeStorage = (ws: WorkspaceAddress): IStorageAsync => {
+    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
         let driver = scenario.makeDriver(ws);
         return new StorageAsync(ws, FormatValidatorEs4, driver);
-    };
+    }
 
     Deno.test(SUBTEST_NAME + ": query rules", async () => {
         let initialCryptoDriver = GlobalCryptoDriver;
@@ -389,7 +389,7 @@ let runQueryFollowerTests = (scenario: TestScenario) => {
     });
 
     // TODO: try closing the queryfollower from inside its own bus event handler -- this might cause a deadlock
-};
+}
 
 for (let scenario of testScenarios) {
     runQueryFollowerTests(scenario);

@@ -14,8 +14,7 @@ let J = JSON.stringify;
 
 //================================================================================
 
-//export type PeerEvent = 'close';
-
+/** Holds many shares' replicas and manages their synchronisation with other peers. Recommended as the point of contact between your application and Earthstar shares. */
 export class Peer implements IPeer {
     peerId: PeerId;
 
