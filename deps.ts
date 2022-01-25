@@ -1,6 +1,5 @@
 export { default as chalk } from "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts";
 export { default as fast_deep_equal } from "https://esm.sh/fast-deep-equal@3.1.3";
-export * as dbly_linked_list from "https://cdn.skypack.dev/dbly-linked-list@0.3.5";
 export { default as fast_json_stable_stringify } from "https://esm.sh/fast-json-stable-stringify@2.1.0";
 export * as rfc4648 from "https://esm.sh/rfc4648@1.5.0";
 export * as sha256_uint8array from "https://esm.sh/sha256-uint8array@0.10.3";
