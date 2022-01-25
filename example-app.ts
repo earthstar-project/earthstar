@@ -1,12 +1,21 @@
-import { isErr, sleep, FormatValidatorEs4, StorageDriverAsyncMemory, StorageAsync, Crypto, AuthorKeypair, QueryFollower, Peer,  Logger,
+import {
+    AuthorKeypair,
+    Crypto,
+    FormatValidatorEs4,
+    isErr,
+    LiveQueryEvent,
+    Logger,
     LogLevel,
+    Peer,
+    QueryFollower,
     setDefaultLogLevel,
-    setLogLevel, LiveQueryEvent } from "./mod.ts";
+    setLogLevel,
+    sleep,
+    StorageAsync,
+    StorageDriverAsyncMemory,
+} from "./mod.ts";
 
 //--------------------------------------------------
-
-
-
 
 let loggerMain = new Logger("main", "whiteBright");
 let loggerBusEvents = new Logger("main storage bus events", "white");
