@@ -10,7 +10,22 @@ await build({
       test: "dev",
     },
     weakRef: true,
+    custom: [
+      {
+        package: {
+          name: "@ungap/structured-clone",
+          version: "0.3.4",
+        },
+        globalNames: ["structuredClone"],
+      },
+    ],
     customDev: [
+      {
+        package: {
+          name: "@types/ungap__structured-clone",
+        },
+        globalNames: [],
+      },
       {
         package: {
           name: "@types/chloride",
