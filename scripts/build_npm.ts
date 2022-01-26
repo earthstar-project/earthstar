@@ -10,6 +10,15 @@ await build({
             test: "dev",
         },
         weakRef: true,
+        custom: [
+            {
+                package: {
+                    name: "@ungap/structured-clone",
+                    version: "0.3.4",
+                },
+                globalNames: [{ name: "structuredClone", exportName: "default" }],
+            },
+        ],
         customDev: [
             {
                 package: {
@@ -37,7 +46,7 @@ await build({
             name: "chloride",
             version: "2.4.1",
         },
-        "https://raw.githubusercontent.com/sgwilym/noble-ed25519/6e05e960522e6def6974769d5bff032eaed68685/mod.ts":
+        "https://raw.githubusercontent.com/sgwilym/noble-ed25519/7af9329476ff2f2a0e524a9f78e36d09704efc63/mod.ts":
             {
                 name: "@noble/ed25519",
                 version: "1.4.0",
