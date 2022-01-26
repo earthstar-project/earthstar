@@ -57,7 +57,7 @@ await build({
         name: "stone-soup",
         version: Deno.args[0],
         description: "A distributed, syncable key-value database",
-        license: "AGPL-3.0",
+        license: "LGPL-3.0-only",
         repository: {
             type: "git",
             url: "git+https://github.com/earthstar-project/stone-soup.git",
