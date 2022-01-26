@@ -16,16 +16,10 @@ await build({
                     name: "@ungap/structured-clone",
                     version: "0.3.4",
                 },
-                globalNames: ["structuredClone"],
+                globalNames: [{ name: "structuredClone", exportName: "default" }],
             },
         ],
         customDev: [
-            {
-                package: {
-                    name: "@types/ungap__structured-clone",
-                },
-                globalNames: [],
-            },
             {
                 package: {
                     name: "@types/chloride",
