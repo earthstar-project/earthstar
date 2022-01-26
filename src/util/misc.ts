@@ -22,7 +22,6 @@ export function randomId(): string {
 }
 
 // replace all occurrences of substring "from" with "to"
-
 export function replaceAll(str: string, from: string, to: string): string {
     return str.split(from).join(to);
 }

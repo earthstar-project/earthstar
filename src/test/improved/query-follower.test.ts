@@ -41,7 +41,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
 
         let workspace = "+gardening.abcde";
         let storage = makeStorage(workspace);
-        let author1 = Crypto.generateAuthorKeypair("onee");
+        let author1 = await Crypto.generateAuthorKeypair("onee");
         if (isErr(author1)) {
             await storage.close(true);
             assert(false, "generate author failed");
@@ -113,6 +113,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
         }
 
         await storage.close(true);
+
         assertEquals(
             initialCryptoDriver,
             GlobalCryptoDriver,
@@ -278,6 +279,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
         });
 
         loggerTest.debug("close the storage");
+        //await qf.close();
         await storage.close(true);
 
         loggerTest.debug("sleep so didClose has time to happen");
@@ -306,8 +308,6 @@ function runQueryFollowerTests(scenario: TestScenario) {
                 (initialCryptoDriver as any).name
             }, ended as ${(GlobalCryptoDriver as any).name}`,
         );
-
-        await qf.close();
     });
 
     Deno.test(SUBTEST_NAME + ": fuzz test", async () => {
@@ -370,7 +370,8 @@ function runQueryFollowerTests(scenario: TestScenario) {
         await addDocs(storage, keypair1, 41, 50);
 
         // TODO-DENO: closing the storage leaks async ops?
-        await qf.close();
+        //await qf.close();
+        await storage.close(true);
 
         let expectedItemsFound = [...Array(51).keys()];
         assertEquals(
