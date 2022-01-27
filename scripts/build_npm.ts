@@ -1,4 +1,4 @@
-import { build } from "https://deno.land/x/dnt@0.15.0/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.16.1/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 

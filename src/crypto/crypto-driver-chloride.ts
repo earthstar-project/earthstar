@@ -1,5 +1,5 @@
 import { default as sodium } from "../node/chloride.ts";
-import { Buffer } from "https://deno.land/std@0.119.0/node/buffer.ts";
+import { Buffer } from "https://deno.land/std@0.122.0/node/buffer.ts";
 import { ICryptoDriver, KeypairBytes } from "./crypto-types.ts";
 import { concatBytes, identifyBufOrBytes } from "../util/bytes.ts";
 import { bufferToBytes, bytesToBuffer, stringToBuffer } from "../util/buffers.ts";
