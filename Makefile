@@ -10,7 +10,7 @@ test:
 	deno test src
 
 test-watch:
-	deno test --watch src
+	deno test --watch --allow-env src 
 
 test-coverage:
 	deno test --no-check --coverage=cov_profile src
