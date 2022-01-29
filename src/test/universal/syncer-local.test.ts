@@ -1,24 +1,9 @@
 import { assert } from "../asserts.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory.ts";
 import { SyncerLocal } from "../../syncer/syncer-local.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Peer } from "../../peer/peer.ts";
-import { storagesAreSynced } from "../test-utils.ts";
-
-function makeStorage(addr: string) {
-    return new StorageAsync(addr, FormatValidatorEs4, new StorageDriverAsyncMemory(addr));
-}
-
-function makeThreeStorages(addr: string) {
-    return [
-        makeStorage(addr),
-        makeStorage(addr),
-        makeStorage(addr),
-    ];
-}
+import { makeNStorages, storagesAreSynced } from "../test-utils.ts";
 
 const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
@@ -29,10 +14,12 @@ const keypairC = await Crypto.generateAuthorKeypair("smee") as AuthorKeypair;
 //  On close
 //    Do we leave any hanging async ops?
 
+// TODO: Turn this into one of those vector-laden tests when we have more kinds of syncers
+
 Deno.test("SyncerLocal", async () => {
     const ADDRESS_A = "+apples.a123";
 
-    const [storageA1, storageA2, storageA3] = makeThreeStorages(ADDRESS_A);
+    const [storageA1, storageA2, storageA3] = makeNStorages(ADDRESS_A, 3);
 
     // Storage A docs
 

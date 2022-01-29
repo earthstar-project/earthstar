@@ -8,15 +8,13 @@ import { WorkspaceQueryRequest, WorkspaceState } from "./sync-types.ts";
 export class SyncCoordinator {
     _connection: Connection<SyncerBag>;
     _syncerBag: SyncerBag;
-
-    _commonWorkspaces: WorkspaceAddress[] = [];
-    _partnerLastSeenAt: number | null = null;
-    _partnerPeerId: string | null = null;
-
     _workspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
-
     // TODO: Soon we'll have streams, not polling.
     _pullIntervals: Array<number> = [];
+
+    commonWorkspaces: WorkspaceAddress[] = [];
+    partnerLastSeenAt: number | null = null;
+    partnerPeerId: string | null = null;
 
     state: "ready" | "active" | "closed" = "ready";
 
@@ -37,14 +35,14 @@ export class SyncCoordinator {
         const { commonWorkspaces, partnerLastSeenAt, partnerPeerId } = await this._syncerBag
             .processSaltedHandshake(saltedHandshakeRes);
 
-        this._commonWorkspaces = commonWorkspaces;
-        this._partnerLastSeenAt = partnerLastSeenAt;
-        this._partnerPeerId = partnerPeerId;
+        this.commonWorkspaces = commonWorkspaces;
+        this.partnerLastSeenAt = partnerLastSeenAt;
+        this.partnerPeerId = partnerPeerId;
 
         this._connection._otherDeviceId = partnerPeerId;
 
         // Get the workspace states from the partner
-        await this.getWorkspaceStates();
+        await this._getWorkspaceStates();
 
         const initialPulls = [];
 
@@ -53,7 +51,7 @@ export class SyncCoordinator {
             const state = this._workspaceStates[key];
 
             const pull = () =>
-                this.pullDocs({
+                this._pullDocs({
                     // Eventually we'll do smart stuff with localIndex.
                     // For now just ask for EVERYTHING, EVERY TIME.
                     query: {},
@@ -62,16 +60,16 @@ export class SyncCoordinator {
                 });
 
             initialPulls.push(pull());
-            const interval = setInterval(pull, 10);
+            const interval = setInterval(pull, 5000);
             this._pullIntervals.push(interval);
         }
 
         return Promise.all(initialPulls);
     }
 
-    async getWorkspaceStates() {
+    async _getWorkspaceStates() {
         const workspaceStatesRequest = {
-            commonWorkspaces: this._commonWorkspaces,
+            commonWorkspaces: this.commonWorkspaces,
         };
 
         const workspaceStatesResponse = await this._connection.request(
@@ -86,14 +84,14 @@ export class SyncCoordinator {
                 workspaceStatesResponse,
             );
 
-        this._partnerLastSeenAt = lastSeenAt;
-        this._partnerPeerId = partnerPeerId;
+        this.partnerLastSeenAt = lastSeenAt;
+        this.partnerPeerId = partnerPeerId;
         this._workspaceStates = workspaceStates;
 
         this._connection._otherDeviceId = partnerPeerId;
     }
 
-    async pullDocs(workspaceQuery: WorkspaceQueryRequest): Promise<number> {
+    async _pullDocs(workspaceQuery: WorkspaceQueryRequest): Promise<number> {
         const queryResponse = await this._connection.request("serveWorkspaceQuery", workspaceQuery);
 
         const { lastSeenAt, workspaceStates, pulled } = await this._syncerBag.processWorkspaceQuery(
@@ -102,7 +100,7 @@ export class SyncCoordinator {
         );
 
         this._workspaceStates = workspaceStates;
-        this._partnerLastSeenAt = lastSeenAt;
+        this.partnerLastSeenAt = lastSeenAt;
 
         return pulled;
     }

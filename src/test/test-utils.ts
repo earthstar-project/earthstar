@@ -2,6 +2,8 @@ import { assert } from "./asserts.ts";
 import { StorageAsync } from "../storage/storage-async.ts";
 import { Doc } from "../util/doc-types.ts";
 import { deepEqual } from "../util/misc.ts";
+import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
 
 // for testing unicode
 export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -28,17 +30,25 @@ export let doesNotThrow = async (
     }
 };
 
+export function makeStorage(addr: string) {
+    return new StorageAsync(addr, FormatValidatorEs4, new StorageDriverAsyncMemory(addr));
+}
+
+export function makeNStorages(addr: string, number: number) {
+    return Array.from({ length: number }, () => makeStorage(addr));
+}
+
+function stripLocalIndexFromDoc({ _localIndex, ...rest }: Doc) {
+    return { ...rest };
+}
+
 export function docsAreEquivalent(docsA: Doc[], docsB: Doc[]) {
     if (docsA.length !== docsB.length) {
         return false;
     }
 
-    const stripLocalIndex = ({ _localIndex, ...rest }: Doc) => {
-        return { ...rest };
-    };
-
-    const aStripped = docsA.map(stripLocalIndex);
-    const bStripped = docsB.map(stripLocalIndex);
+    const aStripped = docsA.map(stripLocalIndexFromDoc);
+    const bStripped = docsB.map(stripLocalIndexFromDoc);
 
     return deepEqual(aStripped, bStripped);
 }
@@ -61,4 +71,27 @@ export async function storagesAreSynced(storages: StorageAsync[]): Promise<boole
 
         return docsAreEquivalent(prevDocs, docs);
     }, false);
+}
+
+export async function storageHasAllStoragesDocs(
+    storageA: StorageAsync,
+    storageB: StorageAsync,
+): Promise<boolean> {
+    const allADocs = await storageA.getAllDocs();
+    const allBDocs = await storageB.getAllDocs();
+
+    const strippedADocs = allADocs.map(stripLocalIndexFromDoc);
+    const strippedBDocs = allBDocs.map(stripLocalIndexFromDoc);
+
+    const aHasAllB = strippedBDocs.reduce((hasAll, doc) => {
+        if (hasAll === false) {
+            return hasAll;
+        }
+
+        return strippedADocs.find((aDoc) => {
+            return deepEqual(doc, aDoc);
+        }) !== undefined;
+    }, true);
+
+    return aHasAllB;
 }
