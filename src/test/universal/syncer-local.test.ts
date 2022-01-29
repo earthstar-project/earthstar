@@ -1,4 +1,4 @@
-import { assertEquals } from "../asserts.ts";
+import { assert } from "../asserts.ts";
 import { StorageAsync } from "../../storage/storage-async.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory.ts";
@@ -6,6 +6,7 @@ import { SyncerLocal } from "../../syncer/syncer-local.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Peer } from "../../peer/peer.ts";
+import { storagesAreSynced } from "../test-utils.ts";
 
 function makeStorage(addr: string) {
     return new StorageAsync(addr, FormatValidatorEs4, new StorageDriverAsyncMemory(addr));
@@ -23,16 +24,13 @@ const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
 const keypairC = await Crypto.generateAuthorKeypair("smee") as AuthorKeypair;
 
-// WHAT I'M TESTING:
 // 	On addPeer
-//    Do the two peers sync documents as expected?
+//    Did the storages sync?
 //  On close
-//    Do all the created coordinators close properly?
+//    Do we leave any hanging async ops?
 
 Deno.test("SyncerLocal", async () => {
     const ADDRESS_A = "+apples.a123";
-    const ADDRESS_B = "+bananas.b234";
-    const ADDRESS_C = "+coconuts.c345";
 
     const [storageA1, storageA2, storageA3] = makeThreeStorages(ADDRESS_A);
 
@@ -50,7 +48,7 @@ Deno.test("SyncerLocal", async () => {
         format: "es.4",
     });
 
-    await storageA3.set(keypairA, {
+    await storageA3.set(keypairC, {
         path: "/apples/textures.txt",
         content: "Crisp, juicy, mealy",
         format: "es.4",
@@ -71,11 +69,21 @@ Deno.test("SyncerLocal", async () => {
 
     const syncer = new SyncerLocal(peer1);
 
+    // Add a peer, verify syncedness
+
     await syncer.addPeer(peer2);
+    assert(await storagesAreSynced([storageA1, storageA2]));
 
-    // check docs
-    const storageA1Docs = await storageA1.getAllDocs();
-    const storageA2Docs = await storageA2.getAllDocs();
+    // add another peer and verify syncedness
 
-    console.log({ storageA1Docs, storageA2Docs });
+    await syncer.addPeer(peer3);
+    assert(await storagesAreSynced([storageA1, storageA3]));
+
+    // close everything
+
+    storageA1.close(false);
+    storageA2.close(false);
+    storageA3.close(false);
+
+    syncer.close();
 });

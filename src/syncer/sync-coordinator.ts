@@ -18,6 +18,8 @@ export class SyncCoordinator {
     // TODO: Soon we'll have streams, not polling.
     _pullIntervals: Array<number> = [];
 
+    state: "ready" | "active" | "closed" = "ready";
+
     constructor(peer: Peer, connection: Connection<SyncerBag>) {
         this._syncerBag = makeSyncerBag(peer);
         this._connection = connection;
@@ -27,6 +29,8 @@ export class SyncCoordinator {
      * @returns - A promise for an initial pull of all workspaces.
      */
     async start() {
+        this.state = "active";
+
         // Perform salty handshake
         const saltedHandshakeRes = await this._connection.request("serveSaltedHandshake");
 
@@ -58,7 +62,7 @@ export class SyncCoordinator {
                 });
 
             initialPulls.push(pull());
-            const interval = setInterval(pull);
+            const interval = setInterval(pull, 10);
             this._pullIntervals.push(interval);
         }
 
@@ -108,6 +112,6 @@ export class SyncCoordinator {
             clearInterval(interval);
         }
 
-        this._connection.close();
+        this.state = "closed";
     }
 }
