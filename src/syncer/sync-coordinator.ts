@@ -1,4 +1,4 @@
-import { Connection } from "../../deps.ts";
+import { Connection, IConnection } from "../../deps.ts";
 import { Peer } from "../peer/peer.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
 import { WorkspaceAddress } from "../util/doc-types.ts";
@@ -6,7 +6,7 @@ import { WorkspaceQueryRequest, WorkspaceState } from "./sync-types.ts";
 
 /** Orchestrates different requests in order to syncrhronise a Peer using a connection */
 export class SyncCoordinator {
-    _connection: Connection<SyncerBag>;
+    _connection: IConnection<SyncerBag>;
     _syncerBag: SyncerBag;
     _workspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
     // TODO: Soon we'll have streams, not polling.
@@ -18,7 +18,7 @@ export class SyncCoordinator {
 
     state: "ready" | "active" | "closed" = "ready";
 
-    constructor(peer: Peer, connection: Connection<SyncerBag>) {
+    constructor(peer: Peer, connection: IConnection<SyncerBag>) {
         this._syncerBag = makeSyncerBag(peer);
         this._connection = connection;
     }
@@ -63,6 +63,10 @@ export class SyncCoordinator {
             const interval = setInterval(pull, 5000);
             this._pullIntervals.push(interval);
         }
+
+        this._connection.onClose(() => {
+            this.close();
+        });
 
         return Promise.all(initialPulls);
     }
