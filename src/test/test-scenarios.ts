@@ -27,15 +27,6 @@ const universalStorageScenarios: JustStorageScenario[] = [
         makeDriver: (ws) => new StorageDriverAsyncMemory(ws),
         builtInConfigKeys: [],
     },
-];
-
-const browserStorageScenarios: JustStorageScenario[] = [
-    {
-        name: "StorageDriverLocalStorage",
-        persistent: true,
-        makeDriver: (ws) => new StorageDriverLocalStorage(ws),
-        builtInConfigKeys: [],
-    },
     {
         name: "StorageDriverSqlite",
         persistent: false,
@@ -46,6 +37,15 @@ const browserStorageScenarios: JustStorageScenario[] = [
                 workspace: ws,
             }),
         builtInConfigKeys: ["schemaVersion", "workspace"],
+    },
+];
+
+const browserStorageScenarios: JustStorageScenario[] = [
+    {
+        name: "StorageDriverLocalStorage",
+        persistent: true,
+        makeDriver: (ws) => new StorageDriverLocalStorage(ws),
+        builtInConfigKeys: [],
     },
 ];
 
