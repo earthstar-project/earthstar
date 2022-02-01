@@ -47,6 +47,7 @@ interface DocObject extends Sqlite.RowObject {
     toSortWithinPath?: number;
 }
 
+/** A strorage driver which persists to SQLite. Works in Deno and browsers. */
 export class StorageDriverSqlite implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
     _filename: string;

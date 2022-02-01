@@ -26,6 +26,7 @@ import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 const logger = new Logger("storage driver sqlite node", "yellow");
 
+/** A strorage driver which persists to SQLite. Works in Node. */
 export class StorageDriverSqlite implements IStorageDriverAsync {
     workspace: WorkspaceAddress;
     _filename: string;

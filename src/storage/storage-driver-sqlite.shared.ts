@@ -21,6 +21,7 @@ export interface StorageSqliteOptsCreateOrOpen {
     workspace: WorkspaceAddress;
     filename: string; // may or may not exist
 }
+
 export type StorageSqliteOpts =
     | StorageSqliteOptsCreate
     | StorageSqliteOptsOpen
