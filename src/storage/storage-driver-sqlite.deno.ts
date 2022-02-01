@@ -16,7 +16,7 @@ import {
     UPSERT_CONFIG_QUERY,
     UPSERT_DOC_QUERY,
 } from "./storage-driver-sqlite.shared.ts";
-import { Sqlite } from "../../deps.ts";
+import * as Sqlite from "https://deno.land/x/sqlite@v3.2.0/mod.ts";
 
 //--------------------------------------------------
 
