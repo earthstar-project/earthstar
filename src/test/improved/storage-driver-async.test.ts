@@ -75,8 +75,8 @@ export function runStorageDriverTests(scenario: TestScenario) {
         );
         assertEquals(
             await driver.listConfigKeys(),
-            [],
-            `listConfigKeys() is []`,
+            [...scenario.builtInConfigKeys],
+            `listConfigKeys() is ${[...scenario.builtInConfigKeys]}`,
         );
         assertEquals(
             await driver.deleteConfig("foo"),
@@ -92,8 +92,8 @@ export function runStorageDriverTests(scenario: TestScenario) {
         assertEquals(await driver.getConfig("a"), "aa", `getConfig works`);
         assertEquals(
             await driver.listConfigKeys(),
-            ["a", "b"],
-            `listConfigKeys() is ['a', 'b'] (sorted)`,
+            ["a", "b", ...scenario.builtInConfigKeys],
+            `listConfigKeys() is ${["a", "b", ...scenario.builtInConfigKeys]} (sorted)`,
         );
 
         assertEquals(
@@ -187,7 +187,7 @@ export function runStorageDriverTests(scenario: TestScenario) {
 
             let docs = await driver.queryDocs({});
             assertEquals(docs.length, 1, "query returns 1 doc");
-            assertEquals(docs[0]._localIndex, 0, "docs[0]._localIndex");
+            assertEquals(docs[0]._localIndex, 0, "docs[0]._localIndex is 0");
             assertEquals(docs[0].content, "Hello 0", "content is from doc0");
 
             //-----------------

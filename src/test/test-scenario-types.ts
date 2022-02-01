@@ -15,6 +15,9 @@ export interface TestScenario {
     // in here you will instantiate a StorageDriver and then
     // use it to instantiate a Storage:
     makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync;
+
+    // Config keys that come with the driver
+    builtInConfigKeys: string[];
 }
 
 export interface CryptoScenario {

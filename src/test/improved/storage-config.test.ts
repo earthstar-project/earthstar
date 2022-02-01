@@ -62,8 +62,8 @@ let _runStorageConfigTests = (
         );
         assertEquals(
             await storage.listConfigKeys(),
-            [],
-            `listConfigKeys() is [] when empty`,
+            [...scenario.builtInConfigKeys],
+            `listConfigKeys() only contains built-in config keys`,
         );
         assertEquals(
             await storage.deleteConfig("a"),
@@ -79,8 +79,8 @@ let _runStorageConfigTests = (
         assertEquals(await storage.getConfig("a"), "aa", `getConfig works`);
         assertEquals(
             await storage.listConfigKeys(),
-            ["a", "b"],
-            `listConfigKeys() is ['a', 'b'] (sorted)`,
+            ["a", "b", ...scenario.builtInConfigKeys],
+            `listConfigKeys() is ${["a", "b", ...scenario.builtInConfigKeys]} (sorted)`,
         );
 
         await storage.setConfig("a", "aaa");
@@ -108,8 +108,8 @@ let _runStorageConfigTests = (
         );
         assertEquals(
             await storage.listConfigKeys(),
-            ["b"],
-            `listConfigKeys() is ['b'] after deleting 'a'`,
+            ["b", ...scenario.builtInConfigKeys],
+            `listConfigKeys() is ${["b", ...scenario.builtInConfigKeys]} after deleting 'a'`,
         );
 
         // close without erasing
