@@ -1,37 +1,32 @@
 import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
 import { EarthstarError, StorageIsClosedError, ValidationError } from "../util/errors.ts";
 import { IStorageDriverAsync } from "./storage-types.ts";
+import {
+    CREATE_CONFIG_TABLE_QUERY,
+    CREATE_DOCS_TABLE_QUERY,
+    CREATE_LOCAL_INDEX_INDEX_QUERY,
+    DELETE_CONFIG_QUERY,
+    GET_ENCODING_QUERY,
+    makeDocQuerySql,
+    MAX_LOCAL_INDEX_QUERY,
+    SELECT_CONFIG_CONTENT_QUERY,
+    SELECT_KEY_CONFIG_QUERY,
+    SET_ENCODING_QUERY,
+    StorageSqliteOpts,
+    UPSERT_CONFIG_QUERY,
+    UPSERT_DOC_QUERY,
+} from "./storage-driver-sqlite.shared.ts";
 import { Sqlite } from "../../deps.ts";
 
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-import { bytesToString, isBytes, stringToBytes } from "../util/bytes.ts";
+import { bytesToString, stringToBytes } from "../util/bytes.ts";
 import { Query } from "../query/query-types.ts";
 import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 
 const logger = new Logger("storage driver sqlite node", "yellow");
-
-interface StorageSqliteOptsCreate {
-    mode: "create";
-    workspace: WorkspaceAddress;
-    filename: string; // must not exist
-}
-interface StorageSqliteOptsOpen {
-    mode: "open";
-    workspace: WorkspaceAddress | null;
-    filename: string; // must exist
-}
-interface StorageSqliteOptsCreateOrOpen {
-    mode: "create-or-open";
-    workspace: WorkspaceAddress;
-    filename: string; // may or may not exist
-}
-export type StorageSqliteNodeOpts =
-    | StorageSqliteOptsCreate
-    | StorageSqliteOptsOpen
-    | StorageSqliteOptsCreateOrOpen;
 
 interface ConfigObject extends Sqlite.RowObject {
     key: string;
@@ -90,7 +85,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         return this._isClosed;
     }
 
-    constructor(opts: StorageSqliteNodeOpts) {
+    constructor(opts: StorageSqliteOpts) {
         this._filename = opts.filename;
         this.workspace = "NOT_INITIALIZED";
 
@@ -138,12 +133,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         this._db = new Sqlite.DB(this._filename, { memory: this._filename === ":memory:" });
         this._ensureTables();
 
-        const maxLocalIndexQuery = this._db
-            .prepareQuery<[number]>(
-                `
-                SELECT MAX(localIndex) from docs;
-        `,
-            );
+        const maxLocalIndexQuery = this._db.prepareQuery<[number]>(MAX_LOCAL_INDEX_QUERY);
 
         const [maxLocalIndexFromDb] = maxLocalIndexQuery.one();
         maxLocalIndexQuery.finalize();
@@ -186,7 +176,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
             this.workspace = opts.workspace;
 
             // existing workspace can be undefined (file may not have existed yet)
-            let existingWorkspace = this._getConfigSync("workspace");
+            const existingWorkspace = this._getConfigSync("workspace");
 
             // if there is an existing workspace, it has to match the one given in opts
             if (
@@ -234,22 +224,15 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         if (this._isClosed) {
             throw new StorageIsClosedError();
         }
-        this._db
-            .query(
-                `
-					INSERT OR REPLACE INTO config (key, content) VALUES (:key, :content);
-			`,
-                { key: key, content: content },
-            );
+        this._db.query(UPSERT_CONFIG_QUERY, { key: key, content: content });
 
         return Promise.resolve();
     }
 
     _getConfigSync(key: string): string | undefined {
-        const configQuery = this._db
-            .prepareQuery<Sqlite.Row, ConfigObject>(
-                `SELECT content FROM config WHERE key = :key;`,
-            );
+        const configQuery = this._db.prepareQuery<Sqlite.Row, ConfigObject>(
+            SELECT_CONFIG_CONTENT_QUERY,
+        );
 
         try {
             const row = configQuery.oneEntry({ key });
@@ -268,12 +251,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
     }
 
     _listConfigKeysSync(): string[] {
-        const keysQuery = this._db
-            .prepareQuery<string[]>(
-                `
-					SELECT key FROM config;
-			`,
-            );
+        const keysQuery = this._db.prepareQuery<string[]>(SELECT_KEY_CONFIG_QUERY);
 
         const rows = keysQuery.all();
 
@@ -302,13 +280,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
             throw new StorageIsClosedError();
         }
 
-        this._db
-            .query(
-                `
-					DELETE FROM config WHERE key = :key;
-			`,
-                { key: key },
-            );
+        this._db.query(DELETE_CONFIG_QUERY, { key: key });
 
         return Promise.resolve(this._db.changes > 0);
     }
@@ -340,7 +312,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         }
         const now = Date.now() * 1000;
 
-        const { sql, params } = this._makeDocQuerySql(query, now, "documents");
+        const { sql, params } = makeDocQuerySql(query, now, "documents");
         logger.debug("  sql:", sql);
         logger.debug("  params:", params);
 
@@ -399,14 +371,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
             content: contentAsBytes,
         };
 
-        this._db
-            .query(
-                `
-					INSERT OR REPLACE INTO docs (format, workspace, path, contentHash, content, author, timestamp, deleteAfter, signature, localIndex)
-					VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature, :_localIndex);
-			`,
-                docWithBytes,
-            );
+        this._db.query(UPSERT_DOC_QUERY, docWithBytes);
 
         return Promise.resolve(docWithLocalIndex);
     }
@@ -424,13 +389,8 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         }
 
         // make sure sqlite is using utf-8
-        this._db.query(`
-            PRAGMA encoding = "UTF-8";
-            `);
-
-        const encoding = this._db.query(`
-        PRAGMA encoding;
-        `);
+        this._db.query(SET_ENCODING_QUERY);
+        const encoding = this._db.query(GET_ENCODING_QUERY);
 
         /*
         if (res !== "UTF-8") {
@@ -439,255 +399,12 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
             );
         }*/
 
-        this._db
-            .query(
-                `
-					CREATE TABLE IF NOT EXISTS docs (
-							format TEXT NOT NULL,
-							workspace TEXT NOT NULL,
-							path TEXT NOT NULL,
-							contentHash TEXT NOT NULL,
-							content BLOB NOT NULL,
-							author TEXT NOT NULL,
-							timestamp NUMBER NOT NULL,
-							deleteAfter NUMBER,  -- can be null
-							signature TEXT NOT NULL,
-							localIndex NUMBER NOT NULL UNIQUE,
-							PRIMARY KEY(path, author)
-					);
-			`,
-            );
-
-        this._db
-            .query(`CREATE INDEX IF NOT EXISTS idx1 ON docs(localIndex);`);
+        this._db.query(CREATE_DOCS_TABLE_QUERY);
+        this._db.query(CREATE_LOCAL_INDEX_INDEX_QUERY);
 
         // the config table is used to store these variables:
         //     workspace - the workspace this store was created for
         //     schemaVersion
-        this._db
-            .query(
-                `
-					CREATE TABLE IF NOT EXISTS config (
-							key TEXT NOT NULL PRIMARY KEY,
-							content TEXT NOT NULL
-					);
-			`,
-            );
-    }
-
-    _makeDocQuerySql(
-        query: Query,
-        now: number,
-        mode: "documents" | "delete",
-    ): { sql: string; params: Record<string, any> } {
-        /**
-         * Internal function to make SQL to query for documents or paths,
-         * or delete documents matching a query.
-         *
-         * Assumes query has already been through cleanUpQuery(q).
-         *
-         * If query.history === 'all', we can do an easy query:
-         *
-         * ```
-         *     SELECT * from DOCS
-         *     WHERE path = "/abc"
-         *         AND timestamp > 123
-         *     ORDER BY path ASC, author ASC
-         *     LIMIT 123
-         * ```
-         *
-         * If query.history === 'latest', we have to do something more complicated.
-         * We don't want to filter out some docs, and THEN get the latest REMAINING
-         * docs in each path.
-         * We want to first get the latest doc per path, THEN filter those.
-         *
-         * ```
-         *     SELECT *, MAX(timestamp) from DOCS
-         *     -- first level of filtering happens before we choose the latest doc.
-         *     -- here we can only do things that are the same for all docs in a path.
-         *     WHERE path = "/abc"
-         *     -- now group by path and keep the newest one
-         *     GROUP BY path
-         *     -- finally, second level of filtering happens AFTER we choose the latest doc.
-         *     -- these are things that can differ for docs within a path
-         *     HAVING timestamp > 123
-         *     ORDER BY path ASC, author ASC
-         *     LIMIT 123
-         * ```
-         */
-
-        let select = "";
-        let from = "FROM docs";
-        let wheres: string[] = [];
-        let groupBy = "";
-        let havings: string[] = [];
-        let orderBy = "";
-        let limit = "";
-
-        switch (query.orderBy) {
-            case "path ASC":
-                //   "path ASC" is actually "path ASC then break ties with timestamp DESC"
-                orderBy = "ORDER BY path ASC, timestamp DESC";
-                break;
-            case "path DESC":
-                //   "path DESC" is the reverse of that
-                orderBy = "ORDER BY path DESC, timestamp ASC";
-                break;
-            case "localIndex ASC":
-                orderBy = "ORDER BY localIndex ASC";
-                break;
-            case "localIndex DESC":
-                orderBy = "ORDER BY localIndex DESC";
-                break;
-        }
-
-        const params: Record<string, any> = {};
-        let sql = "";
-
-        if (mode === "documents") {
-            if (query.historyMode === "all") {
-                select = "SELECT *";
-            } else if (query.historyMode === "latest") {
-                // We're going to GROUP BY path and want to get the doc with the highest timestamp.
-                // To break timestamp ties, we'll use the signature.
-                // Because we need to look at multiple columns to choose the winner of the group
-                // we can't just do MAX(timestamp), we have to do this silly thing instead:
-                // TODO: test sorting by signature when timestamp is tied
-                select =
-                    "SELECT *, MIN(CAST(9999999999999999 - timestamp AS TEXT) || signature) AS toSortWithinPath";
-                //select = 'SELECT *, MAX(timestamp) AS toSortWithinPath';
-                groupBy = "GROUP BY path";
-            } else {
-                throw new ValidationError(
-                    `unexpected query.historyMode = ${query.historyMode}`,
-                );
-            }
-        } else if (mode === "delete") {
-            if (query.historyMode === "all") {
-                select = "DELETE";
-            } else {
-                throw new ValidationError(
-                    `query.history must be "all" when doing forgetDocuments`,
-                );
-            }
-        } else {
-            // if (mode === 'paths') {
-
-            throw new Error("unknown mode to _makeDocQuerySql: " + mode);
-            //select = 'SELECT DISTINCT path';
-        }
-
-        // parts of the query that are the same for all docs in a path can go in WHERE.
-
-        if (query.filter?.path !== undefined) {
-            wheres.push("path = :path");
-            params.path = query.filter.path;
-        }
-        // If we have pathStartsWith AND pathEndsWith we would want to optimize them
-        // into a single filter, path LIKE (:startsWith || '%' || :endsWith).
-        // BUT we can't do that because we are allowing the prefix and suffix
-        // to potentially overlap,
-        // leaving no room in the middle for the wildcard to match anything.
-        // So this has to be left as two separate filter clauses.
-        if (query.filter?.pathStartsWith !== undefined) {
-            // Escape existing % and _ in the prefix so they don't count as wildcards for LIKE.
-            // TODO: test this
-            wheres.push("path LIKE (:startsWith || '%') ESCAPE '\\'");
-            params.startsWith = query.filter.pathStartsWith
-                .split("_")
-                .join("\\_")
-                .split("%")
-                .join("\\%");
-        }
-        if (query.filter?.pathEndsWith !== undefined) {
-            // Escape existing % and _ in the suffix so they don't count as wildcards for LIKE.
-            // TODO: test this
-            wheres.push("path LIKE ('%' || :endsWith) ESCAPE '\\'");
-            params.endsWith = query.filter.pathEndsWith
-                .split("_")
-                .join("\\_")
-                .split("%")
-                .join("\\%");
-        }
-
-        // parts of the query that differ across docs in the same path
-        // may have to go in HAVING if we're doing a GROUP BY.
-        if (query.filter?.timestamp !== undefined) {
-            havings.push("timestamp = :timestamp");
-            params.timestamp = query.filter.timestamp;
-        }
-        if (query.filter?.timestampGt !== undefined) {
-            havings.push("timestamp > :timestampGt");
-            params.timestampGt = query.filter.timestampGt;
-        }
-        if (query.filter?.timestampLt !== undefined) {
-            havings.push("timestamp < :timestampLt");
-            params.timestampLt = query.filter.timestampLt;
-        }
-        if (query.filter?.author !== undefined) {
-            havings.push("author = :author");
-            params.author = query.filter.author;
-        }
-        // Sqlite length() counts unicode characters for TEXT and bytes for BLOB.
-        if (query.filter?.contentLength !== undefined) {
-            havings.push("length(content) = :contentLength");
-            params.contentLength = query.filter.contentLength;
-        }
-        if (query.filter?.contentLengthGt !== undefined) {
-            havings.push("length(content) > :contentLengthGt");
-            params.contentLengthGt = query.filter.contentLengthGt;
-        }
-        if (query.filter?.contentLengthLt !== undefined) {
-            havings.push("length(content) < :contentLengthLt");
-            params.contentLengthLt = query.filter.contentLengthLt;
-        }
-
-        if (query.startAfter !== undefined) {
-            if (query.orderBy?.startsWith("path ")) {
-                havings.push("path > :continuePath");
-                params.continuePath = query.startAfter.path;
-            } else if (query.orderBy?.startsWith("localIndex ")) {
-                havings.push("localIndex > :continueLocalIndex");
-                params.continueLocalIndex = query.startAfter.localIndex;
-            }
-        }
-
-        if (query.limit !== undefined && mode !== "delete") {
-            limit = "LIMIT :limit";
-            params.limit = query.limit;
-        }
-
-        // limitBytes is skipped here since it can't be expressed in SQL.
-        // it's applied after the query is run, and only for docs (not paths).
-
-        // filter out expired docs.
-        // to pretend they don't exist at all, we use WHERE instead of HAVING.
-        // otherwise they might end up as a latest doc of a group,
-        // and then disqualify that group.
-        wheres.push("(deleteAfter IS NULL OR :now <= deleteAfter)");
-        params.now = now;
-
-        // assemble the final sql
-
-        // in 'all' mode, we don't need to use HAVING, we can do all the filters as WHERE.
-        if (query.historyMode === "all") {
-            wheres = wheres.concat(havings);
-            havings = [];
-        }
-
-        const allWheres = wheres.length === 0 ? "" : "WHERE " + wheres.join("\n  AND ");
-        const allHavings = havings.length === 0 ? "" : "HAVING " + havings.join("\n  AND ");
-
-        sql = `
-					${select}
-					${from}
-					${allWheres}
-					${groupBy}
-					${allHavings}
-					${orderBy}
-					${limit};
-			`;
-
-        return { sql, params };
+        this._db.query(CREATE_CONFIG_TABLE_QUERY);
     }
 }
