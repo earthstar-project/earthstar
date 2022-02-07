@@ -1,6 +1,9 @@
+import { Peer } from "../peer/peer.ts";
 import { WorkspaceAddress } from "../util/doc-types.ts";
 import { ICryptoDriver } from "../crypto/crypto-types.ts";
 import { IStorageDriverAsync } from "../storage/storage-types.ts";
+import { SyncerBag } from "../syncer/_syncer-bag.ts";
+import { Rpc } from "../../deps.ts";
 
 export interface TestScenario {
     // name of test, to show in list of tests
@@ -20,4 +23,14 @@ export interface TestScenario {
 export interface CryptoScenario {
     name: string;
     driver: ICryptoDriver;
+}
+
+export interface TransportScenario {
+    name: string;
+    clientPeer: Peer;
+    targetPeer: Peer;
+    clientTransport: Rpc.ITransport<SyncerBag>;
+    targetTransport: Rpc.ITransport<SyncerBag>;
+    connect: () => Promise<void>;
+    teardown: () => Promise<void>;
 }

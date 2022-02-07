@@ -1,6 +1,6 @@
 import { FakeTime } from "https://deno.land/x/mock@0.12.2/mod.ts";
 import { assert, assertEquals } from "../asserts.ts";
-import { TransportLocal } from "../../../deps.ts";
+import { Rpc } from "../../../deps.ts";
 import { Peer } from "../../peer/peer.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
@@ -76,13 +76,13 @@ Deno.test("SyncCoordinator", async () => {
 
     // Set up a coordinator with the two peers
 
-    const localTransport = new TransportLocal({
+    const localTransport = new Rpc.TransportLocal({
         deviceId: peer.peerId,
         description: `Local:${peer.peerId}`,
         methods: makeSyncerBag(peer),
     });
 
-    const targetTransport = new TransportLocal({
+    const targetTransport = new Rpc.TransportLocal({
         deviceId: targetPeer.peerId,
         description: `Local:${targetPeer.peerId}`,
         methods: makeSyncerBag(targetPeer),

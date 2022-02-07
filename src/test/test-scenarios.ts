@@ -10,6 +10,9 @@ import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory
 import { StorageDriverLocalStorage } from "../storage/storage-driver-local-storage.ts";
 import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
 
+// specific transports
+import { TransportScenarioLocal } from "./transport-scenarios.ts";
+
 // test types
 import { CryptoScenario, TestScenario } from "./test-scenario-types.ts";
 
@@ -62,6 +65,13 @@ const nodeCryptoScenarios: CryptoScenario[] = [
         name: "CryptoDriverChloride",
         driver: CryptoDriverChloride,
     },
+];
+
+// ----------------------------------------------------------
+// Transport scenarios, grouped by platform
+
+const universalTransportScenarios = [
+    TransportScenarioLocal,
 ];
 
 // ----------------------------------------------------------
@@ -124,7 +134,18 @@ function getCryptoScenarios() {
     return [...universalCryptoScenarios];
 }
 
+function getTransportScenarios() {
+    if (isDeno) {
+        //
+    } else if (isNode) {
+        //
+    }
+
+    return [...universalTransportScenarios];
+}
+
 //================================================================================
 
 export const testScenarios: TestScenario[] = getScenarios();
 export const testCryptoScenarios: CryptoScenario[] = getCryptoScenarios();
+export const testTransportScenarios = getTransportScenarios();
