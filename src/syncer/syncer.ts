@@ -22,10 +22,10 @@ export class Syncer<TransportType extends Rpc.ITransport<SyncerBag>> {
 
         this.transport = makeTransport(makeSyncerBag(peer));
 
-        this.transport.connections.onAdd(async (connection) => {
+        this.transport.connections.onAdd((connection) => {
             const coordinator = new SyncCoordinator(this._peer, connection);
-            await coordinator.start();
-            this._coordinators.set(connection.description, coordinator);
+            this._coordinators.set(connection._deviceId, coordinator);
+            coordinator.start();
         });
 
         this.transport.connections.onDelete((connection) => {

@@ -97,7 +97,6 @@ Deno.test("SyncCoordinator", async () => {
     await coordinator.start();
 
     assertEquals(coordinator.commonWorkspaces, [ADDRESS_A, ADDRESS_D]);
-    assertEquals(coordinator.partnerPeerId, targetPeer.peerId);
     assert(await storageHasAllStoragesDocs(storageA1, storageA2));
     assert(await storageHasAllStoragesDocs(storageD1, storageD2));
 

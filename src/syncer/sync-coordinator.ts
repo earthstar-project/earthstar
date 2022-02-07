@@ -14,7 +14,6 @@ export class SyncCoordinator {
 
     commonWorkspaces: WorkspaceAddress[] = [];
     partnerLastSeenAt: number | null = null;
-    partnerPeerId: string | null = null;
 
     state: "ready" | "active" | "closed" = "ready";
 
@@ -32,14 +31,11 @@ export class SyncCoordinator {
         // Perform salty handshake
         const saltedHandshakeRes = await this._connection.request("serveSaltedHandshake");
 
-        const { commonWorkspaces, partnerLastSeenAt, partnerPeerId } = await this._syncerBag
+        const { commonWorkspaces, partnerLastSeenAt } = await this._syncerBag
             .processSaltedHandshake(saltedHandshakeRes);
 
         this.commonWorkspaces = commonWorkspaces;
         this.partnerLastSeenAt = partnerLastSeenAt;
-        this.partnerPeerId = partnerPeerId;
-
-        this._connection._otherDeviceId = partnerPeerId;
 
         // Get the workspace states from the partner
         await this._getWorkspaceStates();
@@ -60,7 +56,7 @@ export class SyncCoordinator {
                 });
 
             initialPulls.push(pull());
-            const interval = setInterval(pull, 5000);
+            const interval = setInterval(pull, 1000);
             this._pullIntervals.push(interval);
         }
 
@@ -81,7 +77,7 @@ export class SyncCoordinator {
             workspaceStatesRequest,
         );
 
-        const { lastSeenAt, partnerPeerId, workspaceStates } = this._syncerBag
+        const { lastSeenAt, workspaceStates } = this._syncerBag
             .processAllWorkspaceStates(
                 this._workspaceStates,
                 workspaceStatesRequest,
@@ -89,10 +85,8 @@ export class SyncCoordinator {
             );
 
         this.partnerLastSeenAt = lastSeenAt;
-        this.partnerPeerId = partnerPeerId;
-        this._workspaceStates = workspaceStates;
 
-        this._connection._otherDeviceId = partnerPeerId;
+        this._workspaceStates = workspaceStates;
     }
 
     async _pullDocs(workspaceQuery: WorkspaceQueryRequest): Promise<number> {
