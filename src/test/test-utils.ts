@@ -1,7 +1,8 @@
 import { assert } from "./asserts.ts";
 import { StorageAsync } from "../storage/storage-async.ts";
-import { Doc } from "../util/doc-types.ts";
-import { deepEqual } from "../util/misc.ts";
+import { AuthorKeypair, Doc } from "../util/doc-types.ts";
+import { deepEqual, randomId } from "../util/misc.ts";
+import { isErr } from "../util/errors.ts";
 import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
 
@@ -51,6 +52,29 @@ export function docsAreEquivalent(docsA: Doc[], docsB: Doc[]) {
     const bStripped = docsB.map(stripLocalIndexFromDoc);
 
     return deepEqual(aStripped, bStripped);
+}
+
+export function writeRandomDocs(
+    keypair: AuthorKeypair,
+    storage: StorageAsync,
+    n: number,
+): Promise<void[]> {
+    const setPromises = Array.from({ length: n }, () => {
+        return new Promise<void>((resolve, reject) => {
+            storage.set(keypair, {
+                content: `${randomId()}`,
+                path: `/${randomId()}/${randomId()}.txt`,
+                format: "es.4",
+            }).then((result) => {
+                if (isErr(result)) {
+                    reject(result);
+                }
+                resolve();
+            });
+        });
+    });
+
+    return Promise.all(setPromises);
 }
 
 export async function storagesAreSynced(storages: StorageAsync[]): Promise<boolean> {

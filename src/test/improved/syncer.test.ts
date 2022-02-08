@@ -2,7 +2,7 @@ import { assert } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Peer } from "../../peer/peer.ts";
-import { makeNStorages, storagesAreSynced } from "../test-utils.ts";
+import { makeNStorages, storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
 import { testTransportScenarios } from "../test-scenarios.ts";
 import { TransportTestHelper } from "../test-scenario-types.ts";
 import { Syncer } from "../../syncer/syncer.ts";
@@ -26,6 +26,7 @@ function testSyncer(
     Deno.test({
         name: `Syncer + ${name}`,
         fn: async () => {
+            // Set up Peers and storages
             const peer = new Peer();
             const targetPeer = new Peer();
 
@@ -35,30 +36,29 @@ function testSyncer(
 
             const [storage, targetStorage] = makeNStorages(ADDRESS, 2);
 
-            // Storage A docs
-
-            await storage.set(keypairA, {
-                path: "/apples/colours.txt",
-                content: "Green, red, yellow",
-                format: "es.4",
-            });
-
-            await targetStorage.set(keypairB, {
-                path: "/apples/tastes.txt",
-                content: "Sweet, tart, sour",
-                format: "es.4",
-            });
-
             scenario.clientPeer.addStorage(storage);
             scenario.targetPeer.addStorage(targetStorage);
 
+            // Write random docs to each storage
+            await writeRandomDocs(keypairA, storage, 10);
+            await writeRandomDocs(keypairB, targetStorage, 10);
+
+            // Create Syncers
             const syncer = new Syncer(scenario.clientPeer, () => scenario.clientTransport);
             const otherSyncer = new Syncer(scenario.targetPeer, () => scenario.targetTransport);
 
             await scenario.connect();
 
+            // Check if everything synced
             await sleep(100);
+            assert(await storagesAreSynced([storage, targetStorage]));
 
+            // Write some more random docs
+            await writeRandomDocs(keypairB, storage, 10);
+            await writeRandomDocs(keypairA, targetStorage, 10);
+
+            // Check if everything synced again
+            await sleep(1000);
             assert(await storagesAreSynced([storage, targetStorage]));
 
             syncer.close();

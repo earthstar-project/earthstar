@@ -140,7 +140,7 @@ class TransportHelperHttpOpine implements TransportTestHelper {
 
         this._server.close();
 
-        return sleep(10);
+        return sleep(100);
     }
 }
 
