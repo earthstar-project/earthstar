@@ -4,7 +4,7 @@ import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Peer } from "../../peer/peer.ts";
 import { makeNStorages, storagesAreSynced } from "../test-utils.ts";
 import { testTransportScenarios } from "../test-scenarios.ts";
-import { TransportScenario } from "../test-scenario-types.ts";
+import { TransportTestHelper } from "../test-scenario-types.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { sleep } from "../../util/misc.ts";
 
@@ -21,7 +21,7 @@ for await (const makeScenario of testTransportScenarios) {
 }
 
 function testSyncer(
-    { name, make }: { name: string; make: (peer: Peer, targetPeer: Peer) => TransportScenario },
+    { name, make }: { name: string; make: (peer: Peer, targetPeer: Peer) => TransportTestHelper },
 ) {
     Deno.test({
         name: `Syncer + ${name}`,

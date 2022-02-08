@@ -25,7 +25,7 @@ export interface CryptoScenario {
     driver: ICryptoDriver;
 }
 
-export interface TransportScenario {
+export interface TransportTestHelper {
     name: string;
     clientPeer: Peer;
     targetPeer: Peer;
@@ -33,4 +33,9 @@ export interface TransportScenario {
     targetTransport: Rpc.ITransport<SyncerBag>;
     connect: () => Promise<void>;
     teardown: () => Promise<void>;
+}
+
+export interface TransportScenario {
+    name: string;
+    make: (peer: Peer, targetPeer: Peer) => TransportTestHelper;
 }
