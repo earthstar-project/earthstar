@@ -11,7 +11,11 @@ import { StorageDriverLocalStorage } from "../storage/storage-driver-local-stora
 import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
 
 // specific transports
-import { transportScenarioHttp, transportScenarioLocal } from "./transport-scenarios.ts";
+import {
+    transportScenarioHttp,
+    transportScenarioHttpOpine,
+    transportScenarioLocal,
+} from "./transport-scenarios.ts";
 
 // test types
 import { CryptoScenario, TestScenario, TransportScenario } from "./test-scenario-types.ts";
@@ -76,6 +80,7 @@ const universalTransportScenarios: TransportScenario[] = [
 
 const denoTransportScenarios: TransportScenario[] = [
     transportScenarioHttp,
+    transportScenarioHttpOpine,
 ];
 
 // ----------------------------------------------------------
