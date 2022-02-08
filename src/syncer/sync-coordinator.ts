@@ -2,7 +2,7 @@ import { Rpc } from "../../deps.ts";
 import { Peer } from "../peer/peer.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
 import { WorkspaceAddress } from "../util/doc-types.ts";
-import { WorkspaceQueryRequest, WorkspaceState } from "./sync-types.ts";
+import { WorkspaceQueryRequest, WorkspaceState } from "./syncer-types.ts";
 
 /** Orchestrates different requests in order to syncrhronise a Peer using a connection */
 export class SyncCoordinator {
