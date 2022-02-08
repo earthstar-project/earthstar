@@ -20,14 +20,16 @@ for await (const makeScenario of testTransportScenarios) {
     testSyncer(makeScenario);
 }
 
-function testSyncer(maker: (peer: Peer, targetPeer: Peer) => TransportScenario) {
+function testSyncer(
+    { name, make }: { name: string; make: (peer: Peer, targetPeer: Peer) => TransportScenario },
+) {
     Deno.test({
-        name: `Syncer`,
+        name: `Syncer + ${name}`,
         fn: async () => {
             const peer = new Peer();
             const targetPeer = new Peer();
 
-            const scenario = maker(peer, targetPeer);
+            const scenario = make(peer, targetPeer);
 
             const ADDRESS = "+apples.a123";
 

@@ -11,10 +11,10 @@ import { StorageDriverLocalStorage } from "../storage/storage-driver-local-stora
 import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
 
 // specific transports
-import { makeTransportScenarioHttp, makeTransportScenarioLocal } from "./transport-scenarios.ts";
+import { transportScenarioHttp, transportScenarioLocal } from "./transport-scenarios.ts";
 
 // test types
-import { CryptoScenario, TestScenario, TransportScenario } from "./test-scenario-types.ts";
+import { CryptoScenario, TestScenario } from "./test-scenario-types.ts";
 
 // A version of test scenario without crypto specified yet.
 type JustStorageScenario = Omit<TestScenario, "cryptoDriver">;
@@ -71,11 +71,11 @@ const nodeCryptoScenarios: CryptoScenario[] = [
 // Transport scenarios, grouped by platform
 
 const universalTransportScenarios = [
-    makeTransportScenarioLocal,
+    transportScenarioLocal,
 ];
 
 const denoTransportScenarios = [
-    makeTransportScenarioHttp,
+    transportScenarioHttp,
 ];
 
 // ----------------------------------------------------------
