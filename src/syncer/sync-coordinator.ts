@@ -10,7 +10,7 @@ export class SyncCoordinator {
     _syncerBag: SyncerBag;
     _workspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
     // TODO: Soon we'll have streams, not polling.
-    _pullIntervals: Array<number> = [];
+    _pullIntervals: Map<string, number> = new Map();
 
     commonWorkspaces: WorkspaceAddress[] = [];
     partnerLastSeenAt: number | null = null;
@@ -56,8 +56,9 @@ export class SyncCoordinator {
                 });
 
             initialPulls.push(pull());
+
             const interval = setInterval(pull, 1000);
-            this._pullIntervals.push(interval);
+            this._pullIntervals.set(key, interval);
         }
 
         this._connection.onClose(() => {
@@ -104,9 +105,9 @@ export class SyncCoordinator {
     }
 
     close() {
-        for (const interval of this._pullIntervals) {
+        this._pullIntervals.forEach((interval) => {
             clearInterval(interval);
-        }
+        });
 
         this.state = "closed";
     }

@@ -5,6 +5,10 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { StorageAsync } from "../../storage/storage-async.ts";
 import { sleep } from "../../util/misc.ts";
+import { serve } from "https://deno.land/std@0.123.0/http/server.ts";
+import { Rpc } from "../../../deps.ts";
+import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
+import { Syncer } from "../../syncer/syncer.ts";
 
 /*
 Two scenarios:
@@ -34,10 +38,10 @@ interface PeerSyncScenario {
     close(): Promise<void>;
 }
 
-const localPeerScenario: { _peer2: Peer; _peer3: Peer } & PeerSyncScenario = {
-    name: "Local peers",
-    _peer2: new Peer(),
-    _peer3: new Peer(),
+class LocalPeerScenario implements PeerSyncScenario {
+    name = "Local peers";
+    _peer2 = new Peer();
+    _peer3 = new Peer();
     setUpTargetPeers(
         aStorages: StorageAsync[],
         bStorages: StorageAsync[],
@@ -56,33 +60,143 @@ const localPeerScenario: { _peer2: Peer; _peer3: Peer } & PeerSyncScenario = {
         this._peer3.addStorage(storageC3);
 
         return Promise.resolve([this._peer2, this._peer3]);
-    },
+    }
     addNonSyncingStorages(
         dStorages: StorageAsync[],
     ) {
         const [, storageD2, storageD3] = dStorages;
         this._peer2.addStorage(storageD2);
         this._peer3.addStorage(storageD3);
-    },
+    }
 
-    close() {
-        this._peer2.storages().forEach((storage) => {
-            this._peer2.removeStorage(storage);
+    async close() {
+        const removers2 = this._peer2.storages().map((storage) =>
+            () => {
+                this._peer2.removeStorage(storage);
+            }
+        );
+        const removers3 = this._peer3.storages().map((storage) =>
+            () => {
+                this._peer3.removeStorage(storage);
+            }
+        );
+
+        await Promise.all([...removers2, ...removers3]);
+    }
+}
+
+class HttpPeerScenario implements PeerSyncScenario {
+    name = "Peers over HTTP";
+    _peer2 = new Peer();
+    _transport2: Rpc.TransportHttpServer<SyncerBag>;
+    _controller2: AbortController;
+    _serverPromise2: Promise<void> | null = null;
+    _syncer2: Syncer<Rpc.TransportHttpServer<SyncerBag>>;
+
+    _peer3 = new Peer();
+    _transport3: Rpc.TransportHttpServer<SyncerBag>;
+    _controller3: AbortController;
+    _serverPromise3: Promise<void> | null = null;
+    _syncer3: Syncer<Rpc.TransportHttpServer<SyncerBag>>;
+
+    constructor() {
+        this._transport2 = new Rpc.TransportHttpServer({
+            deviceId: this._peer2.peerId,
+            methods: makeSyncerBag(this._peer2),
         });
-        this._peer3.storages().forEach((storage) => {
-            this._peer3.removeStorage(storage);
+
+        this._transport3 = new Rpc.TransportHttpServer({
+            deviceId: this._peer3.peerId,
+            methods: makeSyncerBag(this._peer3),
         });
-        return Promise.resolve();
+
+        this._controller2 = new AbortController();
+        this._controller3 = new AbortController();
+
+        this._syncer2 = new Syncer(this._peer2, () => this._transport2);
+        this._syncer3 = new Syncer(this._peer3, () => this._transport3);
+    }
+
+    setUpTargetPeers(
+        aStorages: StorageAsync[],
+        bStorages: StorageAsync[],
+        cStorages: StorageAsync[],
+    ) {
+        const [, storageA2, storageA3] = aStorages;
+        const [, storageB2, storageB3] = bStorages;
+        const [, storageC2, storageC3] = cStorages;
+
+        this._peer2.addStorage(storageA2);
+        this._peer2.addStorage(storageB2);
+        this._peer2.addStorage(storageC2);
+
+        this._peer3.addStorage(storageA3);
+        this._peer3.addStorage(storageB3);
+        this._peer3.addStorage(storageC3);
+
+        this._serverPromise2 = serve(
+            (req) => {
+                const res = this._transport2.handler(req);
+
+                return res;
+            },
+            { hostname: "0.0.0.0", port: 9091, signal: this._controller2.signal },
+        );
+
+        this._serverPromise3 = serve(
+            this._transport3.handler,
+            { hostname: "0.0.0.0", port: 9092, signal: this._controller3.signal },
+        );
+
+        return Promise.resolve(["http://localhost:9091", "http://localhost:9092"]);
+    }
+
+    addNonSyncingStorages(
+        dStorages: StorageAsync[],
+    ) {
+        const [, storageD2, storageD3] = dStorages;
+        this._peer2.addStorage(storageD2);
+        this._peer3.addStorage(storageD3);
+    }
+
+    async close() {
+        const removers2 = this._peer2.storages().map((storage) =>
+            () => {
+                this._peer2.removeStorage(storage);
+            }
+        );
+        const removers3 = this._peer3.storages().map((storage) =>
+            () => {
+                this._peer3.removeStorage(storage);
+            }
+        );
+
+        await Promise.all([...removers2, ...removers3]);
+
+        this._syncer2.close();
+        this._syncer3.close();
+
+        this._controller2.abort();
+        this._controller3.abort();
+
+        await this._serverPromise2;
+        await this._serverPromise3;
+    }
+}
+
+const syncScenarios = [
+    { name: "Local Peers", make: () => new LocalPeerScenario() },
+    {
+        name: "HTTP Peers",
+        make: () => new HttpPeerScenario(),
     },
-};
+];
 
-const syncScenarios = [localPeerScenario];
-
-async function testSyncScenario(opts: {
-    scenario: PeerSyncScenario;
-    test: Deno.TestContext;
-}) {
-    await opts.test.step(`Peer.sync, Peer.stopSync + ${opts.scenario.name}`, async () => {
+async function testSyncScenario(
+    scenario: { name: string; make: () => PeerSyncScenario },
+    test: Deno.TestContext,
+) {
+    await test.step(`Peer.sync, Peer.stopSync + ${scenario.name}`, async () => {
         const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 
         const ADDRESS_A = "+apples.a123";
@@ -111,8 +225,10 @@ async function testSyncScenario(opts: {
         peer.addStorage(storageB1);
         peer.addStorage(storageC1);
 
+        const helper = scenario.make();
+
         // Create peers to sync with
-        const syncables = await opts.scenario.setUpTargetPeers(
+        const syncables = await helper.setUpTargetPeers(
             storagesATriplet,
             storagesBTriplet,
             storagesCTriplet,
@@ -147,7 +263,7 @@ async function testSyncScenario(opts: {
         const [storagesD1] = storagesDTriplet;
         peer.addStorage(storagesD1);
 
-        opts.scenario.addNonSyncingStorages(storagesDTriplet);
+        helper.addNonSyncingStorages(storagesDTriplet);
 
         // Wait a sec
 
@@ -159,7 +275,7 @@ async function testSyncScenario(opts: {
         // Wrap up.
 
         peer.stopSyncing();
-        await opts.scenario.close();
+        await helper.close();
         const storageClosers = [
             ...storagesATriplet,
             ...storagesBTriplet,
@@ -173,9 +289,9 @@ async function testSyncScenario(opts: {
 
 Deno.test("Peer sync helper", async (test) => {
     for (const scenario of syncScenarios) {
-        await testSyncScenario({
+        await testSyncScenario(
             scenario,
             test,
-        });
+        );
     }
 });

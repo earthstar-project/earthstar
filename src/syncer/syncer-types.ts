@@ -2,7 +2,7 @@ import { PeerId } from "../peer/peer-types.ts";
 import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
 import { StorageId } from "../storage/storage-types.ts";
 import { Query } from "../query/query-types.ts";
-import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
+import { SyncerBag } from "./_syncer-bag.ts";
 import { Rpc } from "../../deps.ts";
 
 export interface ISyncer<TransportType extends Rpc.ITransport<SyncerBag>> {

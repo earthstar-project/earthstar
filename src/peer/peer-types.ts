@@ -1,8 +1,5 @@
 import { WorkspaceAddress } from "../util/doc-types.ts";
 import { IStorageAsync } from "../storage/storage-types.ts";
-import { ISyncer } from "../syncer/syncer-types.ts";
-import { SyncerBag } from "../syncer/_syncer-bag.ts";
-import { Rpc } from "../../deps.ts";
 
 //================================================================================
 // PEER
