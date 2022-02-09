@@ -29,4 +29,6 @@ export interface IPeer {
     sync(
         target: IPeer | string,
     ): () => void;
+
+    stopSyncing(): void;
 }

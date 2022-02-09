@@ -80,6 +80,7 @@ export function writeRandomDocs(
 export async function storagesAreSynced(storages: StorageAsync[]): Promise<boolean> {
     const allDocsSets: Doc[][] = [];
 
+    // Create an array where each element is a collection of all the docs from a storage.
     for await (const storage of storages) {
         const allDocs = await storage.getAllDocs();
 
@@ -91,9 +92,14 @@ export async function storagesAreSynced(storages: StorageAsync[]): Promise<boole
             return isSynced;
         }
 
+        // Get the set of docs from the previous element.
         const prevDocs = allDocsSets[i - 1];
 
-        return docsAreEquivalent(prevDocs, docs);
+        const strippedDocs = docs.map(stripLocalIndexFromDoc);
+        const strippedPrevDocs = prevDocs.map(stripLocalIndexFromDoc);
+
+        // See if they're equivalent with the current set.
+        return docsAreEquivalent(strippedPrevDocs, strippedDocs);
     }, false);
 }
 

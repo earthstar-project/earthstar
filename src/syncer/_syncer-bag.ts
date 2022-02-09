@@ -14,7 +14,7 @@ import {
     WorkspaceQueryResult,
     WorkspaceState,
     WorkspaceStateFromResponse,
-} from "./sync-types.ts";
+} from "./syncer-types.ts";
 
 function saltAndHashWorkspace(
     salt: string,
