@@ -12,8 +12,8 @@ export * from "../crypto/keypair.ts";
 export * from "../format-validators/format-validator-es4.ts";
 export * from "../format-validators/format-validator-types.ts";
 
-export * from "../peer/peer-client.ts";
-export * from "../peer/peer-server.ts";
+export * from "../syncer/syncer.ts";
+
 export * from "../peer/peer-types.ts";
 export * from "../peer/peer.ts";
 
