@@ -44,16 +44,22 @@ export class SyncCoordinator {
 
         // Use that to set up regular polls
         for (const key in this._workspaceStates) {
-            const state = this._workspaceStates[key];
+            const pull = () => {
+                const state = this._workspaceStates[key];
 
-            const pull = () =>
                 this._pullDocs({
                     // Eventually we'll do smart stuff with localIndex.
                     // For now just ask for EVERYTHING, EVERY TIME.
-                    query: {},
+                    query: {
+                        orderBy: "localIndex ASC",
+                        startAfter: {
+                            localIndex: state.partnerMaxLocalIndexSoFar,
+                        },
+                    },
                     storageId: state.partnerStorageId,
                     workspace: state.workspace,
                 });
+            };
 
             initialPulls.push(pull());
 

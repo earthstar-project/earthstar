@@ -95,9 +95,17 @@ Deno.test("SyncCoordinator", async () => {
 
     await coordinator.start();
 
+    await sleep(100);
+
     assertEquals(coordinator.commonWorkspaces, [ADDRESS_A, ADDRESS_D]);
-    assert(await storageHasAllStoragesDocs(storageA1, storageA2));
-    assert(await storageHasAllStoragesDocs(storageD1, storageD2));
+    assert(
+        await storageHasAllStoragesDocs(storageA1, storageA2),
+        `${ADDRESS_A} storages are synced.`,
+    );
+    assert(
+        await storageHasAllStoragesDocs(storageD1, storageD2),
+        `${ADDRESS_D} storages are synced.`,
+    );
 
     // How can I check if timers were set up...
 
@@ -111,7 +119,10 @@ Deno.test("SyncCoordinator", async () => {
     await sleep(3000);
     // Have to do this. Thought the fake time thing would take care of it.
     await sleep(0);
-    assert(await storageHasAllStoragesDocs(storageA1, storageA2));
+    assert(
+        await storageHasAllStoragesDocs(storageA1, storageA2),
+        `${ADDRESS_A} storages are synced (again).`,
+    );
 
     // Close up
 

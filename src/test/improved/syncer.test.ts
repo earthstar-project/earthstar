@@ -51,7 +51,7 @@ function testSyncer(
 
             // Check if everything synced
             await sleep(100);
-            assert(await storagesAreSynced([storage, targetStorage]));
+            assert(await storagesAreSynced([storage, targetStorage]), "storages synced");
 
             // Write some more random docs
             await writeRandomDocs(keypairB, storage, 10);
@@ -59,7 +59,7 @@ function testSyncer(
 
             // Check if everything synced again
             await sleep(1000);
-            assert(await storagesAreSynced([storage, targetStorage]));
+            assert(await storagesAreSynced([storage, targetStorage]), "storages synced (again)");
 
             syncer.close();
             otherSyncer.close();
