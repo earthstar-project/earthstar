@@ -1,7 +1,7 @@
 import { Peer } from "../peer/peer.ts";
 import { WorkspaceAddress } from "../util/doc-types.ts";
 import { ICryptoDriver } from "../crypto/crypto-types.ts";
-import { IStorageDriverAsync } from "../storage/storage-types.ts";
+import { IStorageAsync, IStorageDriverAsync } from "../storage/storage-types.ts";
 import { SyncerBag } from "../syncer/_syncer-bag.ts";
 import { Rpc } from "../../deps.ts";
 
@@ -38,4 +38,24 @@ export interface TransportTestHelper {
 export interface TransportScenario {
     name: string;
     make: (peer: Peer, targetPeer: Peer) => TransportTestHelper;
+}
+
+export type Syncable = Peer | string;
+
+export interface PeerSyncHelper {
+    name: string;
+    setUpTargetPeers(
+        aStorages: IStorageAsync[],
+        bStorages: IStorageAsync[],
+        cStorages: IStorageAsync[],
+    ): Promise<Syncable[]>;
+    addNonSyncingStorages(
+        dStorages: IStorageAsync[],
+    ): void;
+    close(): Promise<void>;
+}
+
+export interface PeerSyncScenario {
+    name: string;
+    make: () => PeerSyncHelper;
 }

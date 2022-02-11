@@ -299,6 +299,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
             "> queryFollowerDidClose",
             "-end",
         ];
+
         assertEquals(logs, expectedLogs, "logs match");
 
         assertEquals(

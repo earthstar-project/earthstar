@@ -1,48 +1,11 @@
-import { TransportScenario, TransportTestHelper } from "./test-scenario-types.ts";
-import { Peer } from "../peer/peer.ts";
-import { Rpc } from "../../deps.ts";
-import { makeSyncerBag, SyncerBag } from "../syncer/_syncer-bag.ts";
-import { serve } from "https://deno.land/std@0.123.0/http/server.ts";
-import { Opine, opine } from "https://deno.land/x/opine@2.1.1/mod.ts";
-import { sleep } from "../util/misc.ts";
+import { type Opine, opine, serve } from "../test-deps.ts";
 
-class TransportHelperLocal implements TransportTestHelper {
-    name = "TransportLocal";
-    clientPeer: Peer;
-    targetPeer: Peer;
-    clientTransport: Rpc.TransportLocal<SyncerBag>;
-    targetTransport: Rpc.TransportLocal<SyncerBag>;
-
-    constructor(peer: Peer, targetPeer: Peer) {
-        this.clientPeer = peer;
-        this.targetPeer = targetPeer;
-
-        this.clientTransport = new Rpc.TransportLocal({
-            deviceId: peer.peerId,
-            description: `Local:${peer.peerId}`,
-            methods: makeSyncerBag(peer),
-        });
-
-        this.targetTransport = new Rpc.TransportLocal({
-            deviceId: peer.peerId,
-            description: `Local:${targetPeer.peerId}`,
-            methods: makeSyncerBag(targetPeer),
-        });
-    }
-
-    connect() {
-        this.clientTransport.addConnection(this.targetTransport);
-
-        return Promise.resolve();
-    }
-
-    teardown() {
-        this.clientTransport.close();
-        this.targetTransport.close();
-
-        return Promise.resolve();
-    }
-}
+import { TransportScenario, TransportTestHelper } from "../test-scenario-types.ts";
+import { Peer } from "../../peer/peer.ts";
+import { Rpc } from "../../../deps.ts";
+import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
+import { sleep } from "../../util/misc.ts";
+import { transportScenarioLocal } from "./transport-scenarios.universal.ts";
 
 class TransportHelperHttp implements TransportTestHelper {
     name = "TransportHttpClient + TransportHttpServer";
@@ -144,23 +107,22 @@ class TransportHelperHttpOpine implements TransportTestHelper {
     }
 }
 
-export const transportScenarioLocal: TransportScenario = {
-    name: "TransportLocal",
-    make: function (peer: Peer, targetPeer: Peer): TransportTestHelper {
-        return new TransportHelperLocal(peer, targetPeer);
-    },
-};
-
-export const transportScenarioHttp: TransportScenario = {
+const transportScenarioHttp: TransportScenario = {
     name: "TransportHttpClient + TransportHttpServer",
     make: function (peer: Peer, targetPeer: Peer): TransportTestHelper {
         return new TransportHelperHttp(peer, targetPeer);
     },
 };
 
-export const transportScenarioHttpOpine: TransportScenario = {
+const transportScenarioHttpOpine: TransportScenario = {
     name: "TransportHttpClient + TransportHttpServerOpine",
     make: function (peer: Peer, targetPeer: Peer): TransportTestHelper {
         return new TransportHelperHttpOpine(peer, targetPeer);
     },
 };
+
+export default [
+    transportScenarioLocal,
+    transportScenarioHttp,
+    transportScenarioHttpOpine,
+];

@@ -15,6 +15,10 @@ import { testScenarios } from "../test-scenarios.ts";
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
 
+// TestContext type not exported to DNT test shims yet: https://github.com/denoland/node_deno_shims/issues/85
+type TestFn = Parameters<typeof Deno.test>["1"];
+type TestContext = Parameters<TestFn>["0"];
+
 import {
     _matchAll,
     escapeStringForRegex,
@@ -27,8 +31,7 @@ import {
     queryByTemplateAsync,
 } from "../../query/query-helpers.ts";
 
-let runQueryHelpersTests = async (scenario: TestScenario) => {
-    let TEST_NAME = "Query Helpers tests";
+let runQueryHelpersTests = async (scenario: TestScenario, test: TestContext) => {
     let SUBTEST_NAME = scenario.name;
 
     function makeStorage(ws: WorkspaceAddress): IStorageAsync {
@@ -36,14 +39,12 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
         return new StorageAsync(ws, FormatValidatorEs4, driver);
     }
 
-    let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
-
     let logger = new Logger("query helpers test", "yellowBright");
 
     //================================================================================
     // HELPERS
 
-    Deno.test(SUBTEST_NAME + ": escapeStringForRegex", () => {
+    await test.step(SUBTEST_NAME + ": escapeStringForRegex", () => {
         let specialChars = ".*+?^${}()|[]" + "\\";
         let normalChars = '`~!@#%&_-=;:",<>/abcABC123' + "'";
 
@@ -78,7 +79,7 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
         }
     });
 
-    Deno.test(SUBTEST_NAME + ":_matchAll", () => {
+    await test.step(SUBTEST_NAME + ":_matchAll", () => {
         let gMatches = _matchAll(new RegExp(/\d/g), "123");
         let gMatchStrings = gMatches.map((m) => m[0]);
 
@@ -96,7 +97,7 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
     //================================================================================
     // GLOBS
 
-    Deno.test(SUBTEST_NAME + ": globToQueryAndRegex", () => {
+    await test.step(SUBTEST_NAME + ": globToQueryAndRegex", () => {
         interface Vector {
             note?: string;
             glob: string;
@@ -412,10 +413,11 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
         },
     ];
 
-    Deno.test(SUBTEST_NAME + ": queryByGlobAsync", async () => {
+    await test.step(SUBTEST_NAME + ": queryByGlobAsync", async () => {
         let workspace = "+gardening.abcde";
         let storage = makeStorage(workspace);
         let now = microsecondNow();
+        let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 
         for (let path of docPathsForGlobTest) {
             await storage.set(keypair1, {
@@ -452,7 +454,7 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
     //================================================================================
     // TEMPLATES
 
-    Deno.test(
+    await test.step(
         SUBTEST_NAME + ": parseTemplate and extractTemplateVariablesFromPath",
         () => {
             type StringToString = Record<string, string>;
@@ -699,7 +701,7 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
         },
     );
 
-    Deno.test(SUBTEST_NAME + ": insertVariablesIntoTemplate", () => {
+    await test.step(SUBTEST_NAME + ": insertVariablesIntoTemplate", () => {
         interface Vector {
             vars: Record<string, string>;
             template: string;
@@ -821,10 +823,12 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
         },
     ];
 
-    Deno.test(SUBTEST_NAME + ": queryByTemplateAsyncSync", async () => {
+    await test.step(SUBTEST_NAME + ": queryByTemplateAsyncSync", async () => {
         let workspace = "+gardening.abcde";
         let storage = makeStorage(workspace);
         let now = microsecondNow();
+
+        let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 
         for (let path of docPathsForTemplateTest) {
             await storage.set(keypair1, {
@@ -854,6 +858,8 @@ let runQueryHelpersTests = async (scenario: TestScenario) => {
     });
 };
 
-for (let scenario of testScenarios) {
-    runQueryHelpersTests(scenario);
-}
+Deno.test(`Query helpers`, async (test) => {
+    for (const scenario of testScenarios) {
+        await runQueryHelpersTests(scenario, test);
+    }
+});

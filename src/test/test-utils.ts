@@ -87,7 +87,7 @@ export async function storagesAreSynced(storages: StorageAsync[]): Promise<boole
         allDocsSets.push(allDocs);
     }
 
-    return allDocsSets.reduce((isSynced, docs, i) => {
+    return allDocsSets.reduce((isSynced: boolean, docs: Doc[], i: number) => {
         if (i === 0) {
             return isSynced;
         }
@@ -100,7 +100,7 @@ export async function storagesAreSynced(storages: StorageAsync[]): Promise<boole
 
         // See if they're equivalent with the current set.
         return docsAreEquivalent(strippedPrevDocs, strippedDocs);
-    }, false);
+    }, false as boolean);
 }
 
 export async function storageHasAllStoragesDocs(

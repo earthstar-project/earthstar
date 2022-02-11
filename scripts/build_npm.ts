@@ -9,6 +9,7 @@ await build({
         deno: {
             test: "dev",
         },
+        timers: true,
         weakRef: true,
         custom: [
             {
@@ -27,6 +28,20 @@ await build({
                 },
                 globalNames: [],
             },
+            {
+                package: {
+                    name: "@types/express",
+                    version: "4.17.13",
+                },
+                globalNames: [],
+            },
+            {
+                package: {
+                    name: "@types/node-fetch",
+                    version: "2.5.12",
+                },
+                globalNames: [],
+            },
         ],
     },
     compilerOptions: {
@@ -34,6 +49,19 @@ await build({
         target: "ES2020",
     },
     mappings: {
+        "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.0.0/mod.ts":
+            {
+                name: "earthstar-streaming-rpc",
+                version: "3.0.0",
+            },
+        "https://esm.sh/earthstar-streaming-rpc@3.0.0?dts": {
+            name: "earthstar-streaming-rpc",
+            version: "3.0.0",
+        },
+        "https://esm.sh/express?dts": {
+            name: "express",
+            version: "4.17.2",
+        },
         "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts": {
             name: "chalk",
             version: "4.1.2",
@@ -69,6 +97,10 @@ await build({
     // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
     redirects: {
         "./src/storage/indexeddb-types.deno.d.ts": "./src/storage/indexeddb-types.node.d.ts",
+        "./src/test/transport-scenarios/transport-scenarios.ts":
+            "./src/test/transport-scenarios/transport-scenarios.node.ts",
+        "./src/test/peer-sync-scenarios/peer-sync-scenarios.ts":
+            "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
     },
 });
 

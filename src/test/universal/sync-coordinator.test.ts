@@ -1,4 +1,4 @@
-import { FakeTime } from "https://deno.land/x/mock@0.12.2/mod.ts";
+//import { FakeTime } from "https://deno.land/x/mock@0.12.2/mod.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { Rpc } from "../../../deps.ts";
 import { Peer } from "../../peer/peer.ts";
@@ -20,14 +20,13 @@ import { sleep } from "../../util/misc.ts";
 // after close()
 //   Does it leave hanging ops?
 
-const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
-const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
-
 Deno.test("SyncCoordinator", async () => {
-    const time = new FakeTime();
+    //const time = new FakeTime();
 
     // Set up two peers with two shares in common
     // And different sets of docs.
+    const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
+    const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
 
     const ADDRESS_A = "+apples.a123";
     const ADDRESS_B = "+bananas.b234";
@@ -109,8 +108,7 @@ Deno.test("SyncCoordinator", async () => {
     });
 
     // Advance time by 10 seconds
-    await time.tickAsync(10000);
-    time.restore();
+    await sleep(3000);
     // Have to do this. Thought the fake time thing would take care of it.
     await sleep(0);
     assert(await storageHasAllStoragesDocs(storageA1, storageA2));

@@ -3,20 +3,17 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Peer } from "../../peer/peer.ts";
 import { makeNStorages, storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
-import { testTransportScenarios } from "../test-scenarios.ts";
+import testTransportScenarios from "../transport-scenarios/transport-scenarios.ts";
 import { TransportTestHelper } from "../test-scenario-types.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { sleep } from "../../util/misc.ts";
-
-const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
-const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
 
 // 	On addPeer
 //    Did the storages sync?
 //  On close
 //    Do we leave any hanging async ops?
 
-for await (const makeScenario of testTransportScenarios) {
+for (const makeScenario of testTransportScenarios) {
     testSyncer(makeScenario);
 }
 
@@ -26,6 +23,9 @@ function testSyncer(
     Deno.test({
         name: `Syncer + ${name}`,
         fn: async () => {
+            const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
+            const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
+
             // Set up Peers and storages
             const peer = new Peer();
             const targetPeer = new Peer();

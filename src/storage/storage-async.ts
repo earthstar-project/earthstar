@@ -124,7 +124,7 @@ export class StorageAsync implements IStorageAsync {
         logger.debug(`    closing storageDriver (erase = ${erase})...`);
         await this.storageDriver.close(erase);
         logger.debug("    sending didClose nonblockingly...");
-        this.bus.sendLater("didClose");
+        await this.bus.sendAndWait("didClose");
         logger.debug("...closing done");
 
         return Promise.resolve();
