@@ -119,7 +119,7 @@ async function testSyncScenario(
     });
 }
 
-Deno.test("Peer sync helper", async (test) => {
+Deno.test("Peer sync", async (test) => {
     for (const scenario of peerSyncScenarios) {
         await testSyncScenario(
             scenario,

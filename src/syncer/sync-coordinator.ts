@@ -9,8 +9,7 @@ export class SyncCoordinator {
     _connection: Rpc.IConnection<SyncerBag>;
     _syncerBag: SyncerBag;
     _workspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
-    // TODO: Soon we'll have streams, not polling.
-    _pullIntervals: Map<string, number> = new Map();
+    _interval: number | null = null;
 
     commonWorkspaces: WorkspaceAddress[] = [];
     partnerLastSeenAt: number | null = null;
@@ -38,18 +37,14 @@ export class SyncCoordinator {
         this.partnerLastSeenAt = partnerLastSeenAt;
 
         // Get the workspace states from the partner
-        await this._getWorkspaceStates();
 
-        const initialPulls = [];
+        const pull = async () => {
+            await this._getWorkspaceStates();
 
-        // Use that to set up regular polls
-        for (const key in this._workspaceStates) {
-            const pull = () => {
+            Object.keys(this._workspaceStates).forEach((key) => {
                 const state = this._workspaceStates[key];
 
                 this._pullDocs({
-                    // Eventually we'll do smart stuff with localIndex.
-                    // For now just ask for EVERYTHING, EVERY TIME.
                     query: {
                         orderBy: "localIndex ASC",
                         startAfter: {
@@ -59,19 +54,16 @@ export class SyncCoordinator {
                     storageId: state.partnerStorageId,
                     workspace: state.workspace,
                 });
-            };
+            });
+        };
 
-            initialPulls.push(pull());
-
-            const interval = setInterval(pull, 1000);
-            this._pullIntervals.set(key, interval);
-        }
+        this._interval = setInterval(pull, 1000);
 
         this._connection.onClose(() => {
             this.close();
         });
 
-        return Promise.all(initialPulls);
+        await pull();
     }
 
     async _getWorkspaceStates() {
@@ -111,9 +103,9 @@ export class SyncCoordinator {
     }
 
     close() {
-        this._pullIntervals.forEach((interval) => {
-            clearInterval(interval);
-        });
+        if (this._interval) {
+            clearTimeout(this._interval);
+        }
 
         this.state = "closed";
     }

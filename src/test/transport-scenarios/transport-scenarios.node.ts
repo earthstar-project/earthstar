@@ -6,7 +6,7 @@ import { default as express, Express } from "https://esm.sh/express?dts";
 import {
     TransportHttpClient,
     TransportHttpServerExpress,
-} from "https://esm.sh/earthstar-streaming-rpc@3.0.3?dts";
+} from "https://esm.sh/earthstar-streaming-rpc@3.1.0?dts";
 import { transportScenarioLocal } from "./transport-scenarios.universal.ts";
 
 class TransportHelperHttpExpress implements TransportTestHelper {

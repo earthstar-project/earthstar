@@ -8,4 +8,4 @@ export { Simplebus } from "./src/superbus/simplebus.ts";
 export { SuperbusMap } from "./src/superbus_map/superbus_map.ts";
 export * as ed from "https://raw.githubusercontent.com/sgwilym/noble-ed25519/7af9329476ff2f2a0e524a9f78e36d09704efc63/mod.ts";
 export { Lock } from "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts";
-export * as Rpc from "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.0.3/mod.ts";
+export * as Rpc from "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.1.0/mod.ts";

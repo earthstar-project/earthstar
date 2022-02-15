@@ -5,7 +5,7 @@ import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { PeerSyncHelper } from "../test-scenario-types.ts";
 import { default as express, Express } from "https://esm.sh/express?dts";
-import { TransportHttpServerExpress } from "https://esm.sh/earthstar-streaming-rpc@3.0.3?dts";
+import { TransportHttpServerExpress } from "https://esm.sh/earthstar-streaming-rpc@3.1.0?dts";
 
 import universalSyncScenarios from "./peer-sync-scenarios.universal.ts";
 
