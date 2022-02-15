@@ -7,7 +7,7 @@ const { createHash } = sha256_uint8array;
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-let logger = new Logger("crypto-driver-noble", "cyan");
+const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
 /**
@@ -15,17 +15,17 @@ let logger = new Logger("crypto-driver-noble", "cyan");
  * Works in the browser.
  */
 export const CryptoDriverNoble: ICryptoDriver = class {
-    static async sha256(input: string | Uint8Array): Promise<Uint8Array> {
+    static sha256(input: string | Uint8Array): Promise<Uint8Array> {
         if (typeof input === "string") {
-            return createHash("sha256").update(input, "utf-8").digest();
+            return Promise.resolve(createHash("sha256").update(input, "utf-8").digest());
         } else {
-            return createHash("sha256").update(input).digest();
+            return Promise.resolve(createHash("sha256").update(input).digest());
         }
     }
     static async generateKeypairBytes(): Promise<KeypairBytes> {
         logger.debug("generateKeypairBytes");
-        let secret = ed.utils.randomPrivateKey();
-        let pubkey = await ed.getPublicKey(secret);
+        const secret = ed.utils.randomPrivateKey();
+        const pubkey = await ed.getPublicKey(secret);
 
         return {
             pubkey,
@@ -50,8 +50,7 @@ export const CryptoDriverNoble: ICryptoDriver = class {
             if (typeof msg === "string") msg = stringToBytes(msg);
             const result = await ed.verify(sig, msg, publicKey);
             return result;
-        } catch (e) {
-            /* istanbul ignore next */
+        } catch {
             return false;
         }
     }

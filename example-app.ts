@@ -84,6 +84,7 @@ let main = async () => {
             //filter: { path: '/posts/post-0001.txt' },
         },
     );
+
     qf1.bus.on(async (event: LiveQueryEvent) => {
         if (event.kind === "existing") {
             loggerQueryFollowerCallbacks1.debug(

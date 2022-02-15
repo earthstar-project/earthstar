@@ -45,9 +45,9 @@ export const Crypto: ICrypto = class {
         name: string,
     ): Promise<AuthorKeypair | ValidationError> {
         logger.debug(`generateAuthorKeypair("${name}")`);
-        let keypairBytes: KeypairBytes = await GlobalCryptoDriver
+        const keypairBytes = await GlobalCryptoDriver
             .generateKeypairBytes();
-        let keypairFormatted = {
+        const keypairFormatted = {
             address: assembleAuthorAddress(
                 name,
                 base32BytesToString(keypairBytes.pubkey),
@@ -55,7 +55,7 @@ export const Crypto: ICrypto = class {
             secret: base32BytesToString(keypairBytes.secret),
         };
         // Make sure it's valid (correct length, etc).  return error if invalid.
-        let err = checkAuthorIsValid(keypairFormatted.address);
+        const err = checkAuthorIsValid(keypairFormatted.address);
         if (isErr(err)) return err;
         return keypairFormatted;
     }

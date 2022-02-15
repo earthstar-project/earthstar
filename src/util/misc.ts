@@ -10,8 +10,8 @@ export function microsecondNow() {
 }
 
 /** Returns a promise which is fulfilled after a given number of milliseconds. */
-export function sleep(ms: number) {
-    return new Promise((res, rej) => {
+export function sleep(ms: number): Promise<void> {
+    return new Promise((res) => {
         setTimeout(res, ms);
     });
 }

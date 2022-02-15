@@ -12,7 +12,7 @@ import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
 import { StorageDriverSqlite } from "../storage/storage-driver-sqlite.deno.ts";
 
 // test types
-import { CryptoScenario, TestScenario } from "./test-scenario-types.ts";
+import { CryptoScenario, TestScenario, TransportScenario } from "./test-scenario-types.ts";
 
 // A version of test scenario without crypto specified yet.
 type JustStorageScenario = Omit<TestScenario, "cryptoDriver">;

@@ -3,12 +3,17 @@ import { build } from "https://deno.land/x/dnt@0.16.1/mod.ts";
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
-    entryPoints: ["./mod.ts", "./src/entries/node.ts", "./src/entries/browser.ts"],
+    entryPoints: [
+        "./src/entries/universal.ts",
+        "./src/entries/node.ts",
+        "./src/entries/browser.ts",
+    ],
     outDir: "./npm",
     shims: {
         deno: {
             test: "dev",
         },
+        timers: true,
         weakRef: true,
         custom: [
             {
@@ -34,6 +39,20 @@ await build({
                 },
                 globalNames: [],
             },
+            {
+                package: {
+                    name: "@types/express",
+                    version: "4.17.13",
+                },
+                globalNames: [],
+            },
+            {
+                package: {
+                    name: "@types/node-fetch",
+                    version: "2.5.12",
+                },
+                globalNames: [],
+            },
         ],
     },
     compilerOptions: {
@@ -41,6 +60,19 @@ await build({
         target: "ES2020",
     },
     mappings: {
+        "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.2.0/mod.browser.ts":
+            {
+                name: "earthstar-streaming-rpc",
+                version: "3.2.0",
+            },
+        "https://esm.sh/earthstar-streaming-rpc@3.2.0?dts": {
+            name: "earthstar-streaming-rpc",
+            version: "3.2.0",
+        },
+        "https://esm.sh/express?dts": {
+            name: "express",
+            version: "4.17.2",
+        },
         "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts": {
             name: "chalk",
             version: "4.1.2",
@@ -80,8 +112,13 @@ await build({
     // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
     redirects: {
         "./src/storage/indexeddb-types.deno.d.ts": "./src/storage/indexeddb-types.node.d.ts",
+        "./src/test/transport-scenarios/transport-scenarios.ts":
+            "./src/test/transport-scenarios/transport-scenarios.node.ts",
+        "./src/test/peer-sync-scenarios/peer-sync-scenarios.ts":
+            "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
         "./src/storage/storage-driver-sqlite.deno.ts":
             "./src/storage/storage-driver-sqlite.node.ts",
+        "./src/test/test-deps.ts": "./src/test/test-deps.node.ts",
     },
 });
 
