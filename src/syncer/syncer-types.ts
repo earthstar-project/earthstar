@@ -1,6 +1,6 @@
 import { PeerId } from "../peer/peer-types.ts";
 import { Doc, ShareAddress } from "../util/doc-types.ts";
-import { StorageId } from "../storage/storage-types.ts";
+import { ReplicaId } from "../replica/replica-types.ts";
 import { Query } from "../query/query-types.ts";
 import { SyncerBag } from "./_syncer-bag.ts";
 import { type ITransport } from "../../deps.ts";
@@ -28,10 +28,10 @@ export interface SaltedHandshakeResult {
 
 export interface ShareState {
     share: ShareAddress;
-    partnerStorageId: StorageId;
+    partnerStorageId: ReplicaId;
     partnerMaxLocalIndexOverall: number;
     partnerMaxLocalIndexSoFar: number; // -1 if unknown
-    storageId: StorageId;
+    storageId: ReplicaId;
     maxLocalIndexOverall: number;
     maxLocalIndexSoFar: number; // -1 if unknown
     lastSeenAt: number;
@@ -61,12 +61,12 @@ export type AllShareStatesResult = Record<
 
 export interface ShareQueryRequest {
     share: ShareAddress;
-    storageId: StorageId;
+    storageId: ReplicaId;
     query: Query;
 }
 export interface ShareQueryResponse {
     share: ShareAddress;
-    storageId: StorageId;
+    storageId: ReplicaId;
     partnerMaxLocalIndexOverall: number;
     docs: Doc[];
 }

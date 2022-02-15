@@ -1,6 +1,6 @@
 import { assert } from "../asserts.ts";
 import { Peer } from "../../peer/peer.ts";
-import { makeNStorages, storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
+import { makeNReplicas, storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
@@ -35,9 +35,9 @@ async function testSyncScenario(
         const ADDRESS_B = "+bananas.b234";
         const ADDRESS_C = "+coconuts.c345";
 
-        const storagesATriplet = makeNStorages(ADDRESS_A, 3);
-        const storagesBTriplet = makeNStorages(ADDRESS_B, 3);
-        const storagesCTriplet = makeNStorages(ADDRESS_C, 3);
+        const storagesATriplet = makeNReplicas(ADDRESS_A, 3);
+        const storagesBTriplet = makeNReplicas(ADDRESS_B, 3);
+        const storagesCTriplet = makeNReplicas(ADDRESS_C, 3);
 
         const allStorages = [...storagesATriplet, ...storagesBTriplet, ...storagesCTriplet];
 
@@ -53,9 +53,9 @@ async function testSyncScenario(
         const [storageB1] = storagesBTriplet;
         const [storageC1] = storagesCTriplet;
 
-        peer.addStorage(storageA1);
-        peer.addStorage(storageB1);
-        peer.addStorage(storageC1);
+        peer.addReplica(storageA1);
+        peer.addReplica(storageB1);
+        peer.addReplica(storageC1);
 
         const helper = scenario.make();
 
@@ -85,14 +85,14 @@ async function testSyncScenario(
         // Add a new storage which won't be synced
         const keypairB = await Crypto.generateAuthorKeypair("tony") as AuthorKeypair;
         const ADDRESS_D = "+dates.d456";
-        const storagesDTriplet = makeNStorages(ADDRESS_D, 3);
+        const storagesDTriplet = makeNReplicas(ADDRESS_D, 3);
         const writeDocsPromises2 = storagesDTriplet.map((storage) => {
             return writeRandomDocs(keypairB, storage, 10);
         });
         await Promise.all(writeDocsPromises2);
 
         const [storagesD1] = storagesDTriplet;
-        peer.addStorage(storagesD1);
+        peer.addReplica(storagesD1);
 
         helper.addNonSyncingStorages(storagesDTriplet);
 

@@ -1,5 +1,5 @@
 import { Peer } from "../../peer/peer.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { Replica } from "../../replica/replica.ts";
 import { sleep } from "../../util/misc.ts";
 import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
 import { Syncer } from "../../syncer/syncer.ts";
@@ -48,21 +48,21 @@ class HttpPeerScenario implements PeerSyncHelper {
     }
 
     setUpTargetPeers(
-        aStorages: StorageAsync[],
-        bStorages: StorageAsync[],
-        cStorages: StorageAsync[],
+        aStorages: Replica[],
+        bStorages: Replica[],
+        cStorages: Replica[],
     ) {
         const [, storageA2, storageA3] = aStorages;
         const [, storageB2, storageB3] = bStorages;
         const [, storageC2, storageC3] = cStorages;
 
-        this._peer2.addStorage(storageA2);
-        this._peer2.addStorage(storageB2);
-        this._peer2.addStorage(storageC2);
+        this._peer2.addReplica(storageA2);
+        this._peer2.addReplica(storageB2);
+        this._peer2.addReplica(storageC2);
 
-        this._peer3.addStorage(storageA3);
-        this._peer3.addStorage(storageB3);
-        this._peer3.addStorage(storageC3);
+        this._peer3.addReplica(storageA3);
+        this._peer3.addReplica(storageB3);
+        this._peer3.addReplica(storageC3);
 
         this._server2 = this._app2.listen(9091);
         this._server3 = this._app3.listen(9092);
@@ -71,22 +71,22 @@ class HttpPeerScenario implements PeerSyncHelper {
     }
 
     addNonSyncingStorages(
-        dStorages: StorageAsync[],
+        dStorages: Replica[],
     ) {
         const [, storageD2, storageD3] = dStorages;
-        this._peer2.addStorage(storageD2);
-        this._peer3.addStorage(storageD3);
+        this._peer2.addReplica(storageD2);
+        this._peer3.addReplica(storageD3);
     }
 
     async close() {
-        const removers2 = this._peer2.storages().map((storage) =>
+        const removers2 = this._peer2.replicas().map((replica) =>
             () => {
-                this._peer2.removeStorage(storage);
+                this._peer2.removeReplica(replica);
             }
         );
-        const removers3 = this._peer3.storages().map((storage) =>
+        const removers3 = this._peer3.replicas().map((replica) =>
             () => {
-                this._peer3.removeStorage(storage);
+                this._peer3.removeReplica(replica);
             }
         );
 

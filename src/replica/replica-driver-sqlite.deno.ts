@@ -1,6 +1,6 @@
 import { Doc, ShareAddress } from "../util/doc-types.ts";
-import { EarthstarError, StorageIsClosedError, ValidationError } from "../util/errors.ts";
-import { IStorageDriverAsync } from "./storage-types.ts";
+import { EarthstarError, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
+import { IReplicaDriver } from "./replica-types.ts";
 import {
     CREATE_CONFIG_TABLE_QUERY,
     CREATE_DOCS_TABLE_QUERY,
@@ -9,13 +9,13 @@ import {
     GET_ENCODING_QUERY,
     makeDocQuerySql,
     MAX_LOCAL_INDEX_QUERY,
+    ReplicaSqliteOpts,
     SELECT_CONFIG_CONTENT_QUERY,
     SELECT_KEY_CONFIG_QUERY,
     SET_ENCODING_QUERY,
-    StorageSqliteOpts,
     UPSERT_CONFIG_QUERY,
     UPSERT_DOC_QUERY,
-} from "./storage-driver-sqlite.shared.ts";
+} from "./replica-driver-sqlite.shared.ts";
 import * as Sqlite from "https://deno.land/x/sqlite@v3.2.0/mod.ts";
 
 //--------------------------------------------------
@@ -48,7 +48,7 @@ interface DocObject extends Sqlite.RowObject {
 }
 
 /** A strorage driver which persists to SQLite. Works in Deno and browsers. */
-export class StorageDriverSqlite implements IStorageDriverAsync {
+export class ReplicaDriverSqlite implements IReplicaDriver {
     share: ShareAddress;
     _filename: string;
     _isClosed = false;
@@ -61,7 +61,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
     close(erase: boolean): Promise<void> {
         logger.debug("close");
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         if (this._db) {
             this._db.close();
@@ -86,7 +86,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         return this._isClosed;
     }
 
-    constructor(opts: StorageSqliteOpts) {
+    constructor(opts: ReplicaSqliteOpts) {
         this._filename = opts.filename;
         this.share = "NOT_INITIALIZED";
 
@@ -223,7 +223,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
             `setConfig(${JSON.stringify(key)} = ${JSON.stringify(content)})`,
         );
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         this._db.query(UPSERT_CONFIG_QUERY, { key: key, content: content });
 
@@ -263,14 +263,14 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
 
     getConfig(key: string): Promise<string | undefined> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         return Promise.resolve(this._getConfigSync(key));
     }
 
     listConfigKeys(): Promise<string[]> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         return Promise.resolve(this._listConfigKeysSync());
     }
@@ -278,7 +278,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
     deleteConfig(key: string): Promise<boolean> {
         logger.debug(`deleteConfig(${JSON.stringify(key)})`);
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         this._db.query(DELETE_CONFIG_QUERY, { key: key });
@@ -291,7 +291,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
 
     getMaxLocalIndex(): number {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         return this._maxLocalIndex;
@@ -302,7 +302,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
 
         logger.debug("queryDocs", queryToClean);
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         // clean up the query and exit early if possible.
@@ -354,7 +354,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         logger.debug(`upsertDocument(doc.path: ${JSON.stringify(doc.path)})`);
 
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         Object.freeze(doc);
@@ -386,7 +386,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         // TODO: how to tell if we're loading an old sqlite file with old schema?
 
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         // make sure sqlite is using utf-8

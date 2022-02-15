@@ -3,10 +3,10 @@ import { throws } from "../test-utils.ts";
 //t.runOnly = true;
 
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IStorageAsync, IStorageDriverAsync } from "../../storage/storage-types.ts";
+import { IReplica, IReplicaDriver } from "../../replica/replica-types.ts";
 import { GlobalCryptoDriver, setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { Replica } from "../../replica/replica.ts";
 
 import { TestScenario } from "../test-scenario-types.ts";
 import { testScenarios } from "../test-scenarios.ts";
@@ -39,9 +39,9 @@ let _runStorageConfigTests = (
 
     let makeStorageOrDriver = (
         share: ShareAddress,
-    ): IStorageAsync | IStorageDriverAsync => {
+    ): IReplica | IReplicaDriver => {
         let driver = scenario.makeDriver(share);
-        return mode === "storage" ? new StorageAsync(share, FormatValidatorEs4, driver) : driver;
+        return mode === "storage" ? new Replica(share, FormatValidatorEs4, driver) : driver;
     };
 
     Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {

@@ -1,2 +1,2 @@
-export { StorageDriverLocalStorage } from "../storage/storage-driver-local-storage.ts";
-export { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
+export { ReplicaDriverLocalStorage } from "../replica/replica-driver-local-storage.ts";
+export { ReplicaDriverIndexedDB } from "../replica/replica-driver-indexeddb.ts";

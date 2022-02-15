@@ -14,13 +14,13 @@ export class ValidationError extends EarthstarError {
     }
 }
 
-/** An IStorageAsync or IStorageDriverAsync was used after close() was called on it. */
-export class StorageIsClosedError extends EarthstarError {
+/** An IReplica or IReplicaDriver was used after close() was called on it. */
+export class ReplicaIsClosedError extends EarthstarError {
     constructor(message?: string) {
         super(
-            message || "a Storage or StorageDriver was used after being closed",
+            message || "a Replica or ReplicaDriver was used after being closed",
         );
-        this.name = "StorageIsClosedError";
+        this.name = "ReplicaIsClosedError";
     }
 }
 

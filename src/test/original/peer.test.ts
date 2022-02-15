@@ -1,10 +1,10 @@
 import { assert, assertEquals } from "../asserts.ts";
 
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IStorageAsync } from "../../storage/storage-types.ts";
+import { IReplica } from "../../replica/replica-types.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
-import { compareByFn, sortedInPlace } from "../../storage/compare.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { compareByFn, sortedInPlace } from "../../replica/compare.ts";
+import { Replica } from "../../replica/replica.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { Peer } from "../../peer/peer.ts";
 import { testScenarios } from "../test-scenarios.ts";
@@ -31,9 +31,9 @@ export let runPeerTests = (
     let TEST_NAME = "peer shared tests";
     let SUBTEST_NAME = name;
 
-    function makeStorage(share: ShareAddress): IStorageAsync {
+    function makeStorage(share: ShareAddress): IReplica {
         let stDriver = makeDriver(share);
-        let storage = new StorageAsync(share, FormatValidatorEs4, stDriver);
+        let storage = new Replica(share, FormatValidatorEs4, stDriver);
         return storage;
     }
 
@@ -64,11 +64,11 @@ export let runPeerTests = (
             "does not yet have +two.ws",
         );
         assertEquals(peer.shares(), [], "has no shares");
-        assertEquals(peer.storages(), [], "has no storages");
+        assertEquals(peer.replicas(), [], "has no replicas");
         assertEquals(peer.size(), 0, "size is zero");
 
         for (let storage of storages) {
-            await peer.addStorage(storage);
+            await peer.addReplica(storage);
         }
 
         assertEquals(
@@ -93,13 +93,13 @@ export let runPeerTests = (
             "has all 3 shares, sorted",
         );
         assertEquals(
-            peer.storages(),
+            peer.replicas(),
             sortedStorages,
             "has all 3 storages sorted by share",
         );
         assertEquals(peer.size(), 3, "size is 3");
 
-        await peer.removeStorageByShare("+one.ws");
+        await peer.removeReplicaByShare("+one.ws");
         assertEquals(
             peer.shares(),
             ["+three.ws", "+two.ws"],
@@ -107,7 +107,7 @@ export let runPeerTests = (
         );
         assertEquals(peer.size(), 2, "size is 2");
 
-        await peer.removeStorage(storages[1]); // that's two.ws
+        await peer.removeReplica(storages[1]); // that's two.ws
         assertEquals(
             peer.shares(),
             ["+three.ws"],

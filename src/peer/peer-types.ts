@@ -1,5 +1,5 @@
 import { ShareAddress } from "../util/doc-types.ts";
-import { IStorageAsync } from "../storage/storage-types.ts";
+import { IReplica } from "../replica/replica-types.ts";
 
 //================================================================================
 // PEER
@@ -14,14 +14,14 @@ export interface IPeer {
     // getters
     hasShare(share: ShareAddress): boolean;
     shares(): ShareAddress[];
-    storages(): IStorageAsync[];
+    replicas(): IReplica[];
     size(): number;
-    getStorage(ws: ShareAddress): IStorageAsync | undefined;
+    getReplica(share: ShareAddress): IReplica | undefined;
 
     // setters
-    addStorage(storage: IStorageAsync): Promise<void>;
-    removeStorageByShare(share: ShareAddress): Promise<void>;
-    removeStorage(storage: IStorageAsync): Promise<void>;
+    addReplica(replica: IReplica): Promise<void>;
+    removeReplicaByShare(share: ShareAddress): Promise<void>;
+    removeReplica(replica: IReplica): Promise<void>;
 
     sync(
         target: IPeer | string,

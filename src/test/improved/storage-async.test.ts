@@ -1,13 +1,13 @@
 import { assert, assertEquals } from "../asserts.ts";
 import { doesNotThrow, throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IStorageAsync } from "../../storage/storage-types.ts";
+import { IReplica } from "../../replica/replica-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { Replica } from "../../replica/replica.ts";
 
 import { TestScenario } from "../test-scenario-types.ts";
 import { testScenarios } from "../test-scenarios.ts";
@@ -26,9 +26,9 @@ export function runStorageAsyncTests(scenario: TestScenario) {
     let TEST_NAME = "storage tests";
     let SUBTEST_NAME = scenario.name;
 
-    function makeStorage(ws: ShareAddress): IStorageAsync {
+    function makeStorage(ws: ShareAddress): IReplica {
         let driver = scenario.makeDriver(ws);
-        return new StorageAsync(ws, FormatValidatorEs4, driver);
+        return new Replica(ws, FormatValidatorEs4, driver);
     }
 
     Deno.test(
@@ -41,7 +41,7 @@ export function runStorageAsyncTests(scenario: TestScenario) {
             let events: string[] = [];
 
             assertEquals(
-                typeof storage.storageId,
+                typeof storage.replicaId,
                 "string",
                 "storage has a storageId",
             );

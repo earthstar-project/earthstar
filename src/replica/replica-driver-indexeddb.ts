@@ -1,8 +1,8 @@
 // @deno-types="./indexeddb-types.deno.d.ts"
 
 import { Doc, ShareAddress } from "../util/doc-types.ts";
-import { StorageIsClosedError } from "../util/errors.ts";
-import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
+import { ReplicaIsClosedError } from "../util/errors.ts";
+import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 
 //--------------------------------------------------
 
@@ -15,10 +15,10 @@ const DOC_STORE = "documents";
 const DOCUMENTS_ID = "allDocs";
 const CONFIG_STORE = "config";
 
-/** A storage driver which persists to IndexedDB in the browser. Maximum storage capacity varies, but is generally upwards of one gigabyte.
+/** A replica driver which persists to IndexedDB in the browser. Maximum storage capacity varies, but is generally upwards of one gigabyte.
  * Works in browsers.
  */
-export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
+export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
     _db: IDBDatabase | null = null;
 
     /**
@@ -108,7 +108,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     async close(erase: boolean): Promise<void> {
         logger.debug("close");
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         if (erase) {
             logger.debug("...close: and erase");
@@ -143,7 +143,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
     async getConfig(key: string): Promise<string | undefined> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -169,7 +169,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     }
     async setConfig(key: string, value: string): Promise<void> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -191,7 +191,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     }
     async listConfigKeys(): Promise<string[]> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -214,7 +214,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
     async deleteConfig(key: string): Promise<boolean> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -248,7 +248,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
     async upsert(doc: Doc): Promise<Doc> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         let upsertedDoc = await super.upsert(doc);
 

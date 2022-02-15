@@ -1,18 +1,18 @@
 import { Simplebus } from "../../deps.ts";
 
-import { Thunk } from "../storage/util-types.ts";
+import { Thunk } from "../replica/util-types.ts";
 import { Query } from "../query/query-types.ts";
-import { NotImplementedError, StorageIsClosedError } from "../util/errors.ts";
+import { NotImplementedError, ReplicaIsClosedError } from "../util/errors.ts";
 import {
     DocAlreadyExists,
     IdleEvent,
-    IStorageAsync,
+    IReplica,
     LiveQueryEvent,
     QueryFollowerDidClose,
-    StorageBusChannel,
-    StorageEventDidClose,
-    StorageEventWillClose,
-} from "../storage/storage-types.ts";
+    ReplicaBusChannel,
+    ReplicaEventDidClose,
+    ReplicaEventWillClose,
+} from "../replica/replica-types.ts";
 import { docMatchesFilter } from "../query/query.ts";
 import { IQueryFollower, QueryFollowerState } from "./query-follower-types.ts";
 
@@ -32,7 +32,7 @@ let J = JSON.stringify;
 /**
  * Subscribe to the ongoing results of a query, optionally including old existing docs.
  *  ```
- * const myFollower = new QueryFollower(storage, myQuery);
+ * const myFollower = new QueryFollower(replica, myQuery);
  * myFollower.bus.on(async (event: LiveQueryEvent) => {
  *     if (event.kind === 'existing' || event.kind === 'success') {
  *         doSomething(event.doc)
@@ -43,7 +43,7 @@ let J = JSON.stringify;
  * ```
  */
 export class QueryFollower implements IQueryFollower {
-    storage: IStorageAsync;
+    replica: IReplica;
     /**
      * The query being followed. Has some limitations:
      * - `historyMode` must be `all`
@@ -63,15 +63,15 @@ export class QueryFollower implements IQueryFollower {
      */
     bus: Simplebus<LiveQueryEvent>;
     _state: QueryFollowerState = "new";
-    _unsub: Thunk | null = null; // to unsub from storage events
+    _unsub: Thunk | null = null; // to unsub from replica events
 
     /**
      * Create a new QueryFollower
      * @param query - The query to be followed. Has some limitations: `historyMode` must be `all`; `orderBy` must be `localIndex ASC`; `limit` can *not* be set. The query's `startAfter` controls the behaviour of the follower: if not set, we begin with the next write event that occurs, and ignore existing documents; if `startAfter` is set to a `localIndex` value, we begin there. The usual case is to set `startAfter` to -1 to process all documents.
      */
-    constructor(storage: IStorageAsync, query: Query) {
+    constructor(replica: IReplica, query: Query) {
         logger.debug("constructor");
-        this.storage = storage;
+        this.replica = replica;
         this.query = deepCopy(query); // we'll modify the query as we go, changing the startAfter
         this.bus = new Simplebus<LiveQueryEvent>();
 
@@ -142,8 +142,8 @@ export class QueryFollower implements IQueryFollower {
         logger.debug("_catchUp...");
         this._expectState(["new"]);
 
-        let storage = this.storage;
-        let driver = this.storage.storageDriver;
+        let storage = this.replica;
+        let driver = this.replica.replicaDriver;
         let query = this.query;
 
         if (query.startAfter === undefined) {
@@ -196,7 +196,7 @@ export class QueryFollower implements IQueryFollower {
                     `...at ${asOf3}, finished running ${existingDocs.length} callbacks for existing docs`,
                 );
             } catch (err) {
-                if (err instanceof StorageIsClosedError) {
+                if (err instanceof ReplicaIsClosedError) {
                     logger.debug(
                         `storage was closed while we were catching up, oh well.`,
                     );
@@ -257,7 +257,7 @@ export class QueryFollower implements IQueryFollower {
         logger.debug("_subscribe...");
         this._expectState(["live"]);
 
-        let driver = this.storage.storageDriver;
+        let driver = this.replica.replicaDriver;
         let query = this.query;
 
         let queryFilter = query.filter || {};
@@ -274,9 +274,9 @@ export class QueryFollower implements IQueryFollower {
             `...start paying attention after local index ${queryStartAfter}.  subscribing...`,
         );
 
-        this._unsub = this.storage.bus.on(
+        this._unsub = this.replica.bus.on(
             "*",
-            async (channel: StorageBusChannel | "*", data: any) => {
+            async (channel: ReplicaBusChannel | "*", data: any) => {
                 this._expectState(["live"]); // make sure the query follower itself has not been closed
 
                 loggerSub.debug(
@@ -284,13 +284,13 @@ export class QueryFollower implements IQueryFollower {
                 );
                 let event = data as LiveQueryEvent;
                 if (channel === "willClose") {
-                    let event: StorageEventWillClose = {
+                    let event: ReplicaEventWillClose = {
                         kind: "willClose",
                         maxLocalIndex: driver.getMaxLocalIndex(),
                     };
                     await this.bus.send(event);
                 } else if (channel === "didClose") {
-                    let event: StorageEventDidClose = {
+                    let event: ReplicaEventDidClose = {
                         kind: "didClose",
                     };
                     loggerSub.debug(

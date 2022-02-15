@@ -2,7 +2,7 @@ import { Peer } from "../peer/peer.ts";
 import { microsecondNow, randomId } from "../util/misc.ts";
 import { Doc, ShareAddress } from "../util/doc-types.ts";
 import { Crypto } from "../crypto/crypto.ts";
-import { sortedInPlace } from "../storage/compare.ts";
+import { sortedInPlace } from "../replica/compare.ts";
 import { ValidationError } from "../util/errors.ts";
 import {
     AllShareStatesRequest,
@@ -78,13 +78,13 @@ export function makeSyncerBag(peer: Peer) {
                 ShareStateFromResponse
             > = {};
             for (const share of request.commonShares) {
-                const storage = peer.getStorage(share);
+                const storage = peer.getReplica(share);
                 if (storage === undefined) {
                     continue;
                 }
                 const shareState: ShareStateFromResponse = {
                     share,
-                    partnerStorageId: storage.storageId,
+                    partnerStorageId: storage.replicaId,
                     partnerMaxLocalIndexOverall: storage.getMaxLocalIndex(),
                 };
                 shareStates[share] = shareState;
@@ -120,7 +120,7 @@ export function makeSyncerBag(peer: Peer) {
                         `server shenanigans: server included a share that is not common: ${share}`,
                     );
                 }
-                const clientStorage = peer.getStorage(share);
+                const clientStorage = peer.getReplica(share);
                 if (clientStorage === undefined) {
                     throw new ValidationError(
                         `server shenanigans: referenced a share we don't have: ${share}`,
@@ -139,7 +139,7 @@ export function makeSyncerBag(peer: Peer) {
 
                     // TODO: check if client storage id has changed, and if so reset this state
 
-                    storageId: clientStorage.storageId,
+                    storageId: clientStorage.replicaId,
                     maxLocalIndexOverall: clientStorage.getMaxLocalIndex(),
                     // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
                     maxLocalIndexSoFar: existingShareState.maxLocalIndexSoFar ?? -1,
@@ -165,23 +165,23 @@ export function makeSyncerBag(peer: Peer) {
         async serveShareQuery(request: ShareQueryRequest): Promise<ShareQueryResponse> {
             const { share, storageId, query } = request;
 
-            const storage = peer.getStorage(share);
-            if (storage === undefined) {
+            const replica = peer.getReplica(share);
+            if (replica === undefined) {
                 const err = `share ${share} is unknown; skipping`;
                 throw err;
             }
-            if (storage.storageId !== storageId) {
+            if (replica.replicaId !== storageId) {
                 const err =
-                    `storageId for ${share} is not ${storageId} anymore, it's ${storage.storageId}`;
+                    `storageId for ${share} is not ${storageId} anymore, it's ${replica.replicaId}`;
                 throw err;
             }
 
-            const docs: Doc[] = await storage.queryDocs(query);
+            const docs: Doc[] = await replica.queryDocs(query);
 
             return {
                 share,
                 storageId,
-                partnerMaxLocalIndexOverall: storage.getMaxLocalIndex(),
+                partnerMaxLocalIndexOverall: replica.getMaxLocalIndex(),
                 docs,
             };
         },
@@ -204,7 +204,7 @@ export function makeSyncerBag(peer: Peer) {
             // maybe that can happen in do_...
 
             // get the storage
-            const storage = peer.getStorage(share);
+            const storage = peer.getReplica(share);
             if (storage === undefined) {
                 const err = `share ${share} is unknown; skipping`;
 

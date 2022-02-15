@@ -7,9 +7,9 @@ import { Superbus } from "../../deps.ts";
 //================================================================================
 // TYPES AND EVENTS
 
-export type StorageId = string;
+export type ReplicaId = string;
 
-export type StorageBusChannel =
+export type ReplicaBusChannel =
     | "ingest"
     | // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
     "willClose"
@@ -18,12 +18,12 @@ export type StorageBusChannel =
 export interface QueryResult {
     // the docs from the query...
     docs: Doc[];
-    // ...and the storageDriver's maxLocalIndex at the time
+    // ...and the replica Driver's maxLocalIndex at the time
     // just before and just after the query was done.
     // This provided a lower and upper bound for the maxLocalIndex
     // associated with the resulting docs.
     // (This is the OVERALL max local index for
-    // the whole storage, not just for the resulting docs.)
+    // the whole replica, not just for the resulting docs.)
     maxLocalIndexBefore: number;
     maxLocalIndexAfter: number;
     // The max localIndex out of the returned docs.
@@ -33,8 +33,8 @@ export interface QueryResult {
     maxLocalIndexInResult: number;
 }
 
-// IngestEvents are returned from storage.set() and storage.ingest(),
-// and sent as events on the storage.bus 'ingest' channel.
+// IngestEvents are returned from replica.set() and replica.ingest(),
+// and sent as events on the replica.bus 'ingest' channel.
 
 export interface IngestEventFailure {
     kind: "failure";
@@ -77,11 +77,11 @@ export interface DocAlreadyExists {
     //// note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
     //prevLatestDoc: Doc | null,
 }
-export interface StorageEventWillClose {
+export interface ReplicaEventWillClose {
     kind: "willClose";
     maxLocalIndex: number;
 }
-export interface StorageEventDidClose {
+export interface ReplicaEventDidClose {
     kind: "didClose";
 }
 
@@ -106,10 +106,10 @@ export type IngestEvent =
 /**
  * - DocAlreadyExists — processing an old doc as you catch up
  * - IdleEvent — reached the end of existing docs; waiting for new docs
- * - IngestEvent — the result of a storage ingesting a document
- * - StorageEventWillClose — the storage is about to close
- * - StorageEventDidClose — the storage has closed
- * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the storage closes)
+ * - IngestEvent — the result of a replica ingesting a document
+ * - ReplicaEventWillClose — the replica is about to close
+ * - ReplicaEventDidClose — the replica has closed
+ * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the replica closes)
  */
 export type LiveQueryEvent =
     | DocAlreadyExists
@@ -118,18 +118,18 @@ export type LiveQueryEvent =
     | // waiting for an ingest to happen...
     IngestEvent
     | // an ingest happened
-    StorageEventWillClose
-    | StorageEventDidClose
+    ReplicaEventWillClose
+    | ReplicaEventDidClose
     | QueryFollowerDidClose;
 
 //================================================================================
 
-export interface IStorageAsyncConfigStorage {
-    // These methods will be mixed into the IStorageAsync.
-    // This is for local storage of configuration details for storage instances.
+export interface IReplicaConfig {
+    // These methods will be mixed into the IReplica.
+    // This is for local replica of configuration details for replica instances.
     // This data will not be directly sync'd with other instances.
-    // Storage drivers implement these, and IStorageAsync just has stubs of
-    // these methods that call out to the storage driver.
+    // replica drivers implement these, and IReplica just has stubs of
+    // these methods that call out to the replica driver.
     getConfig(key: string): Promise<string | undefined>;
     setConfig(key: string, value: string): Promise<void>;
     listConfigKeys(): Promise<string[]>; // sorted
@@ -140,43 +140,43 @@ export interface IStorageAsyncConfigStorage {
  * A replica of a share's data, used to read, write, and synchronise data to.
  * Should be closed using the `close` method when no longer being used.
  * ```
- * const myReplica = new StorageAsync("+a.a123", Es4Validatior, new StorageDriverMemory());
+ * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
  * ```
  */
-export interface IStorageAsync extends IStorageAsyncConfigStorage {
-    storageId: StorageId;
+export interface IReplica extends IReplicaConfig {
+    replicaId: ReplicaId;
     /** The address of the share this replica belongs to. */
     share: ShareAddress;
     /** The validator used to validate ingested documents. */
     formatValidator: IFormatValidator;
-    storageDriver: IStorageDriverAsync;
-    bus: Superbus<StorageBusChannel>;
+    replicaDriver: IReplicaDriver;
+    bus: Superbus<ReplicaBusChannel>;
 
     //--------------------------------------------------
     // LIFECYCLE
 
-    /** Returns whether the storage is closed or not. */
+    /** Returns whether the replica is closed or not. */
     isClosed(): boolean;
 
     /**
      * Closes the replica, preventing new documents from being ingested or events being emitted.
-     * Any methods called after closing will return `StorageIsClosedError`.
+     * Any methods called after closing will return `ReplicaIsClosedError`.
      * @param erase - Erase the contents of the replica. Defaults to `false`.
      */
     /*
   More details:
 
-  * send StorageWillClose events and wait for event receivers to finish blocking.
-  * close the IStorage
-  * close the IStorageDriver and possibly erase it
-  * send StorageDidClose events and do not wait for event receivers.
+  * send ReplicaWillClose events and wait for event receivers to finish blocking.
+  * close the IReplica
+  * close the IReplicaDriver and possibly erase it
+  * send ReplicaDidClose events and do not wait for event receivers.
 
-  Any function called after the storage is closed will throw a StorageIsClosedError, except isClosed() is always allowed.
+  Any function called after the replica is closed will throw a ReplicaIsClosedError, except isClosed() is always allowed.
 
-  You cannot call close() if the storage is already closed (it will throw a StorageIsClosedError).
+  You cannot call close() if the replica is already closed (it will throw a ReplicaIsClosedError).
 
   close() can happen while set() or ingest() are waiting for locks or have pending transactions.
-  In that case, the pending operations will fail and throw a storageIsClosed.
+  In that case, the pending operations will fail and throw a ReplicaIsClosed.
 
   If erase is true, actually delete and forget the local data (remove files, etc).
   Erase defaults to false if not provided.
@@ -251,9 +251,9 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
 }
 
 /**
- * A storage driver provides low-level access to actual storage and is used by IStorageAsync to actually load and save data. StorageDrivers are not meant to be used directly by users; let the StorageAsync talk to it for you.
+ * A replica driver provides low-level access to actual replica and is used by IReplica to actually load and save data. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
  */
-export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
+export interface IReplicaDriver extends IReplicaConfig {
     share: ShareAddress;
     //--------------------------------------------------
     // LIFECYCLE
@@ -262,9 +262,9 @@ export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
     isClosed(): boolean;
 
     /**
-     * Close the storageDriver.
-     * The Storage will call this.
-     * You cannot call close() if the storage is already closed (it will throw a StorageIsClosedError).
+     * Close the replica Driver.
+     * The replica will call this.
+     * You cannot call close() if the replica is already closed (it will throw a ReplicaIsClosedError).
      * If erase, actually delete and forget data locally.
      * Erase defaults to false if not provided.
      */

@@ -1,7 +1,7 @@
 import { Simplebus } from "../../deps.ts";
 import { Query } from "../query/query-types.ts";
 
-import { IStorageAsync, LiveQueryEvent } from "../storage/storage-types.ts";
+import { IReplica, LiveQueryEvent } from "../replica/replica-types.ts";
 
 //================================================================================
 
@@ -22,7 +22,7 @@ export type QueryFollowerState =
 /**
  * Subscribe to the ongoing results of a query, optionally including old existing docs.
  *  ```
- * const myFollower = new QueryFollower(storage, myQuery);
+ * const myFollower = new QueryFollower(replica, myQuery);
  * myFollower.bus.on(async (event: LiveQueryEvent) => {
  *     if (event.kind === 'existing' || event.kind === 'success') {
  *         doSomething(event.doc)
@@ -33,7 +33,7 @@ export type QueryFollowerState =
  * ```
  */
 export interface IQueryFollower {
-    storage: IStorageAsync;
+    replica: IReplica;
     /**
      * The query being followed. Has some limitations:
      * - `historyMode` must be `all`
@@ -57,7 +57,7 @@ export interface IQueryFollower {
     /** Returns the follower's state, which can be in two modes:
      *   1. catching up with the backlog
      *   2. caught up; processing new events as they happen.
-     * When the query follower is in catching-up mode, it runs independently on its own schedule.  When it's in live mode, it processes each doc  as it's written, blockingly, which means it provides backpressure all the way back up to whatever is trying to ingest() docs into the storage.
+     * When the query follower is in catching-up mode, it runs independently on its own schedule.  When it's in live mode, it processes each doc  as it's written, blockingly, which means it provides backpressure all the way back up to whatever is trying to ingest() docs into the replica.
      * There is not currently an easy way to know when a query follower has caught up and switched to live mode, except to listen for the 'idle' event on its bus.
      */
     state(): QueryFollowerState;
@@ -65,8 +65,8 @@ export interface IQueryFollower {
     /** Begins the process of catching up with existing documents (if needed), then switches to live mode. */
     hatch(): Promise<void>;
 
-    /** Permanently shut down the QueryFollower, unhooking from the storage and stopping the processing of events. Automatically called when the followed storage closes. */
-    // Triggered when the storage closes
+    /** Permanently shut down the QueryFollower, unhooking from the replica and stopping the processing of events. Automatically called when the followed replica closes. */
+    // Triggered when the replica closes
     // Can also be called manually if you just want to destroy this queryFollower.
     close(): Promise<void>;
 }

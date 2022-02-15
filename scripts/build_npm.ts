@@ -111,13 +111,13 @@ await build({
     },
     // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
     redirects: {
-        "./src/storage/indexeddb-types.deno.d.ts": "./src/storage/indexeddb-types.node.d.ts",
+        "./src/replica/indexeddb-types.deno.d.ts": "./src/replica/indexeddb-types.node.d.ts",
         "./src/test/transport-scenarios/transport-scenarios.ts":
             "./src/test/transport-scenarios/transport-scenarios.node.ts",
         "./src/test/peer-sync-scenarios/peer-sync-scenarios.ts":
             "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
-        "./src/storage/storage-driver-sqlite.deno.ts":
-            "./src/storage/storage-driver-sqlite.node.ts",
+        "./src/replica/replica-driver-sqlite.deno.ts":
+            "./src/replica/replica-driver-sqlite.node.ts",
         "./src/test/test-deps.ts": "./src/test/test-deps.node.ts",
     },
 });

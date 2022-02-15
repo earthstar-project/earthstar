@@ -1,13 +1,13 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
-import { IStorageAsync, LiveQueryEvent } from "../../storage/storage-types.ts";
+import { IReplica, LiveQueryEvent } from "../../replica/replica-types.ts";
 import { Query } from "../../query/query-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { Replica } from "../../replica/replica.ts";
 
 import { TestScenario } from "../test-scenario-types.ts";
 import { testScenarios } from "../test-scenarios.ts";
@@ -31,9 +31,9 @@ function runQueryFollowerTests(scenario: TestScenario) {
     let TEST_NAME = "QueryFollower tests";
     let SUBTEST_NAME = scenario.name;
 
-    function makeStorage(ws: ShareAddress): IStorageAsync {
+    function makeStorage(ws: ShareAddress): IReplica {
         let driver = scenario.makeDriver(ws);
-        return new StorageAsync(ws, FormatValidatorEs4, driver);
+        return new Replica(ws, FormatValidatorEs4, driver);
     }
 
     Deno.test(SUBTEST_NAME + ": query rules", async () => {
@@ -329,7 +329,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
 
         // set a bunch of sequential documents
         let addDocs = async (
-            storage: IStorageAsync,
+            storage: IReplica,
             keypair: AuthorKeypair,
             startAt: number,
             endAt: number,

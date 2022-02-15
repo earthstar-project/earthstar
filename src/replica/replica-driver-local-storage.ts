@@ -1,6 +1,6 @@
 import { Doc, Path, ShareAddress } from "../util/doc-types.ts";
-import { StorageIsClosedError } from "../util/errors.ts";
-import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
+import { ReplicaIsClosedError } from "../util/errors.ts";
+import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 
 //--------------------------------------------------
 
@@ -21,10 +21,10 @@ function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
     return ("byPathAndAuthor" in value && "byPathNewestFirst" in value);
 }
 
-/** A storage driver which perists to LocalStorage, which stores a maximum of five megabytes per domain. If you're storing multiple shares, this limit will be divided among all their replicas.
+/** A replica driver which perists to LocalStorage, which stores a maximum of five megabytes per domain. If you're storing multiple shares, this limit will be divided among all their replicas.
  * Works in browsers and Deno.
  */
-export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
+export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
     _localStorageKeyConfig: string;
     _localStorageKeyDocs: string;
 
@@ -72,7 +72,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     // isClosed(): inherited
     close(erase: boolean) {
         logger.debug("close");
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         if (erase) {
             logger.debug("...close: and erase");
             this._configKv = {};
@@ -99,20 +99,20 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     // synchronous versions for internal use
 
     _getConfigSync(key: string): string | undefined {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         key = `${this._localStorageKeyConfig}:${key}`;
         let result = localStorage.getItem(key);
         return result === null ? undefined : result;
     }
 
     _setConfigSync(key: string, value: string): void {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.setItem(key, value);
     }
 
     _listConfigKeysSync(): string[] {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         let keys = Object.keys(localStorage)
             .filter((key) => key.startsWith(this._localStorageKeyConfig + ":"))
             .map((key) => key.slice(this._localStorageKeyConfig.length + 1));
@@ -121,7 +121,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     }
 
     _deleteConfigSync(key: string): boolean {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         let hadIt = this._getConfigSync(key);
         key = `${this._localStorageKeyConfig}:${key}`;
         localStorage.removeItem(key);
@@ -153,7 +153,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     // SET
 
     async upsert(doc: Doc): Promise<Doc> {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         let upsertedDoc = await super.upsert(doc);
 
         // After every upsert, for now, we save everything

@@ -6,7 +6,7 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { SyncCoordinator } from "../../syncer/sync-coordinator.ts";
 import { makeSyncerBag } from "../../syncer/_syncer-bag.ts";
-import { makeNStorages, storageHasAllStoragesDocs } from "../test-utils.ts";
+import { makeNReplicas, storageHasAllStoragesDocs } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 
 // after start()
@@ -33,21 +33,21 @@ Deno.test("SyncCoordinator", async () => {
     const ADDRESS_C = "+coconuts.c345";
     const ADDRESS_D = "+dates.d456";
 
-    const [storageA1, storageA2] = makeNStorages(ADDRESS_A, 2);
-    const [storageB1] = makeNStorages(ADDRESS_B, 1);
-    const [storageC2] = makeNStorages(ADDRESS_C, 1);
-    const [storageD1, storageD2] = makeNStorages(ADDRESS_D, 2);
+    const [storageA1, storageA2] = makeNReplicas(ADDRESS_A, 2);
+    const [storageB1] = makeNReplicas(ADDRESS_B, 1);
+    const [storageC2] = makeNReplicas(ADDRESS_C, 1);
+    const [storageD1, storageD2] = makeNReplicas(ADDRESS_D, 2);
 
     const peer = new Peer();
     const targetPeer = new Peer();
 
-    peer.addStorage(storageA1);
-    peer.addStorage(storageB1);
-    peer.addStorage(storageD1);
+    peer.addReplica(storageA1);
+    peer.addReplica(storageB1);
+    peer.addReplica(storageD1);
 
-    targetPeer.addStorage(storageA2);
-    targetPeer.addStorage(storageC2);
-    targetPeer.addStorage(storageD2);
+    targetPeer.addReplica(storageA2);
+    targetPeer.addReplica(storageC2);
+    targetPeer.addReplica(storageD2);
 
     await storageA1.set(keypairA, {
         content: "Cider",
