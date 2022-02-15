@@ -1,6 +1,6 @@
 //import { FakeTime } from "https://deno.land/x/mock@0.12.2/mod.ts";
 import { assert, assertEquals } from "../asserts.ts";
-import { Rpc } from "../../../deps.ts";
+import { Rpc } from "../test-deps.ts";
 import { Peer } from "../../peer/peer.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";

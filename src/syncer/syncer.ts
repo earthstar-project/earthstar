@@ -1,14 +1,13 @@
 import { Peer } from "../peer/peer.ts";
 import { PeerId } from "../peer/peer-types.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
-import { Rpc } from "../../deps.ts";
+import { type ITransport } from "../../deps.ts";
 import { SyncCoordinator } from "./sync-coordinator.ts";
 import { ISyncer } from "./syncer-types.ts";
 
 /** A generic syncer which can be used with any kind of Transport.
  */
-export class Syncer<TransportType extends Rpc.ITransport<SyncerBag>>
-    implements ISyncer<TransportType> {
+export class Syncer<TransportType extends ITransport<SyncerBag>> implements ISyncer<TransportType> {
     /** The transport used by the syncer. Can be used to add new connections. */
     transport: TransportType;
     _coordinators: Map<PeerId, SyncCoordinator> = new Map();

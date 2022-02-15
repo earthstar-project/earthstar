@@ -1,7 +1,6 @@
 import { Peer } from "../../peer/peer.ts";
 import { StorageAsync } from "../../storage/storage-async.ts";
-import { serve } from "../test-deps.ts";
-import { Rpc } from "../../../deps.ts";
+import { Rpc, serve } from "../test-deps.ts";
 import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { PeerSyncHelper } from "../test-scenario-types.ts";

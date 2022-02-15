@@ -462,7 +462,7 @@ export class StorageAsync implements IStorageAsync {
         logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
         if (this._isClosed) throw new StorageIsClosedError();
         // TODO: do this in batches
-        let docsToOverwrite = await this.queryDocs({
+        const docsToOverwrite = await this.queryDocs({
             filter: { author: keypair.address },
             historyMode: "all",
         });
@@ -471,19 +471,19 @@ export class StorageAsync implements IStorageAsync {
         );
         let numOverwritten = 0;
         let numAlreadyEmpty = 0;
-        for (let doc of docsToOverwrite) {
+        for (const doc of docsToOverwrite) {
             if (doc.content.length === 0) {
                 numAlreadyEmpty += 1;
                 continue;
             }
 
             // remove extra fields
-            let cleanedResult = this.formatValidator.removeExtraFields(doc);
+            const cleanedResult = this.formatValidator.removeExtraFields(doc);
             if (isErr(cleanedResult)) return cleanedResult;
-            let cleanedDoc = cleanedResult.doc;
+            const cleanedDoc = cleanedResult.doc;
 
             // make new doc which is empty and just barely newer than the original
-            let emptyDoc: Doc = {
+            const emptyDoc: Doc = {
                 ...cleanedDoc,
                 content: "",
                 contentHash: await Crypto.sha256base32(""),
@@ -492,13 +492,13 @@ export class StorageAsync implements IStorageAsync {
             };
 
             // sign and ingest it
-            let signedDoc = await this.formatValidator.signDocument(
+            const signedDoc = await this.formatValidator.signDocument(
                 keypair,
                 emptyDoc,
             );
             if (isErr(signedDoc)) return signedDoc;
 
-            let ingestEvent = await this.ingest(signedDoc);
+            const ingestEvent = await this.ingest(signedDoc);
             if (ingestEvent.kind === "failure") {
                 return new ValidationError(
                     "ingestion error during overwriteAllDocsBySameAuthor: " +

@@ -3,9 +3,9 @@ import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
 import { StorageId } from "../storage/storage-types.ts";
 import { Query } from "../query/query-types.ts";
 import { SyncerBag } from "./_syncer-bag.ts";
-import { Rpc } from "../../deps.ts";
+import { type ITransport } from "../../deps.ts";
 
-export interface ISyncer<TransportType extends Rpc.ITransport<SyncerBag>> {
+export interface ISyncer<TransportType extends ITransport<SyncerBag>> {
     transport: TransportType;
     close(): void;
 }

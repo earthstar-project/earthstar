@@ -25,7 +25,7 @@ npm:
 	deno run --allow-all scripts/build_npm.ts $(VERSION)
 	
 bundle:
-	deno bundle --no-check=remote ./mod.ts ./earthstar.bundle.js
+	deno bundle --no-check=remote ./mod.browser.ts ./earthstar.bundle.js
 	
 run-bundle:
 	deno run --allow-all ./earthstar.bundle.js --help

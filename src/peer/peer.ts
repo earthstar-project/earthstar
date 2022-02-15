@@ -1,4 +1,4 @@
-import { Rpc, SuperbusMap } from "../../deps.ts";
+import { SuperbusMap, TransportHttpClient, TransportLocal } from "../../deps.ts";
 
 import { WorkspaceAddress } from "../util/doc-types.ts";
 import { IStorageAsync } from "../storage/storage-types.ts";
@@ -90,14 +90,14 @@ export class Peer implements IPeer {
     // Syncing stuff
 
     // A few variables to store syncers for re-use.
-    _httpSyncer: Syncer<Rpc.TransportHttpClient<SyncerBag>> | null = null;
-    _localSyncer: Syncer<Rpc.TransportLocal<SyncerBag>> | null = null;
-    _targetLocalSyncers: Map<string, Syncer<Rpc.TransportLocal<SyncerBag>>> = new Map();
+    _httpSyncer: Syncer<TransportHttpClient<SyncerBag>> | null = null;
+    _localSyncer: Syncer<TransportLocal<SyncerBag>> | null = null;
+    _targetLocalSyncers: Map<string, Syncer<TransportLocal<SyncerBag>>> = new Map();
 
-    _addOrGetHttpSyncer(): Syncer<Rpc.TransportHttpClient<SyncerBag>> {
+    _addOrGetHttpSyncer(): Syncer<TransportHttpClient<SyncerBag>> {
         if (!this._httpSyncer) {
             this._httpSyncer = new Syncer(this, (methods) => {
-                return new Rpc.TransportHttpClient({
+                return new TransportHttpClient({
                     deviceId: this.peerId,
                     methods,
                 });
@@ -107,10 +107,10 @@ export class Peer implements IPeer {
         return this._httpSyncer;
     }
 
-    _addOrGetLocalSyncer(): Syncer<Rpc.TransportLocal<SyncerBag>> {
+    _addOrGetLocalSyncer(): Syncer<TransportLocal<SyncerBag>> {
         if (!this._localSyncer) {
             this._localSyncer = new Syncer(this, (methods) => {
-                return new Rpc.TransportLocal({
+                return new TransportLocal({
                     deviceId: this.peerId,
                     methods,
                     description: `Local:${this.peerId}}`,
@@ -158,7 +158,7 @@ export class Peer implements IPeer {
 
             // Otherwise create a new syncer and add it to a private set of target syncers
             const otherSyncer = new Syncer(target as Peer, (methods) => {
-                return new Rpc.TransportLocal({
+                return new TransportLocal({
                     deviceId: (target as Peer).peerId,
                     methods,
                     description: (target as Peer).peerId,

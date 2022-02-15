@@ -1,4 +1,4 @@
-import { Rpc } from "../../deps.ts";
+import { type IConnection } from "../../deps.ts";
 import { Peer } from "../peer/peer.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
 import { WorkspaceAddress } from "../util/doc-types.ts";
@@ -6,7 +6,7 @@ import { WorkspaceQueryRequest, WorkspaceState } from "./syncer-types.ts";
 
 /** Orchestrates different requests in order to syncrhronise a Peer using a connection */
 export class SyncCoordinator {
-    _connection: Rpc.IConnection<SyncerBag>;
+    _connection: IConnection<SyncerBag>;
     _syncerBag: SyncerBag;
     _workspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
     _interval: number | null = null;
@@ -16,7 +16,7 @@ export class SyncCoordinator {
 
     state: "ready" | "active" | "closed" = "ready";
 
-    constructor(peer: Peer, connection: Rpc.IConnection<SyncerBag>) {
+    constructor(peer: Peer, connection: IConnection<SyncerBag>) {
         this._syncerBag = makeSyncerBag(peer);
         this._connection = connection;
     }

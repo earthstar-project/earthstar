@@ -8,8 +8,8 @@
 
 import { rfc4648 } from "../../deps.ts";
 
-let decoder: TextDecoder = new TextDecoder();
-let encoder: TextEncoder = new TextEncoder();
+const decoder: TextDecoder = new TextDecoder();
+const encoder: TextEncoder = new TextEncoder();
 
 //--------------------------------------------------
 

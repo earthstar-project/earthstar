@@ -1,6 +1,6 @@
 import { TransportScenario, TransportTestHelper } from "../test-scenario-types.ts";
 import { Peer } from "../../peer/peer.ts";
-import { Rpc } from "../../../deps.ts";
+import { Rpc } from "../test-deps.ts";
 import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
 
 class TransportHelperLocal implements TransportTestHelper {

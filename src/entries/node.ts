@@ -2,3 +2,6 @@
 
 export { CryptoDriverChloride } from "../crypto/crypto-driver-chloride.ts";
 export { CryptoDriverNode } from "../crypto/crypto-driver-node.js";
+
+// Import path deliberately points to Deno version: this'll be switched out for the node version during NPM build.
+export { StorageDriverSqlite } from "../storage/storage-driver-sqlite.deno.ts";

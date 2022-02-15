@@ -3,7 +3,7 @@ import { WorkspaceAddress } from "../util/doc-types.ts";
 import { ICryptoDriver } from "../crypto/crypto-types.ts";
 import { IStorageAsync, IStorageDriverAsync } from "../storage/storage-types.ts";
 import { SyncerBag } from "../syncer/_syncer-bag.ts";
-import { Rpc } from "../../deps.ts";
+import { Rpc } from "./test-deps.ts";
 
 export interface TestScenario {
     // name of test, to show in list of tests
@@ -18,6 +18,9 @@ export interface TestScenario {
     // in here you will instantiate a StorageDriver and then
     // use it to instantiate a Storage:
     makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync;
+
+    // Config keys that come with the driver
+    builtInConfigKeys: string[];
 }
 
 export interface CryptoScenario {
