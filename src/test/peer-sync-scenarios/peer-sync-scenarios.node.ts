@@ -5,7 +5,7 @@ import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { PeerSyncHelper } from "../test-scenario-types.ts";
 import { default as express, Express } from "https://esm.sh/express?dts";
-import { TransportHttpServerExpress } from "https://esm.sh/earthstar-streaming-rpc@3.1.0?dts";
+import { Rpc } from "../test-deps.node.ts";
 
 import universalSyncScenarios from "./peer-sync-scenarios.universal.ts";
 
@@ -13,16 +13,16 @@ class HttpPeerScenario implements PeerSyncHelper {
     name = "Peers over HTTP";
 
     _peer2 = new Peer();
-    _transport2: TransportHttpServerExpress<SyncerBag>;
+    _transport2: Rpc.TransportHttpServerExpress<SyncerBag>;
     _app2: Express;
     _server2: ReturnType<Express["listen"]> | null = null;
-    _syncer2: Syncer<TransportHttpServerExpress<SyncerBag>>;
+    _syncer2: Syncer<Rpc.TransportHttpServerExpress<SyncerBag>>;
 
     _peer3 = new Peer();
-    _transport3: TransportHttpServerExpress<SyncerBag>;
+    _transport3: Rpc.TransportHttpServerExpress<SyncerBag>;
     _app3: Express;
     _server3: ReturnType<Express["listen"]> | null = null;
-    _syncer3: Syncer<TransportHttpServerExpress<SyncerBag>>;
+    _syncer3: Syncer<Rpc.TransportHttpServerExpress<SyncerBag>>;
 
     constructor() {
         // Set up server
@@ -31,13 +31,13 @@ class HttpPeerScenario implements PeerSyncHelper {
         // Set up server
         this._app3 = express();
 
-        this._transport2 = new TransportHttpServerExpress({
+        this._transport2 = new Rpc.TransportHttpServerExpress({
             app: this._app2,
             deviceId: this._peer2.peerId,
             methods: makeSyncerBag(this._peer2),
         });
 
-        this._transport3 = new TransportHttpServerExpress({
+        this._transport3 = new Rpc.TransportHttpServerExpress({
             app: this._app3,
             deviceId: this._peer3.peerId,
             methods: makeSyncerBag(this._peer3),

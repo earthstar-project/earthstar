@@ -3,18 +3,15 @@ import { Peer } from "../../peer/peer.ts";
 import { makeSyncerBag, SyncerBag } from "../../syncer/_syncer-bag.ts";
 import { sleep } from "../../util/misc.ts";
 import { default as express, Express } from "https://esm.sh/express?dts";
-import {
-    TransportHttpClient,
-    TransportHttpServerExpress,
-} from "https://esm.sh/earthstar-streaming-rpc@3.1.0?dts";
+import { Rpc } from "../test-deps.node.ts";
 import { transportScenarioLocal } from "./transport-scenarios.universal.ts";
 
 class TransportHelperHttpExpress implements TransportTestHelper {
     name = "TransportHttpClient + TransportHttpServerExpress";
     clientPeer: Peer;
     targetPeer: Peer;
-    clientTransport: TransportHttpClient<SyncerBag>;
-    targetTransport: TransportHttpServerExpress<SyncerBag>;
+    clientTransport: Rpc.TransportHttpClient<SyncerBag>;
+    targetTransport: Rpc.TransportHttpServerExpress<SyncerBag>;
 
     _server: ReturnType<Express["listen"]>;
 
@@ -25,7 +22,7 @@ class TransportHelperHttpExpress implements TransportTestHelper {
         // Set up server
         const app = express();
 
-        this.targetTransport = new TransportHttpServerExpress({
+        this.targetTransport = new Rpc.TransportHttpServerExpress({
             app,
             deviceId: targetPeer.peerId,
             methods: makeSyncerBag(targetPeer),
@@ -34,7 +31,7 @@ class TransportHelperHttpExpress implements TransportTestHelper {
         this._server = app.listen(2345);
 
         // Set up client
-        this.clientTransport = new TransportHttpClient({
+        this.clientTransport = new Rpc.TransportHttpClient({
             deviceId: peer.peerId,
             methods: makeSyncerBag(peer),
         });
@@ -56,11 +53,11 @@ class TransportHelperHttpExpress implements TransportTestHelper {
     }
 }
 
-const transportScenarioHttpOpine: TransportScenario = {
+const transportScenarioHttpExpress: TransportScenario = {
     name: "TransportHttpClient + TransportHttpServerExpress",
     make: function (peer: Peer, targetPeer: Peer): TransportTestHelper {
         return new TransportHelperHttpExpress(peer, targetPeer);
     },
 };
 
-export default [transportScenarioLocal, transportScenarioHttpOpine];
+export default [transportScenarioLocal, transportScenarioHttpExpress];

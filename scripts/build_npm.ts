@@ -3,7 +3,11 @@ import { build } from "https://deno.land/x/dnt@0.16.1/mod.ts";
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
-    entryPoints: ["./mod.ts", "./src/entries/node.ts", "./src/entries/browser.ts"],
+    entryPoints: [
+        "./src/entries/universal.ts",
+        "./src/entries/node.ts",
+        "./src/entries/browser.ts",
+    ],
     outDir: "./npm",
     shims: {
         deno: {
@@ -56,14 +60,14 @@ await build({
         target: "ES2020",
     },
     mappings: {
-        "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.1.0/mod.ts":
+        "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.2.0/mod.browser.ts":
             {
                 name: "earthstar-streaming-rpc",
-                version: "3.1.0",
+                version: "3.2.0",
             },
-        "https://esm.sh/earthstar-streaming-rpc@3.1.0?dts": {
+        "https://esm.sh/earthstar-streaming-rpc@3.2.0?dts": {
             name: "earthstar-streaming-rpc",
-            version: "3.1.0",
+            version: "3.2.0",
         },
         "https://esm.sh/express?dts": {
             name: "express",
@@ -114,6 +118,7 @@ await build({
             "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
         "./src/storage/storage-driver-sqlite.deno.ts":
             "./src/storage/storage-driver-sqlite.node.ts",
+        "./src/test/test-deps.ts": "./src/test/test-deps.node.ts",
     },
 });
 
