@@ -1,4 +1,4 @@
-import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Query } from "../query/query-types.ts";
 
@@ -6,19 +6,19 @@ import { Query } from "../query/query-types.ts";
 
 export interface StorageSqliteOptsCreate {
     mode: "create";
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     filename: string; // must not exist
 }
 
 export interface StorageSqliteOptsOpen {
     mode: "open";
-    workspace: WorkspaceAddress | null;
+    share: ShareAddress | null;
     filename: string; // must exist
 }
 
 export interface StorageSqliteOptsCreateOrOpen {
     mode: "create-or-open";
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     filename: string; // may or may not exist
 }
 

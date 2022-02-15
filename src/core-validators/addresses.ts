@@ -3,8 +3,8 @@ import {
     AuthorShortname,
     Base32String,
     ParsedAddress,
-    WorkspaceAddress,
-    WorkspaceName,
+    ShareAddress,
+    ShareName,
 } from "../util/doc-types.ts";
 import { notErr, ValidationError } from "../util/errors.ts";
 
@@ -29,10 +29,10 @@ export function assembleAuthorAddress(
 }
 
 /** Put a share name and encoded pub key together into a share address. */
-export function assembleWorkspaceAddress(
-    name: WorkspaceName,
+export function assembleShareAddress(
+    name: ShareName,
     encodedPubkey: Base32String,
-): WorkspaceAddress // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
+): ShareAddress // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
  {
     return `+${name}.${encodedPubkey}`;
 }
@@ -47,10 +47,10 @@ export function checkAuthorIsValid(
 }
 
 /** Check that a share address is valid. */
-export function checkWorkspaceIsValid(
-    addr: WorkspaceAddress,
+export function checkShareIsValid(
+    addr: ShareAddress,
 ): true | ValidationError {
-    let parsed = parseWorkspaceAddress(addr);
+    let parsed = parseShareAddress(addr);
     if (notErr(parsed)) return true;
     return parsed;
 }
@@ -73,8 +73,8 @@ export function parseAuthorAddress(
 }
 
 /** Parse a workspace address into its parts. */
-export function parseWorkspaceAddress(
-    address: WorkspaceAddress,
+export function parseShareAddress(
+    address: ShareAddress,
 ): ParsedAddress | ValidationError {
     return parseAddress(address, {
         sigil: "+",

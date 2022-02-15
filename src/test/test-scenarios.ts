@@ -34,9 +34,9 @@ const universalStorageScenarios: JustStorageScenario[] = [
             new StorageDriverSqlite({
                 filename: ":memory:",
                 mode: "create",
-                workspace: ws,
+                share: ws,
             }),
-        builtInConfigKeys: ["schemaVersion", "workspace"],
+        builtInConfigKeys: ["schemaVersion", "share"],
     },
 ];
 

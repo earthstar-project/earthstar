@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "../asserts.ts";
 import { doesNotThrow, throws } from "../test-utils.ts";
-import { WorkspaceAddress } from "../../util/doc-types.ts";
+import { ShareAddress } from "../../util/doc-types.ts";
 import { IStorageAsync } from "../../storage/storage-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
@@ -26,7 +26,7 @@ export function runStorageAsyncTests(scenario: TestScenario) {
     let TEST_NAME = "storage tests";
     let SUBTEST_NAME = scenario.name;
 
-    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
+    function makeStorage(ws: ShareAddress): IStorageAsync {
         let driver = scenario.makeDriver(ws);
         return new StorageAsync(ws, FormatValidatorEs4, driver);
     }
@@ -36,8 +36,8 @@ export function runStorageAsyncTests(scenario: TestScenario) {
         async () => {
             let initialCryptoDriver = GlobalCryptoDriver;
 
-            let workspace = "+gardening.abcde";
-            let storage = makeStorage(workspace);
+            let share = "+gardening.abcde";
+            let storage = makeStorage(share);
             let events: string[] = [];
 
             assertEquals(
@@ -196,8 +196,8 @@ export function runStorageAsyncTests(scenario: TestScenario) {
         async () => {
             let initialCryptoDriver = GlobalCryptoDriver;
 
-            let workspace = "+gardening.abcde";
-            let storage = makeStorage(workspace);
+            let share = "+gardening.abcde";
+            let storage = makeStorage(share);
 
             let keypair1 = await Crypto.generateAuthorKeypair("aaaa");
             let keypair2 = await Crypto.generateAuthorKeypair("bbbb");

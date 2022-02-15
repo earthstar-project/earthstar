@@ -5,7 +5,7 @@ import {
     TransportWebsocketClient,
 } from "../../deps.ts";
 
-import { WorkspaceAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { IStorageAsync } from "../storage/storage-types.ts";
 import { IPeer, PeerId } from "./peer-types.ts";
 import { Syncer } from "../syncer/syncer.ts";
@@ -26,21 +26,21 @@ export class Peer implements IPeer {
     peerId: PeerId;
 
     //bus: Superbus<PeerEvent>;
-    storageMap: SuperbusMap<WorkspaceAddress, IStorageAsync>;
+    storageMap: SuperbusMap<ShareAddress, IStorageAsync>;
     constructor() {
         logger.debug("constructor");
         //this.bus = new Superbus<PeerEvent>();
-        this.storageMap = new SuperbusMap<WorkspaceAddress, IStorageAsync>();
+        this.storageMap = new SuperbusMap<ShareAddress, IStorageAsync>();
         this.peerId = "peer:" + randomId();
     }
 
     //--------------------------------------------------
     // getters
 
-    hasWorkspace(workspace: WorkspaceAddress): boolean {
-        return this.storageMap.has(workspace);
+    hasShare(share: ShareAddress): boolean {
+        return this.storageMap.has(share);
     }
-    workspaces(): WorkspaceAddress[] {
+    shares(): ShareAddress[] {
         const keys = [...this.storageMap.keys()];
         keys.sort();
         return keys;
@@ -53,7 +53,7 @@ export class Peer implements IPeer {
     size(): number {
         return this.storageMap.size;
     }
-    getStorage(ws: WorkspaceAddress): IStorageAsync | undefined {
+    getStorage(ws: ShareAddress): IStorageAsync | undefined {
         return this.storageMap.get(ws);
     }
 
@@ -61,32 +61,32 @@ export class Peer implements IPeer {
     // setters
 
     async addStorage(storage: IStorageAsync): Promise<void> {
-        logger.debug(`addStorage(${J(storage.workspace)})`);
-        if (this.storageMap.has(storage.workspace)) {
-            logger.debug(`already had a storage with that workspace`);
+        logger.debug(`addStorage(${J(storage.share)})`);
+        if (this.storageMap.has(storage.share)) {
+            logger.debug(`already had a storage with that share`);
             throw new Error(
-                `Peer.addStorage: already has a storage with workspace ${
-                    J(storage.workspace)
+                `Peer.addStorage: already has a storage with share ${
+                    J(storage.share)
                 }.  Don't add another one.`,
             );
         }
-        await this.storageMap.set(storage.workspace, storage);
+        await this.storageMap.set(storage.share, storage);
         logger.debug(`    ...addStorage: done`);
     }
-    async removeStorageByWorkspace(workspace: WorkspaceAddress): Promise<void> {
-        logger.debug(`removeStorageByWorkspace(${J(workspace)})`);
-        await this.storageMap.delete(workspace);
+    async removeStorageByShare(share: ShareAddress): Promise<void> {
+        logger.debug(`removeStorageByShare(${J(share)})`);
+        await this.storageMap.delete(share);
     }
     async removeStorage(storage: IStorageAsync): Promise<void> {
-        const existingStorage = this.storageMap.get(storage.workspace);
+        const existingStorage = this.storageMap.get(storage.share);
         if (storage === existingStorage) {
-            logger.debug(`removeStorage(${J(storage.workspace)})`);
-            await this.removeStorageByWorkspace(storage.workspace);
+            logger.debug(`removeStorage(${J(storage.share)})`);
+            await this.removeStorageByShare(storage.share);
         } else {
             logger.debug(
                 `removeStorage(${
-                    J(storage.workspace)
-                }) -- same workspace but it's a different instance now; ignoring`,
+                    J(storage.share)
+                }) -- same share but it's a different instance now; ignoring`,
             );
         }
     }

@@ -1,6 +1,6 @@
 // @deno-types="./indexeddb-types.deno.d.ts"
 
-import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
+import { Doc, ShareAddress } from "../util/doc-types.ts";
 import { StorageIsClosedError } from "../util/errors.ts";
 import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
 
@@ -22,10 +22,10 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     _db: IDBDatabase | null = null;
 
     /**
-     * @param workspace - The address of the share the replica belongs to.
+     * @param share - The address of the share the replica belongs to.
      */
-    constructor(workspace: WorkspaceAddress) {
-        super(workspace);
+    constructor(share: ShareAddress) {
+        super(share);
         logger.debug("constructor");
 
         this.docByPathAndAuthor = new Map();
@@ -46,12 +46,12 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
             // Deno doesn't have indexedDB yet, so we need to cast as any.
             // dnt-shim-ignore
             const request = (window as any).indexedDB.open(
-                `stonesoup:database:${this.workspace}`,
+                `stonesoup:database:${this.share}`,
                 1,
             );
 
             request.onerror = () => {
-                logger.error(`Could not open IndexedDB for ${this.workspace}`);
+                logger.error(`Could not open IndexedDB for ${this.share}`);
                 logger.error(request.error);
             };
 
@@ -93,7 +93,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
                 retrieval.onerror = () => {
                     logger.debug(
-                        `StorageIndexedDB constructing: No existing DB for ${this.workspace}`,
+                        `StorageIndexedDB constructing: No existing DB for ${this.share}`,
                     );
                     reject();
                 };

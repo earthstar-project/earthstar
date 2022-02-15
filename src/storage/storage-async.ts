@@ -1,14 +1,7 @@
 import { Lock, Superbus } from "../../deps.ts";
 
 import { Cmp, Thunk } from "./util-types.ts";
-import {
-    AuthorKeypair,
-    Doc,
-    DocToSet,
-    LocalIndex,
-    Path,
-    WorkspaceAddress,
-} from "../util/doc-types.ts";
+import { AuthorKeypair, Doc, DocToSet, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { HistoryMode, Query } from "../query/query-types.ts";
 import {
     IngestEvent,
@@ -75,7 +68,7 @@ function docCompareNewestFirst(a: Doc, b: Doc): Cmp {
 export class StorageAsync implements IStorageAsync {
     storageId: StorageId; // todo: save it to the driver too, and reload it when starting up
     /** The address of the share this replica belongs to. */
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     /** The validator used to validate ingested documents. */
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
@@ -85,7 +78,7 @@ export class StorageAsync implements IStorageAsync {
     _ingestLock: Lock<IngestEvent>;
 
     constructor(
-        workspace: WorkspaceAddress,
+        share: ShareAddress,
         validator: IFormatValidator,
         driver: IStorageDriverAsync,
     ) {
@@ -93,7 +86,7 @@ export class StorageAsync implements IStorageAsync {
             `constructor.  driver = ${(driver as any)?.constructor?.name}`,
         );
         this.storageId = "storage-" + randomId();
-        this.workspace = workspace;
+        this.share = share;
         this.formatValidator = validator;
         this.storageDriver = driver;
         this.bus = new Superbus<StorageBusChannel>("|");
@@ -296,7 +289,7 @@ export class StorageAsync implements IStorageAsync {
             deleteAfter: docToSet.deleteAfter ?? null,
             path: docToSet.path,
             timestamp,
-            workspace: this.workspace,
+            workspace: this.share,
             signature: "?", // signature will be added in just a moment
             // _localIndex will be added during upsert.  it's not needed for the signature.
         };

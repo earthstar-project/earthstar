@@ -20,7 +20,7 @@ import { sleep } from "../../util/misc.ts";
 
 //================================================================================
 
-const WORKSPACE_ADDR = "+test.a123";
+const SHARE_ADDR = "+test.a123";
 
 Deno.test("works", async () => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
@@ -29,9 +29,9 @@ Deno.test("works", async () => {
     ) as AuthorKeypair;
 
     const storage = new StorageAsync(
-        WORKSPACE_ADDR,
+        SHARE_ADDR,
         FormatValidatorEs4,
-        new StorageDriverAsyncMemory(WORKSPACE_ADDR),
+        new StorageDriverAsyncMemory(SHARE_ADDR),
     );
 
     const cache = new StorageCache(storage);

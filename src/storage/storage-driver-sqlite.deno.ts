@@ -1,4 +1,4 @@
-import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
+import { Doc, ShareAddress } from "../util/doc-types.ts";
 import { EarthstarError, StorageIsClosedError, ValidationError } from "../util/errors.ts";
 import { IStorageDriverAsync } from "./storage-types.ts";
 import {
@@ -49,7 +49,7 @@ interface DocObject extends Sqlite.RowObject {
 
 /** A strorage driver which persists to SQLite. Works in Deno and browsers. */
 export class StorageDriverSqlite implements IStorageDriverAsync {
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     _filename: string;
     _isClosed = false;
     _db: Sqlite.DB = null as unknown as Sqlite.DB;
@@ -88,7 +88,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
 
     constructor(opts: StorageSqliteOpts) {
         this._filename = opts.filename;
-        this.workspace = "NOT_INITIALIZED";
+        this.share = "NOT_INITIALIZED";
 
         // check if file exists
         if (opts.mode === "create") {
@@ -141,61 +141,61 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
 
         this._maxLocalIndex = maxLocalIndexFromDb || -1;
 
-        // check workspace
+        // check share
         if (opts.mode === "create") {
-            // workspace is provided; set it into the file which we know didn't exist until just now
-            this.workspace = opts.workspace;
-            this.setConfig("workspace", this.workspace);
+            // share is provided; set it into the file which we know didn't exist until just now
+            this.share = opts.share;
+            this.setConfig("share", this.share);
         } else if (opts.mode === "open") {
-            // load existing workspace from file, which we know already existed...
-            const existingWorkspace = this._getConfigSync("workspace");
-            if (existingWorkspace === undefined) {
+            // load existing share from file, which we know already existed...
+            const existingShare = this._getConfigSync("share");
+            if (existingShare === undefined) {
                 this.close(false);
                 throw new EarthstarError(
-                    `can't open sqlite file with opts.mode="open" because the file doesn't have a workspace saved in its config table. ${opts.filename}`,
+                    `can't open sqlite file with opts.mode="open" because the file doesn't have a share saved in its config table. ${opts.filename}`,
                 );
             }
             // if it was also provided in opts, assert that it matches the file
             if (
-                opts.workspace !== null &&
-                opts.workspace !== this._getConfigSync("workspace")
+                opts.share !== null &&
+                opts.share !== this._getConfigSync("share")
             ) {
                 this.close(false);
                 throw new EarthstarError(
-                    `sqlite with opts.mode="open" wanted workspace ${opts.workspace} but found ${existingWorkspace} in the file ${opts.filename}`,
+                    `sqlite with opts.mode="open" wanted share ${opts.share} but found ${existingShare} in the file ${opts.filename}`,
                 );
             }
-            this.workspace = existingWorkspace;
+            this.share = existingShare;
         } else if (opts.mode === "create-or-open") {
-            // workspace must be provided
-            if (opts.workspace === null) {
+            // share must be provided
+            if (opts.share === null) {
                 this.close(false);
                 throw new EarthstarError(
-                    'sqlite with opts.mode="create-or-open" must have a workspace provided, not null',
+                    'sqlite with opts.mode="create-or-open" must have a share provided, not null',
                 );
             }
-            this.workspace = opts.workspace;
+            this.share = opts.share;
 
-            // existing workspace can be undefined (file may not have existed yet)
-            const existingWorkspace = this._getConfigSync("workspace");
+            // existing share can be undefined (file may not have existed yet)
+            const existingShare = this._getConfigSync("share");
 
-            // if there is an existing workspace, it has to match the one given in opts
+            // if there is an existing share, it has to match the one given in opts
             if (
-                existingWorkspace !== undefined &&
-                opts.workspace !== existingWorkspace
+                existingShare !== undefined &&
+                opts.share !== existingShare
             ) {
                 this.close(false);
                 throw new EarthstarError(
-                    `sqlite file had existing workspace ${existingWorkspace} but opts wanted it to be ${opts.workspace} in file ${opts.filename}`,
+                    `sqlite file had existing share ${existingShare} but opts wanted it to be ${opts.share} in file ${opts.filename}`,
                 );
             }
 
-            // set workspace if it's not set yet
-            if (existingWorkspace === undefined) {
-                this.setConfig("workspace", opts.workspace);
+            // set share if it's not set yet
+            if (existingShare === undefined) {
+                this.setConfig("share", opts.share);
             }
 
-            this.workspace = opts.workspace;
+            this.share = opts.share;
         }
 
         // check and set schemaVersion
@@ -404,7 +404,7 @@ export class StorageDriverSqlite implements IStorageDriverAsync {
         this._db.query(CREATE_LOCAL_INDEX_INDEX_QUERY);
 
         // the config table is used to store these variables:
-        //     workspace - the workspace this store was created for
+        //     share - the share this store was created for
         //     schemaVersion
         this._db.query(CREATE_CONFIG_TABLE_QUERY);
     }

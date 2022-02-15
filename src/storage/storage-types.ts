@@ -1,15 +1,7 @@
-import {
-    AuthorKeypair,
-    Doc,
-    DocToSet,
-    LocalIndex,
-    Path,
-    WorkspaceAddress,
-} from "../util/doc-types.ts";
+import { AuthorKeypair, Doc, DocToSet, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { HistoryMode, Query } from "../query/query-types.ts";
 import { IFormatValidator } from "../format-validators/format-validator-types.ts";
 import { ValidationError } from "../util/errors.ts";
-import { Thunk } from "./util-types.ts";
 import { Superbus } from "../../deps.ts";
 
 //================================================================================
@@ -154,7 +146,7 @@ export interface IStorageAsyncConfigStorage {
 export interface IStorageAsync extends IStorageAsyncConfigStorage {
     storageId: StorageId;
     /** The address of the share this replica belongs to. */
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     /** The validator used to validate ingested documents. */
     formatValidator: IFormatValidator;
     storageDriver: IStorageDriverAsync;
@@ -262,7 +254,7 @@ export interface IStorageAsync extends IStorageAsyncConfigStorage {
  * A storage driver provides low-level access to actual storage and is used by IStorageAsync to actually load and save data. StorageDrivers are not meant to be used directly by users; let the StorageAsync talk to it for you.
  */
 export interface IStorageDriverAsync extends IStorageAsyncConfigStorage {
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     //--------------------------------------------------
     // LIFECYCLE
 

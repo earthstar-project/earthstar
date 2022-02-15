@@ -1,5 +1,5 @@
 import { Peer } from "../peer/peer.ts";
-import { WorkspaceAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { ICryptoDriver } from "../crypto/crypto-types.ts";
 import { IStorageAsync, IStorageDriverAsync } from "../storage/storage-types.ts";
 import { SyncerBag } from "../syncer/_syncer-bag.ts";
@@ -17,7 +17,7 @@ export interface TestScenario {
 
     // in here you will instantiate a StorageDriver and then
     // use it to instantiate a Storage:
-    makeDriver: (ws: WorkspaceAddress) => IStorageDriverAsync;
+    makeDriver: (share: ShareAddress) => IStorageDriverAsync;
 
     // Config keys that come with the driver
     builtInConfigKeys: string[];

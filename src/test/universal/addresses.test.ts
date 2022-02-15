@@ -1,15 +1,15 @@
 import { assert, assertEquals } from "../asserts.ts";
 import { snowmanString } from "../test-utils.ts";
 
-import { AuthorAddress, ParsedAddress, WorkspaceAddress } from "../../util/doc-types.ts";
+import { AuthorAddress, ParsedAddress, ShareAddress } from "../../util/doc-types.ts";
 import { isErr, notErr } from "../../util/errors.ts";
 import {
     assembleAuthorAddress,
-    assembleWorkspaceAddress,
+    assembleShareAddress,
     checkAuthorIsValid,
-    checkWorkspaceIsValid,
+    checkShareIsValid,
     parseAuthorAddress,
-    parseWorkspaceAddress,
+    parseShareAddress,
 } from "../../core-validators/addresses.ts";
 
 //================================================================================
@@ -22,9 +22,9 @@ Deno.test("assemble addresses", () => {
         "assembleAuthorAddress",
     );
     assertEquals(
-        assembleWorkspaceAddress("gardening", "party"),
+        assembleShareAddress("gardening", "party"),
         "+gardening.party",
-        "assembleWorkspaceAddress",
+        "assembleShareAddress",
     );
 });
 
@@ -283,14 +283,14 @@ Deno.test("parseAuthorAddress", () => {
     }
 });
 
-type WorkspaceAddressVector = {
+type ShareAddressVector = {
     valid: boolean;
-    address: WorkspaceAddress;
+    address: ShareAddress;
     parsed?: ParsedAddress;
     note?: string;
 };
-Deno.test("parseWorkspaceAddress", () => {
-    let vectors: WorkspaceAddressVector[] = [
+Deno.test("parseShareAddress", () => {
+    let vectors: ShareAddressVector[] = [
         {
             valid: true,
             address: "+gardening.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
@@ -502,21 +502,21 @@ Deno.test("parseWorkspaceAddress", () => {
     for (let v of vectors) {
         if (v.valid) {
             assertEquals(
-                parseWorkspaceAddress(v.address),
+                parseShareAddress(v.address),
                 v.parsed,
                 "should be parsable: " + (v.note || v.address),
             );
             assert(
-                notErr(checkWorkspaceIsValid(v.address)),
+                notErr(checkShareIsValid(v.address)),
                 "should be valid:    " + (v.note || v.address),
             );
         } else {
             assert(
-                isErr(parseWorkspaceAddress(v.address)),
+                isErr(parseShareAddress(v.address)),
                 "should be unparsable: " + (v.note || v.address),
             );
             assert(
-                isErr(checkWorkspaceIsValid(v.address)),
+                isErr(checkShareIsValid(v.address)),
                 "should be invalid:    " + (v.note || v.address),
             );
         }

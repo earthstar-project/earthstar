@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "../asserts.ts";
 
-import { WorkspaceAddress } from "../../util/doc-types.ts";
+import { ShareAddress } from "../../util/doc-types.ts";
 import { IStorageAsync } from "../../storage/storage-types.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { compareByFn, sortedInPlace } from "../../storage/compare.ts";
@@ -31,25 +31,25 @@ export let runPeerTests = (
     let TEST_NAME = "peer shared tests";
     let SUBTEST_NAME = name;
 
-    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
-        let stDriver = makeDriver(ws);
-        let storage = new StorageAsync(ws, FormatValidatorEs4, stDriver);
+    function makeStorage(share: ShareAddress): IStorageAsync {
+        let stDriver = makeDriver(share);
+        let storage = new StorageAsync(share, FormatValidatorEs4, stDriver);
         return storage;
     }
 
     Deno.test(SUBTEST_NAME + ": peer basics", async () => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let workspaces = [
+        let shares = [
             "+one.ws",
             "+two.ws",
             "+three.ws",
         ];
-        let storages = workspaces.map((ws) => makeStorage(ws));
+        let storages = shares.map((ws) => makeStorage(ws));
 
-        let sortedWorkspaces = sortedInPlace([...workspaces]);
+        let sortedShares = sortedInPlace([...shares]);
         let sortedStorages = [...storages];
-        sortedStorages.sort(compareByFn((storage) => storage.workspace));
+        sortedStorages.sort(compareByFn((storage) => storage.share));
 
         let peer = new Peer();
 
@@ -59,11 +59,11 @@ export let runPeerTests = (
         );
 
         assertEquals(
-            peer.hasWorkspace("+two.ws"),
+            peer.hasShare("+two.ws"),
             false,
             "does not yet have +two.ws",
         );
-        assertEquals(peer.workspaces(), [], "has no workspaces");
+        assertEquals(peer.shares(), [], "has no shares");
         assertEquals(peer.storages(), [], "has no storages");
         assertEquals(peer.size(), 0, "size is zero");
 
@@ -72,44 +72,44 @@ export let runPeerTests = (
         }
 
         assertEquals(
-            peer.hasWorkspace("nope"),
+            peer.hasShare("nope"),
             false,
-            "does not have invalid workspace address",
+            "does not have invalid share address",
         );
         assertEquals(
-            peer.hasWorkspace("+nope.ws"),
+            peer.hasShare("+nope.ws"),
             false,
-            "does not have +nope.ws workspace",
+            "does not have +nope.ws share",
         );
         assertEquals(
-            peer.hasWorkspace("+two.ws"),
+            peer.hasShare("+two.ws"),
             true,
             "now it does have +two.ws",
         );
 
         assertEquals(
-            peer.workspaces(),
-            sortedWorkspaces,
-            "has all 3 workspaces, sorted",
+            peer.shares(),
+            sortedShares,
+            "has all 3 shares, sorted",
         );
         assertEquals(
             peer.storages(),
             sortedStorages,
-            "has all 3 storages sorted by workspace",
+            "has all 3 storages sorted by share",
         );
         assertEquals(peer.size(), 3, "size is 3");
 
-        await peer.removeStorageByWorkspace("+one.ws");
+        await peer.removeStorageByShare("+one.ws");
         assertEquals(
-            peer.workspaces(),
+            peer.shares(),
             ["+three.ws", "+two.ws"],
-            "removed by workspace address",
+            "removed by share address",
         );
         assertEquals(peer.size(), 2, "size is 2");
 
         await peer.removeStorage(storages[1]); // that's two.ws
         assertEquals(
-            peer.workspaces(),
+            peer.shares(),
             ["+three.ws"],
             "removed storage instance",
         );

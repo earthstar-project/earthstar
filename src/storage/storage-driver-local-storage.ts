@@ -1,4 +1,4 @@
-import { Doc, Path, WorkspaceAddress } from "../util/doc-types.ts";
+import { Doc, Path, ShareAddress } from "../util/doc-types.ts";
 import { StorageIsClosedError } from "../util/errors.ts";
 import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
 
@@ -29,16 +29,16 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
     _localStorageKeyDocs: string;
 
     /**
-     * @param workspace - The address of the share the replica belongs to.
+     * @param share - The address of the share the replica belongs to.
      */
-    constructor(workspace: WorkspaceAddress) {
-        super(workspace);
+    constructor(share: ShareAddress) {
+        super(share);
         logger.debug("constructor");
 
         // each config item starts with this prefix and gets its own entry in localstorage
-        this._localStorageKeyConfig = `stonesoup:config:${workspace}`; // TODO: change this to "earthstar:..." later
+        this._localStorageKeyConfig = `stonesoup:config:${share}`; // TODO: change this to "earthstar:..." later
         // but all docs are stored together inside this one item, as a giant JSON object
-        this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${workspace}`;
+        this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${share}`;
 
         let existingData = localStorage.getItem(this._localStorageKeyDocs);
         if (existingData !== null) {
@@ -47,7 +47,7 @@ export class StorageDriverLocalStorage extends StorageDriverAsyncMemory {
 
             if (!isSerializedDriverDocs(parsed)) {
                 console.warn(
-                    `localStorage data could not be parsed for workspace ${workspace}`,
+                    `localStorage data could not be parsed for share ${share}`,
                 );
                 return;
             }

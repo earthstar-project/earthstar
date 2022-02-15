@@ -1,4 +1,4 @@
-import { WorkspaceAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { IStorageAsync } from "../storage/storage-types.ts";
 
 //================================================================================
@@ -12,15 +12,15 @@ export interface IPeer {
     peerId: PeerId;
 
     // getters
-    hasWorkspace(workspace: WorkspaceAddress): boolean;
-    workspaces(): WorkspaceAddress[];
+    hasShare(share: ShareAddress): boolean;
+    shares(): ShareAddress[];
     storages(): IStorageAsync[];
     size(): number;
-    getStorage(ws: WorkspaceAddress): IStorageAsync | undefined;
+    getStorage(ws: ShareAddress): IStorageAsync | undefined;
 
     // setters
     addStorage(storage: IStorageAsync): Promise<void>;
-    removeStorageByWorkspace(workspace: WorkspaceAddress): Promise<void>;
+    removeStorageByShare(share: ShareAddress): Promise<void>;
     removeStorage(storage: IStorageAsync): Promise<void>;
 
     sync(

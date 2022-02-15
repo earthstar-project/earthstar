@@ -1,5 +1,5 @@
 import { Cmp } from "./util-types.ts";
-import { Doc, LocalIndex, Path, WorkspaceAddress } from "../util/doc-types.ts";
+import { Doc, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
 import { IStorageDriverAsync } from "./storage-types.ts";
 import { StorageIsClosedError, ValidationError } from "../util/errors.ts";
@@ -44,7 +44,7 @@ function docComparePathDESCthenNewestFirst(a: Doc, b: Doc): Cmp {
  * Works everywhere.
  */
 export class StorageDriverAsyncMemory implements IStorageDriverAsync {
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     _maxLocalIndex: LocalIndex = -1; // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
     _isClosed: boolean = false;
     _configKv: Record<string, string> = {};
@@ -56,11 +56,11 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     docsByPathNewestFirst: Map<Path, Doc[]> = new Map(); // path --> array of docs with that path, sorted newest first
 
     /**
-     * @param workspace - The address of the share the replica belongs to.
+     * @param share - The address of the share the replica belongs to.
      */
-    constructor(workspace: WorkspaceAddress) {
+    constructor(share: ShareAddress) {
         logger.debug("constructor");
-        this.workspace = workspace;
+        this.share = share;
     }
 
     //--------------------------------------------------

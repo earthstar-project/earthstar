@@ -107,7 +107,7 @@ The `IStorageAsync` is the main star of the show. Classes to the right are used 
 implementation. Classes to the left stack on top of an `IStorageAsync` to do extra things to it
 (subscribe to changes, cache data, etc).
 
-Each `IStorageAsync` holds the Docs for one Workspace.
+Each `IStorageAsync` holds the Docs for one Share.
 
 ![](classes.png)
 

@@ -35,7 +35,7 @@ setLogLevel("main", LogLevel.Debug);
 //================================================================================
 
 let main = async () => {
-    let workspace = "+gardening.abc";
+    let share = "+gardening.abc";
 
     // setup
     loggerMain.blank();
@@ -43,13 +43,13 @@ let main = async () => {
     loggerMain.blank();
     loggerMain.info("-----------\\");
     loggerMain.info("setup");
-    loggerMain.info("workspace =", workspace);
+    loggerMain.info("share =", share);
     //loggerMain.info('set global crypto driver')
     //setGlobalCryptoDriver(CryptoDriverTweetnacl);  // this is the default
     loggerMain.info("instantiate storageDriver and storage");
-    let storageDriver = new StorageDriverAsyncMemory(workspace);
+    let storageDriver = new StorageDriverAsyncMemory(share);
     let storage = new StorageAsync(
-        workspace,
+        share,
         FormatValidatorEs4,
         storageDriver,
     );

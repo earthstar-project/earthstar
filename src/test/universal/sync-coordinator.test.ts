@@ -10,7 +10,7 @@ import { makeNStorages, storageHasAllStoragesDocs } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 
 // after start()
-//   does it determine the common workspaces?
+//   does it determine the common shares?
 //   does it determine the partner's peerId?
 //   has the peer acquired the other peer's docs?
 
@@ -97,7 +97,7 @@ Deno.test("SyncCoordinator", async () => {
 
     await sleep(100);
 
-    assertEquals(coordinator.commonWorkspaces, [ADDRESS_A, ADDRESS_D]);
+    assertEquals(coordinator.commonShares, [ADDRESS_A, ADDRESS_D]);
     assert(
         await storageHasAllStoragesDocs(storageA1, storageA2),
         `${ADDRESS_A} storages are synced.`,
