@@ -28,6 +28,7 @@ export class SyncCoordinator {
         this.state = "active";
 
         // Perform salty handshake
+
         const saltedHandshakeRes = await this._connection.request("serveSaltedHandshake");
 
         const { commonWorkspaces, partnerLastSeenAt } = await this._syncerBag

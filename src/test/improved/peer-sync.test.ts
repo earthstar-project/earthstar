@@ -72,7 +72,6 @@ async function testSyncScenario(
         });
 
         // Wait a sec
-
         await sleep(3000);
 
         // Check that everything synced

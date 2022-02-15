@@ -105,6 +105,58 @@ class TransportHelperHttpOpine implements TransportTestHelper {
     }
 }
 
+class TransportHelperWebsocket implements TransportTestHelper {
+    name = "TransportWebsocketClient + TransportWebsocketServer";
+    clientPeer: Peer;
+    targetPeer: Peer;
+    clientTransport: Rpc.TransportWebsocketClient<SyncerBag>;
+    targetTransport: Rpc.TransportWebsocketServer<SyncerBag>;
+    _controller: AbortController;
+    _serverPromise: Promise<void>;
+
+    constructor(peer: Peer, targetPeer: Peer) {
+        this.clientPeer = peer;
+        this.targetPeer = targetPeer;
+
+        // Set up server
+        this.targetTransport = new Rpc.TransportWebsocketServer({
+            // This is unused ... should ditch this option.
+            url: "",
+            deviceId: targetPeer.peerId,
+            methods: makeSyncerBag(targetPeer),
+        });
+
+        this._controller = new AbortController();
+
+        this._serverPromise = serve(
+            //
+            this.targetTransport.reqHandler,
+            { hostname: "0.0.0.0", port: 3456, signal: this._controller.signal },
+        );
+
+        // Set up client
+        this.clientTransport = new Rpc.TransportWebsocketClient({
+            deviceId: peer.peerId,
+            methods: makeSyncerBag(peer),
+        });
+    }
+
+    connect() {
+        this.clientTransport.addConnection("ws://localhost:3456");
+
+        return Promise.resolve();
+    }
+
+    teardown() {
+        this.clientTransport.close();
+        this.targetTransport.close();
+
+        this._controller.abort("End of test");
+
+        return this._serverPromise;
+    }
+}
+
 const transportScenarioHttp: TransportScenario = {
     name: "TransportHttpClient + TransportHttpServer",
     make: function (peer: Peer, targetPeer: Peer): TransportTestHelper {
@@ -119,8 +171,16 @@ const transportScenarioHttpOpine: TransportScenario = {
     },
 };
 
+const transportScenarioWebsocket: TransportScenario = {
+    name: "TransportWebsocketClient + TransportWebsocketServer",
+    make: function (peer: Peer, targetPeer: Peer): TransportTestHelper {
+        return new TransportHelperWebsocket(peer, targetPeer);
+    },
+};
+
 export default [
     transportScenarioLocal,
     transportScenarioHttp,
     transportScenarioHttpOpine,
+    transportScenarioWebsocket,
 ];

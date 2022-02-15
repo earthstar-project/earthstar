@@ -13,4 +13,5 @@ export {
     type ITransport,
     TransportHttpClient,
     TransportLocal,
+    TransportWebsocketClient,
 } from "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.2.0/mod.browser.ts";

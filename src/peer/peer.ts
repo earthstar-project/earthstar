@@ -1,4 +1,9 @@
-import { SuperbusMap, TransportHttpClient, TransportLocal } from "../../deps.ts";
+import {
+    SuperbusMap,
+    TransportHttpClient,
+    TransportLocal,
+    TransportWebsocketClient,
+} from "../../deps.ts";
 
 import { WorkspaceAddress } from "../util/doc-types.ts";
 import { IStorageAsync } from "../storage/storage-types.ts";
@@ -91,8 +96,22 @@ export class Peer implements IPeer {
 
     // A few variables to store syncers for re-use.
     _httpSyncer: Syncer<TransportHttpClient<SyncerBag>> | null = null;
+    _websocketSyncer: Syncer<TransportWebsocketClient<SyncerBag>> | null = null;
     _localSyncer: Syncer<TransportLocal<SyncerBag>> | null = null;
     _targetLocalSyncers: Map<string, Syncer<TransportLocal<SyncerBag>>> = new Map();
+
+    _addOrGetWebsocketSyncer(): Syncer<TransportWebsocketClient<SyncerBag>> {
+        if (!this._websocketSyncer) {
+            this._websocketSyncer = new Syncer(this, (methods) => {
+                return new TransportWebsocketClient({
+                    deviceId: this.peerId,
+                    methods,
+                });
+            });
+        }
+
+        return this._websocketSyncer;
+    }
 
     _addOrGetHttpSyncer(): Syncer<TransportHttpClient<SyncerBag>> {
         if (!this._httpSyncer) {
@@ -131,8 +150,17 @@ export class Peer implements IPeer {
             // Check if it's a URL of some kind.
             const url = new URL(target as string);
 
-            // Add it to the HTTP syncer
-            // TODO: Check if the protocol indicates HTTP or Websockets
+            // Check if it's a websocket syncer
+            if (url.protocol.startsWith("ws")) {
+                const websocketSyncer = this._addOrGetWebsocketSyncer();
+                const connection = websocketSyncer.transport.addConnection(url.toString());
+
+                return () => {
+                    connection.close();
+                };
+            }
+
+            // Set up a HttpSyncer
             const httpSyncer = this._addOrGetHttpSyncer();
             const connection = httpSyncer.transport.addConnection(url.toString());
 
@@ -182,6 +210,11 @@ export class Peer implements IPeer {
         if (this._httpSyncer) {
             this._httpSyncer.close();
             this._httpSyncer = null;
+        }
+
+        if (this._websocketSyncer) {
+            this._websocketSyncer.close();
+            this._websocketSyncer = null;
         }
 
         if (this._localSyncer) {
