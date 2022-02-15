@@ -9,6 +9,7 @@ import { CryptoDriverChloride } from "../crypto/crypto-driver-chloride.ts";
 import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
 import { StorageDriverLocalStorage } from "../storage/storage-driver-local-storage.ts";
 import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
+import { StorageDriverSqlite } from "../storage/storage-driver-sqlite.deno.ts";
 
 // test types
 import { CryptoScenario, TestScenario } from "./test-scenario-types.ts";
@@ -24,6 +25,18 @@ const universalStorageScenarios: JustStorageScenario[] = [
         name: "StorageDriverAsyncMemory",
         persistent: false,
         makeDriver: (ws) => new StorageDriverAsyncMemory(ws),
+        builtInConfigKeys: [],
+    },
+    {
+        name: "StorageDriverSqlite",
+        persistent: false,
+        makeDriver: (ws) =>
+            new StorageDriverSqlite({
+                filename: ":memory:",
+                mode: "create",
+                workspace: ws,
+            }),
+        builtInConfigKeys: ["schemaVersion", "workspace"],
     },
 ];
 
@@ -32,6 +45,7 @@ const browserStorageScenarios: JustStorageScenario[] = [
         name: "StorageDriverLocalStorage",
         persistent: true,
         makeDriver: (ws) => new StorageDriverLocalStorage(ws),
+        builtInConfigKeys: [],
     },
 ];
 
@@ -40,6 +54,7 @@ const browserOnlyStorageScenarios: JustStorageScenario[] = [
         name: "StorageDriverIndexedDB",
         persistent: true,
         makeDriver: (ws) => new StorageDriverIndexedDB(ws),
+        builtInConfigKeys: [],
     },
 ];
 

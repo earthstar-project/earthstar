@@ -3,7 +3,7 @@ import { build } from "https://deno.land/x/dnt@0.16.1/mod.ts";
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
-    entryPoints: ["./mod.ts", "./src/entries/node.ts"],
+    entryPoints: ["./mod.ts", "./src/entries/node.ts", "./src/entries/browser.ts"],
     outDir: "./npm",
     shims: {
         deno: {
@@ -27,6 +27,13 @@ await build({
                 },
                 globalNames: [],
             },
+            {
+                package: {
+                    name: "@types/better-sqlite3",
+                    version: "7.4.2",
+                },
+                globalNames: [],
+            },
         ],
     },
     compilerOptions: {
@@ -45,6 +52,10 @@ await build({
         "./src/node/chloride.ts": {
             name: "chloride",
             version: "2.4.1",
+        },
+        "https://esm.sh/better-sqlite3?dts": {
+            name: "better-sqlite3",
+            version: "7.5.0",
         },
         "https://raw.githubusercontent.com/sgwilym/noble-ed25519/7af9329476ff2f2a0e524a9f78e36d09704efc63/mod.ts":
             {
@@ -69,6 +80,8 @@ await build({
     // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
     redirects: {
         "./src/storage/indexeddb-types.deno.d.ts": "./src/storage/indexeddb-types.node.d.ts",
+        "./src/storage/storage-driver-sqlite.deno.ts":
+            "./src/storage/storage-driver-sqlite.node.ts",
     },
 });
 
