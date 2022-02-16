@@ -14,4 +14,4 @@ export {
     TransportHttpClient,
     TransportLocal,
     TransportWebsocketClient,
-} from "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.2.0/mod.browser.ts";
+} from "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.2.1/mod.browser.ts";
