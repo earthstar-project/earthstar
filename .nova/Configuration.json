@@ -1,0 +1,4 @@
+{
+  "co.gwil.deno.config.formatOnSave": "false",
+  "co.gwil.deno.config.tsconfig": "deno.json"
+}

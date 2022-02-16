@@ -1,0 +1,9 @@
+*.swp
+.DS_Store
+.nyc_output/
+.vscode/
+cov.lcov
+cov_profile/
+cov_html/
+npm/*
+earthstar.bundle.js
