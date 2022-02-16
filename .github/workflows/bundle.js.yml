@@ -1,4 +1,4 @@
-name: NPM + Node CI
+name: Bundle CI
 
 on:
   push:
@@ -12,19 +12,13 @@ jobs:
 
     strategy:
       matrix:
-        node-version: ["14", "16"]
         deno-version: ["1.18.0"]
 
     steps:
       - uses: actions/checkout@v2
-      
+
       - uses: denoland/setup-deno@v1
         with:
           deno-version: ${{ matrix.deno-version}}
 
-      - name: Use Node.js version ${{ matrix.node-version }}
-        uses: actions/setup-node@v2
-        with:
-          node-version: ${{ matrix.node-version }}
-          
-      - run: make npm
+      - run: make bundle && make run-bundle

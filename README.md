@@ -1,553 +1,422 @@
-# Earthstar
+# Stone Soup - Earthstar v2
 
-![](docs/earthstar-box.png)
+This is a re-implementation of [Earthstar](https://github.com/earthstar-project/earthstar),
+maintaining compatability with the data format (see the specification) but changing the Typescript
+API and the networking protocol.
 
-## An offline-first, distributed, syncable, embedded document database for use in p2p software -- in browsers and outside of browsers
+## Usage
 
-## Community / how to contribute
+To use in Deno, add the following:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+````ts
+import * as Earthstar from "https://setthisup.com/earthstar/mod.ts"
+```;
 
-Join our community on the [Earthstar Discord](https://discord.gg/FuaAnNqUfZ)
+To use with Node or apps built with NPM dependencies:
 
-## Links and docs
+`npm i stone-soup`
 
-Docs for everyone:
-* **[A Guided Tour of Earthstar](https://earthstar-docs.netlify.app/docs/)** -- Slides and diagrams explaining how it works
-
-Docs for app developers:
-* [Overview for developers](https://earthstar-docs.netlify.app/docs/intro/overview-for-developers) -- A quick comparison between Earthstar, CouchDB, and SSB
-* [Rules of Earthstar](https://earthstar-docs.netlify.app/docs/intro/rules-of-earthstar) -- The scope of the project, and details of the technical invariants of the distributed system.
-* [Tutorial](https://earthstar-docs.netlify.app/docs/tutorials/making-an-app) -- Make a Todo list app, step by step
-* [Invite code format](https://github.com/earthstar-project/earthstar/wiki/Invite-code-format)
-* [Standard paths and data formats used by apps](https://github.com/earthstar-project/earthstar/wiki/Standard-paths-and-data-formats-used-by-apps) for their Earthstar documents, so apps can interoperate
-
-Docs for core Earthstar developers:
-* [Earthstar Specification](https://earthstar-docs.netlify.app/docs/reference/earthstar-specification) -- All you need to know to write an Earthstar implementation from scratch
-* [About syncing](https://earthstar-docs.netlify.app/docs/articles/syncing) -- Exploring this topic in more detail
-* [About fancy conflict resolution](https://earthstar-docs.netlify.app/docs/articles/fancier-conflict-resolution) -- How to add more complex conflict tracking on top of Earthstar
-* [About timestamps](https://earthstar-docs.netlify.app/docs/articles/timestamps) -- Exploring the limits of Earthstar's assumptions about timestamps
-* [Urls](https://earthstar-docs.netlify.app/docs/_old/urls) -- How to build URLs related to Earthstar
-
-Related repos:
-* [earthstar-cli](https://github.com/earthstar-project/earthstar-cli) -- Command line utility
-* [earthstar-pub](https://github.com/earthstar-project/earthstar-pub) -- Server to help you sync
-* [react-earthstar](https://github.com/earthstar-project/react-earthstar) -- Make Earthstar apps with React 
-* [earthstar-graphql](https://github.com/earthstar-project/earthstar-graphql) -- A GraphQL layer for handling Earthstar data
-
-Demo apps:
-* [Twodays Crossing](https://github.com/earthstar-project/twodays-crossing) -- Ephemeral Roleplay chatroom [Try it here](https://twodays-crossing.netlify.app)
-* [earthstar-status](https://github.com/earthstar-project/earthstar-status) -- Online presence messages app [Try it here](https://earthstar-status.netlify.app)
-* [earthstar-lobby](https://github.com/sgwilym/earthstar-lobby/) -- Text posts on a timeline.  [Try it here](https://earthstar-lobby.vercel.app/)
-* [earthstar-wiki](https://github.com/earthstar-project/earthstar-wiki) -- An example app built with Earthstar (deprecated)
-* [earthstar-os](https://github.com/earthstar-project/earthstar-os) -- A toolkit for hosting and using Earthstar apps in the browser (deprecated)
-
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Contents**
-
-- [What kinds of apps can you build with Earthstar?](#what-kinds-of-apps-can-you-build-with-earthstar)
-- [Motivation](#motivation)
-- [Data model](#data-model)
-- [Block diagram](#block-diagram)
-- [Scope, typical usage](#scope-typical-usage)
-- [Editing data; multiple users and devices; conflicts](#editing-data-multiple-users-and-devices-conflicts)
-- [Security properties](#security-properties)
-- [Comparisons](#comparisons)
-- [Use cases](#use-cases)
-- [What doesn't it do?](#what-doesnt-it-do)
-- [Example](#example)
-- [Extras](#extras)
-  - [Deleting your data](#deleting-your-data)
-- [Details and notes](#details-and-notes)
-  - [Signatures](#signatures)
-  - [Sync over duplex streams:](#sync-over-duplex-streams)
-  - [Sync over HTTP when only one peer is publicly available:](#sync-over-http-when-only-one-peer-is-publicly-available)
-  - [HTTP API](#http-api)
-- [Future plans](#future-plans)
-  - [Immutable documents by putting "(hash)" in the path](#immutable-documents-by-putting-hash-in-the-path)
-  - [Path overlays](#path-overlays)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
-
-## What kinds of apps can you build with Earthstar?
-
-Tools for collaborating with groups of people.  See [Use-cases](#Use-cases), below.
-
-## Motivation
-
-Centralized services like Facebook have lots of problems: privacy, surveillance, addiction, dark patterns, ads, "real name" policies that harm minority groups, poor handling of moderation, bots, ...
-
-These problems come from 2 root causes:
-* They have a **profit motive**, so their purpose is to extract value from users.
-* They're **big**, so they're a bureaucracy that can't understand the nuances of the diverse world population they serve, and they're unresponsive to demands from their users.
-
-We'd be better off with communication services that are:
-* **Not for profit** - run by volunteers on small, cheap servers
-* **Small** - close to their users, locally governed, more democratic, understanding local norms and culture
-
-This is the "federated" model, like Mastodon: instead of one big Twitter, make a thousand small Twitters.
-
-But this has problems too -- volunteer-run servers don't last forever, and when they shut down their users lose their communities.
-
-Earthstar goes one step further: you can communicate without servers at all, directly from device to device; or you can run Earthstar on [servers ("called pubs")](https://github.com/cinnamon-bun/earthstar-pub) which help sync your data but have no authority over your account.  You can easily run your own servers for yourself and your friends.  Instructions coming soon.
-
-All the authority in the system rests in the users and is enforced by cryptography, not central servers.  Since servers only exist to help with syncing, and your data and identity are independent of the servers, you can easily use as many or as few servers as you want, and move between them without losing anything.
-
-Earthstar's philosophy is that **apps should be tools, not services**.  Authority no longer rests in a central server, it rests in each user.
-
-## Data model
-
-An Earthstar workspace holds mutable **documents** with unique **paths** (ids), similar to leveldb or CouchDb.
-
-Within each **path**, we keep the newest version of that **document** from each author.  We discard old versions of a document from the same author.
-
-In other words, it's a mapping from `(path, author)` to `latest version of the document at that path, from that author`.
-
-The newest document (from any author) is considered the winner of a conflict.  More details below in the "Editing data" section.
-
-There are no transactions.  The unit of atomic change is the document.
-
-![](docs/earthstar-data-model.png)
-
-## Block diagram
-
-Simplified diagram of the entire system.  The dashed boxes are not implemented yet.
-
-![](docs/block-diagram.png)
-
-A more detailed look at this Javascript implementation:
-
-![](docs/building-blocks.png)
-
-## Scope, typical usage
-
-Each user will have their own instance of an Earthstar database in whatever app they're using -- in the browser or native.  There might also be some instances on cloud servers ("pubs").  The databases can sync with each other across HTTP or duplex stream connections.
-
-Each database instance can hold a subset of the entire data, specified by a query such as "paths starting with a certain substring", "paths written after a certain timestamp", etc.
-
-The universe of data is divided into **workspaces** -- collections of documents accessed by certain users.  Syncing happens one workspace at a time.
-
-Read the [vocabulary and concepts](https://earthstar-docs.netlify.app/docs/intro/concepts-and-vocabulary) documentation for more about workspaces.
-
-## Editing data; multiple users and devices; conflicts
-
-A single author can use multiple devices at the same time.  You "log into" a device by providing your public and private key, like a username and password.
-
-Data is mutable.  Authors can update paths with new documents.  The old data is thrown away and doesn't take up space.  You can "delete" data by overwriting it with an empty document.
-
-There is a write permission system to allow only certain authors to write to certain paths.  Other paths can be written by anyone.
-
-Soon, there will also be a way to write immutable messages, for use cases where you need those.
-
-Conflicts from a single author (on multiple devices) are resolved by timestamp and the old data is discarded.  Conflicts from multiple authors are resolved by timestamp by default, but the old data is kept to allow for manual conflict resolution if needed.
-
-## Security properties
-
-Each author is identified by a public key.
-
-Data updates are signed by the author, so it's safe for untrusted peers to help host and propagate data.  (Soon) you will also be able to encrypt data so untrusted peers can host it without reading it.
-
-Malicious peers can:
-* Withold updates to individual documents during a sync
-* See the data (until encryption is implemented, soon)
-* Know which peers they're connecting to
-
-Malicious peers cannot:
-* Alter documents from another author
-* Forge new documents signed by another author
-
-Although malicious peers can withold individual documents, as long as there are honest peers around you will eventually get the latest verison of everything.
-
-Because it allows partial sync and mutation of data, Earthstar doesn't cryptographically guarantee that you have a complete dataset with no gaps from a certain author.  Authors could chose to use sequential paths or embed a blockchain of hash backlinks into their messages, and you could verify these in your app (outside of Earthstar).
-
-## Comparisons
-
-Like leveldb, but:
-* multi-author
-* it syncs
-
-Like CouchDb, but:
-* with signatures and encryption, so untrusted nodes can help move data around.
-
-Like Scuttlebutt, but:
-* one author can use multiple devices
-* data is mutable
-* instead of an append-only log, it's a set of mutable items
-* supports partial replication
-* will sync over HTTP, not just TCP, so it's easy to host in places like Glitch.com
-* has less strict data guarantees -- you can't tell if you have someone's entire dataset or not
-
-Like DAT, but:
-* multi-author, multi-device
-* simpler
-* communicates over HTTP, making it easier to deploy pub servers and run in regular browsers
-* instead of an append-only log, it's a set of mutable items
-
-Like IPFS, but:
-* multi-author, multi-device
-* mutable
-* documents are signed by the author
-* currently more focused on pub servers for replication and not DHT swarms, although swarm support is coming
-
-Like Firebase, but:
-* open source
-* distributed
-
-Sometimes immutability is needed, like if you're running a package registry or want an audit log.  For social-network style use cases, though, immutability can be a privacy liability instead of a desirable guarantee.
-
-## Use cases
-
-Earthstar can be used for invite-only tools where you have all the data (think Slack) and large open-world tools where you only replicate part of the entire dataset (think SSB).  Apps tell Earthstar what paths and what authors to replicate.
-
-These styles of app could be built on top of Earthstar:
-* wikis
-* chat: Slack, IRC
-* social: Facebook, Scuttlebutt, Discourse, LiveJournal, Forums
-* microblogging: Twitter, Mastodon
-* productivity: Trello, GitHub Issues, Asana, Todo lists
-* office: Google sheets
-* art: Collaborative drawing or music tools, multi-user Twine for making interactive fiction games
-
-## What doesn't it do?
-
-Earthstar's conflict resolution chooses entire document versions as winners, it doesn't merge versions together.  This means it's a poor choice for simultaneous multi-user editing of large text documents.  For that, you could use a fancier CRDT like Automerge and rely on Earthstar to move and sync the patches it produces.  Or you can design apps to store large documents as smaller pieces, like paragraphs, or design other ways to collaborate such as comments or chat where people don't simultaneously edit the same text.
-
-It will eventually stream live changes, but it doesn't yet.  For now, syncing is done on demand.
-
-The cryptography is not audited yet.  It's based on libsodium which is also used by Scuttlebutt and many other projects.
-
-Earthstar is more focused on autonomy than on anonymity.  It doesn't have perfect forward secrecy.  Your messages are signed by your key so it's easy to prove which identity said something.  We try to reduce IP address exposure etc, but if you have a serious need for anonymity you should layer it on something like Tor or use other tools that are anonymity-focused.
-
-Earthstar doesn't provide transactions or causality guarantees.
-
-Moderation and blocking support is not figured out yet but it's important and we'll get there eventually.  In the meantime, apps can layer their own moderation and blocking support on top of Earthstar.
-
-## Example
-
-The main interface to Earthstar is the Storage class:
+And then import in your code:
 
 ```ts
-export interface IStorage {
-    // A Storage instance holds the documents of a single workspace.
-    // To construct one, you need to supply
-    //   * a workspace address
-    //   * a list of Validator classes, for the document formats you want to support
-    //   * various other options such as database filenames, specific to that kind of Storage
+import * as Earthstar from "stone-soup";
+````
 
-    // The workspace held in this Storage object.
-    workspace: WorkspaceAddress;
+### Platform-specific drivers
 
-    // onChange is called whenever any data changes:
-    //   * after every set()
-    //   * after every ingestDocument()
-    //   * after each document obtained during a sync (because that happens via ingestDocument())
-    // It doesn't yet send any details about the changes to the callback, but it should.
-    // Subscribe with onChange.subscribe(...cb...);
-    onChange: Emitter<undefined>;
+There are two parts of stone-soup which are swappable to support different platforms or backends:
+`ICryptoDriver` and `IStorageDriverAsync`. Everything else should work on all platforms.
 
-    // QUERYING
-    // Return the documents that match the query.
-    // Default sort is path ASC, then timestamp DESC (newest first within same path)
-    //  but query objects will eventually include sort options.
-    documents(query?: QueryOpts): Document[];
-    // Same as documents(), but only return the distinct paths of the matching documents (duplicates removed).
-    paths(query?: QueryOpts): string[];
-    // Same as documents(), but only return the content properties of the matching documents.
-    contents(query?: QueryOpts): string[];
+Crypto drivers:
 
-    // List of authors that have ever written in this workspace.
-    authors(now?: number): AuthorAddress[];
+- `CryptoDriverChloride` - only in browser, Node
+- `CryptoDriverNode` - only in Node
+- `CryptoDriverNoble` - universal
 
-    // INDIVIDUAL DOCUMENT LOOKUP
-    // Get one document by path.
-    // Only returns the most recent document at this path.
-    // To get older docs at this path (from other authors), do a query.
-    getDocument(path: string, now?: number): Document | undefined;
-    // Same as getDocument(path).content -- just the content of that document
-    getContent(path: string, now?: number): string | undefined;
+Storage drivers:
 
-    // WRITING
-    // Write a document.
-    // To do this you need to know an author's private key, which is part of the keypair object.
-    // The DocToSet type is similar but smaller than a regular document:
-    //   format: which document format to use
-    //   path
-    //   content
-    //   timestamp: optional.  If absent or zero, the current time is set for you
-    //   - no workspace -- this Storage object knows what workspace it is
-    //   - no author -- it's provided in the keypair argument
-    //   - no signature -- it will be signed for you
-    // Timestamps should only be set manually for testing purposes.  Normally they should be
-    // omitted so they default to now.
-    // The timestamp will also be increased so that it's greater than any previous doc
-    // at the same path (from any author), to guarantee that this write will be the conflict winner.
-    //
-    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
-    set(keypair: AuthorKeypair, docToSet: DocToSet, now?: number): WriteResult | ValidationError;
+- `StorageDriverAsyncMemory` - univeral
+- `StorageDriverLocalStorage` - browser
+- `StorageDriverIndexedDB` - browser
+- `StorageDriverSqlite` - Node, Deno (⏳ coming soon)
 
-    // Save a document from an external source to this Storage instance.
-    // The document must be already signed.
-    // This is mostly used for syncing.
-    //
-    // now should usually be omitted; it's used for testing and defaults to Date.now()*1000
-    ingestDocument(doc: Document, now?: number): WriteResult | ValidationError;
+Users of this library have to decide which of these drivers to import and use in their app.
+Hopefully your app is using some build system that does tree-shaking and will discard the unused
+drivers.
 
-    // Internal helper method to do a one-way pull sync.
-    _syncFrom(otherStore: IStorage, existing: boolean, live: boolean): number;
+## Development
 
-    // TODO: add now? param to _syncFrom and sync
+### Setup
 
-    // Two-way sync to another local Storage instance running in the same process.
-    // This is not network-aware.  Network sync is handled by the Syncer class.
-    sync(otherStore: IStorage, opts?: SyncOpts): SyncResults;
+You will need Deno installed.
+[Instructions for installation can be found here](https://deno.land/#installation). You may also
+want type-checking and linting from Deno for your IDE, which you can get with extensions
+[like this one for VSCode](https://deno.land/manual@v1.17.2/vscode_deno).
 
-    // TODO: Delete data locally.  This deletion will not propagate.
-    // forget(query : QueryOpts) : void;  // same query options as paths()
+To check that you've got everything set up correctly:
 
-    // Close this storage.
-    // All functions called after this will throw a StorageIsClosedError,
-    // except you can call close() as many times as you want.
-    // Once closed, a Storage instance cannot be opened again.
-    // TODO: what happens when a long-running process like a sync is happening, and the Storage is closed?
-    close() : void;
-    // Find out if the storage is closed.
-    isClosed() : boolean;
+`make example`
+
+This will run the example script at `example-app.ts`, and you will see a lot of colourful log
+messages from the app.
+
+### Scripts
+
+Scripts are run with the `make` command.
+
+- `make test` - Run all tests
+- `make test-watch` - Run all tests in watch mode
+- `make fmt` - Format all code in the codebase
+- `make npm` - Create a NPM package in `npm` and run tests against it (requires Node v14 or v16 to
+  be installed).
+- `make bundle` - Create a bundled browser script at `earthstar.bundle.js`
+- `make depchart` - Regenerate the dependency chart images
+- `make coverage` - Generate code test coverage statistics
+- `make clean` - Delete generated files
+
+### Orientation
+
+- The entry for the package can be found at `mod.ts`.
+- Most external dependencies can be found in `deps.ts`. All other files import external dependencies
+  from this file.
+- Script definitions can be found in `Makefile`.
+- Tests are all in `src/test/`
+- The script for building the NPM package can be found in `scripts/build_npm.ts`
+
+### Uint8Arrays and Buffers
+
+We use Uint8Arrays throughout the code to maximize platform support. Some of the node-specific
+drivers use Buffers internally but the Buffers are converted to Uint8Arrays before leaving those
+drivers.
+
+For convenience, variables that hold Uint8Arrays are called "bytes", like `bytesToHash` instead of
+`uint8ArrayToHash`.
+
+`util/bytes.ts` has a bunch of helper code to do common operations on Uint8Arrays and to convert
+them back and forth to strings and to Buffers.
+
+### Platform-specific tests
+
+Drivers are tested against the runtimes they're intended for. When tests are run, they pull the
+correct scenarios from 'src/test/test-scenarios.ts', where the current runtime is inferred during
+runtime.
+
+### Classes
+
+The `IStorageAsync` is the main star of the show. Classes to the right are used internally for its
+implementation. Classes to the left stack on top of an `IStorageAsync` to do extra things to it
+(subscribe to changes, cache data, etc).
+
+Each `IStorageAsync` holds the Docs for one Share.
+
+![](classes.png)
+
+Names starting with `I` are interfaces; there are one or multiple actual classes that implement
+those interfaces.
+
+The orange classes are "drivers" which have multiple implementations to choose from, for different
+platforms (node, browser, etc).
+
+Blue arrows show which functions call each other.
+
+Thick black arrows show which classes have pointers to other classes when they're running.
+
+### Source code dependency chart
+
+A --> B means "file A imports file B".
+
+For readability this hides `/test/` and `/util/` and `*-types.ts`.
+
+![](depchart/depchart-no-types.png)
+
+And again with 3rd party dependencies as brown boxes with dotted lines, and including `*-types.ts`
+
+![](depchart/depchart-deps.png)
+
+Run `yarn depchart` to regenerate this. You'll need graphviz installed.
+
+### Documentation
+
+We use JSDoc for user documentation. You can view docs for the whole codebase at
+https://doc.deno.land/https://deno.land/x/stone_soup@v8.0.0/mod.ts, or by running the following from
+the root of the project:
+
+```
+deno doc mod.ts
+```
+
+JSDocs are intended for end-users of the library. Comments for contributors working with the
+codebase — e.g. notes on how something is implemented — are better as standard JS comments.
+
+If possible, use a single line for the JSDoc. Example:
+
+```ts
+/** Does something great */
+export function doSomething() {
+    // ...
 }
 ```
 
-Usage example ([readme-example.ts](src/readme-example.ts)):
-```ts
-import {
-    StorageMemory,
-    ValidatorEs4,
-    generateAuthorKeypair,
-    isErr,
-} from 'earthstar';
+You can use markdown inside of JSDoc block. While markdown supports HTML tags, it is forbidden in
+JSDoc blocks.
 
-// Create a database for a particular workspace, '+gardening.xxxxxxxx'
-// We've chosen to use the latest 'es.4' feed format so we supply the matching validator.
-let storage = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');
-
-// Users are called "authors".
-// Let's make up some authors for testing.
-// A keypair is { address: '@aaaa.xxx', secret: 'xxx' }.
-// (xxx represents base32-encoded ed25519 keys)
-let keypair1 = generateAuthorKeypair('aaaa');
-let keypair2 = generateAuthorKeypair('bbbb');
-if (isErr(keypair1)) { throw "oops"; }  // error could happen if our author shortname broke the rules
-if (isErr(keypair2)) { throw "oops"; }
-let author1 = keypair1.address;
-let author2 = keypair2.address;
-
-// You can set documents at specific paths, like a filesystem or key-value store.
-storage.set(keypair1, { format: 'es.4', path: '/wiki/Strawberry', content: 'Tasty' });
-storage.getContent('/wiki/Strawberry'); // --> 'Tasty'
-
-// One author can use multiple devices with no problems.
-// Conflicts are resolved by timestamp.
-// Here the same author overwrites their previous document,
-// which is forgotten from the database.
-storage.set(keypair1, { format: 'es.4', path: '/wiki/Strawberry', content: 'Tasty!!' });
-storage.getContent('/wiki/Strawberry'); // --> 'Tasty!!'
-
-// Multiple authors can overwrite each other (also by timestamp).
-// Here author 2 writes to the same path.
-storage.set(keypair2, { format: 'es.4', path: '/wiki/Strawberry', content: 'Yum' });
-storage.getContent('wiki/Strawberry'); // --> 'Yum'
-
-// Within a path we keep the most-recent document from each author,
-// in case we need to do better conflict resolution later.
-// To see the old versions, use a query:
-storage.contents({ path: '/wiki/Strawberry', includeHistory: true });
-// --> ['Yum', 'Tasty!!']  // newest first
-
-// Get the entire document to see all the metadata as well as the content.
-storage.getDocument('/wiki/Strawberry');
-// --> {
-//     format: 'es.4',
-//     workspace: '+gardening.xxxxxxxx',
-//     path: '/wiki/Strawberry',
-//     content: 'Yum',
-//     author: '@bbbb.xxxxxxx',
-//     timestamp: 1596676583283000,  // time in microseconds: Date.now()*1000
-//     signature: 'xxxxxxxx',
-// }
-
-// WRITE PERMISSIONS
-//
-// Paths can specify which authors are allowed to write to them.
-// Author names in a path prefixed by '~' can write to that path.
-//
-// Examples:
-// (in these docs, "xxx" is shorthand for a long public key)
-// One author write permission:
-//   '/about/~@aaaa.xxx/name'  -- only @aaaa.xxx can write here.
-//   '/about/~@aaaa.xxx/follows/@bbbb.xxx'  -- only @aaaa.xxx can write here
-// Public:
-//   '/wall/@aaaa.xxx'  -- no tilde, so anyone can write here
-//   '/wiki/Kittens'  -- no tilde, so anyone can write here
-// Multiple authors:
-//   '/whiteboard/~@aaaa.xxx~@bbbb.xxx'  -- both @aaaa.xxx and @bbbb.xxx can write here
-//
-// Here we'll set the author's display name by writing to their profile document.
-storage.set(keypair1, {
-    format: 'es.4',
-    path: '/about/~' + keypair1.address + '/profile.json',
-    content: JSON.stringify({displayName: 'Suzie'}),
-});
-
-// You can do leveldb style queries.
-// See the /src/storage/queries.ts for details on queries.
-storage.paths()
-storage.paths({ pathStartsWith: '/wiki/', limit: 10 })
-
-// You can sync to another Storage that has the same workspace address
-let storage2 = new StorageMemory([ValidatorEs4], '+gardening.xxxxxxxx');
-storage.sync(storage2);
-// Now storage and storage2 are identical.
-
-// Get notified when anything changes.
-let unsub = storage.onChange.subscribe(() => console.log('something changed'));
-
-// Later, you can turn off your subscription.
-unsub();
-```
-
-## Extras
-
-### Deleting your data
-
-There's a special function to delete all of your own data from a workspace.
-
-It has limitations; I wish we could do better but this is the best that's possible given the current design of Earthstar.
+Code string literals should be braced with the back-tick (\`) instead of quotes. For example:
 
 ```ts
-import { deleteMyDocuments } from 'earthstar'
-
-let { numDeleted, numErrors } = deleteMyDocuments(storage, authorKeypair);
-// numErrors is how many documents failed to be deleted.  It should be zero.
+/** Import something from the `earthstar` module. */
 ```
 
-This overwrites all the documents you created with empty strings, which is the usual way to "delete" things from Earthstar.  These deletions will propagate across the network, erasing your content from everyone in the workspace the next time they sync.
+It's not necessary to document function arguments unless an extra explanation is warranted.
+Therefore `@param` should generally not be used. If `@param` is used, it should not include the
+`type` as TypeScript is already strongly typed.
 
-If you do this, make sure you give Earthstar a chance to sync with pubs and get your empty versions out there, before you turn off your computer or log out of the workspace.
-
-What's deleted:
-* The content of documents that you wrote
-* The hashes of your original content
-
-Some metadata is left behind forever:
-* The paths of those documents
-* Their original timestamps plus 1 microsecond, so the empty version wins
-* Your author address
-
-App authors should consider the privacy implications of the way their paths are constructed, since the paths of documents can't be removed.  For example, use random IDs in paths instead of descriptive titles.
-
-Recall that if multiple people have written to the same path, Earthstar keeps one document from each of those people.  There are two scenarios to consider there:
-* If you were one of the older writers to that path, your document will be emptied and the newer document from someone else will be unaffected.
-* If you were the most recent writer, your document will be emptied and, since this is the most recent one, apps will now treat the whole paths as if it was gone.  The older docs by other people are still accessible but in most apps it will look like the path is empty.
-
-Your *ephemeral* documents (which have expiration dates) will also be emptied of content.  Their expiration date will not be changed.  When that date arrives, they will be completely and physically deleted.  (It would be nice to make them expire sooner but that might prevent the empty version from propagating across the entire network; generally expiration dates can be extended but not shortened.)
-
-----
-
-## Details and notes
-
-**NOTE** The rest of this README is somewhat out of date!
-
-### Signatures
-
-Document hashes are used within signatures and could be used to link to specific versions of a doc.
-
-There's a simple canonical way to hash a document.  See [docs/serialization-and-hashing.md](Serialization and Hashing) for details.
-
-To sign a doc, you sign its hash with the author's secret key.
-
-Note that docs only ever have to get transformed INTO this representation just before hashing -- we never need to convert from this representation BACK into a real doc -- so it can be nice and simple.
-
-There is no canonical encoding for storage or networking - only the canonical hash encoding, above.  Databases and network code can represent the doc in any way they want.
-
-The hash and signature specification may change as the schema evolves beyond `es.4`.  For example there may be another schema `ssb.1` which wraps and embeds SSB messages and knows how to validate their signatures.
-
-### Sync over duplex streams:
-
-Here's a very simple but inefficient algorithm to start with:
-
-```
-    sort paths by (path, timestamp DESC, signature ASC)
-    filter by my interest query
-    while true:
-        both sides send next 100 docs to each other as (path, timestamp, signature)
-        both sides figure out what the other needs and send it in full
-        both sides send 'ok'
+```ts
+/**
+ * Function with non obvious param.
+ * @param nonObvious Description of non obvious parameter.
+ */
 ```
 
-### Sync over HTTP when only one peer is publicly available:
+Code examples should utilize markdown format, like so:
 
-Here's a very simple but inefficient algorithm to start with:
+````ts
+/** A straight forward comment and an example:
+ * ```ts
+ * import { Crypto } from "stone-soup";
+ * const keypair = Crypto.generateAuthorKeypair("suzy");
+ * ```
+ */
+````
 
+Code examples should not contain additional comments and must not be indented. It is already inside
+a comment. If it needs further comments it is not a good example.
+
+Exported functions should use the `function` keyword, and not be defined as inline functions
+assigned to variables. The main reason for this being that they are then correctly categorised as
+functions.
+
+### Publishing to NPM
+
+1. Run `make VERSION="version.number.here" npm`, where `version.number.here` is the desired version
+   number for the package.
+2. `cd npm`
+3. `npm publish`
+
+## Changes from Earthstar v1
+
+### Splitting `IStorage` into `Storage` and `StorageDriver` classes
+
+Think of this as `IStorageNiceAPIFullOfComplexity` and `IStorageSimpleLowLevelDriver`.
+
+I want to make it easier to add new kinds of storage so I'm splitting IStorage into two parts:
+
+The Storage does:
+
+- the complex annoying stuff we only want to write once
+- `set():` sign and add a document
+- `ingest():` validate and accept a document from the outside
+- user-friendly helper functions, getters, setters
+- an event bus that other things can subscribe to, like QueryFollowers
+
+The StorageDriver does:
+
+- simple stuff, so we can make lots of drivers
+- query for documents (this is actually pretty complicated)
+- maintain indexes for querying (hopefully provided by the underlying storage technology)
+- simple upsert of a document with no smartness
+
+Possibly even you can have multiple Storages for one Driver, for example when you're using multiple
+tabs with indexedDb or localStorage.
+
+### "Reliable indexing / streaming"
+
+This shows an implementation of the "reliable indexing" idea discussed in
+[this issue](https://github.com/earthstar-project/earthstar/issues/66).
+
+#### The problem
+
+We have livestreaming now, over the network and also to local subscribers, all based on `onWrite`
+events.
+
+If you miss some events, you can't recover -- you have to do a full batch download of every
+document.
+
+Events also don't tell you what was overwritten, which you might need to know to update a Layer or
+index.
+
+#### The solution: `localIndex`
+
+Each Storage keeps track of the order that it receives documents, and assignes each doc a
+`localIndex` value which starts at 1 and increments from there with every newly written doc.
+
+This puts the documents in a nice stable linear order that can be used to reliably stream, and
+resume streaming, from the Storage.
+
+When we get a new version of a document, it gets a new `localIndex` and goes at the end of the
+sequence, and the old version vanishes, leaving a gap in the sequence. It's ok that there are gaps.
+
+The `localIndex` is particular to a certain IStorage. It's kept in the `Doc` object but it's not
+really part of it; it's not included in the signature. It's this IStorage's metadata about that
+document. When syncing, it's sent as one of the "extra fields"
+[(newly added to the specification)](https://earthstar-docs.netlify.app/docs/reference/earthstar-specification/#extra-fields-for-syncing),
+observed by the receiving peer, then discarded and overwritten with the receiving peer's own latest
+`localIndex` number.
+
+#### Use cases
+
+1. Streaming sync between peers, which can be interrupted and resumed
+1. Layers and indexes that use a QueryFollower to subscribe to changes in a Storage. These might
+   store their indexes in localStorage, for example, and would therefore want to resume indexing
+   instead of starting over from scratch.
+1. React components that need to know when to re-render
+
+For use cases where the listener will never have any downtime, they don't really need to be able to
+resume, they can just listen for events from the Storage instead and it may be more efficient. For
+example a React component could listen for events about a particular document instead of making a
+whole QueryFollower that has to go through every single change to find changes to that particular
+document.
+
+#### Properties of the `localIndex` sequence
+
+The docs, sorted by `localIndex` on a particular peer, have these properties:
+
+**Properties**
+
+1. The docs are in a stable order that does not change, except:
+1. Newly added or changed docs go at the end, increasing the highest `localIndex` by 1.
+1. When a doc is updated (same author and same path, but newer timestamp), we discard the old
+   version. So we leave a gap in the sequence where the old verison used to be, and the new version
+   goes on the end of the sequence.
+1. The first doc has a `localIndex` of zero, unless it was later changed, in which case there will
+   be a gap at zero.
+
+Why do all this? The goal is to be able to catch up to changes since the last time we looked at a
+Storage. We can do that by remembering the highest `localIndex` we saw last time, and now getting
+all the docs later than that in the sequence. We always read this sequence from old to new (in
+increasing order of `localIndex`.
+
+There are not really any other nice properties about this sequence:
+
+**Downsides**
+
+1. The `localIndex` order is not sorted by `path`, `timestamp`, `author`, or any other useful
+   property. The order is jumbled because docs can be received in any order during a sync, perhaps
+   with multiple other peers simultaneously, perhaps some using Sync Filters to only get some
+   docs...
+1. The order is different on every peer (that's why it's "local").
+1. The history docs for a certain path will be in a jumbled order in the `localIndex` sequence. The
+   Latest doc for a path can be before or after the other history docs. User of QueryFollowers will
+   need some bookeeping to remember which version is the Latest for each path, if they care (e.g. if
+   it's being used as an index and not just a sync mechanism between peers).
+1. When a doc is modified and the old one is deleted, leaving a gap, you do not get notified about
+   the gap. There is no pointer back to the gap, or anything. Users of QueryFollowers are expected
+   to have some kind of index so they can notice that the new doc overwrites the old one, and delete
+   the old one.
+1. When an ephemeral doc expires, it leaves a gap in the sequence but nothing is added to the end of
+   the sequence. Users of QueryFollowers are expected to pay attention to expiration dates and
+   delete ephemeral docs themselves. We may also add an event on the Storage when a doc expires, but
+   you could miss this event if you were not listening at that moment, so you'll still have to check
+   for your own expired docs from time to time.
+1. QueryFollowers should always progress in the direction of increasing `localIndex`. (They can
+   start at 0, or the latest number, or anywhere in between). This makes it simple to keep track of
+   where to resume next time. However this means we always process the oldest-received docs first,
+   but the user probably cares more about the recently-received docs.
+   - It would be possible with fancier bookeeping to make QueryFollowers that track which intervals
+     of the sequence they've visited, so they can work from newest-to-oldest. But sometimes the
+     oldest-received docs are the most important (like usernames)...
+
+#### Querying by `localIndex`
+
+This lets you easily resume where you left off. You can get batches of N docs at a time if you want,
+using the `limit` option.
+
+```ts
+storage.getDocsSinceLocalIndex(
+    startAt: LocalIndex,
+    limit?: number): Doc[];
 ```
-    the client side is in charge and does these actions:
-    sort paths by (path, timestamp DESC, signature ASC)
-    filter by my interest query
-    GET /interest-query   the server's interest query
-    while true:
-        GET /doc-versions?after='foo/bar'&limit=100 from server
-        compare with my own docs
-        pull things I need
-            POST /batch-get-docs       paths=[foo, foo/a, foo/b, ...]
-        push things they need:
-            POST /batch-ingest-docs    docs=[ {...}, {...} ]
-```
 
-Note that everything happens in batches instead of infinite streams.  The code avoids using streams.
+This is also how you tell a QueryFollower where to start in the sequence. QueryFollowers ignore the
+`limit` property though.
 
-For *efficient* sync, we'll use something similar to [this set reconciliation algorithm described by Aljoscha Meyer](https://github.com/AljoschaMeyer/set-reconciliation/).
+(You can also still look up documents by path in the usual old way.)
 
-### HTTP API
+### QueryFollowers: Reliable streaming locally, to subscribers or indexes
 
-This is out of date -- See earthstar-pub for the latest
+The old `onWrite` events are gone. Now, there's now a new way to subscribe to a Storage: with a
+`QueryFollower`. A query follower is like a pointer that moves along the sequence of documents, in
+order by `localIndex`, running a callback on each one, if it matches the given query.
 
-```
-HTTP replication:
+This is a Kafka or Kappa-db style architecture.
 
-GET /interest-query   the server's interest query
-    return a list of query objects -- what does the server want?
-GET /doc-versions [after='...'] [limit=100] [before='...']
-    return array of docs with just path, version, first N bytes of signature
-POST /batch-get-docs       paths=[foo, foo/a, foo/b, ...]
-    return complete docs
-POST /batch-ingest-docs    docs=[ {...}, {...} ]
-    ask server to write these docs
-    return 'ok' or error
-```
+You could use this to build an index or Layer that incrementally digests the content of an IStorage
+without ever missing anything, even if it only runs occasionally. It just resumes from the last
+`localIndex` it saw, and proceeds from there.
 
-## Future plans
+Currently QueryFollowers are always blocking -- they hold up the entire Storage until they catch up,
+and when a new doc is ingested everything waits until the QueryFollowers have finished running.
 
-### Immutable documents by putting "(hash)" in the path
-You'll be able to put the literal string "`(hash)`" in a path.  It will be replaced with the hash of that document.  Since no other document can have the same path, it will be impossible to overwrite or delete this document, making it immutable.
+A QueryFollower has one async callback that it runs on each doc in sequence. It never allows that
+callback to overlap with itself, e.g. it waits to finish one doc before moving along to the next.
 
-* Signatures are based on the shorthand path
-* Upon ingestion to the db, replace `(hash)` with the actual hash of the document
-* Database lookups use the full expanded path
-* Across the network, we only need to send the shorthand path.  The expanded path is derived state.
-* `(hash)` lets you create docs that can never be overwritten, because you can never make another doc with the same hash.
-* The expanded path needs to contain a character that's not allowed in regular paths, so the only way to get that path is via `(hash)`.  e.g. a percent sign like `(hash)` --> `%a93jDj39sdH...`
+An IStorage may have many QueryFollowers. They will run in parallel with each other, while the
+IStorage waits for them all to finish.
 
-### Path overlays
-* It would be easy make an overlay view of different path prefixes ("folders") within a Storage
-* Or overlay two Storage instances
-* For example you could combine `/wiki/~@a.xxxx` and `/wiki/~@b.xxxx` into one namespace
+### Starting query followers at the beginning or the end
 
-# Dependency chart
+You can start a QueryFollower anywhere in the sequence: at the beginning (good for indexes and
+Layers), or at the current most recent document (good for live syncing new changes).
 
-Low level files on the left, high level on the right.
+You do this by setting the `startAt: {localIndex: 123}` property of the query.
 
-`low.ts <-- high.ts` means `low.ts` is imported by `high.ts`.
+### Reliable streaming over the network, when syncing
 
-Omitting `test` and `util` because they had too many arrows, and not showing how `index.ts` brings everything together.
+(Not implemented in this code yet)
 
-Run `npm run depchart` to regnerate this.  It's made using [depchart](https://github.com/cinnamon-bun/depchart) by @cinnamon.
+When we send docs over the network we will send the `localIndex` to help the other side track where
+they are in our own sequence. The other side will then discard the property and put their own
+`localIndex` on the document when they store it.
 
-![](depchart.png)
+Peers will remember, for each other peer, which is the latest `localIndex` they've seen from that
+peer, so they can resume syncing from there.
+
+This is similar to how append-only logs are synced in Scuttlebutt and Hyper, except our logs have
+gaps.
+
+### Slightly different querying
+
+Querying has been made more organized -- see the Query type in `types.ts`. It looks a bit more like
+an SQL query but the pieces are written in the order they actually happen, so it's easier to
+understand.
+
+The order is:
+
+- history (all or latest only)
+- orderBy
+- startAt (continue from a certain point)
+- filter - the same options, timestamp, pathStartswith, etc etc
+- limit
+
+Also, the `cleanUpQuery` function is fancier and will also figure out if the query will match `all`,
+`some`, or `nothing` documents. This helps with optimizations elsewhere.
+
+## Problems left to solve
+
+- Ephemeral documents disappear without leaving a trace, do we need events for that?
+- An IStorage might significantly change or start over, by deleting most of its local documents and
+  choosing a different sync query. Then we'd need to tell subscribers and peers that we're
+  effectively a different IStorage now.
+  - localIndex could be a tuple `[generation, localIndex]` where generation is an integer that
+    increments on each big change like that
+  - or give each IStorage a UUID which gets randomly changed when big changes happen. This would be
+    helpful for other reasons too (to prevent echoing back documents to the storage that just gave
+    them back to us, we need to track who gave them to us)
+- Syncing by `localIndex` doesn't work very well when you also have a sync query, because you have
+  to scan the entire sequence to find the couple of docs you care about. We probably still want
+  another way of efficient syncing that goes in path order and uses hashing in some clever way, sort
+  of like a Merkle tree but not.
+
+## Other small improvements
+
+- The `Document` type is now named `Doc` to avoid collision with an existing built-in Typescript
+  type

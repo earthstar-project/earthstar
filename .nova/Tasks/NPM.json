@@ -1,0 +1,10 @@
+{
+  "actions": {
+    "build": {
+      "enabled": true,
+      "script": "make npm"
+    }
+  },
+  "identifier": "6BF0BC30-D705-4998-AFEB-8318B738D0E4",
+  "openLogOnRun": "fail"
+}
