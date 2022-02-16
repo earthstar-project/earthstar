@@ -20,15 +20,10 @@ Overall:
 	- Make sure everything is cleaned up after closing.
 */
 
-// TestContext type not exported to DNT test shims yet: https://github.com/denoland/node_deno_shims/issues/85
-type TestFn = Parameters<typeof Deno.test>["1"];
-type TestContext = Parameters<TestFn>["0"];
-
-async function testSyncScenario(
+function testSyncScenario(
     scenario: PeerSyncScenario,
-    test: TestContext,
 ) {
-    await test.step(`Peer.sync, Peer.stopSync + ${scenario.name}`, async () => {
+    Deno.test(`Peer.sync, Peer.stopSync + ${scenario.name}`, async () => {
         const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 
         const ADDRESS_A = "+apples.a123";
@@ -118,11 +113,8 @@ async function testSyncScenario(
     });
 }
 
-Deno.test("Peer sync", async (test) => {
-    for (const scenario of peerSyncScenarios) {
-        await testSyncScenario(
-            scenario,
-            test,
-        );
-    }
-});
+for (const scenario of peerSyncScenarios) {
+    testSyncScenario(
+        scenario,
+    );
+}
