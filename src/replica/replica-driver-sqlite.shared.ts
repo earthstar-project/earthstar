@@ -1,31 +1,31 @@
-import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Query } from "../query/query-types.ts";
 
 // types
 
-export interface StorageSqliteOptsCreate {
+export interface ReplicaSqliteOptsCreate {
     mode: "create";
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     filename: string; // must not exist
 }
 
-export interface StorageSqliteOptsOpen {
+export interface ReplicaSqliteOptsOpen {
     mode: "open";
-    workspace: WorkspaceAddress | null;
+    share: ShareAddress | null;
     filename: string; // must exist
 }
 
-export interface StorageSqliteOptsCreateOrOpen {
+export interface ReplicaSqliteOptsCreateOrOpen {
     mode: "create-or-open";
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     filename: string; // may or may not exist
 }
 
-export type StorageSqliteOpts =
-    | StorageSqliteOptsCreate
-    | StorageSqliteOptsOpen
-    | StorageSqliteOptsCreateOrOpen;
+export type ReplicaSqliteOpts =
+    | ReplicaSqliteOptsCreate
+    | ReplicaSqliteOptsOpen
+    | ReplicaSqliteOptsCreateOrOpen;
 
 // SQL queries
 

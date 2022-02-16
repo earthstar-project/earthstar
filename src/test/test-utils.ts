@@ -1,10 +1,10 @@
 import { assert } from "./asserts.ts";
-import { StorageAsync } from "../storage/storage-async.ts";
+import { Replica } from "../replica/replica.ts";
 import { AuthorKeypair, Doc } from "../util/doc-types.ts";
 import { deepEqual, randomId } from "../util/misc.ts";
 import { isErr } from "../util/errors.ts";
 import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
-import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
+import { ReplicaDriverMemory } from "../replica/replica-driver-memory.ts";
 
 // for testing unicode
 export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -31,12 +31,12 @@ export let doesNotThrow = async (
     }
 };
 
-export function makeStorage(addr: string) {
-    return new StorageAsync(addr, FormatValidatorEs4, new StorageDriverAsyncMemory(addr));
+export function makeReplica(addr: string) {
+    return new Replica(addr, FormatValidatorEs4, new ReplicaDriverMemory(addr));
 }
 
-export function makeNStorages(addr: string, number: number) {
-    return Array.from({ length: number }, () => makeStorage(addr));
+export function makeNReplicas(addr: string, number: number) {
+    return Array.from({ length: number }, () => makeReplica(addr));
 }
 
 function stripLocalIndexFromDoc({ _localIndex, ...rest }: Doc) {
@@ -56,7 +56,7 @@ export function docsAreEquivalent(docsA: Doc[], docsB: Doc[]) {
 
 export function writeRandomDocs(
     keypair: AuthorKeypair,
-    storage: StorageAsync,
+    storage: Replica,
     n: number,
 ): Promise<void[]> {
     const setPromises = Array.from({ length: n }, () => {
@@ -77,7 +77,7 @@ export function writeRandomDocs(
     return Promise.all(setPromises);
 }
 
-export async function storagesAreSynced(storages: StorageAsync[]): Promise<boolean> {
+export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
     const allDocsSets: Doc[][] = [];
 
     // Create an array where each element is a collection of all the docs from a storage.
@@ -104,8 +104,8 @@ export async function storagesAreSynced(storages: StorageAsync[]): Promise<boole
 }
 
 export async function storageHasAllStoragesDocs(
-    storageA: StorageAsync,
-    storageB: StorageAsync,
+    storageA: Replica,
+    storageB: Replica,
 ): Promise<boolean> {
     const allADocs = await storageA.getAllDocs();
     const allBDocs = await storageB.getAllDocs();

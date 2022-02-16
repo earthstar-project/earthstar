@@ -23,12 +23,12 @@ export * from "../query/query.ts";
 export * from "../query-follower/query-follower-types.ts";
 export * from "../query-follower/query-follower.ts";
 
-export * from "../storage/compare.ts";
-export * from "../storage/storage-async.ts";
-export * from "../storage/storage-cache.ts";
-export * from "../storage/storage-driver-async-memory.ts";
-export * from "../storage/storage-types.ts";
-export * from "../storage/util-types.ts";
+export * from "../replica/compare.ts";
+export * from "../replica/replica.ts";
+export * from "../replica/replica-cache.ts";
+export * from "../replica/replica-driver-memory.ts";
+export * from "../replica/replica-types.ts";
+export * from "../replica/util-types.ts";
 
 export * from "../util/bytes.ts";
 export * from "../util/doc-types.ts";

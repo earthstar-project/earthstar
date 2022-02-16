@@ -17,7 +17,7 @@ import {
     checkString,
     isPlainObject,
 } from "../core-validators/checkers.ts";
-import { checkAuthorIsValid, checkWorkspaceIsValid } from "../core-validators/addresses.ts";
+import { checkAuthorIsValid, checkShareIsValid } from "../core-validators/addresses.ts";
 
 //--------------------------------------------------
 
@@ -201,7 +201,7 @@ export const FormatValidatorEs4: IFormatValidator = class {
         let errAA = checkAuthorIsValid(doc.author);
         if (isErr(errAA)) return errAA;
 
-        let errWA = checkWorkspaceIsValid(doc.workspace);
+        let errWA = checkShareIsValid(doc.workspace);
         if (isErr(errWA)) return errWA;
 
         // do this after validating that the author address is well-formed

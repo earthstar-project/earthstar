@@ -1,58 +1,30 @@
 import { Lock, Superbus } from "../../deps.ts";
 
-import { Cmp, Thunk } from "./util-types.ts";
-import {
-    AuthorKeypair,
-    Doc,
-    DocToSet,
-    LocalIndex,
-    Path,
-    WorkspaceAddress,
-} from "../util/doc-types.ts";
+import { Cmp } from "./util-types.ts";
+import { AuthorKeypair, Doc, DocToSet, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { HistoryMode, Query } from "../query/query-types.ts";
 import {
     IngestEvent,
-    IStorageAsync,
-    IStorageDriverAsync,
-    LiveQueryEvent,
-    StorageBusChannel,
-    StorageEventDidClose,
-    StorageEventWillClose,
-    StorageId,
-} from "./storage-types.ts";
+    IReplica,
+    IReplicaDriver,
+    ReplicaBusChannel,
+    ReplicaId,
+} from "./replica-types.ts";
 import { IFormatValidator } from "../format-validators/format-validator-types.ts";
 
-import {
-    isErr,
-    NotImplementedError,
-    StorageIsClosedError,
-    ValidationError,
-} from "../util/errors.ts";
-import { microsecondNow, randomId, sleep } from "../util/misc.ts";
+import { isErr, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
+import { microsecondNow, randomId } from "../util/misc.ts";
 import { compareArrays } from "./compare.ts";
 
 import { Crypto } from "../crypto/crypto.ts";
-import { docMatchesFilter } from "../query/query.ts";
 
 //--------------------------------------------------
 
-import { Logger, LogLevel, setDefaultLogLevel, setLogLevel } from "../util/log.ts";
-let J = JSON.stringify;
-let logger = new Logger("storage async", "yellowBright");
-let loggerSet = new Logger("storage async set", "yellowBright");
-let loggerIngest = new Logger("storage async ingest", "yellowBright");
-let loggerLiveQuery = new Logger("storage live query", "magentaBright");
-let loggerLiveQuerySubscription = new Logger(
-    "storage live query subscription",
-    "magenta",
-);
-
-//setDefaultLogLevel(LogLevel.None);
-//setLogLevel('storage async', LogLevel.Debug);
-//setLogLevel('storage async set', LogLevel.Debug);
-//setLogLevel('storage async ingest', LogLevel.Debug);
-//setLogLevel('storage live query', LogLevel.Debug);
-//setLogLevel('storage live query subscription', LogLevel.Debug);
+import { Logger } from "../util/log.ts";
+const J = JSON.stringify;
+const logger = new Logger("replica", "yellowBright");
+const loggerSet = new Logger("replica set", "yellowBright");
+const loggerIngest = new Logger("replica ingest", "yellowBright");
 
 //================================================================================
 
@@ -69,60 +41,60 @@ function docCompareNewestFirst(a: Doc, b: Doc): Cmp {
  * A replica of a share's data, used to read, write, and synchronise data to.
  * Should be closed using the `close` method when no longer being used.
  * ```
- * const myReplica = new StorageAsync("+a.a123", Es4Validatior, new StorageDriverMemory());
+ * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
  * ```
  */
-export class StorageAsync implements IStorageAsync {
-    storageId: StorageId; // todo: save it to the driver too, and reload it when starting up
+export class Replica implements IReplica {
+    replicaId: ReplicaId; // todo: save it to the driver too, and reload it when starting up
     /** The address of the share this replica belongs to. */
-    workspace: WorkspaceAddress;
+    share: ShareAddress;
     /** The validator used to validate ingested documents. */
     formatValidator: IFormatValidator;
-    storageDriver: IStorageDriverAsync;
-    bus: Superbus<StorageBusChannel>;
+    replicaDriver: IReplicaDriver;
+    bus: Superbus<ReplicaBusChannel>;
 
-    _isClosed: boolean = false;
+    _isClosed = false;
     _ingestLock: Lock<IngestEvent>;
 
     constructor(
-        workspace: WorkspaceAddress,
+        share: ShareAddress,
         validator: IFormatValidator,
-        driver: IStorageDriverAsync,
+        driver: IReplicaDriver,
     ) {
         logger.debug(
             `constructor.  driver = ${(driver as any)?.constructor?.name}`,
         );
-        this.storageId = "storage-" + randomId();
-        this.workspace = workspace;
+        this.replicaId = "replica-" + randomId();
+        this.share = share;
         this.formatValidator = validator;
-        this.storageDriver = driver;
-        this.bus = new Superbus<StorageBusChannel>("|");
+        this.replicaDriver = driver;
+        this.bus = new Superbus<ReplicaBusChannel>("|");
         this._ingestLock = new Lock<IngestEvent>();
     }
 
     //--------------------------------------------------
     // LIFECYCLE
 
-    /** Returns whether the storage is closed or not. */
+    /** Returns whether the replica is closed or not. */
     isClosed(): boolean {
         return this._isClosed;
     }
 
     /**
      * Closes the replica, preventing new documents from being ingested or events being emitted.
-     * Any methods called after closing will return `StorageIsClosedError`.
+     * Any methods called after closing will return `ReplicaIsClosedError`.
      * @param erase - Erase the contents of the replica. Defaults to `false`.
      */
     async close(erase: boolean): Promise<void> {
         logger.debug("closing...");
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         // TODO: do this all in a lock?
         logger.debug("    sending willClose blockingly...");
         await this.bus.sendAndWait("willClose");
         logger.debug("    marking self as closed...");
         this._isClosed = true;
-        logger.debug(`    closing storageDriver (erase = ${erase})...`);
-        await this.storageDriver.close(erase);
+        logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
+        await this.replicaDriver.close(erase);
         logger.debug("    sending didClose nonblockingly...");
         await this.bus.sendAndWait("didClose");
         logger.debug("...closing done");
@@ -134,20 +106,20 @@ export class StorageAsync implements IStorageAsync {
     // CONFIG
 
     async getConfig(key: string): Promise<string | undefined> {
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.getConfig(key);
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.getConfig(key);
     }
     async setConfig(key: string, value: string): Promise<void> {
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.setConfig(key, value);
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.setConfig(key, value);
     }
     async listConfigKeys(): Promise<string[]> {
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.listConfigKeys();
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.listConfigKeys();
     }
     async deleteConfig(key: string): Promise<boolean> {
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.deleteConfig(key);
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.deleteConfig(key);
     }
 
     //--------------------------------------------------
@@ -155,8 +127,8 @@ export class StorageAsync implements IStorageAsync {
 
     /** Returns the max local index of all stored documents */
     getMaxLocalIndex(): number {
-        if (this._isClosed) throw new StorageIsClosedError();
-        return this.storageDriver.getMaxLocalIndex();
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return this.replicaDriver.getMaxLocalIndex();
     }
 
     async getDocsAfterLocalIndex(
@@ -167,7 +139,7 @@ export class StorageAsync implements IStorageAsync {
         logger.debug(
             `getDocsAfterLocalIndex(${historyMode}, ${startAfter}, ${limit})`,
         );
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         let query: Query = {
             historyMode: historyMode,
             orderBy: "localIndex ASC",
@@ -176,14 +148,14 @@ export class StorageAsync implements IStorageAsync {
             },
             limit,
         };
-        return await this.storageDriver.queryDocs(query);
+        return await this.replicaDriver.queryDocs(query);
     }
 
     /** Returns all documents, including historical versions of documents by other identities. */
     async getAllDocs(): Promise<Doc[]> {
         logger.debug(`getAllDocs()`);
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.queryDocs({
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.queryDocs({
             historyMode: "all",
             orderBy: "path ASC",
         });
@@ -191,8 +163,8 @@ export class StorageAsync implements IStorageAsync {
     /** Returns latest document from every path. */
     async getLatestDocs(): Promise<Doc[]> {
         logger.debug(`getLatestDocs()`);
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.queryDocs({
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.queryDocs({
             historyMode: "latest",
             orderBy: "path ASC",
         });
@@ -200,8 +172,8 @@ export class StorageAsync implements IStorageAsync {
     /** Returns all versions of a document by different authors from a specific path. */
     async getAllDocsAtPath(path: Path): Promise<Doc[]> {
         logger.debug(`getAllDocsAtPath("${path}")`);
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.queryDocs({
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.queryDocs({
             historyMode: "all",
             orderBy: "path ASC",
             filter: { path: path },
@@ -210,8 +182,8 @@ export class StorageAsync implements IStorageAsync {
     /** Returns the most recently written version of a document at a path. */
     async getLatestDocAtPath(path: Path): Promise<Doc | undefined> {
         logger.debug(`getLatestDocsAtPath("${path}")`);
-        if (this._isClosed) throw new StorageIsClosedError();
-        let docs = await this.storageDriver.queryDocs({
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        let docs = await this.replicaDriver.queryDocs({
             historyMode: "latest",
             orderBy: "path ASC",
             filter: { path: path },
@@ -234,8 +206,8 @@ export class StorageAsync implements IStorageAsync {
     */
     async queryDocs(query: Query = {}): Promise<Doc[]> {
         logger.debug(`queryDocs`, query);
-        if (this._isClosed) throw new StorageIsClosedError();
-        return await this.storageDriver.queryDocs(query);
+        if (this._isClosed) throw new ReplicaIsClosedError();
+        return await this.replicaDriver.queryDocs(query);
     }
 
     //queryPaths(query?: Query): Path[];
@@ -252,7 +224,7 @@ export class StorageAsync implements IStorageAsync {
         docToSet: DocToSet,
     ): Promise<IngestEvent> {
         loggerSet.debug(`set`, docToSet);
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
 
         loggerSet.debug(
             "...deciding timestamp: getting latest doc at the same path (from any author)",
@@ -296,7 +268,7 @@ export class StorageAsync implements IStorageAsync {
             deleteAfter: docToSet.deleteAfter ?? null,
             path: docToSet.path,
             timestamp,
-            workspace: this.workspace,
+            workspace: this.share,
             signature: "?", // signature will be added in just a moment
             // _localIndex will be added during upsert.  it's not needed for the signature.
         };
@@ -308,7 +280,7 @@ export class StorageAsync implements IStorageAsync {
                 kind: "failure",
                 reason: "invalid_document",
                 err: signedDoc,
-                maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
             };
         }
         loggerSet.debug("...signature =", signedDoc.signature);
@@ -327,7 +299,7 @@ export class StorageAsync implements IStorageAsync {
      */
     async ingest(docToIngest: Doc): Promise<IngestEvent> {
         loggerIngest.debug(`ingest`, docToIngest);
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
 
         loggerIngest.debug("...removing extra fields");
         let removeResultsOrErr = this.formatValidator.removeExtraFields(
@@ -338,7 +310,7 @@ export class StorageAsync implements IStorageAsync {
                 kind: "failure",
                 reason: "invalid_document",
                 err: removeResultsOrErr,
-                maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
             };
         }
         docToIngest = removeResultsOrErr.doc; // a copy of doc without extra fields
@@ -354,7 +326,7 @@ export class StorageAsync implements IStorageAsync {
                 kind: "failure",
                 reason: "invalid_document",
                 err: docIsValid,
-                maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
             };
         }
 
@@ -400,7 +372,7 @@ export class StorageAsync implements IStorageAsync {
                         kind: "nothing_happened",
                         reason: "obsolete_from_same_author",
                         doc: docToIngest,
-                        maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                        maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
                     };
                 }
                 if (docComp === Cmp.EQ) {
@@ -411,17 +383,17 @@ export class StorageAsync implements IStorageAsync {
                         kind: "nothing_happened",
                         reason: "already_had_it",
                         doc: docToIngest,
-                        maxLocalIndex: this.storageDriver.getMaxLocalIndex(),
+                        maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
                     };
                 }
             }
 
             // save it
-            loggerIngest.debug("  > upserting into storageDriver...");
-            let docAsWritten = await this.storageDriver.upsert(docToIngest); // TODO: pass existingDocsSamePath to save another lookup
-            loggerIngest.debug("  > ...done upserting into storageDriver");
-            loggerIngest.debug("  > ...getting storageDriver maxLocalIndex...");
-            let maxLocalIndex = this.storageDriver.getMaxLocalIndex();
+            loggerIngest.debug("  > upserting into ReplicaDriver...");
+            let docAsWritten = await this.replicaDriver.upsert(docToIngest); // TODO: pass existingDocsSamePath to save another lookup
+            loggerIngest.debug("  > ...done upserting into ReplicaDriver");
+            loggerIngest.debug("  > ...getting ReplicaDriver maxLocalIndex...");
+            let maxLocalIndex = this.replicaDriver.getMaxLocalIndex();
 
             loggerIngest.debug(
                 " >> ingest: end of protected region, returning a WriteEvent from the lock",
@@ -460,7 +432,7 @@ export class StorageAsync implements IStorageAsync {
         keypair: AuthorKeypair,
     ): Promise<number | ValidationError> {
         logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         // TODO: do this in batches
         const docsToOverwrite = await this.queryDocs({
             filter: { author: keypair.address },

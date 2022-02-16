@@ -6,9 +6,9 @@ export type AuthorAddress = string;
 /** The human-identifiable portion of an identity's public address, e.g. `suzy`. */
 export type AuthorShortname = string;
 /** A share's public address. */
-export type WorkspaceAddress = string;
+export type ShareAddress = string;
 /** The human-identifiable portion of a share's address, e.g. `gardening`. */
-export type WorkspaceName = string;
+export type ShareName = string;
 /** The path of a document, e.g. `/images/teapot.png`. */
 export type Path = string;
 export type Signature = string;
@@ -48,7 +48,10 @@ export interface Doc {
     signature: Signature;
     /** When the document was written, as a UNIX timestamp in microseconds (millionths of a second, e.g. `Date.now() * 1000`).*/
     timestamp: Timestamp;
-    workspace: WorkspaceAddress;
+    /** The share this document is from.
+     * Shares were previously called workspaces, but we didn't want to break compatibility with previous versions by renaming this field.
+     */
+    workspace: ShareAddress;
     // workspaceSignature: Signature,  // TODO: add for sparse mode
 
     // Local Index:

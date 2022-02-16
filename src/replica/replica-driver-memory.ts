@@ -1,8 +1,8 @@
 import { Cmp } from "./util-types.ts";
-import { Doc, LocalIndex, Path, WorkspaceAddress } from "../util/doc-types.ts";
+import { Doc, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
-import { IStorageDriverAsync } from "./storage-types.ts";
-import { StorageIsClosedError, ValidationError } from "../util/errors.ts";
+import { IReplicaDriver } from "./replica-types.ts";
+import { ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
 
 import { compareArrays, compareByObjKey, sortedInPlace } from "./compare.ts";
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
@@ -40,11 +40,11 @@ function docComparePathDESCthenNewestFirst(a: Doc, b: Doc): Cmp {
     );
 }
 
-/** An in-memory storage driver. Its contents will be lost when it is closed.
+/** An in-memory replica driver. Its contents will be lost when it is closed.
  * Works everywhere.
  */
-export class StorageDriverAsyncMemory implements IStorageDriverAsync {
-    workspace: WorkspaceAddress;
+export class ReplicaDriverMemory implements IReplicaDriver {
+    share: ShareAddress;
     _maxLocalIndex: LocalIndex = -1; // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
     _isClosed: boolean = false;
     _configKv: Record<string, string> = {};
@@ -56,11 +56,11 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     docsByPathNewestFirst: Map<Path, Doc[]> = new Map(); // path --> array of docs with that path, sorted newest first
 
     /**
-     * @param workspace - The address of the share the replica belongs to.
+     * @param share - The address of the share the replica belongs to.
      */
-    constructor(workspace: WorkspaceAddress) {
+    constructor(share: ShareAddress) {
         logger.debug("constructor");
-        this.workspace = workspace;
+        this.share = share;
     }
 
     //--------------------------------------------------
@@ -71,7 +71,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     }
     close(erase: boolean) {
         logger.debug("close");
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         if (erase) {
             logger.debug("...close: and erase");
             // this is an in-memory store so we don't really need to delete anything,
@@ -91,19 +91,19 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     // CONFIG
 
     async getConfig(key: string): Promise<string | undefined> {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         return this._configKv[key];
     }
     async setConfig(key: string, value: string): Promise<void> {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         this._configKv[key] = value;
     }
     async listConfigKeys(): Promise<string[]> {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         return sortedInPlace(Object.keys(this._configKv));
     }
     async deleteConfig(key: string): Promise<boolean> {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         let had = (key in this._configKv);
         delete this._configKv[key];
         return had;
@@ -113,19 +113,19 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
     // GET
 
     getMaxLocalIndex() {
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         logger.debug(`getMaxLocalIndex(): it's ${this._maxLocalIndex}`);
         return this._maxLocalIndex;
     }
 
     async _getAllDocs(): Promise<Doc[]> {
         // return in unsorted order
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         return [...this.docByPathAndAuthor.values()];
     }
     async _getLatestDocs(): Promise<Doc[]> {
         // return in unsorted order
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
         let docs: Doc[] = [];
         for (let docArray of this.docsByPathNewestFirst.values()) {
             // this array is kept sorted newest-first
@@ -138,7 +138,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         // Query the documents.
 
         logger.debug("queryDocs", queryToClean);
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
 
         // clean up the query and exit early if possible.
         let { query, willMatch } = cleanUpQuery(queryToClean);
@@ -247,7 +247,7 @@ export class StorageDriverAsyncMemory implements IStorageDriverAsync {
         // overwrite existing doc even if this doc is older.
         // return a copy of the doc, frozen, with _localIndex set.
 
-        if (this._isClosed) throw new StorageIsClosedError();
+        if (this._isClosed) throw new ReplicaIsClosedError();
 
         doc = { ...doc };
         this._maxLocalIndex += 1; // this starts at -1 initially, so the first doc has a localIndex of 0.

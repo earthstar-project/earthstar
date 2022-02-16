@@ -5,8 +5,8 @@ import {
     TransportWebsocketClient,
 } from "../../deps.ts";
 
-import { WorkspaceAddress } from "../util/doc-types.ts";
-import { IStorageAsync } from "../storage/storage-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
+import { IReplica } from "../replica/replica-types.ts";
 import { IPeer, PeerId } from "./peer-types.ts";
 import { Syncer } from "../syncer/syncer.ts";
 import { SyncerBag } from "../syncer/_syncer-bag.ts";
@@ -26,67 +26,67 @@ export class Peer implements IPeer {
     peerId: PeerId;
 
     //bus: Superbus<PeerEvent>;
-    storageMap: SuperbusMap<WorkspaceAddress, IStorageAsync>;
+    replicaMap: SuperbusMap<ShareAddress, IReplica>;
     constructor() {
         logger.debug("constructor");
         //this.bus = new Superbus<PeerEvent>();
-        this.storageMap = new SuperbusMap<WorkspaceAddress, IStorageAsync>();
+        this.replicaMap = new SuperbusMap<ShareAddress, IReplica>();
         this.peerId = "peer:" + randomId();
     }
 
     //--------------------------------------------------
     // getters
 
-    hasWorkspace(workspace: WorkspaceAddress): boolean {
-        return this.storageMap.has(workspace);
+    hasShare(share: ShareAddress): boolean {
+        return this.replicaMap.has(share);
     }
-    workspaces(): WorkspaceAddress[] {
-        const keys = [...this.storageMap.keys()];
+    shares(): ShareAddress[] {
+        const keys = [...this.replicaMap.keys()];
         keys.sort();
         return keys;
     }
-    storages(): IStorageAsync[] {
-        const keys = [...this.storageMap.keys()];
+    replicas(): IReplica[] {
+        const keys = [...this.replicaMap.keys()];
         keys.sort();
-        return keys.map((key) => this.storageMap.get(key) as IStorageAsync);
+        return keys.map((key) => this.replicaMap.get(key) as IReplica);
     }
     size(): number {
-        return this.storageMap.size;
+        return this.replicaMap.size;
     }
-    getStorage(ws: WorkspaceAddress): IStorageAsync | undefined {
-        return this.storageMap.get(ws);
+    getReplica(ws: ShareAddress): IReplica | undefined {
+        return this.replicaMap.get(ws);
     }
 
     //--------------------------------------------------
     // setters
 
-    async addStorage(storage: IStorageAsync): Promise<void> {
-        logger.debug(`addStorage(${J(storage.workspace)})`);
-        if (this.storageMap.has(storage.workspace)) {
-            logger.debug(`already had a storage with that workspace`);
+    async addReplica(replica: IReplica): Promise<void> {
+        logger.debug(`addReplica(${J(replica.share)})`);
+        if (this.replicaMap.has(replica.share)) {
+            logger.debug(`already had a replica with that share`);
             throw new Error(
-                `Peer.addStorage: already has a storage with workspace ${
-                    J(storage.workspace)
+                `Peer.addReplica: already has a replica with share ${
+                    J(replica.share)
                 }.  Don't add another one.`,
             );
         }
-        await this.storageMap.set(storage.workspace, storage);
-        logger.debug(`    ...addStorage: done`);
+        await this.replicaMap.set(replica.share, replica);
+        logger.debug(`    ...addReplica: done`);
     }
-    async removeStorageByWorkspace(workspace: WorkspaceAddress): Promise<void> {
-        logger.debug(`removeStorageByWorkspace(${J(workspace)})`);
-        await this.storageMap.delete(workspace);
+    async removeReplicaByShare(share: ShareAddress): Promise<void> {
+        logger.debug(`removeReplicaByShare(${J(share)})`);
+        await this.replicaMap.delete(share);
     }
-    async removeStorage(storage: IStorageAsync): Promise<void> {
-        const existingStorage = this.storageMap.get(storage.workspace);
-        if (storage === existingStorage) {
-            logger.debug(`removeStorage(${J(storage.workspace)})`);
-            await this.removeStorageByWorkspace(storage.workspace);
+    async removeReplica(replica: IReplica): Promise<void> {
+        const existingReplica = this.replicaMap.get(replica.share);
+        if (replica === existingReplica) {
+            logger.debug(`removeReplica(${J(replica.share)})`);
+            await this.removeReplicaByShare(replica.share);
         } else {
             logger.debug(
-                `removeStorage(${
-                    J(storage.workspace)
-                }) -- same workspace but it's a different instance now; ignoring`,
+                `removeReplica(${
+                    J(replica.share)
+                }) -- same share but it's a different instance now; ignoring`,
             );
         }
     }

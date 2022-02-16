@@ -1,8 +1,8 @@
 // @deno-types="./indexeddb-types.deno.d.ts"
 
-import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
-import { StorageIsClosedError } from "../util/errors.ts";
-import { StorageDriverAsyncMemory } from "./storage-driver-async-memory.ts";
+import { Doc, ShareAddress } from "../util/doc-types.ts";
+import { ReplicaIsClosedError } from "../util/errors.ts";
+import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 
 //--------------------------------------------------
 
@@ -15,17 +15,17 @@ const DOC_STORE = "documents";
 const DOCUMENTS_ID = "allDocs";
 const CONFIG_STORE = "config";
 
-/** A storage driver which persists to IndexedDB in the browser. Maximum storage capacity varies, but is generally upwards of one gigabyte.
+/** A replica driver which persists to IndexedDB in the browser. Maximum storage capacity varies, but is generally upwards of one gigabyte.
  * Works in browsers.
  */
-export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
+export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
     _db: IDBDatabase | null = null;
 
     /**
-     * @param workspace - The address of the share the replica belongs to.
+     * @param share - The address of the share the replica belongs to.
      */
-    constructor(workspace: WorkspaceAddress) {
-        super(workspace);
+    constructor(share: ShareAddress) {
+        super(share);
         logger.debug("constructor");
 
         this.docByPathAndAuthor = new Map();
@@ -46,12 +46,12 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
             // Deno doesn't have indexedDB yet, so we need to cast as any.
             // dnt-shim-ignore
             const request = (window as any).indexedDB.open(
-                `stonesoup:database:${this.workspace}`,
+                `stonesoup:database:${this.share}`,
                 1,
             );
 
             request.onerror = () => {
-                logger.error(`Could not open IndexedDB for ${this.workspace}`);
+                logger.error(`Could not open IndexedDB for ${this.share}`);
                 logger.error(request.error);
             };
 
@@ -93,7 +93,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
                 retrieval.onerror = () => {
                     logger.debug(
-                        `StorageIndexedDB constructing: No existing DB for ${this.workspace}`,
+                        `StorageIndexedDB constructing: No existing DB for ${this.share}`,
                     );
                     reject();
                 };
@@ -108,7 +108,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     async close(erase: boolean): Promise<void> {
         logger.debug("close");
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         if (erase) {
             logger.debug("...close: and erase");
@@ -143,7 +143,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
     async getConfig(key: string): Promise<string | undefined> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -169,7 +169,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     }
     async setConfig(key: string, value: string): Promise<void> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -191,7 +191,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
     }
     async listConfigKeys(): Promise<string[]> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -214,7 +214,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
     async deleteConfig(key: string): Promise<boolean> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
 
         const db = await this.getIndexedDb();
@@ -248,7 +248,7 @@ export class StorageDriverIndexedDB extends StorageDriverAsyncMemory {
 
     async upsert(doc: Doc): Promise<Doc> {
         if (this._isClosed) {
-            throw new StorageIsClosedError();
+            throw new ReplicaIsClosedError();
         }
         let upsertedDoc = await super.upsert(doc);
 

@@ -2,10 +2,10 @@ import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { Query } from "../../query/query-types.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { IStorageAsync } from "../../storage/storage-types.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { IReplica } from "../../replica/replica-types.ts";
+import { Replica } from "../../replica/replica.ts";
 import { ValidationError } from "../../util/errors.ts";
-import { AuthorKeypair, WorkspaceAddress } from "../../util/doc-types.ts";
+import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
 import { microsecondNow } from "../../util/misc.ts";
 
 import { TestScenario } from "../test-scenario-types.ts";
@@ -34,9 +34,9 @@ import {
 let runQueryHelpersTests = async (scenario: TestScenario, test: TestContext) => {
     let SUBTEST_NAME = scenario.name;
 
-    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
+    function makeStorage(ws: ShareAddress): IReplica {
         let driver = scenario.makeDriver(ws);
-        return new StorageAsync(ws, FormatValidatorEs4, driver);
+        return new Replica(ws, FormatValidatorEs4, driver);
     }
 
     let logger = new Logger("query helpers test", "yellowBright");
@@ -414,8 +414,8 @@ let runQueryHelpersTests = async (scenario: TestScenario, test: TestContext) => 
     ];
 
     await test.step(SUBTEST_NAME + ": queryByGlobAsync", async () => {
-        let workspace = "+gardening.abcde";
-        let storage = makeStorage(workspace);
+        let share = "+gardening.abcde";
+        let storage = makeStorage(share);
         let now = microsecondNow();
         let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 
@@ -824,8 +824,8 @@ let runQueryHelpersTests = async (scenario: TestScenario, test: TestContext) => 
     ];
 
     await test.step(SUBTEST_NAME + ": queryByTemplateAsyncSync", async () => {
-        let workspace = "+gardening.abcde";
-        let storage = makeStorage(workspace);
+        let share = "+gardening.abcde";
+        let storage = makeStorage(share);
         let now = microsecondNow();
 
         let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;

@@ -1,17 +1,17 @@
 import { type IConnection } from "../../deps.ts";
 import { Peer } from "../peer/peer.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
-import { WorkspaceAddress } from "../util/doc-types.ts";
-import { WorkspaceQueryRequest, WorkspaceState } from "./syncer-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
+import { ShareQueryRequest, ShareState } from "./syncer-types.ts";
 
 /** Orchestrates different requests in order to syncrhronise a Peer using a connection */
 export class SyncCoordinator {
     _connection: IConnection<SyncerBag>;
     _syncerBag: SyncerBag;
-    _workspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
+    _shareStates: Record<ShareAddress, ShareState> = {};
     _interval: number | null = null;
 
-    commonWorkspaces: WorkspaceAddress[] = [];
+    commonShares: ShareAddress[] = [];
     partnerLastSeenAt: number | null = null;
 
     state: "ready" | "active" | "closed" = "ready";
@@ -21,8 +21,8 @@ export class SyncCoordinator {
         this._connection = connection;
     }
 
-    /** Start the coordinator - establish common workspaces and begin pulling
-     * @returns - A promise for an initial pull of all workspaces.
+    /** Start the coordinator - establish common shares and begin pulling
+     * @returns - A promise for an initial pull of all shares.
      */
     async start() {
         this.state = "active";
@@ -31,19 +31,19 @@ export class SyncCoordinator {
 
         const saltedHandshakeRes = await this._connection.request("serveSaltedHandshake");
 
-        const { commonWorkspaces, partnerLastSeenAt } = await this._syncerBag
+        const { commonShares, partnerLastSeenAt } = await this._syncerBag
             .processSaltedHandshake(saltedHandshakeRes);
 
-        this.commonWorkspaces = commonWorkspaces;
+        this.commonShares = commonShares;
         this.partnerLastSeenAt = partnerLastSeenAt;
 
-        // Get the workspace states from the partner
+        // Get the share states from the partner
 
         const pull = async () => {
-            await this._getWorkspaceStates();
+            await this._getShareStates();
 
-            Object.keys(this._workspaceStates).forEach((key) => {
-                const state = this._workspaceStates[key];
+            Object.keys(this._shareStates).forEach((key) => {
+                const state = this._shareStates[key];
 
                 this._pullDocs({
                     query: {
@@ -53,7 +53,7 @@ export class SyncCoordinator {
                         },
                     },
                     storageId: state.partnerStorageId,
-                    workspace: state.workspace,
+                    share: state.share,
                 });
             });
         };
@@ -67,37 +67,37 @@ export class SyncCoordinator {
         await pull();
     }
 
-    async _getWorkspaceStates() {
-        const workspaceStatesRequest = {
-            commonWorkspaces: this.commonWorkspaces,
+    async _getShareStates() {
+        const shareStatesRequest = {
+            commonShares: this.commonShares,
         };
 
-        const workspaceStatesResponse = await this._connection.request(
-            "serveAllWorkspaceStates",
-            workspaceStatesRequest,
+        const shareStatesResponse = await this._connection.request(
+            "serveAllShareStates",
+            shareStatesRequest,
         );
 
-        const { lastSeenAt, workspaceStates } = this._syncerBag
-            .processAllWorkspaceStates(
-                this._workspaceStates,
-                workspaceStatesRequest,
-                workspaceStatesResponse,
+        const { lastSeenAt, shareStates } = this._syncerBag
+            .processAllShareStates(
+                this._shareStates,
+                shareStatesRequest,
+                shareStatesResponse,
             );
 
         this.partnerLastSeenAt = lastSeenAt;
 
-        this._workspaceStates = workspaceStates;
+        this._shareStates = shareStates;
     }
 
-    async _pullDocs(workspaceQuery: WorkspaceQueryRequest): Promise<number> {
-        const queryResponse = await this._connection.request("serveWorkspaceQuery", workspaceQuery);
+    async _pullDocs(shareQuery: ShareQueryRequest): Promise<number> {
+        const queryResponse = await this._connection.request("serveShareQuery", shareQuery);
 
-        const { lastSeenAt, workspaceStates, pulled } = await this._syncerBag.processWorkspaceQuery(
-            this._workspaceStates,
+        const { lastSeenAt, shareStates, pulled } = await this._syncerBag.processShareQuery(
+            this._shareStates,
             queryResponse,
         );
 
-        this._workspaceStates = workspaceStates;
+        this._shareStates = shareStates;
         this.partnerLastSeenAt = lastSeenAt;
 
         return pulled;

@@ -1,28 +1,22 @@
 import { fast_deep_equal as isEqual, fast_json_stable_stringify as stringify } from "../../deps.ts";
 
 import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types.ts";
-import { isErr, StorageIsClosedError } from "../util/errors.ts";
-import { microsecondNow } from "../util/misc.ts";
+import { ReplicaIsClosedError } from "../util/errors.ts";
+
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 import { QueryFollower } from "../query-follower/query-follower.ts";
 import { Query } from "../query/query-types.ts";
-import { IngestEvent, IStorageAsync, LiveQueryEvent } from "./storage-types.ts";
-import { Crypto } from "../crypto/crypto.ts";
-
-//--------------------------------------------------
-
-import { Logger } from "../util/log.ts";
-let logger = new Logger("storage cache", "cyan");
+import { IReplica, LiveQueryEvent } from "./replica-types.ts";
 
 //================================================================================
 
-// Lifted from StorageDriverAsyncMemory
+// Lifted from ReplicaDriverMemory
 // Slightly different in that it does not check if doc matches the filter,
 // as this has been done beforehand by now.
 function sortAndLimit(query: Query, docs: Doc[]) {
-    let filteredDocs: Doc[] = [];
+    const filteredDocs: Doc[] = [];
 
-    for (let doc of docs) {
+    for (const doc of docs) {
         if (query.orderBy === "path ASC") {
             if (query.startAfter !== undefined) {
                 if (
@@ -82,7 +76,7 @@ function sortAndLimit(query: Query, docs: Doc[]) {
 
 /** A cached, synchronous interface to a replica, useful for reactive abstractions. Always returns results from its cache, and proxies the query to the backing replica in case of a cache miss.
  * ```
- * const cache = new StorageCache(myReplica);
+ * const cache = new ReplicaCache(myReplica);
  * const pngQuery = { filter: { pathEndsWith: ".png" } };
  * let pngDocs = cache.queryDocs(pngQuery);
  * cache.onCacheUpdate(() => {
@@ -90,8 +84,8 @@ function sortAndLimit(query: Query, docs: Doc[]) {
  * });
  * ```
  */
-export class StorageCache {
-    _storage: IStorageAsync;
+export class ReplicaCache {
+    _replica: IReplica;
 
     _docCache = new Map<
         string,
@@ -103,11 +97,11 @@ export class StorageCache {
     _onCacheUpdatedCallbacks = new Set<() => void | (() => Promise<void>)>();
 
     /**
-     * Create a new StorageCache.
+     * Create a new ReplicaCache.
      * @param timeToLive - The number of milliseconds a cached document is considered valid for.
      */
-    constructor(storage: IStorageAsync, timeToLive?: number) {
-        this._storage = storage;
+    constructor(replica: IReplica, timeToLive?: number) {
+        this._replica = replica;
         this._timeToLive = timeToLive || 1000;
     }
 
@@ -115,15 +109,15 @@ export class StorageCache {
 
     /** Add a new document directly to the backing replica. */
     set(keypair: AuthorKeypair, docToSet: DocToSet) {
-        return this._storage.set(keypair, docToSet);
+        return this._replica.set(keypair, docToSet);
     }
 
     // GET
 
     /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getAllDocs(): Doc[] {
-        if (this._storage.isClosed()) {
-            throw new StorageIsClosedError();
+        if (this._replica.isClosed()) {
+            throw new ReplicaIsClosedError();
         }
         return this.queryDocs({
             historyMode: "all",
@@ -133,8 +127,8 @@ export class StorageCache {
 
     /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getLatestDocs(): Doc[] {
-        if (this._storage.isClosed()) {
-            throw new StorageIsClosedError();
+        if (this._replica.isClosed()) {
+            throw new ReplicaIsClosedError();
         }
         return this.queryDocs({
             historyMode: "latest",
@@ -144,8 +138,8 @@ export class StorageCache {
 
     /** Fetch all versions of all docs from a certain path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getAllDocsAtPath(path: Path): Doc[] {
-        if (this._storage.isClosed()) {
-            throw new StorageIsClosedError();
+        if (this._replica.isClosed()) {
+            throw new ReplicaIsClosedError();
         }
         return this.queryDocs({
             historyMode: "all",
@@ -156,10 +150,10 @@ export class StorageCache {
 
     /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getLatestDocAtPath(path: Path): Doc | undefined {
-        if (this._storage.isClosed()) {
-            throw new StorageIsClosedError();
+        if (this._replica.isClosed()) {
+            throw new ReplicaIsClosedError();
         }
-        let docs = this.queryDocs({
+        const docs = this.queryDocs({
             historyMode: "latest",
             orderBy: "path DESC",
             filter: { path: path },
@@ -173,13 +167,13 @@ export class StorageCache {
     /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     queryDocs(query: Query = {}): Doc[] {
         // make a deterministic string out of the query
-        let cleanUpQueryResult = cleanUpQuery(query);
+        const cleanUpQueryResult = cleanUpQuery(query);
 
         if (cleanUpQueryResult.willMatch === "nothing") {
             return [];
         }
 
-        let queryString = stringify(cleanUpQueryResult.query);
+        const queryString = stringify(cleanUpQueryResult.query);
 
         // Check if the cache has anything from this
         // and if so, return it.
@@ -187,12 +181,12 @@ export class StorageCache {
 
         if (cachedResult) {
             // Query the storage, set the eventual result in the cache.
-            this._storage.queryDocs(query).then((docs) => {
+            this._replica.queryDocs(query).then((docs) => {
                 this._docCache.set(queryString, { ...cachedResult, docs });
             });
 
             if (Date.now() > cachedResult.expires) {
-                this._storage.queryDocs(query).then((docs) => {
+                this._replica.queryDocs(query).then((docs) => {
                     this._docCache.set(queryString, {
                         follower,
                         docs,
@@ -206,11 +200,12 @@ export class StorageCache {
             return cachedResult.docs;
         }
 
-        let follower = new QueryFollower(
-            this._storage,
+        const follower = new QueryFollower(
+            this._replica,
             { ...query, historyMode: "all", orderBy: "localIndex ASC" },
         );
-        follower.bus.on(async (event: LiveQueryEvent) => {
+
+        follower.bus.on((event: LiveQueryEvent) => {
             if (event.kind === "existing" || event.kind === "success") {
                 this._updateCache(event.doc);
             }
@@ -226,7 +221,7 @@ export class StorageCache {
         // Hatch the follower.
         follower.hatch();
 
-        this._storage.queryDocs(query).then((docs) => {
+        this._replica.queryDocs(query).then((docs) => {
             this._docCache.set(queryString, {
                 follower,
                 docs,
@@ -249,7 +244,7 @@ export class StorageCache {
 
     /** Call this method on the backing replica. */
     overwriteAllDocsByAuthor(keypair: AuthorKeypair) {
-        return this._storage.overwriteAllDocsByAuthor(keypair);
+        return this._replica.overwriteAllDocsByAuthor(keypair);
     }
 
     // CACHE
@@ -287,7 +282,7 @@ export class StorageCache {
      */
 
             const appendDoc = () => {
-                let nextDocs = [...entry.docs, doc];
+                const nextDocs = [...entry.docs, doc];
                 this._docCache.set(key, {
                     ...entry,
                     docs: sortAndLimit(query, nextDocs),

@@ -2,7 +2,7 @@ import { assert, assertEquals } from "../asserts.ts";
 
 let TEST_NAME = "compare";
 
-import { Cmp } from "../../storage/util-types.ts";
+import { Cmp } from "../../replica/util-types.ts";
 import {
     compareArrays,
     compareBasic,
@@ -10,7 +10,7 @@ import {
     compareByObjArrayFn,
     compareByObjKey,
     SortOrder,
-} from "../../storage/compare.ts";
+} from "../../replica/compare.ts";
 
 //================================================================================
 

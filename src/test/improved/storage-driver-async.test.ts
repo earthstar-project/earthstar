@@ -22,8 +22,8 @@ export function runStorageDriverTests(scenario: TestScenario) {
     Deno.test(SUBTEST_NAME + ": empty storage, close", async () => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let workspace = "+gardening.abcde";
-        let driver = scenario.makeDriver(workspace);
+        let share = "+gardening.abcde";
+        let driver = scenario.makeDriver(share);
 
         assertEquals(
             driver.getMaxLocalIndex(),
@@ -64,8 +64,8 @@ export function runStorageDriverTests(scenario: TestScenario) {
     Deno.test(SUBTEST_NAME + ": config", async () => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let workspace = "+gardening.abcde";
-        let driver = scenario.makeDriver(workspace);
+        let share = "+gardening.abcde";
+        let driver = scenario.makeDriver(share);
 
         // empty...
         assertEquals(
@@ -127,8 +127,8 @@ export function runStorageDriverTests(scenario: TestScenario) {
         async () => {
             let initialCryptoDriver = GlobalCryptoDriver;
 
-            let workspace = "+gardening.abcde";
-            let driver = scenario.makeDriver(workspace);
+            let share = "+gardening.abcde";
+            let driver = scenario.makeDriver(share);
 
             let doc0: Doc = {
                 format: "es.4",

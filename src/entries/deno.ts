@@ -1,2 +1,2 @@
-export { StorageDriverLocalStorage } from "../storage/storage-driver-local-storage.ts";
-export { StorageDriverSqlite } from "../storage/storage-driver-sqlite.deno.ts";
+export { ReplicaDriverLocalStorage } from "../replica/replica-driver-local-storage.ts";
+export { ReplicaDriverSqlite } from "../replica/replica-driver-sqlite.deno.ts";

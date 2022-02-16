@@ -6,10 +6,10 @@ import { CryptoDriverNode } from "../crypto/crypto-driver-node.js";
 import { CryptoDriverChloride } from "../crypto/crypto-driver-chloride.ts";
 
 // specific storage drivers
-import { StorageDriverAsyncMemory } from "../storage/storage-driver-async-memory.ts";
-import { StorageDriverLocalStorage } from "../storage/storage-driver-local-storage.ts";
-import { StorageDriverIndexedDB } from "../storage/storage-driver-indexeddb.ts";
-import { StorageDriverSqlite } from "../storage/storage-driver-sqlite.deno.ts";
+import { ReplicaDriverMemory } from "../replica/replica-driver-memory.ts";
+import { ReplicaDriverLocalStorage } from "../replica/replica-driver-local-storage.ts";
+import { ReplicaDriverIndexedDB } from "../replica/replica-driver-indexeddb.ts";
+import { ReplicaDriverSqlite } from "../replica/replica-driver-sqlite.deno.ts";
 
 // test types
 import { CryptoScenario, TestScenario, TransportScenario } from "./test-scenario-types.ts";
@@ -22,38 +22,38 @@ type JustStorageScenario = Omit<TestScenario, "cryptoDriver">;
 
 const universalStorageScenarios: JustStorageScenario[] = [
     {
-        name: "StorageDriverAsyncMemory",
+        name: "ReplicaDriverAsyncMemory",
         persistent: false,
-        makeDriver: (ws) => new StorageDriverAsyncMemory(ws),
+        makeDriver: (ws) => new ReplicaDriverMemory(ws),
         builtInConfigKeys: [],
     },
     {
-        name: "StorageDriverSqlite",
+        name: "ReplicaDriverSqlite",
         persistent: false,
         makeDriver: (ws) =>
-            new StorageDriverSqlite({
+            new ReplicaDriverSqlite({
                 filename: ":memory:",
                 mode: "create",
-                workspace: ws,
+                share: ws,
             }),
-        builtInConfigKeys: ["schemaVersion", "workspace"],
+        builtInConfigKeys: ["schemaVersion", "share"],
     },
 ];
 
 const browserStorageScenarios: JustStorageScenario[] = [
     {
-        name: "StorageDriverLocalStorage",
+        name: "ReplicaDriverLocalStorage",
         persistent: true,
-        makeDriver: (ws) => new StorageDriverLocalStorage(ws),
+        makeDriver: (ws) => new ReplicaDriverLocalStorage(ws),
         builtInConfigKeys: [],
     },
 ];
 
 const browserOnlyStorageScenarios: JustStorageScenario[] = [
     {
-        name: "StorageDriverIndexedDB",
+        name: "ReplicaDriverIndexedDB",
         persistent: true,
-        makeDriver: (ws) => new StorageDriverIndexedDB(ws),
+        makeDriver: (ws) => new ReplicaDriverIndexedDB(ws),
         builtInConfigKeys: [],
     },
 ];

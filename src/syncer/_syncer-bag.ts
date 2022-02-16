@@ -1,26 +1,26 @@
 import { Peer } from "../peer/peer.ts";
 import { microsecondNow, randomId } from "../util/misc.ts";
-import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
+import { Doc, ShareAddress } from "../util/doc-types.ts";
 import { Crypto } from "../crypto/crypto.ts";
-import { sortedInPlace } from "../storage/compare.ts";
+import { sortedInPlace } from "../replica/compare.ts";
 import { ValidationError } from "../util/errors.ts";
 import {
-    AllWorkspaceStatesRequest,
-    AllWorkspaceStatesResponse,
+    AllShareStatesRequest,
+    AllShareStatesResponse,
     SaltedHandshakeResponse,
     SaltedHandshakeResult,
-    WorkspaceQueryRequest,
-    WorkspaceQueryResponse,
-    WorkspaceQueryResult,
-    WorkspaceState,
-    WorkspaceStateFromResponse,
+    ShareQueryRequest,
+    ShareQueryResponse,
+    ShareQueryResult,
+    ShareState,
+    ShareStateFromResponse,
 } from "./syncer-types.ts";
 
-function saltAndHashWorkspace(
+function saltAndHashShare(
     salt: string,
-    workspace: WorkspaceAddress,
+    share: ShareAddress,
 ): Promise<string> {
-    return Crypto.sha256base32(salt + workspace + salt);
+    return Crypto.sha256base32(salt + share + salt);
 }
 
 /** Produce a bag of syncing methods to pass to earthstar-streaming-rpc. */
@@ -33,14 +33,14 @@ export function makeSyncerBag(peer: Peer) {
         /** Serve a request for a salted handshake*/
         async serveSaltedHandshake() {
             const salt = randomId();
-            const saltedWorkspaces = await Promise.all(
-                peer.workspaces().map((ws) => saltAndHashWorkspace(salt, ws)),
+            const saltedShares = await Promise.all(
+                peer.shares().map((ws) => saltAndHashShare(salt, ws)),
             );
 
             return {
                 peerId: peer.peerId,
                 salt,
-                saltedWorkspaces,
+                saltedShares,
             };
         },
 
@@ -48,102 +48,101 @@ export function makeSyncerBag(peer: Peer) {
         async processSaltedHandshake(
             response: SaltedHandshakeResponse,
         ): Promise<SaltedHandshakeResult> {
-            const { peerId, salt, saltedWorkspaces } = response;
+            const { peerId, salt, saltedShares } = response;
 
-            const serverSaltedSet = new Set<string>(saltedWorkspaces);
-            const commonWorkspaceSet = new Set<WorkspaceAddress>();
-            for (const plainWs of peer.workspaces()) {
-                const saltedWs = await saltAndHashWorkspace(salt, plainWs);
+            const serverSaltedSet = new Set<string>(saltedShares);
+            const commonShareSet = new Set<ShareAddress>();
+            for (const plainWs of peer.shares()) {
+                const saltedWs = await saltAndHashShare(salt, plainWs);
                 if (serverSaltedSet.has(saltedWs)) {
-                    commonWorkspaceSet.add(plainWs);
+                    commonShareSet.add(plainWs);
                 }
             }
-            const commonWorkspaces = sortedInPlace([...commonWorkspaceSet]);
+            const commonShares = sortedInPlace([...commonShareSet]);
 
             return {
                 partnerPeerId: peerId,
                 partnerLastSeenAt: microsecondNow(),
-                commonWorkspaces: commonWorkspaces,
+                commonShares,
             };
         },
 
         // -----------------------------------------
-        // WORKSPACE STATES
+        // Share STATES
 
-        serveAllWorkspaceStates(
-            request: AllWorkspaceStatesRequest,
-        ): AllWorkspaceStatesResponse {
-            const workspaceStates: Record<
-                WorkspaceAddress,
-                WorkspaceStateFromResponse
+        serveAllShareStates(
+            request: AllShareStatesRequest,
+        ): AllShareStatesResponse {
+            const shareStates: Record<
+                ShareAddress,
+                ShareStateFromResponse
             > = {};
-            for (const workspace of request.commonWorkspaces) {
-                const storage = peer.getStorage(workspace);
+            for (const share of request.commonShares) {
+                const storage = peer.getReplica(share);
                 if (storage === undefined) {
                     continue;
                 }
-                const workspaceState: WorkspaceStateFromResponse = {
-                    workspace: workspace,
-                    partnerStorageId: storage.storageId,
+                const shareState: ShareStateFromResponse = {
+                    share,
+                    partnerStorageId: storage.replicaId,
                     partnerMaxLocalIndexOverall: storage.getMaxLocalIndex(),
                 };
-                workspaceStates[workspace] = workspaceState;
+                shareStates[share] = shareState;
             }
 
             return {
                 partnerPeerId: peer.peerId,
-                workspaceStates,
+                shareStates,
             };
         },
 
-        processAllWorkspaceStates(
-            existingWorkspaceStates: Record<WorkspaceAddress, WorkspaceState>,
-            request: AllWorkspaceStatesRequest,
-            response: AllWorkspaceStatesResponse,
+        processAllShareStates(
+            existingShareStates: Record<ShareAddress, ShareState>,
+            request: AllShareStatesRequest,
+            response: AllShareStatesResponse,
         ) {
             // request is provided here so we can check for consistency in case the server replied with
             // something totally different
 
-            const { commonWorkspaces } = request;
-            const { partnerPeerId, workspaceStates } = response;
+            const { commonShares } = request;
+            const { partnerPeerId, shareStates } = response;
 
-            const newWorkspaceStates: Record<WorkspaceAddress, WorkspaceState> = {};
-            for (const workspace of Object.keys(workspaceStates)) {
-                const workspaceStateFromServer = workspaceStates[workspace];
-                if (workspaceStateFromServer.workspace !== workspace) {
+            const newShareStates: Record<ShareAddress, ShareState> = {};
+            for (const share of Object.keys(shareStates)) {
+                const shareStateFromServer = shareStates[share];
+                if (shareStateFromServer.share !== share) {
                     throw new ValidationError(
-                        `server shenanigans: server response is not self-consistent, workspace key does not match data in the Record ${workspaceStateFromServer.workspace} & ${workspace}`,
+                        `server shenanigans: server response is not self-consistent, share key does not match data in the Record ${shareStateFromServer.share} & ${share}`,
                     );
                 }
-                if (commonWorkspaces.indexOf(workspace) === -1) {
+                if (commonShares.indexOf(share) === -1) {
                     throw new ValidationError(
-                        `server shenanigans: server included a workspace that is not common: ${workspace}`,
+                        `server shenanigans: server included a share that is not common: ${share}`,
                     );
                 }
-                const clientStorage = peer.getStorage(workspace);
+                const clientStorage = peer.getReplica(share);
                 if (clientStorage === undefined) {
                     throw new ValidationError(
-                        `server shenanigans: referenced a workspace we don't have: ${workspace}`,
+                        `server shenanigans: referenced a share we don't have: ${share}`,
                     );
                 }
 
-                const existingWorkspaceState = existingWorkspaceStates[workspace] || {};
-                newWorkspaceStates[workspace] = {
-                    workspace,
+                const existingShareState = existingShareStates[share] || {};
+                newShareStates[share] = {
+                    share,
 
-                    partnerStorageId: workspaceStateFromServer.partnerStorageId,
-                    partnerMaxLocalIndexOverall:
-                        workspaceStateFromServer.partnerMaxLocalIndexOverall,
+                    partnerStorageId: shareStateFromServer.partnerStorageId,
+                    partnerMaxLocalIndexOverall: shareStateFromServer.partnerMaxLocalIndexOverall,
                     // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
-                    partnerMaxLocalIndexSoFar: existingWorkspaceState.partnerMaxLocalIndexSoFar ??
+                    partnerMaxLocalIndexSoFar: existingShareState.partnerMaxLocalIndexSoFar ??
                         -1,
 
                     // TODO: check if client storage id has changed, and if so reset this state
 
-                    storageId: clientStorage.storageId,
+                    storageId: clientStorage.replicaId,
                     maxLocalIndexOverall: clientStorage.getMaxLocalIndex(),
                     // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
-                    maxLocalIndexSoFar: existingWorkspaceState.maxLocalIndexSoFar ?? -1,
+                    maxLocalIndexSoFar: existingShareState.maxLocalIndexSoFar ?? -1,
 
                     lastSeenAt: microsecondNow(),
                 };
@@ -154,7 +153,7 @@ export function makeSyncerBag(peer: Peer) {
                 // TODO: should this merge with, or overwrite, the existing one?
                 // we've incorporated the existing one into this one already, so we should
                 // have checked if the serverPeerId has changed also...
-                workspaceStates: newWorkspaceStates,
+                shareStates: newShareStates,
                 lastSeenAt: microsecondNow(),
             };
         },
@@ -163,59 +162,59 @@ export function makeSyncerBag(peer: Peer) {
         // QUERYING
 
         /** Respond to a query */
-        async serveWorkspaceQuery(request: WorkspaceQueryRequest): Promise<WorkspaceQueryResponse> {
-            const { workspace, storageId, query } = request;
+        async serveShareQuery(request: ShareQueryRequest): Promise<ShareQueryResponse> {
+            const { share, storageId, query } = request;
 
-            const storage = peer.getStorage(workspace);
-            if (storage === undefined) {
-                const err = `workspace ${workspace} is unknown; skipping`;
+            const replica = peer.getReplica(share);
+            if (replica === undefined) {
+                const err = `share ${share} is unknown; skipping`;
                 throw err;
             }
-            if (storage.storageId !== storageId) {
+            if (replica.replicaId !== storageId) {
                 const err =
-                    `storageId for ${workspace} is not ${storageId} anymore, it's ${storage.storageId}`;
+                    `storageId for ${share} is not ${storageId} anymore, it's ${replica.replicaId}`;
                 throw err;
             }
 
-            const docs: Doc[] = await storage.queryDocs(query);
+            const docs: Doc[] = await replica.queryDocs(query);
 
             return {
-                workspace,
+                share,
                 storageId,
-                partnerMaxLocalIndexOverall: storage.getMaxLocalIndex(),
+                partnerMaxLocalIndexOverall: replica.getMaxLocalIndex(),
                 docs,
             };
         },
 
         /** Process a query response */
-        async processWorkspaceQuery(
-            existingWorkspaceStates: Record<WorkspaceAddress, WorkspaceState>,
-            response: WorkspaceQueryResponse,
-        ): Promise<WorkspaceQueryResult> {
+        async processShareQuery(
+            existingShareStates: Record<ShareAddress, ShareState>,
+            response: ShareQueryResponse,
+        ): Promise<ShareQueryResult> {
             // returns the number of docs pulled, even if they were obsolete or we alreayd had them.
 
             const {
-                workspace,
+                share,
                 storageId,
                 partnerMaxLocalIndexOverall,
                 docs,
             } = response;
             // TODO: we need to compare this with the request to make sure
-            // the server didn't switch the workspace or storageId on us...
+            // the server didn't switch the share or storageId on us...
             // maybe that can happen in do_...
 
             // get the storage
-            const storage = peer.getStorage(workspace);
+            const storage = peer.getReplica(share);
             if (storage === undefined) {
-                const err = `workspace ${workspace} is unknown; skipping`;
+                const err = `share ${share} is unknown; skipping`;
 
                 throw err;
             }
 
-            const myWorkspaceState = existingWorkspaceStates[workspace];
-            if (storageId !== myWorkspaceState.partnerStorageId) {
+            const myShareState = existingShareStates[share];
+            if (storageId !== myShareState.partnerStorageId) {
                 const err =
-                    `storageId for ${workspace} is not ${storageId} anymore, it's ${myWorkspaceState.partnerStorageId}`;
+                    `storageId for ${share} is not ${storageId} anymore, it's ${myShareState.partnerStorageId}`;
 
                 throw err;
             }
@@ -223,8 +222,8 @@ export function makeSyncerBag(peer: Peer) {
             // ingest the docs
             let pulled = 0;
             for (const doc of docs) {
-                // get the workspace every time in case something else is changing it?
-                let myWorkspaceState = existingWorkspaceStates[workspace];
+                // get the share every time in case something else is changing it?
+                let myShareState = existingShareStates[share];
                 // TODO: keep checking if storageId has changed every time
 
                 // save the doc
@@ -246,8 +245,8 @@ export function makeSyncerBag(peer: Peer) {
                     break;
                 }
                 pulled += 1;
-                myWorkspaceState = {
-                    ...myWorkspaceState,
+                myShareState = {
+                    ...myShareState,
                     partnerMaxLocalIndexOverall,
                     partnerMaxLocalIndexSoFar: doc._localIndex ?? -1,
                     lastSeenAt: microsecondNow(),
@@ -257,9 +256,9 @@ export function makeSyncerBag(peer: Peer) {
             return {
                 pulled,
                 lastSeenAt: microsecondNow(),
-                workspaceStates: {
-                    ...existingWorkspaceStates,
-                    [workspace]: myWorkspaceState,
+                shareStates: {
+                    ...existingShareStates,
+                    [share]: myShareState,
                 },
             };
         },

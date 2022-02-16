@@ -2,11 +2,11 @@ import { assertEquals } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
 //t.runOnly = true;
 
-import { WorkspaceAddress } from "../../util/doc-types.ts";
-import { IStorageAsync, IStorageDriverAsync } from "../../storage/storage-types.ts";
+import { ShareAddress } from "../../util/doc-types.ts";
+import { IReplica, IReplicaDriver } from "../../replica/replica-types.ts";
 import { GlobalCryptoDriver, setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { Replica } from "../../replica/replica.ts";
 
 import { TestScenario } from "../test-scenario-types.ts";
 import { testScenarios } from "../test-scenarios.ts";
@@ -38,18 +38,18 @@ let _runStorageConfigTests = (
     let SUBTEST_NAME = `${scenario.name} (${mode} mode)`;
 
     let makeStorageOrDriver = (
-        ws: WorkspaceAddress,
-    ): IStorageAsync | IStorageDriverAsync => {
-        let driver = scenario.makeDriver(ws);
-        return mode === "storage" ? new StorageAsync(ws, FormatValidatorEs4, driver) : driver;
+        share: ShareAddress,
+    ): IReplica | IReplicaDriver => {
+        let driver = scenario.makeDriver(share);
+        return mode === "storage" ? new Replica(share, FormatValidatorEs4, driver) : driver;
     };
 
     Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {
         setGlobalCryptoDriver(scenario.cryptoDriver);
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let workspace = "+gardening.abcde";
-        let storage = makeStorageOrDriver(workspace);
+        let share = "+gardening.abcde";
+        let storage = makeStorageOrDriver(share);
 
         // methods in common between Storage and StorageDriver:
         // set, get, list, delete, erase, close
@@ -134,7 +134,7 @@ let _runStorageConfigTests = (
         }, "close should throw if used after close()");
 
         // make a new one so we can erase it to clean up
-        let storage2 = makeStorageOrDriver(workspace);
+        let storage2 = makeStorageOrDriver(share);
         await storage2.close(true);
         await throws(async () => {
             await storage2.close(true);
@@ -155,16 +155,16 @@ let _runStorageConfigTests = (
             setGlobalCryptoDriver(scenario.cryptoDriver);
             let initialCryptoDriver = GlobalCryptoDriver;
 
-            let workspace = "+gardening.abcde";
-            let storage1 = makeStorageOrDriver(workspace);
+            let share = "+gardening.abcde";
+            let storage1 = makeStorageOrDriver(share);
 
             // set an item
             await storage1.setConfig("a", "aa");
 
-            // close, then reopen the same workspace, without erasing
+            // close, then reopen the same share, without erasing
             await storage1.close(false);
             assertEquals(storage1.isClosed(), true, "close worked");
-            let storage2 = makeStorageOrDriver(workspace);
+            let storage2 = makeStorageOrDriver(share);
 
             // see if data is still there (depending on the scenario)
             if (scenario.persistent) {
@@ -200,8 +200,8 @@ let _runStorageConfigTests = (
             setGlobalCryptoDriver(scenario.cryptoDriver);
             let initialCryptoDriver = GlobalCryptoDriver;
 
-            let workspace = "+gardening.abcde";
-            let storage1 = makeStorageOrDriver(workspace);
+            let share = "+gardening.abcde";
+            let storage1 = makeStorageOrDriver(share);
 
             // set an item
             await storage1.setConfig("a", "aa");
@@ -211,7 +211,7 @@ let _runStorageConfigTests = (
             assertEquals(storage1.isClosed(), true, "closing should close");
 
             // re-open.  data should be gone.
-            let storage2 = makeStorageOrDriver(workspace);
+            let storage2 = makeStorageOrDriver(share);
             assertEquals(
                 await storage2.getConfig("a"),
                 undefined,

@@ -1,13 +1,13 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
-import { AuthorKeypair, WorkspaceAddress } from "../../util/doc-types.ts";
-import { IStorageAsync, LiveQueryEvent } from "../../storage/storage-types.ts";
+import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
+import { IReplica, LiveQueryEvent } from "../../replica/replica-types.ts";
 import { Query } from "../../query/query-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
+import { Replica } from "../../replica/replica.ts";
 
 import { TestScenario } from "../test-scenario-types.ts";
 import { testScenarios } from "../test-scenarios.ts";
@@ -31,16 +31,16 @@ function runQueryFollowerTests(scenario: TestScenario) {
     let TEST_NAME = "QueryFollower tests";
     let SUBTEST_NAME = scenario.name;
 
-    function makeStorage(ws: WorkspaceAddress): IStorageAsync {
+    function makeStorage(ws: ShareAddress): IReplica {
         let driver = scenario.makeDriver(ws);
-        return new StorageAsync(ws, FormatValidatorEs4, driver);
+        return new Replica(ws, FormatValidatorEs4, driver);
     }
 
     Deno.test(SUBTEST_NAME + ": query rules", async () => {
         let initialCryptoDriver = GlobalCryptoDriver;
 
-        let workspace = "+gardening.abcde";
-        let storage = makeStorage(workspace);
+        let share = "+gardening.abcde";
+        let storage = makeStorage(share);
         let author1 = await Crypto.generateAuthorKeypair("onee");
         if (isErr(author1)) {
             await storage.close(true);
@@ -130,8 +130,8 @@ function runQueryFollowerTests(scenario: TestScenario) {
 
         let logs: string[] = ["-begin"];
 
-        let workspace = "+gardening.abcde";
-        let storage = makeStorage(workspace);
+        let share = "+gardening.abcde";
+        let storage = makeStorage(share);
 
         let keypair1 = await Crypto.generateAuthorKeypair("aaaa");
         let keypair2 = await Crypto.generateAuthorKeypair("bbbb");
@@ -318,8 +318,8 @@ function runQueryFollowerTests(scenario: TestScenario) {
 
         let logs: string[] = ["-begin"];
 
-        let workspace = "+gardening.abcde";
-        let storage = makeStorage(workspace);
+        let share = "+gardening.abcde";
+        let storage = makeStorage(share);
 
         let keypair1 = await Crypto.generateAuthorKeypair("aaaa");
         let keypair2 = await Crypto.generateAuthorKeypair("bbbb");
@@ -329,7 +329,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
 
         // set a bunch of sequential documents
         let addDocs = async (
-            storage: IStorageAsync,
+            storage: IReplica,
             keypair: AuthorKeypair,
             startAt: number,
             endAt: number,

@@ -1,6 +1,6 @@
 import { PeerId } from "../peer/peer-types.ts";
-import { Doc, WorkspaceAddress } from "../util/doc-types.ts";
-import { StorageId } from "../storage/storage-types.ts";
+import { Doc, ShareAddress } from "../util/doc-types.ts";
+import { ReplicaId } from "../replica/replica-types.ts";
 import { Query } from "../query/query-types.ts";
 import { SyncerBag } from "./_syncer-bag.ts";
 import { type ITransport } from "../../deps.ts";
@@ -15,64 +15,64 @@ export interface ISyncer<TransportType extends ITransport<SyncerBag>> {
 export interface SaltedHandshakeResponse {
     peerId: PeerId;
     salt: string;
-    saltedWorkspaces: string[];
+    saltedShares: string[];
 }
 
 export interface SaltedHandshakeResult {
     partnerPeerId: PeerId;
     partnerLastSeenAt: number;
-    commonWorkspaces: WorkspaceAddress[];
+    commonShares: ShareAddress[];
 }
 
-// Workspace state types
+// Share state types
 
-export interface WorkspaceState {
-    workspace: WorkspaceAddress;
-    partnerStorageId: StorageId;
+export interface ShareState {
+    share: ShareAddress;
+    partnerStorageId: ReplicaId;
     partnerMaxLocalIndexOverall: number;
     partnerMaxLocalIndexSoFar: number; // -1 if unknown
-    storageId: StorageId;
+    storageId: ReplicaId;
     maxLocalIndexOverall: number;
     maxLocalIndexSoFar: number; // -1 if unknown
     lastSeenAt: number;
 }
 
-export type WorkspaceStateFromResponse = Pick<
-    WorkspaceState,
-    "workspace" | "partnerStorageId" | "partnerMaxLocalIndexOverall"
+export type ShareStateFromResponse = Pick<
+    ShareState,
+    "share" | "partnerStorageId" | "partnerMaxLocalIndexOverall"
 >;
 
-export interface AllWorkspaceStatesRequest {
-    commonWorkspaces: WorkspaceAddress[];
+export interface AllShareStatesRequest {
+    commonShares: ShareAddress[];
 }
-export type AllWorkspaceStatesResponse = {
+export type AllShareStatesResponse = {
     partnerPeerId: PeerId;
-    workspaceStates: Record<
-        WorkspaceAddress,
-        WorkspaceStateFromResponse
+    shareStates: Record<
+        ShareAddress,
+        ShareStateFromResponse
     >;
 };
-export type AllWorkspaceStatesResult = Record<
-    WorkspaceAddress,
-    WorkspaceState
+export type AllShareStatesResult = Record<
+    ShareAddress,
+    ShareState
 >;
 
-// Workspace query types
+// Share query types
 
-export interface WorkspaceQueryRequest {
-    workspace: WorkspaceAddress;
-    storageId: StorageId;
+export interface ShareQueryRequest {
+    share: ShareAddress;
+    storageId: ReplicaId;
     query: Query;
 }
-export interface WorkspaceQueryResponse {
-    workspace: WorkspaceAddress;
-    storageId: StorageId;
+export interface ShareQueryResponse {
+    share: ShareAddress;
+    storageId: ReplicaId;
     partnerMaxLocalIndexOverall: number;
     docs: Doc[];
 }
 
-export interface WorkspaceQueryResult {
+export interface ShareQueryResult {
     pulled: number;
     lastSeenAt: number;
-    workspaceStates: Record<WorkspaceAddress, WorkspaceState>;
+    shareStates: Record<ShareAddress, ShareState>;
 }

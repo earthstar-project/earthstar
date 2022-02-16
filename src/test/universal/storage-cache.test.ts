@@ -5,9 +5,9 @@ let TEST_NAME = "storage-cache";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-memory.ts";
-import { StorageAsync } from "../../storage/storage-async.ts";
-import { StorageCache } from "../../storage/storage-cache.ts";
+import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { Replica } from "../../replica/replica.ts";
+import { ReplicaCache } from "../../replica/replica-cache.ts";
 
 // No types for tap...? Bit of a drag.
 
@@ -20,7 +20,7 @@ import { sleep } from "../../util/misc.ts";
 
 //================================================================================
 
-const WORKSPACE_ADDR = "+test.a123";
+const SHARE_ADDR = "+test.a123";
 
 Deno.test("works", async () => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
@@ -28,13 +28,13 @@ Deno.test("works", async () => {
         "suzy",
     ) as AuthorKeypair;
 
-    const storage = new StorageAsync(
-        WORKSPACE_ADDR,
+    const storage = new Replica(
+        SHARE_ADDR,
         FormatValidatorEs4,
-        new StorageDriverAsyncMemory(WORKSPACE_ADDR),
+        new ReplicaDriverMemory(SHARE_ADDR),
     );
 
-    const cache = new StorageCache(storage);
+    const cache = new ReplicaCache(storage);
 
     const values = {
         allDocs: cache.getAllDocs(),
@@ -52,19 +52,19 @@ Deno.test("works", async () => {
     assertEquals(values.latestDocs, []);
     assertStrictEquals(values.orangesDoc, undefined);
 
-    cache._storage.set(keypair, {
+    cache._replica.set(keypair, {
         content: "Hello!",
         path: "/test/hello.txt",
         format: "es.4",
     });
 
-    cache._storage.set(keypair, {
+    cache._replica.set(keypair, {
         content: "Apples!",
         path: "/test/apples.txt",
         format: "es.4",
     });
 
-    cache._storage.set(keypair, {
+    cache._replica.set(keypair, {
         content: "Oranges!",
         path: "/test/oranges.txt",
         format: "es.4",
@@ -77,7 +77,7 @@ Deno.test("works", async () => {
     assertStrictEquals(values.orangesDoc?.path, "/test/oranges.txt");
     assertStrictEquals(values.orangesDoc?.author, keypair.address);
 
-    cache._storage.set(keypairB, {
+    cache._replica.set(keypairB, {
         content: "Suzy's Oranges!",
         path: "/test/oranges.txt",
         format: "es.4",

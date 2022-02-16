@@ -2,7 +2,7 @@ import { assert } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Peer } from "../../peer/peer.ts";
-import { makeNStorages, storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
+import { makeNReplicas, storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
 import testTransportScenarios from "../transport-scenarios/transport-scenarios.ts";
 import { TransportTestHelper } from "../test-scenario-types.ts";
 import { Syncer } from "../../syncer/syncer.ts";
@@ -34,10 +34,10 @@ function testSyncer(
 
             const ADDRESS = "+apples.a123";
 
-            const [storage, targetStorage] = makeNStorages(ADDRESS, 2);
+            const [storage, targetStorage] = makeNReplicas(ADDRESS, 2);
 
-            scenario.clientPeer.addStorage(storage);
-            scenario.targetPeer.addStorage(targetStorage);
+            scenario.clientPeer.addReplica(storage);
+            scenario.targetPeer.addReplica(targetStorage);
 
             // Write random docs to each storage
             await writeRandomDocs(keypairA, storage, 10);

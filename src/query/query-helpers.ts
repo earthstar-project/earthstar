@@ -1,6 +1,6 @@
 import { Doc } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
-import { IStorageAsync } from "../storage/storage-types.ts";
+import { IReplica } from "../replica/replica-types.ts";
 import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
@@ -125,10 +125,10 @@ export let globToRegex = (
  *
  * To use it:
  *
- *    let queryByGlob = async (storage: IStorageAsync, glob: string): Promise<Doc[]> => {
+ *    let queryByGlob = async (replica: IReplica, glob: string): Promise<Doc[]> => {
  *       let { query, regex } = globToQueryAndRegex(glob);
  *
- *       let docs = await storage.queryDocs(query);
+ *       let docs = await replica.queryDocs(query);
  *       if (regex != null) {
  *           let re = new RegExp(regex);
  *           docs = docs.filter(doc => re.test(doc.path));
@@ -136,7 +136,7 @@ export let globToRegex = (
  *       return docs;
  *    }
  *
- *    let posts = await queryByGlob(myStorage, '/posts/*.txt');
+ *    let posts = await queryByGlob(myReplica, '/posts/*.txt');
  */
 export let globToQueryAndRegex = (
     glob: string,
@@ -198,13 +198,13 @@ export let globToQueryAndRegex = (
  * intend to override the glob's query.
  */
 export let queryByGlobAsync = async (
-    storage: IStorageAsync,
+    replica: IReplica,
     glob: string,
     moreQueryOptions: Query = {},
 ): Promise<Doc[]> => {
     let { query, regex } = globToQueryAndRegex(glob);
     query = { ...query, ...moreQueryOptions };
-    let docs = await storage.queryDocs(query);
+    let docs = await replica.queryDocs(query);
 
     if (regex !== null) {
         let re = new RegExp(regex);
@@ -468,21 +468,21 @@ export let insertVariablesIntoTemplate = (
 
 /*
  * Given a template string like "/posts/{postId}.json",
- *  query the storage for docs with matching paths.
+ *  query the replica for docs with matching paths.
  *
  * See the docs for matchTemplateAndPath for details on template strings.
  *
  * You can get the variables out of your document paths like this:
  *
  *      let template = '/posts/{postId}.json';
- *      let docs = await queryByTemplateAsync(myStorage, template);
+ *      let docs = await queryByTemplateAsync(myReplica, template);
  *      for (let doc of docs) {
  *          // vars will be like { postId: 'abc' }
  *          let vars = extractTemplateVariablesFromPath(template, doc.path);
  *      }
  */
 export let queryByTemplateAsync = async (
-    storage: IStorageAsync,
+    replica: IReplica,
     template: string,
     moreQueryOptions: Query = {},
 ): Promise<Doc[]> => {
@@ -490,7 +490,7 @@ export let queryByTemplateAsync = async (
     let { query, regex } = globToQueryAndRegex(glob);
     query = { ...query, ...moreQueryOptions };
 
-    let docs = await storage.queryDocs(query);
+    let docs = await replica.queryDocs(query);
     if (regex != null) {
         let re = new RegExp(regex);
         docs = docs.filter((doc) => re.test(doc.path));
