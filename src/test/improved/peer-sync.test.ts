@@ -23,7 +23,7 @@ Overall:
 function testSyncScenario(
     scenario: PeerSyncScenario,
 ) {
-    Deno.test(`Peer.sync, Peer.stopSync + ${scenario.name}`, async () => {
+    Deno.test(`Peer.sync, Peer.stopSync + ${scenario.name}`, async (test) => {
         const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
 
         const ADDRESS_A = "+apples.a123";
@@ -69,10 +69,26 @@ function testSyncScenario(
         // Wait a sec
         await sleep(3000);
 
-        // Check that everything synced
-        assert(await storagesAreSynced(storagesATriplet), `All ${ADDRESS_A} storages synced`);
-        assert(await storagesAreSynced(storagesBTriplet), `All ${ADDRESS_B} storages synced`);
-        assert(await storagesAreSynced(storagesCTriplet), `All ${ADDRESS_C} storages synced`);
+        await test.step({
+            name: "Storages synced",
+            sanitizeOps: false,
+            sanitizeResources: false,
+            fn: async () => {
+                // Check that everything synced
+                assert(
+                    await storagesAreSynced(storagesATriplet),
+                    `All ${ADDRESS_A} storages synced`,
+                );
+                assert(
+                    await storagesAreSynced(storagesBTriplet),
+                    `All ${ADDRESS_B} storages synced`,
+                );
+                assert(
+                    await storagesAreSynced(storagesCTriplet),
+                    `All ${ADDRESS_C} storages synced`,
+                );
+            },
+        });
 
         // Now close the connections
         closers.forEach((closer) => closer());
@@ -95,8 +111,15 @@ function testSyncScenario(
 
         await sleep(1000);
 
-        const areDStoragesSynced = await storagesAreSynced(storagesDTriplet);
-        assert(areDStoragesSynced === false, `All ${ADDRESS_D} storages did NOT sync`);
+        await test.step({
+            name: "Storages did not sync after closing connection",
+            sanitizeOps: false,
+            sanitizeResources: false,
+            fn: async () => {
+                const areDStoragesSynced = await storagesAreSynced(storagesDTriplet);
+                assert(areDStoragesSynced === false, `All ${ADDRESS_D} storages did NOT sync`);
+            },
+        });
 
         // Wrap up.
 

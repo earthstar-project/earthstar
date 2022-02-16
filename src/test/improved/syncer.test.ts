@@ -22,7 +22,7 @@ function testSyncer(
 ) {
     Deno.test({
         name: `Syncer + ${name}`,
-        fn: async () => {
+        fn: async (test) => {
             const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
             const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
 
@@ -50,8 +50,16 @@ function testSyncer(
             await scenario.connect();
 
             // Check if everything synced
-            await sleep(100);
-            assert(await storagesAreSynced([storage, targetStorage]), "storages synced");
+            await sleep(1000);
+
+            await test.step({
+                name: "Storages synced",
+                sanitizeOps: false,
+                sanitizeResources: false,
+                fn: async () => {
+                    assert(await storagesAreSynced([storage, targetStorage]), "storages synced");
+                },
+            });
 
             // Write some more random docs
             await writeRandomDocs(keypairB, storage, 10);
@@ -59,13 +67,25 @@ function testSyncer(
 
             // Check if everything synced again
             await sleep(1000);
-            assert(await storagesAreSynced([storage, targetStorage]), "storages synced (again)");
+
+            await test.step({
+                name: "Storages synced (again)",
+                sanitizeOps: false,
+                sanitizeResources: false,
+                fn: async () => {
+                    assert(
+                        await storagesAreSynced([storage, targetStorage]),
+                        "storages synced (again)",
+                    );
+                },
+            });
 
             syncer.close();
             otherSyncer.close();
             await storage.close(false);
             await targetStorage.close(false);
             await scenario.teardown();
+            await sleep(100);
         },
     });
 }
