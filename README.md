@@ -1,48 +1,26 @@
-# Stone Soup - Earthstar v2
+# Earthstar
 
-This is a re-implementation of [Earthstar](https://github.com/earthstar-project/earthstar),
-maintaining compatability with the data format (see the specification) but changing the Typescript
-API and the networking protocol.
+Sync stuff you care about with people you know. A specification and Javascript library for building online tools you can truly call your own.Build offline-first, decentralised, and private network applications in the browser, server, or command-line.
+
+**Clearly there's a lot to unpack, so check out [Earthstar's website](https://earthstar-project.org) for an introduction to Earthstar's concepts, an API tour, technical documentation, videos, and more!**
 
 ## Usage
 
 To use in Deno, add the following:
 
 ````ts
-import * as Earthstar from "https://setthisup.com/earthstar/mod.ts"
+import * as Earthstar from "https://deno.land/x/earthstar/mod.ts"
 ```;
 
 To use with Node or apps built with NPM dependencies:
 
-`npm i stone-soup`
+`npm i earthstar`
 
 And then import in your code:
 
 ```ts
-import * as Earthstar from "stone-soup";
+import * as Earthstar from "earthstar";
 ````
-
-### Platform-specific drivers
-
-There are two parts of stone-soup which are swappable to support different platforms or backends:
-`ICryptoDriver` and `IStorageDriverAsync`. Everything else should work on all platforms.
-
-Crypto drivers:
-
-- `CryptoDriverChloride` - only in browser, Node
-- `CryptoDriverNode` - only in Node
-- `CryptoDriverNoble` - universal
-
-Storage drivers:
-
-- `StorageDriverAsyncMemory` - univeral
-- `StorageDriverLocalStorage` - browser
-- `StorageDriverIndexedDB` - browser
-- `StorageDriverSqlite` - Node, Deno (⏳ coming soon)
-
-Users of this library have to decide which of these drivers to import and use in their app.
-Hopefully your app is using some build system that does tree-shaking and will discard the unused
-drivers.
 
 ## Development
 
@@ -103,11 +81,11 @@ runtime.
 
 ### Classes
 
-The `IStorageAsync` is the main star of the show. Classes to the right are used internally for its
-implementation. Classes to the left stack on top of an `IStorageAsync` to do extra things to it
+The `Replica` is the main star of the show. Classes to the right are used internally for its
+implementation. Classes to the left stack on top of an `Replica` to do extra things to it
 (subscribe to changes, cache data, etc).
 
-Each `IStorageAsync` holds the Docs for one Share.
+Each `Replica` holds the Docs for one Share.
 
 ![](classes.png)
 
@@ -134,6 +112,26 @@ And again with 3rd party dependencies as brown boxes with dotted lines, and incl
 ![](depchart/depchart-deps.png)
 
 Run `yarn depchart` to regenerate this. You'll need graphviz installed.
+
+### Platform-specific drivers
+
+There are two parts of stone-soup which are swappable to support different platforms or backends:
+`IReplica` and `IReplicaDriver`. Everything else should work on all platforms.
+
+Crypto drivers:
+
+- `ReplicaDriverChloride` - only in browser, Node
+- `ReplicaDriverNode` - only in Node
+- `ReplicaDriverNoble` - universal
+
+Storage drivers:
+
+- `ReplicaDriverMemory` - univeral
+- `ReplicaDriverLocalStorage` - browser
+- `ReplicaDriverIndexedDB` - browser
+- `ReplicaDriverSqlite` - Node, Deno
+
+Users of this library have to decide which of these drivers to import and use in their app.
 
 ### Documentation
 
@@ -204,7 +202,7 @@ functions.
 
 ## Changes from Earthstar v1
 
-### Splitting `IStorage` into `Storage` and `StorageDriver` classes
+### Splitting `Storage` into `Replica` and `ReplicaDriver` classes
 
 Think of this as `IStorageNiceAPIFullOfComplexity` and `IStorageSimpleLowLevelDriver`.
 

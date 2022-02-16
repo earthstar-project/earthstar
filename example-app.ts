@@ -8,11 +8,11 @@ import {
     LogLevel,
     Peer,
     QueryFollower,
+    Replica,
+    ReplicaDriverMemory,
     setDefaultLogLevel,
     setLogLevel,
     sleep,
-    StorageAsync,
-    StorageDriverAsyncMemory,
 } from "./mod.ts";
 
 //--------------------------------------------------
@@ -47,18 +47,18 @@ let main = async () => {
     //loggerMain.info('set global crypto driver')
     //setGlobalCryptoDriver(CryptoDriverTweetnacl);  // this is the default
     loggerMain.info("instantiate storageDriver and storage");
-    let storageDriver = new StorageDriverAsyncMemory(share);
-    let storage = new StorageAsync(
+    let storageDriver = new ReplicaDriverMemory(share);
+    let storage = new Replica(
         share,
         FormatValidatorEs4,
         storageDriver,
     );
 
     let peer = new Peer();
-    peer.storageMap.bus.on("*", (channel, data) => {
+    peer.replicaMap.bus.on("*", (channel, data) => {
         loggerPeerMapEvents.debug(`${channel}`);
     });
-    peer.addStorage(storage);
+    peer.addReplica(storage);
 
     loggerMain.info("generate a keypair");
     let keypair = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
