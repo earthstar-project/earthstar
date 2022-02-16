@@ -97,16 +97,22 @@ await build({
     },
     package: {
         // package.json properties
-        name: "stone-soup",
+        name: "earthstar",
         version: Deno.args[0],
-        description: "A distributed, syncable key-value database",
+        description:
+            "Earthstar is a specification and Javascript library for building online tools you can truly call your own.",
         license: "LGPL-3.0-only",
+        homepage: "https://earthstar-project.org",
+        "funding": {
+            "type": "opencollective",
+            "url": "https://opencollective.com/earthstar",
+        },
         repository: {
             type: "git",
-            url: "git+https://github.com/earthstar-project/stone-soup.git",
+            url: "git+https://github.com/earthstar-project/earthstar.git",
         },
         bugs: {
-            url: "https://github.com/earthstar-project/stone-soup/issues",
+            url: "https://github.com/earthstar-project/earthstar/issues",
         },
     },
     // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
