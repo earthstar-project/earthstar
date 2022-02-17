@@ -8,19 +8,21 @@ Sync stuff you care about with people you know. A specification and Javascript l
 
 To use in Deno, add the following:
 
-````ts
+```ts
 import * as Earthstar from "https://deno.land/x/earthstar/mod.ts"
-```;
+```
 
 To use with Node or apps built with NPM dependencies:
 
-`npm i earthstar`
+```
+npm i earthstar
+```
 
 And then import in your code:
 
 ```ts
 import * as Earthstar from "earthstar";
-````
+```
 
 ## Development
 
