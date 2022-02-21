@@ -19,6 +19,7 @@ export * from "../peer/peer.ts";
 
 export * from "../query/query-types.ts";
 export * from "../query/query.ts";
+export * from "../query/query-helpers.ts";
 
 export * from "../query-follower/query-follower-types.ts";
 export * from "../query-follower/query-follower.ts";
