@@ -67,7 +67,7 @@ function testSyncScenario(
         });
 
         // Wait a sec
-        await sleep(3000);
+        await sleep(4000);
 
         await test.step({
             name: "Storages synced",

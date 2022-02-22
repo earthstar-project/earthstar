@@ -60,14 +60,13 @@ await build({
         target: "ES2020",
     },
     mappings: {
-        "https://raw.githubusercontent.com/earthstar-project/earthstar-streaming-rpc/v3.2.1/mod.browser.ts":
-            {
-                name: "earthstar-streaming-rpc",
-                version: "3.2.1",
-            },
-        "https://esm.sh/earthstar-streaming-rpc@3.2.1?dts": {
+        "https://deno.land/x/earthstar_streaming_rpc@3.2.3/mod.browser.ts": {
             name: "earthstar-streaming-rpc",
-            version: "3.2.1",
+            version: "3.2.3",
+        },
+        "https://esm.sh/earthstar-streaming-rpc@3.2.3?dts": {
+            name: "earthstar-streaming-rpc",
+            version: "3.2.3",
         },
         "https://esm.sh/express?dts": {
             name: "express",
