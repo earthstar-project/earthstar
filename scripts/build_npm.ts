@@ -4,9 +4,7 @@ await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
     entryPoints: [
-        "./src/entries/universal.ts",
-        "./src/entries/node.ts",
-        "./src/entries/browser.ts",
+        "./src/entries/npm.ts",
     ],
     outDir: "./npm",
     shims: {
