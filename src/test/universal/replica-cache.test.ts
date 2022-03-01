@@ -1,4 +1,4 @@
-import { assertEquals, assertStrictEquals } from "../asserts.ts";
+import { assert, assertEquals, assertStrictEquals } from "../asserts.ts";
 
 let TEST_NAME = "storage-cache";
 
@@ -36,6 +36,8 @@ Deno.test("works", async () => {
 
     const cache = new ReplicaCache(storage);
 
+    assertEquals(cache.version, 0);
+
     const values = {
         allDocs: cache.getAllDocs(),
         latestDocs: cache.getLatestDocs(),
@@ -72,6 +74,9 @@ Deno.test("works", async () => {
 
     await sleep(100);
 
+    assert(cache.version > 0);
+    const versionAfterFirstOps = cache.version;
+
     assertStrictEquals(values.allDocs.length, 3);
     assertStrictEquals(values.latestDocs.length, 3);
     assertStrictEquals(values.orangesDoc?.path, "/test/oranges.txt");
@@ -84,6 +89,8 @@ Deno.test("works", async () => {
     });
 
     await sleep(100);
+
+    assert(cache.version > versionAfterFirstOps);
 
     assertStrictEquals(values.allDocs.length, 4);
     assertStrictEquals(values.latestDocs.length, 3);

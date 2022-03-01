@@ -85,6 +85,8 @@ function sortAndLimit(query: Query, docs: Doc[]) {
  * ```
  */
 export class ReplicaCache {
+    version = 0;
+
     _replica: IReplica;
 
     _docCache = new Map<
@@ -363,6 +365,7 @@ export class ReplicaCache {
     // SUBSCRIBE
 
     _fireOnCacheUpdateds() {
+        this.version++;
         return Promise.all(
             Array.from(this._onCacheUpdatedCallbacks.values()).map(
                 (callback) => {
