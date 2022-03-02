@@ -1,10 +1,12 @@
-import { build } from "https://deno.land/x/dnt@0.16.1/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.21.0/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
 await build({
     entryPoints: [
-        "./src/entries/npm.ts",
+        { name: ".", path: "./src/entries/universal.ts" },
+        { name: "./node", path: "./src/entries/node.ts" },
+        { name: "./browser", path: "./src/entries/browser.ts" },
     ],
     outDir: "./npm",
     shims: {
@@ -57,15 +59,18 @@ await build({
         // This is for Node v14 support
         target: "ES2020",
     },
+    // typeCheck: false,
     mappings: {
-        "https://deno.land/x/earthstar_streaming_rpc@3.2.3/mod.browser.ts": {
+        "https://esm.sh/earthstar-streaming-rpc@4.0.1": {
             name: "earthstar-streaming-rpc",
-            version: "3.2.3",
+            version: "4.0.1",
         },
-        "https://esm.sh/earthstar-streaming-rpc@3.2.3?dts": {
+        "https://deno.land/x/earthstar_streaming_rpc@v4.0.1/src/entries/node.ts": {
             name: "earthstar-streaming-rpc",
-            version: "3.2.3",
+            version: "4.0.1",
+            subPath: "node",
         },
+        "./src/streaming_rpc/streaming_rpc.ts": "./src/streaming_rpc/streaming_rpc.node.ts",
         "https://esm.sh/express?dts": {
             name: "express",
             version: "4.17.2",
@@ -91,6 +96,14 @@ await build({
                 name: "@noble/ed25519",
                 version: "1.4.0",
             },
+        "./src/replica/indexeddb-types.deno.d.ts": "./src/replica/indexeddb-types.node.d.ts",
+        "./src/test/transport-scenarios/transport-scenarios.ts":
+            "./src/test/transport-scenarios/transport-scenarios.node.ts",
+        "./src/test/peer-sync-scenarios/peer-sync-scenarios.ts":
+            "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
+        "./src/replica/replica-driver-sqlite.deno.ts":
+            "./src/replica/replica-driver-sqlite.node.ts",
+        "./src/test/test-deps.ts": "./src/test/test-deps.node.ts",
     },
     package: {
         // package.json properties
@@ -112,19 +125,29 @@ await build({
             url: "https://github.com/earthstar-project/earthstar/issues",
         },
     },
-    // tsc includes 'dom' as a lib, so doesn't need IndexedDB types
-    redirects: {
-        "./src/replica/indexeddb-types.deno.d.ts": "./src/replica/indexeddb-types.node.d.ts",
-        "./src/test/transport-scenarios/transport-scenarios.ts":
-            "./src/test/transport-scenarios/transport-scenarios.node.ts",
-        "./src/test/peer-sync-scenarios/peer-sync-scenarios.ts":
-            "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
-        "./src/replica/replica-driver-sqlite.deno.ts":
-            "./src/replica/replica-driver-sqlite.node.ts",
-        "./src/test/test-deps.ts": "./src/test/test-deps.node.ts",
-    },
 });
 
 // post build steps
 Deno.copyFileSync("LICENSE", "npm/LICENSE");
 Deno.copyFileSync("README.md", "npm/README.md");
+
+// A truly filthy hack to compensate for Typescript's lack of support for the exports field
+Deno.writeTextFileSync(
+    "npm/browser.js",
+    `export * from "./esm/src/entries/browser";`,
+);
+
+Deno.writeTextFileSync(
+    "npm/browser.d.ts",
+    `export * from './types/src/entries/browser';`,
+);
+
+Deno.writeTextFileSync(
+    "npm/node.js",
+    `export * from "./esm/src/entries/node";`,
+);
+
+Deno.writeTextFileSync(
+    "npm/node.d.ts",
+    `export * from './types/src/entries/node';`,
+);

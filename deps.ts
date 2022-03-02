@@ -14,4 +14,4 @@ export {
     TransportHttpClient,
     TransportLocal,
     TransportWebsocketClient,
-} from "https://deno.land/x/earthstar_streaming_rpc@3.2.3/mod.browser.ts";
+} from "./src/streaming_rpc/streaming_rpc.ts";

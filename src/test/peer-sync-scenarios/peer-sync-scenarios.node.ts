@@ -17,7 +17,6 @@ class HttpPeerScenario implements PeerSyncHelper {
     _app2: Express;
     _server2: ReturnType<Express["listen"]> | null = null;
     _syncer2: Syncer<Rpc.TransportHttpServerExpress<SyncerBag>>;
-
     _peer3 = new Peer();
     _transport3: Rpc.TransportHttpServerExpress<SyncerBag>;
     _app3: Express;
