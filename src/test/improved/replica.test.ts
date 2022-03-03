@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "../asserts.ts";
+import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { doesNotThrow, throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
 import { IReplica } from "../../replica/replica-types.ts";
@@ -14,31 +14,29 @@ import { testScenarios } from "../test-scenarios.ts";
 
 //================================================================================
 
-import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
-let loggerTest = new Logger("test", "whiteBright");
-let loggerTestCb = new Logger("test cb", "white");
-let J = JSON.stringify;
+import { Logger } from "../../util/log.ts";
+const loggerTest = new Logger("test", "whiteBright");
+const loggerTestCb = new Logger("test cb", "white");
 //setLogLevel('test', LogLevel.Debug);
 
 //================================================================================
 
-export function runStorageAsyncTests(scenario: TestScenario) {
-    let TEST_NAME = "storage tests";
-    let SUBTEST_NAME = scenario.name;
+export function runRelpicaTests(scenario: TestScenario) {
+    const SUBTEST_NAME = scenario.name;
 
-    function makeStorage(ws: ShareAddress): IReplica {
-        let driver = scenario.makeDriver(ws);
+    function makeReplica(ws: ShareAddress): IReplica {
+        const driver = scenario.makeDriver(ws);
         return new Replica(ws, FormatValidatorEs4, driver);
     }
 
     Deno.test(
-        SUBTEST_NAME + ": storage close() and throwing when closed",
+        SUBTEST_NAME + ": replica close() and throwing when closed",
         async () => {
-            let initialCryptoDriver = GlobalCryptoDriver;
+            const initialCryptoDriver = GlobalCryptoDriver;
 
-            let share = "+gardening.abcde";
-            let storage = makeStorage(share);
-            let events: string[] = [];
+            const share = "+gardening.abcde";
+            const storage = makeReplica(share);
+            const events: string[] = [];
 
             assertEquals(
                 typeof storage.replicaId,
@@ -48,11 +46,11 @@ export function runStorageAsyncTests(scenario: TestScenario) {
 
             // subscribe in a different order than they will normally happen,
             // to make sure they really happen in the right order when they happen for real
-            storage.bus.on("didClose", (channel, data) => {
+            storage.bus.on("didClose", (channel) => {
                 loggerTestCb.debug(">> didClose event handler");
                 events.push(channel);
             });
-            storage.bus.on("willClose", (channel, data) => {
+            storage.bus.on("willClose", (channel) => {
                 loggerTestCb.debug(">> willClose event handler");
                 events.push(channel);
             });
@@ -192,20 +190,20 @@ export function runStorageAsyncTests(scenario: TestScenario) {
     // TODO: test querying
 
     Deno.test(
-        SUBTEST_NAME + ": storage overwriteAllDocsByAuthor",
+        SUBTEST_NAME + ": replica overwriteAllDocsByAuthor",
         async () => {
-            let initialCryptoDriver = GlobalCryptoDriver;
+            const initialCryptoDriver = GlobalCryptoDriver;
 
-            let share = "+gardening.abcde";
-            let storage = makeStorage(share);
+            const share = "+gardening.abcde";
+            const storage = makeReplica(share);
 
-            let keypair1 = await Crypto.generateAuthorKeypair("aaaa");
-            let keypair2 = await Crypto.generateAuthorKeypair("bbbb");
+            const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
+            const keypair2 = await Crypto.generateAuthorKeypair("bbbb");
             if (isErr(keypair1) || isErr(keypair2)) {
                 assert(false, "error making keypair");
             }
 
-            let now = microsecondNow();
+            const now = microsecondNow();
             await storage.set(keypair1, {
                 format: "es.4",
                 path: "/pathA",
@@ -298,7 +296,7 @@ export function runStorageAsyncTests(scenario: TestScenario) {
 
             //--------------------------------------------
             // overwrite
-            let result = await storage.overwriteAllDocsByAuthor(keypair1);
+            const result = await storage.overwriteAllDocsByAuthor(keypair1);
             assertEquals(result, 2, "two docs were overwritten");
 
             //--------------------------------------------
@@ -372,9 +370,22 @@ export function runStorageAsyncTests(scenario: TestScenario) {
         },
     );
 
-    // TODO: more StorageAsync tests
+    Deno.test(
+        SUBTEST_NAME + ": validates addresses",
+        () => {
+            const validShare = "+gardening.abcde";
+            const invalidShare = "PEANUTS.123";
+
+            assertThrows(() => {
+                makeReplica(invalidShare);
+            });
+
+            const storage = makeReplica(validShare);
+            assert(storage);
+        },
+    );
 }
 
-for (let scenario of testScenarios) {
-    runStorageAsyncTests(scenario);
+for (const scenario of testScenarios) {
+    runRelpicaTests(scenario);
 }
