@@ -1,5 +1,4 @@
 import { Lock, Superbus } from "../../deps.ts";
-
 import { Cmp } from "./util-types.ts";
 import { AuthorKeypair, Doc, DocToSet, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { HistoryMode, Query } from "../query/query-types.ts";
@@ -11,10 +10,10 @@ import {
     ReplicaId,
 } from "./replica-types.ts";
 import { IFormatValidator } from "../format-validators/format-validator-types.ts";
-
 import { isErr, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
 import { microsecondNow, randomId } from "../util/misc.ts";
 import { compareArrays } from "./compare.ts";
+import { checkShareIsValid } from "../core-validators/addresses.ts";
 
 import { Crypto } from "../crypto/crypto.ts";
 
@@ -61,9 +60,16 @@ export class Replica implements IReplica {
         validator: IFormatValidator,
         driver: IReplicaDriver,
     ) {
+        const addressIsValidResult = checkShareIsValid(share);
+
+        if (isErr(addressIsValidResult)) {
+            throw addressIsValidResult;
+        }
+
         logger.debug(
             `constructor.  driver = ${(driver as any)?.constructor?.name}`,
         );
+
         this.replicaId = "replica-" + randomId();
         this.share = share;
         this.formatValidator = validator;
