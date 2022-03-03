@@ -190,7 +190,7 @@ export class ReplicaCache {
             if (Date.now() > cachedResult.expires) {
                 this._replica.queryDocs(query).then((docs) => {
                     this._docCache.set(queryString, {
-                        follower,
+                        follower: cachedResult.follower,
                         docs,
                         expires: Date.now() + this._timeToLive,
                     });
