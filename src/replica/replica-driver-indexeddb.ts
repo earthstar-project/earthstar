@@ -3,11 +3,12 @@
 import { Doc, ShareAddress } from "../util/doc-types.ts";
 import { ReplicaIsClosedError } from "../util/errors.ts";
 import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
+import { Query } from "../query/query-types.ts";
 
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-let logger = new Logger("storage driver indexeddb", "yellowBright");
+const logger = new Logger("replica driver indexeddb", "yellowBright");
 
 //================================================================================
 
@@ -43,16 +44,15 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
                 return reject();
             }
 
-            // Deno doesn't have indexedDB yet, so we need to cast as any.
             // dnt-shim-ignore
-            const request = (window as any).indexedDB.open(
-                `stonesoup:database:${this.share}`,
-                1,
+            const request = ((window as any).indexedDB as IDBFactory).open(
+                `earthstar:share:${this.share}`,
             );
 
             request.onerror = () => {
                 logger.error(`Could not open IndexedDB for ${this.share}`);
                 logger.error(request.error);
+                return reject(request.error);
             };
 
             request.onupgradeneeded = function () {
@@ -241,7 +241,14 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
     // GET
 
     // getMaxLocalIndex(): inherited
-    // queryDocs(query: Query): inherited
+
+    async queryDocs(query: Query) {
+        // Make sure the IndexedDB has been loaded up
+        await this.getIndexedDb();
+        const result = await super.queryDocs(query);
+
+        return result;
+    }
 
     //--------------------------------------------------
     // SET
@@ -250,7 +257,7 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
         if (this._isClosed) {
             throw new ReplicaIsClosedError();
         }
-        let upsertedDoc = await super.upsert(doc);
+        const upsertedDoc = await super.upsert(doc);
 
         // After every upsert, for now, we save everything
         // to IndexedDB as a single giant blob.
