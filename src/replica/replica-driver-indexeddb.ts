@@ -75,7 +75,7 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
                 const retrieval = store.get(DOCUMENTS_ID);
 
                 retrieval.onsuccess = () => {
-                    const docs = retrieval.result;
+                    const docs = retrieval.result["docs"];
 
                     if (!docs) {
                         return resolve(request.result);
