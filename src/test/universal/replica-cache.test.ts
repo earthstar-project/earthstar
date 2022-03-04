@@ -1,10 +1,12 @@
-import { assertEquals, assertStrictEquals } from "../asserts.ts";
+import { assert, assertEquals, assertStrictEquals, assertThrows } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaCache } from "../../replica/replica-cache.ts";
+import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
+import { throws } from "../test-utils.ts";
 
 import { sleep } from "../../util/misc.ts";
 
@@ -112,4 +114,50 @@ Deno.test("ReplicaCache", async () => {
     assertStrictEquals(values.latestDocs.length, 3);
     assertStrictEquals(values.orangesDoc?.path, "/test/oranges.txt");
     assertStrictEquals(values.orangesDoc?.author, keypairB.address);
+
+    // Test that
+
+    await cache.close();
+
+    assert(cache.isClosed(), "Cache is closed");
+
+    throws(async () => {
+        await cache.close();
+    }, "Throws if you try to close twice.");
+
+    assertThrows(() => {
+        cache.getAllDocs();
+    }, ReplicaCacheIsClosedError);
+
+    assertThrows(() => {
+        cache.getAllDocsAtPath("nya");
+    }, ReplicaCacheIsClosedError);
+
+    assertThrows(() => {
+        cache.getLatestDocAtPath("nya");
+    }, ReplicaCacheIsClosedError);
+
+    assertThrows(() => {
+        cache.getLatestDocs();
+    }, ReplicaCacheIsClosedError);
+
+    assertThrows(() => {
+        cache.onCacheUpdated(() => {});
+    }, ReplicaCacheIsClosedError);
+
+    assertThrows(() => {
+        cache.overwriteAllDocsByAuthor(keypair);
+    }, ReplicaCacheIsClosedError);
+
+    assertThrows(() => {
+        cache.queryDocs({});
+    }, ReplicaCacheIsClosedError);
+
+    assertThrows(() => {
+        cache.set(keypair, {
+            content: "na",
+            format: "es.4",
+            path: "bloo",
+        });
+    }, ReplicaCacheIsClosedError);
 });

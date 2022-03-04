@@ -1,7 +1,7 @@
 import { fast_deep_equal as isEqual, fast_json_stable_stringify as stringify } from "../../deps.ts";
 
 import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types.ts";
-import { ReplicaIsClosedError } from "../util/errors.ts";
+import { ReplicaCacheIsClosedError, ReplicaIsClosedError } from "../util/errors.ts";
 
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 import { QueryFollower } from "../query-follower/query-follower.ts";
@@ -104,6 +104,8 @@ export class ReplicaCache {
 
     _onCacheUpdatedCallbacks = new Set<(entry: string) => void>();
 
+    _isClosed = false;
+
     /**
      * Create a new ReplicaCache.
      * @param timeToLive - The number of milliseconds a cached document is considered valid for.
@@ -113,10 +115,27 @@ export class ReplicaCache {
         this._timeToLive = timeToLive || 1000;
     }
 
+    async close() {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
+        this._isClosed = true;
+
+        await Promise.all(
+            Array.from(this._docCache.values()).map((entry) => entry.follower.close),
+        );
+
+        this._docCache.clear();
+    }
+
+    isClosed() {
+        return this._isClosed;
+    }
+
     // SET - just pass along to the backing storage
 
     /** Add a new document directly to the backing replica. */
     set(keypair: AuthorKeypair, docToSet: DocToSet) {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
+
         return this._replica.set(keypair, docToSet);
     }
 
@@ -124,6 +143,7 @@ export class ReplicaCache {
 
     /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getAllDocs(): Doc[] {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
         if (this._replica.isClosed()) {
             throw new ReplicaIsClosedError();
         }
@@ -135,6 +155,7 @@ export class ReplicaCache {
 
     /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getLatestDocs(): Doc[] {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
         if (this._replica.isClosed()) {
             throw new ReplicaIsClosedError();
         }
@@ -146,6 +167,7 @@ export class ReplicaCache {
 
     /** Fetch all versions of all docs from a certain path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getAllDocsAtPath(path: Path): Doc[] {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
         if (this._replica.isClosed()) {
             throw new ReplicaIsClosedError();
         }
@@ -158,6 +180,7 @@ export class ReplicaCache {
 
     /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     getLatestDocAtPath(path: Path): Doc | undefined {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
         if (this._replica.isClosed()) {
             throw new ReplicaIsClosedError();
         }
@@ -174,6 +197,10 @@ export class ReplicaCache {
 
     /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
     queryDocs(query: Query = {}): Doc[] {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
+        if (this._replica.isClosed()) {
+            throw new ReplicaIsClosedError();
+        }
         // make a deterministic string out of the query
         const cleanUpQueryResult = cleanUpQuery(query);
 
@@ -243,6 +270,10 @@ export class ReplicaCache {
 
     /** Call this method on the backing replica. */
     overwriteAllDocsByAuthor(keypair: AuthorKeypair) {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
+        if (this._replica.isClosed()) {
+            throw new ReplicaIsClosedError();
+        }
         return this._replica.overwriteAllDocsByAuthor(keypair);
     }
 
@@ -394,6 +425,11 @@ export class ReplicaCache {
 
     /** Subscribes to the cache, calling a callback when previously returned results can be considered stale. Returns a function for unsubscribing. */
     onCacheUpdated(callback: (entryKey: string) => void): () => void {
+        if (this._isClosed) throw new ReplicaCacheIsClosedError();
+        if (this._replica.isClosed()) {
+            throw new ReplicaIsClosedError();
+        }
+
         this._onCacheUpdatedCallbacks.add(callback);
 
         return () => {

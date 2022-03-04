@@ -24,6 +24,16 @@ export class ReplicaIsClosedError extends EarthstarError {
     }
 }
 
+/** An IReplica or IReplicaDriver was used after close() was called on it. */
+export class ReplicaCacheIsClosedError extends EarthstarError {
+    constructor(message?: string) {
+        super(
+            message || "a ReplicaCache was used after being closed",
+        );
+        this.name = "ReplicaCacheIsClosedError";
+    }
+}
+
 /** A QueryFollower was used after close() was called on it. */
 export class QueryFollowerIsClosedError extends EarthstarError {
     constructor(message?: string) {
