@@ -14,6 +14,10 @@ const logger = new Logger("replica-cache", "green");
 
 //================================================================================
 
+function justLocalIndex({ _localIndex }: Doc) {
+    return _localIndex;
+}
+
 // Lifted from ReplicaDriverMemory
 // Slightly different in that it does not check if doc matches the filter,
 // as this has been done beforehand by now.
@@ -218,6 +222,15 @@ export class ReplicaCache {
             // If the result has expired, query the storage again.
             if (Date.now() > cachedResult.expires) {
                 this._replica.queryDocs(query).then((docs) => {
+                    const localIndexes = docs.map(justLocalIndex).sort();
+                    const cacheLocalIndexes = cachedResult.docs.map(justLocalIndex).sort();
+
+                    // Return early if the new result is the same as the cached result.
+                    // (The sets of localIndexes should be identical if they're the same)
+                    if (isEqual(localIndexes, cacheLocalIndexes)) {
+                        return;
+                    }
+
                     this._docCache.set(queryString, {
                         follower: cachedResult.follower,
                         docs,
@@ -245,17 +258,28 @@ export class ReplicaCache {
             }
         });
 
-        // Add an entry to the cache.
-        this._docCache.set(queryString, {
-            docs: [],
-            follower,
-            expires: Date.now() + this._timeToLive,
-        });
-        logger.debug("Updated cache with a new entry.");
-        this._fireOnCacheUpdateds(queryString);
-
         // Hatch the follower.
         follower.hatch();
+
+        // Set an empty entry in the cache so that calls which happen
+        // while we wait for the first request to resolve don't queue up
+        // more 'initial' queries.
+        this._docCache.set(queryString, {
+            follower,
+            docs: [],
+            expires: Date.now() + this._timeToLive,
+        });
+
+        // Query the storage, set the eventual result in the cache.
+        this._replica.queryDocs(query).then((docs) => {
+            this._docCache.set(queryString, {
+                follower,
+                docs,
+                expires: Date.now() + this._timeToLive,
+            });
+            logger.debug("Updated cache with a new entry.");
+            this._fireOnCacheUpdateds(queryString);
+        });
 
         // Return an empty result for the moment.
         return [];

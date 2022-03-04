@@ -9,8 +9,9 @@ import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
 import { throws } from "../test-utils.ts";
 
 import { sleep } from "../../util/misc.ts";
+import { LogLevel, setLogLevel } from "../../util/log.ts";
 
-//setDefaultLogLevel(LogLevel.Debug);
+//setLogLevel("replica-cache", LogLevel.Debug);
 
 //================================================================================
 
@@ -160,4 +161,21 @@ Deno.test("ReplicaCache", async () => {
             path: "bloo",
         });
     }, ReplicaCacheIsClosedError);
+
+    // Test cache expiry with a quickly expiring cache
+    const expiringCache = new ReplicaCache(storage, 10);
+
+    // Heat the cache by getting something.
+    expiringCache.getAllDocs();
+    await sleep(50);
+    assertEquals(expiringCache.version, 1, "Quickly expiring cache was updated once");
+    // Hit the cache again.
+    expiringCache.getAllDocs();
+    await sleep(50);
+    // Cache version should be the same.
+    assertEquals(
+        expiringCache.version,
+        1,
+        "Quickly expiring cache was updated once, even after second request",
+    );
 });
