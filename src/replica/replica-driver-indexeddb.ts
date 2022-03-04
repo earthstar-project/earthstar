@@ -75,11 +75,11 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
                 const retrieval = store.get(DOCUMENTS_ID);
 
                 retrieval.onsuccess = () => {
-                    const docs = retrieval.result["docs"];
-
-                    if (!docs) {
+                    if (!retrieval.result || !retrieval.result["docs"]) {
                         return resolve(request.result);
                     }
+
+                    const docs = retrieval.result["docs"];
 
                     this.docByPathAndAuthor = new Map(
                         Object.entries(docs.byPathAndAuthor),
