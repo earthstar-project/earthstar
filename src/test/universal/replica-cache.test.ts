@@ -1,7 +1,4 @@
-import { assert, assertEquals, assertStrictEquals } from "../asserts.ts";
-
-let TEST_NAME = "storage-cache";
-
+import { assertEquals, assertStrictEquals } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
@@ -9,11 +6,6 @@ import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaCache } from "../../replica/replica-cache.ts";
 
-// No types for tap...? Bit of a drag.
-
-//-------------------
-
-import { LogLevel, setDefaultLogLevel } from "../../util/log.ts";
 import { sleep } from "../../util/misc.ts";
 
 //setDefaultLogLevel(LogLevel.Debug);
@@ -22,7 +14,7 @@ import { sleep } from "../../util/misc.ts";
 
 const SHARE_ADDR = "+test.a123";
 
-Deno.test("works", async () => {
+Deno.test("ReplicaCache", async () => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
     const keypairB = await Crypto.generateAuthorKeypair(
         "suzy",
@@ -36,7 +28,7 @@ Deno.test("works", async () => {
 
     const cache = new ReplicaCache(storage);
 
-    assertEquals(cache.version, 0);
+    assertEquals(cache.version, 0, "Cache version is 0");
 
     const values = {
         allDocs: cache.getAllDocs(),
@@ -50,9 +42,16 @@ Deno.test("works", async () => {
         values.orangesDoc = cache.getLatestDocAtPath("/test/oranges.txt");
     });
 
-    assertEquals(values.allDocs, []);
-    assertEquals(values.latestDocs, []);
-    assertStrictEquals(values.orangesDoc, undefined);
+    await sleep(100);
+    // Cache should have be updated three times
+    // Once for allDocs
+    // Once for latestDocs
+    // And once for oranges docs
+    assertEquals(cache.version, 3, "Cache was updated three times");
+
+    assertEquals(values.allDocs, [], "Cache for allDocs is empty");
+    assertEquals(values.latestDocs, [], "Cache for latestDocs is empty");
+    assertStrictEquals(values.orangesDoc, undefined, "latestDocAtPath result is undefined");
 
     cache._replica.set(keypair, {
         content: "Hello!",
@@ -60,11 +59,23 @@ Deno.test("works", async () => {
         format: "es.4",
     });
 
+    await sleep(100);
+    // Cache should have be updated five times
+    // Once for allDocs
+    // Once for latestDocs
+    assertEquals(cache.version, 5, "Cache was updated five times");
+
     cache._replica.set(keypair, {
         content: "Apples!",
         path: "/test/apples.txt",
         format: "es.4",
     });
+
+    await sleep(100);
+    // Cache should have be updated seven times
+    // Once for allDocs
+    // Once for latestDocs
+    assertEquals(cache.version, 7, "Cache was updated seven times");
 
     cache._replica.set(keypair, {
         content: "Oranges!",
@@ -73,9 +84,11 @@ Deno.test("works", async () => {
     });
 
     await sleep(100);
-
-    assert(cache.version > 0);
-    const versionAfterFirstOps = cache.version;
+    // Cache should have be updated 10 times
+    // Once for allDocs
+    // Once for latestDocs
+    // Once for orangesDoc
+    assertEquals(cache.version, 10, "Cache was updated 10 times");
 
     assertStrictEquals(values.allDocs.length, 3);
     assertStrictEquals(values.latestDocs.length, 3);
@@ -89,8 +102,11 @@ Deno.test("works", async () => {
     });
 
     await sleep(100);
-
-    assert(cache.version > versionAfterFirstOps);
+    // Cache should have be updated 13 times
+    // Once for allDocs
+    // Once for latestDocs
+    // Once for orangesDoc
+    assertEquals(cache.version, 13, "Cache was updated thirteen times");
 
     assertStrictEquals(values.allDocs.length, 4);
     assertStrictEquals(values.latestDocs.length, 3);

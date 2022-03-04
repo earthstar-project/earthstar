@@ -8,6 +8,10 @@ import { QueryFollower } from "../query-follower/query-follower.ts";
 import { Query } from "../query/query-types.ts";
 import { IReplica, LiveQueryEvent } from "./replica-types.ts";
 
+import { Logger } from "../util/log.ts";
+
+const logger = new Logger("replica-cache", "green");
+
 //================================================================================
 
 // Lifted from ReplicaDriverMemory
@@ -74,6 +78,8 @@ function sortAndLimit(query: Query, docs: Doc[]) {
     return filteredDocs;
 }
 
+type CacheEntry = { docs: Doc[]; follower: QueryFollower; expires: number };
+
 /** A cached, synchronous interface to a replica, useful for reactive abstractions. Always returns results from its cache, and proxies the query to the backing replica in case of a cache miss.
  * ```
  * const cache = new ReplicaCache(myReplica);
@@ -91,12 +97,12 @@ export class ReplicaCache {
 
     _docCache = new Map<
         string,
-        { docs: Doc[]; follower: QueryFollower; expires: number }
+        CacheEntry
     >();
 
     _timeToLive: number;
 
-    _onCacheUpdatedCallbacks = new Set<() => void | (() => Promise<void>)>();
+    _onCacheUpdatedCallbacks = new Set<(entry: string) => void>();
 
     /**
      * Create a new ReplicaCache.
@@ -182,11 +188,7 @@ export class ReplicaCache {
         const cachedResult = this._docCache.get(queryString);
 
         if (cachedResult) {
-            // Query the storage, set the eventual result in the cache.
-            this._replica.queryDocs(query).then((docs) => {
-                this._docCache.set(queryString, { ...cachedResult, docs });
-            });
-
+            // If the result has expired, query the storage again.
             if (Date.now() > cachedResult.expires) {
                 this._replica.queryDocs(query).then((docs) => {
                     this._docCache.set(queryString, {
@@ -195,13 +197,15 @@ export class ReplicaCache {
                         expires: Date.now() + this._timeToLive,
                     });
 
-                    this._fireOnCacheUpdateds();
+                    logger.debug("Updated cache because result expired.");
+                    this._fireOnCacheUpdateds(queryString);
                 });
             }
 
             return cachedResult.docs;
         }
 
+        // If there's no result, let's follow this query.
         const follower = new QueryFollower(
             this._replica,
             { ...query, historyMode: "all", orderBy: "localIndex ASC" },
@@ -209,7 +213,8 @@ export class ReplicaCache {
 
         follower.bus.on((event: LiveQueryEvent) => {
             if (event.kind === "existing" || event.kind === "success") {
-                this._updateCache(event.doc);
+                logger.debug({ doc: event.doc.path, queryString });
+                this._updateCache(queryString, event.doc);
             }
         });
 
@@ -219,19 +224,11 @@ export class ReplicaCache {
             follower,
             expires: Date.now() + this._timeToLive,
         });
+        logger.debug("Updated cache with a new entry.");
+        this._fireOnCacheUpdateds(queryString);
 
         // Hatch the follower.
         follower.hatch();
-
-        this._replica.queryDocs(query).then((docs) => {
-            this._docCache.set(queryString, {
-                follower,
-                docs,
-                expires: Date.now() + this._timeToLive,
-            });
-
-            this._fireOnCacheUpdateds();
-        });
 
         // Return an empty result for the moment.
         return [];
@@ -252,11 +249,17 @@ export class ReplicaCache {
     // CACHE
 
     // Update cache entries as best as we can until results from the backing storage arrive.
-    _updateCache(doc: Doc): void {
-        this._docCache.forEach((entry, key) => {
-            const query: Query = JSON.parse(key);
+    _updateCache(key: string, doc: Doc): void {
+        const entry = this._docCache.get(key);
 
-            /*
+        // This shouldn't happen really.
+        if (!entry) {
+            return;
+        }
+
+        const query: Query = JSON.parse(key);
+
+        /*
       IF at least one document with same path is present
         AND historymode is latest
           AND doc has different author
@@ -283,100 +286,114 @@ export class ReplicaCache {
           APPEND
      */
 
-            const appendDoc = () => {
-                const nextDocs = [...entry.docs, doc];
-                this._docCache.set(key, {
-                    ...entry,
-                    docs: sortAndLimit(query, nextDocs),
-                });
-                this._fireOnCacheUpdateds();
-            };
+        const appendDoc = () => {
+            const nextDocs = [...entry.docs, doc];
+            this._docCache.set(key, {
+                ...entry,
+                docs: sortAndLimit(query, nextDocs),
+            });
+            this._fireOnCacheUpdateds(key);
+        };
 
-            const replaceDoc = ({ exact }: { exact: boolean }) => {
-                const nextDocs = entry.docs.map((existingDoc) => {
-                    if (
-                        exact &&
-                        existingDoc.path === doc.path &&
-                        existingDoc.author === doc.author
-                    ) {
-                        return doc;
-                    } else if (!exact && existingDoc.path === doc.path) {
-                        return doc;
-                    }
-
-                    return existingDoc;
-                });
-
-                this._docCache.set(key, {
-                    ...entry,
-                    docs: sortAndLimit(query, nextDocs),
-                });
-                this._fireOnCacheUpdateds();
-            };
-
-            const documentsWithSamePath = entry.docs.filter(
-                (existingDoc) => existingDoc.path === doc.path,
-            );
-
-            const documentsWithSamePathAndAuthor = entry.docs.filter(
-                (existingDoc) =>
-                    existingDoc.path === doc.path &&
-                    existingDoc.author === doc.author,
-            );
-
-            if (documentsWithSamePath.length === 0) {
+        const replaceDoc = ({ exact }: { exact: boolean }) => {
+            const nextDocs = entry.docs.map((existingDoc) => {
+                // If exact is true, we want to change the doc only if
+                // The path and author are the same as the new doc.
                 if (
-                    (query.filter && docMatchesFilter(doc, query.filter)) ||
-                    !query.filter
+                    exact &&
+                    existingDoc.path === doc.path &&
+                    existingDoc.author === doc.author
                 ) {
-                    appendDoc();
-                }
-                return;
-            }
-
-            const historyMode = query.historyMode || "latest";
-
-            if (historyMode === "all") {
-                if (documentsWithSamePathAndAuthor.length === 0) {
-                    appendDoc();
-                    return;
+                    return doc;
+                    // If exact is false, we only need to check if the path is the same.
+                } else if (!exact && existingDoc.path === doc.path) {
+                    return doc;
                 }
 
-                replaceDoc({ exact: true });
+                return existingDoc;
+            });
+
+            this._docCache.set(key, { ...entry, docs: sortAndLimit(query, nextDocs) });
+            this._fireOnCacheUpdateds(key);
+        };
+
+        const documentsWithSamePath = entry.docs.filter(
+            (existingDoc) => existingDoc.path === doc.path,
+        );
+
+        const documentsWithSamePathAndAuthor = entry.docs.filter(
+            (existingDoc) =>
+                existingDoc.path === doc.path &&
+                existingDoc.author === doc.author,
+        );
+
+        // No documents with the same path were found in the cache entry.
+        // And the doc matches the query's filter (or lack thereof).
+        // So append it to the entry's docs.
+        if (documentsWithSamePath.length === 0) {
+            if (
+                (query.filter && docMatchesFilter(doc, query.filter)) ||
+                !query.filter
+            ) {
+                logger.debug(
+                    "Updated cache after appending a doc to a entry with matching filter.",
+                );
+                appendDoc();
+            }
+            return;
+        }
+
+        const historyMode = query.historyMode || "latest";
+
+        // The history mode is 'all', so all versions are included
+        if (historyMode === "all") {
+            // A version by this author isn't present, so let's include it.
+            if (documentsWithSamePathAndAuthor.length === 0) {
+                logger.debug(
+                    "Updated cache after appending a version of a doc to a historyMode: all query.",
+                );
+                appendDoc();
                 return;
             }
 
-            const latestDoc = documentsWithSamePath[0];
+            // A version by this author is present, so let's replace it.
+            logger.debug(
+                "Updated cache after replacing a version of a doc in a historyMode: all query.",
+            );
+            replaceDoc({ exact: true });
+            return;
+        }
 
-            // console.log({latestDoc, doc})
+        // The mode is 'latest', so there is only one doc with the same path.
+        const latestDoc = documentsWithSamePath[0];
 
-            const docIsDifferent = doc.author !== latestDoc?.author ||
-                !isEqual(doc, latestDoc);
+        // If the doc's author or content has changed.
+        const docIsDifferent = doc.author !== latestDoc?.author ||
+            !isEqual(doc, latestDoc);
 
-            const docIsLater = doc.timestamp > latestDoc.timestamp;
+        const docIsLater = doc.timestamp > latestDoc.timestamp;
 
-            if (docIsDifferent && docIsLater) {
-                replaceDoc({ exact: false });
-                return;
-            }
-        });
+        // The doc has changed or has a newer timestamp,
+        // So replace it.
+        if (docIsDifferent && docIsLater) {
+            logger.debug("Updated cache after replacing a doc with its latest version.");
+            replaceDoc({ exact: false });
+            return;
+        }
     }
 
     // SUBSCRIBE
 
-    _fireOnCacheUpdateds() {
+    _fireOnCacheUpdateds(entry: string) {
         this.version++;
-        return Promise.all(
-            Array.from(this._onCacheUpdatedCallbacks.values()).map(
-                (callback) => {
-                    return callback();
-                },
-            ),
-        );
+
+        this._onCacheUpdatedCallbacks.forEach((cb) => {
+            cb(entry);
+        });
     }
 
     /** Subscribes to the cache, calling a callback when previously returned results can be considered stale. Returns a function for unsubscribing. */
-    onCacheUpdated(callback: () => void | (() => Promise<void>)): () => void {
+    onCacheUpdated(callback: (entryKey: string) => void): () => void {
         this._onCacheUpdatedCallbacks.add(callback);
 
         return () => {
