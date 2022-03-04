@@ -15,15 +15,6 @@ await build({
         },
         timers: true,
         weakRef: true,
-        custom: [
-            {
-                package: {
-                    name: "@ungap/structured-clone",
-                    version: "0.3.4",
-                },
-                globalNames: [{ name: "structuredClone", exportName: "default" }],
-            },
-        ],
         customDev: [
             {
                 package: {

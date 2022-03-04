@@ -3,8 +3,6 @@ export { fast_deep_equal as deepEqual } from "../../deps.ts";
 //================================================================================
 // TIME
 
-export const deepCopy = structuredClone;
-
 export function microsecondNow() {
     return Date.now() * 1000;
 }

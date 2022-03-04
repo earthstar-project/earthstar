@@ -1,4 +1,4 @@
-import { Simplebus } from "../../deps.ts";
+import { cloneDeep, Simplebus } from "../../deps.ts";
 
 import { Thunk } from "../replica/util-types.ts";
 import { Query } from "../query/query-types.ts";
@@ -19,7 +19,7 @@ import { IQueryFollower, QueryFollowerState } from "./query-follower-types.ts";
 //================================================================================
 
 import { Logger, LogLevel, setDefaultLogLevel, setLogLevel } from "../util/log.ts";
-import { deepCopy, sleep } from "../util/misc.ts";
+import { sleep } from "../util/misc.ts";
 let logger = new Logger("QueryFollower", "redBright");
 let loggerSub = new Logger("QueryFollowerSub", "red");
 let J = JSON.stringify;
@@ -72,7 +72,7 @@ export class QueryFollower implements IQueryFollower {
     constructor(replica: IReplica, query: Query) {
         logger.debug("constructor");
         this.replica = replica;
-        this.query = deepCopy(query); // we'll modify the query as we go, changing the startAfter
+        this.query = cloneDeep(query); // we'll modify the query as we go, changing the startAfter
         this.bus = new Simplebus<LiveQueryEvent>();
 
         // enforce rules on supported queries
