@@ -43,6 +43,7 @@ export class SyncCoordinator {
             this.close();
         });
 
+        await this._getShareStates();
         await this.pull();
     }
 
@@ -50,8 +51,6 @@ export class SyncCoordinator {
         if (this.state === "closed") {
             return;
         }
-
-        await this._getShareStates();
 
         const docPulls = Object.keys(this._shareStates).map((key) => {
             return new Promise((resolve) => {

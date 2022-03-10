@@ -1,4 +1,4 @@
-import { assert } from "../asserts.ts";
+import { assert, assertEquals } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Peer } from "../../peer/peer.ts";
@@ -73,6 +73,8 @@ function testSyncer(
                 sanitizeOps: false,
                 sanitizeResources: false,
                 fn: async () => {
+                    const storageDocs = await storage.getLatestDocs();
+                    assertEquals(storageDocs.length, 40, "Storage has 40 docs");
                     assert(
                         await storagesAreSynced([storage, targetStorage]),
                         "storages synced (again)",

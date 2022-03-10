@@ -79,6 +79,11 @@ Deno.test("SyncCoordinator", async () => {
     await sleep(100);
 
     assertEquals(coordinator.commonShares, [ADDRESS_A, ADDRESS_D]);
+    const storageADocs = await storageA1.getLatestDocs();
+    const storageDDocs = await storageD1.getLatestDocs();
+
+    assertEquals(storageADocs.length, 20, "Storage A1 contains 20 docs");
+    assertEquals(storageDDocs.length, 20, "Storage D1 contains 20 docs");
     assert(
         await storageHasAllStoragesDocs(storageA1, storageA2),
         `${ADDRESS_A} storages are synced.`,
@@ -92,6 +97,12 @@ Deno.test("SyncCoordinator", async () => {
     await writeRandomDocs(keypairB, storageD2, 10);
 
     await sleep(1000);
+
+    const storageADocsAgain = await storageA1.getLatestDocs();
+    const storageDDocsAgain = await storageD1.getLatestDocs();
+
+    assertEquals(storageADocsAgain.length, 30, "Storage A1 contains 30 docs");
+    assertEquals(storageDDocsAgain.length, 30, "Storage D1 contains 30 docs");
 
     assert(
         await storageHasAllStoragesDocs(storageA1, storageA2),
