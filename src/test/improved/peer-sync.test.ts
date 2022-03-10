@@ -1,4 +1,4 @@
-import { assert } from "../asserts.ts";
+import { assert, assertEquals } from "../asserts.ts";
 import { Peer } from "../../peer/peer.ts";
 import { makeNReplicas, storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
 import { Crypto } from "../../crypto/crypto.ts";
@@ -36,11 +36,9 @@ function testSyncScenario(
 
         const allStorages = [...storagesATriplet, ...storagesBTriplet, ...storagesCTriplet];
 
-        const writeDocsPromises = allStorages.map((storage) => {
+        await Promise.all(allStorages.map((storage) => {
             return writeRandomDocs(keypairA, storage, 10);
-        });
-
-        await Promise.all(writeDocsPromises);
+        }));
 
         const peer = new Peer();
 
@@ -67,7 +65,7 @@ function testSyncScenario(
         });
 
         // Wait a sec
-        await sleep(4000);
+        await sleep(3000);
 
         await test.step({
             name: "Storages synced",
@@ -75,6 +73,42 @@ function testSyncScenario(
             sanitizeResources: false,
             fn: async () => {
                 // Check that everything synced
+                const docs = await storagesATriplet[0].getLatestDocs();
+
+                assertEquals(docs.length, 30, "Storage A has 30 docs");
+
+                assert(
+                    await storagesAreSynced(storagesATriplet),
+                    `All ${ADDRESS_A} storages synced`,
+                );
+                assert(
+                    await storagesAreSynced(storagesBTriplet),
+                    `All ${ADDRESS_B} storages synced`,
+                );
+                assert(
+                    await storagesAreSynced(storagesCTriplet),
+                    `All ${ADDRESS_C} storages synced`,
+                );
+            },
+        });
+
+        // Write some random docs again
+
+        await Promise.all(allStorages.map((storage) => {
+            return writeRandomDocs(keypairA, storage, 10);
+        }));
+
+        await sleep(3500);
+        await test.step({
+            name: "Storages synced (again)",
+            sanitizeOps: false,
+            sanitizeResources: false,
+            fn: async () => {
+                // Check that everything synced again
+                const docs = await storagesATriplet[0].getLatestDocs();
+
+                assertEquals(docs.length, 60, "Storage A has 60 docs");
+
                 assert(
                     await storagesAreSynced(storagesATriplet),
                     `All ${ADDRESS_A} storages synced`,

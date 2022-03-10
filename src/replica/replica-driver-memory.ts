@@ -242,7 +242,7 @@ export class ReplicaDriverMemory implements IReplicaDriver {
     //--------------------------------------------------
     // SET
 
-    async upsert(doc: Doc): Promise<Doc> {
+    upsert(doc: Doc): Promise<Doc> {
         // add a doc.  don't enforce any rules on it.
         // overwrite existing doc even if this doc is older.
         // return a copy of the doc, frozen, with _localIndex set.
@@ -270,6 +270,6 @@ export class ReplicaDriverMemory implements IReplicaDriver {
         // save the list back to the index
         this.docsByPathNewestFirst.set(doc.path, docsByPath);
 
-        return doc;
+        return Promise.resolve(doc);
     }
 }
