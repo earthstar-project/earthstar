@@ -32,8 +32,6 @@ export interface ShareState {
     partnerMaxLocalIndexOverall: number;
     partnerMaxLocalIndexSoFar: number; // -1 if unknown
     storageId: ReplicaId;
-    maxLocalIndexOverall: number;
-    maxLocalIndexSoFar: number; // -1 if unknown
     lastSeenAt: number;
 }
 

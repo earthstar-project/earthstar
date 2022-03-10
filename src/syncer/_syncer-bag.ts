@@ -128,6 +128,7 @@ export function makeSyncerBag(peer: Peer) {
                 }
 
                 const existingShareState = existingShareStates[share] || {};
+
                 newShareStates[share] = {
                     share,
 
@@ -136,14 +137,8 @@ export function makeSyncerBag(peer: Peer) {
                     // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
                     partnerMaxLocalIndexSoFar: existingShareState.partnerMaxLocalIndexSoFar ??
                         -1,
-
                     // TODO: check if client storage id has changed, and if so reset this state
-
                     storageId: clientStorage.replicaId,
-                    maxLocalIndexOverall: clientStorage.getMaxLocalIndex(),
-                    // set maxIndexSoFar to -1 if it's missing, otherwise preserve the old value
-                    maxLocalIndexSoFar: existingShareState.maxLocalIndexSoFar ?? -1,
-
                     lastSeenAt: microsecondNow(),
                 };
             }
@@ -196,7 +191,6 @@ export function makeSyncerBag(peer: Peer) {
             const {
                 share,
                 storageId,
-                partnerMaxLocalIndexOverall,
                 docs,
             } = response;
             // TODO: we need to compare this with the request to make sure
@@ -219,46 +213,64 @@ export function makeSyncerBag(peer: Peer) {
                 throw err;
             }
 
-            // ingest the docs
-            let pulled = 0;
-            for (const doc of docs) {
-                // get the share every time in case something else is changing it?
-                let myShareState = existingShareStates[share];
-                // TODO: keep checking if storageId has changed every time
+            // For each doc create a promise for ingesting it.
+            const ingests = docs.map((doc) => {
+                return new Promise<
+                    { pulled: boolean; localIndex: number }
+                >((resolve, reject) => {
+                    // get the share every time in case something else is changing it?
+                    const shareState = existingShareStates[share];
+                    if (storageId !== shareState.partnerStorageId) {
+                        const err =
+                            `storageId for ${share} is not ${storageId} anymore, it's ${myShareState.partnerStorageId}`;
 
-                // save the doc
-                const ingestEvent = await storage.ingest(doc);
-                if (ingestEvent.kind === "failure") {
-                    // TODO: big problem:
-                    // If the server gives a doc from the future, it will be invalid
-                    // so we can't ingest it.  We will need to get it in a future
-                    // query so we can ingest it then.
-                    // So what do we do with our record of the server's maxIndexSoFar?
-                    // I think we have to abort here and try continuing later,
-                    // otherwise we'll leave a gap and that doc-from-the-future
-                    // will never get synced.
-                    // BUT this means a single invalid doc can block syncing forever.
-                    // We need to know if it's invalid because it's from the future,
-                    // in which case we should stop and try later, or if it's
-                    // invalid for another reason, in which case we should ignore it
-                    // and continue.
-                    break;
-                }
-                pulled += 1;
-                myShareState = {
-                    ...myShareState,
-                    partnerMaxLocalIndexOverall,
-                    partnerMaxLocalIndexSoFar: doc._localIndex ?? -1,
-                    lastSeenAt: microsecondNow(),
-                };
-            }
+                        throw reject(err);
+                    }
+
+                    // save the doc
+                    storage.ingest(doc).then((ingestEvent) => {
+                        if (ingestEvent.kind === "failure") {
+                            // TODO: big problem:
+                            // If the server gives a doc from the future, it will be invalid
+                            // so we can't ingest it.  We will need to get it in a future
+                            // query so we can ingest it then.
+                            // So what do we do with our record of the server's maxIndexSoFar?
+                            // I think we have to abort here and try continuing later,
+                            // otherwise we'll leave a gap and that doc-from-the-future
+                            // will never get synced.
+                            // BUT this means a single invalid doc can block syncing forever.
+                            // We need to know if it's invalid because it's from the future,
+                            // in which case we should stop and try later, or if it's
+                            // invalid for another reason, in which case we should ignore it
+                            // and continue.
+                            return resolve({ pulled: false, localIndex: -1 });
+                        }
+
+                        return resolve({
+                            pulled: true,
+                            localIndex: doc._localIndex ?? -1,
+                        });
+                    });
+                });
+            });
+
+            const ingestResults = await Promise.all(ingests);
+            const pulled = ingestResults.filter(({ pulled }) => pulled);
 
             return {
-                pulled,
+                pulled: pulled.length,
                 lastSeenAt: microsecondNow(),
                 shareStates: {
                     ...existingShareStates,
-                    [share]: myShareState,
+                    [share]: {
+                        ...myShareState,
+                        partnerMaxLocalIndexSoFar: pulled.length > 0
+                            ? Math.max(
+                                ...pulled.map(({ localIndex }) => localIndex),
+                            )
+                            : myShareState.partnerMaxLocalIndexSoFar,
+                        lastSeenAt: microsecondNow(),
+                    },
                 },
             };
         },
