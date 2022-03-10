@@ -47,6 +47,7 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
             // dnt-shim-ignore
             const request = ((window as any).indexedDB as IDBFactory).open(
                 `earthstar:share:${this.share}`,
+                1,
             );
 
             request.onerror = () => {
@@ -87,6 +88,11 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
                     this.docsByPathNewestFirst = new Map(
                         Object.entries(docs.byPathNewestFirst),
                     );
+
+                    const localIndexes = Array.from(this.docByPathAndAuthor.values()).map((doc) =>
+                        doc._localIndex as number
+                    );
+                    this._maxLocalIndex = Math.max(...localIndexes);
 
                     return resolve(request.result);
                 };

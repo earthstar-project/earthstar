@@ -15,15 +15,57 @@ let J = JSON.stringify;
 
 //================================================================================
 
-export function runStorageDriverTests(scenario: TestScenario) {
-    let TEST_NAME = "storage-driver shared tests";
-    let SUBTEST_NAME = scenario.name;
+export function runReplicaDriverTests(scenario: TestScenario) {
+    const SUBTEST_NAME = scenario.name;
 
-    Deno.test(SUBTEST_NAME + ": empty storage, close", async () => {
-        let initialCryptoDriver = GlobalCryptoDriver;
+    Deno.test(`${SUBTEST_NAME}: maxLocalIndex`, async () => {
+        const share = "+gardening.abcde";
+        const driver = scenario.makeDriver(share);
 
-        let share = "+gardening.abcde";
-        let driver = scenario.makeDriver(share);
+        assertEquals(driver.getMaxLocalIndex(), -1, "Initial maxLocalIndex is -1");
+
+        const doc: Doc = {
+            format: "es.4",
+            author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
+            content: "Hello 0",
+            contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+            deleteAfter: null,
+            path: "/posts/post-0000.txt",
+            timestamp: 1619627796035000,
+            workspace: "+gardening.abc",
+            signature: "whatever0", // upsert does not check signature or validate doc
+        };
+
+        await driver.upsert(doc);
+
+        assertEquals(driver.getMaxLocalIndex(), 0, "maxLocalIndex is 0 after setting one doc");
+
+        await driver.close(false);
+
+        const driverTwo = scenario.makeDriver(share);
+
+        if (scenario.persistent) {
+            assertEquals(
+                driverTwo.getMaxLocalIndex(),
+                0,
+                "maxLocalIndex is 0 for a persistent driver",
+            );
+        } else {
+            assertEquals(
+                driverTwo.getMaxLocalIndex(),
+                -1,
+                "maxLocalIndex is -1 for a non-persistent driver",
+            );
+        }
+
+        driverTwo.close(true);
+    });
+
+    Deno.test(`${SUBTEST_NAME}: empty storage, close`, async () => {
+        const initialCryptoDriver = GlobalCryptoDriver;
+
+        const share = "+gardening.abcde";
+        const driver = scenario.makeDriver(share);
 
         assertEquals(
             driver.getMaxLocalIndex(),
@@ -61,11 +103,11 @@ export function runStorageDriverTests(scenario: TestScenario) {
         );
     });
 
-    Deno.test(SUBTEST_NAME + ": config", async () => {
-        let initialCryptoDriver = GlobalCryptoDriver;
+    Deno.test(`${SUBTEST_NAME}: config`, async () => {
+        const initialCryptoDriver = GlobalCryptoDriver;
 
-        let share = "+gardening.abcde";
-        let driver = scenario.makeDriver(share);
+        const share = "+gardening.abcde";
+        const driver = scenario.makeDriver(share);
 
         // empty...
         assertEquals(
@@ -123,14 +165,14 @@ export function runStorageDriverTests(scenario: TestScenario) {
     });
 
     Deno.test(
-        SUBTEST_NAME + ": upsert and basic querying with one path",
+        `${SUBTEST_NAME}: upsert and basic querying with one path`,
         async () => {
-            let initialCryptoDriver = GlobalCryptoDriver;
+            const initialCryptoDriver = GlobalCryptoDriver;
 
-            let share = "+gardening.abcde";
-            let driver = scenario.makeDriver(share);
+            const share = "+gardening.abcde";
+            const driver = scenario.makeDriver(share);
 
-            let doc0: Doc = {
+            const doc0: Doc = {
                 format: "es.4",
                 author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
                 content: "Hello 0",
@@ -142,14 +184,14 @@ export function runStorageDriverTests(scenario: TestScenario) {
                 signature: "whatever0", // upsert does not check signature or validate doc
             };
             // same author, newer
-            let doc1 = {
+            const doc1 = {
                 ...doc0,
                 content: "Hello 1",
                 timestamp: doc0.timestamp + 1, // make sure this one wins
                 signature: "whatever1", // everything assumes different docs have different sigs
             };
             // second author, newer still
-            let doc2 = {
+            const doc2 = {
                 ...doc0,
                 author: "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
                 content: "Hello 2",
@@ -157,7 +199,7 @@ export function runStorageDriverTests(scenario: TestScenario) {
                 signature: "whatever2", // everything assumes different docs have different sigs
             };
             // second author, older
-            let doc3 = {
+            const doc3 = {
                 ...doc0,
                 author: "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
                 content: "Hello 3",
@@ -165,7 +207,7 @@ export function runStorageDriverTests(scenario: TestScenario) {
                 signature: "whatever3", // everything assumes different docs have different sigs
             };
             // third author, oldest
-            let doc4 = {
+            const doc4 = {
                 ...doc0,
                 author: "@bobo.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxnr7zyef2hvpftw45clq",
                 content: "Hello 4",
@@ -173,15 +215,15 @@ export function runStorageDriverTests(scenario: TestScenario) {
                 signature: "whatever4", // everything assumes different docs have different sigs
             };
 
-            let docResult: Doc = await driver.upsert(doc0);
+            const firstDocResult: Doc = await driver.upsert(doc0);
             assertEquals(
-                docResult._localIndex,
+                firstDocResult._localIndex,
                 0,
                 "upsert doc0, localIndex is now 0",
             );
             assertEquals(
                 driver.getMaxLocalIndex(),
-                docResult._localIndex,
+                firstDocResult._localIndex,
                 "driver.getMaxLocalIndex() matches doc._localIndex",
             );
 
@@ -193,15 +235,15 @@ export function runStorageDriverTests(scenario: TestScenario) {
             //-----------------
 
             // overwrite same author, latest
-            docResult = await driver.upsert(doc1);
+            const secondDocResult = await driver.upsert(doc1);
             assertEquals(
-                docResult._localIndex,
+                secondDocResult._localIndex,
                 1,
                 "upsert doc1 from same author, localIndex is now 1",
             );
             assertEquals(
                 driver.getMaxLocalIndex(),
-                docResult._localIndex,
+                secondDocResult._localIndex,
                 "driver.getMaxLocalIndex() matches doc._localIndex",
             );
 
@@ -213,15 +255,15 @@ export function runStorageDriverTests(scenario: TestScenario) {
             //-----------------
 
             // add a second author, latest
-            docResult = await driver.upsert(doc2);
+            const thirdDocResult = await driver.upsert(doc2);
             assertEquals(
-                docResult._localIndex,
+                thirdDocResult._localIndex,
                 2,
                 "upsert doc2 from second author, localIndex is now 3",
             );
             assertEquals(
                 driver.getMaxLocalIndex(),
-                docResult._localIndex,
+                thirdDocResult._localIndex,
                 "driver.getMaxLocalIndex() matches doc._localIndex",
             );
 
@@ -255,15 +297,15 @@ export function runStorageDriverTests(scenario: TestScenario) {
 
             // add a second author, older, overwriting the previous newer one from same author.
             // -- should not bounce, that's the job of IStorage
-            docResult = await driver.upsert(doc3);
+            const fourthDocResult = await driver.upsert(doc3);
             assertEquals(
-                docResult._localIndex,
+                fourthDocResult._localIndex,
                 3,
                 "upsert doc3 from second author (but older), localIndex is now 3",
             );
             assertEquals(
                 driver.getMaxLocalIndex(),
-                docResult._localIndex,
+                fourthDocResult._localIndex,
                 "driver.getMaxLocalIndex() matches doc._localIndex",
             );
 
@@ -297,15 +339,15 @@ export function runStorageDriverTests(scenario: TestScenario) {
             //-----------------
 
             // add a third author, oldest
-            docResult = await driver.upsert(doc4);
+            const fifthDocResult = await driver.upsert(doc4);
             assertEquals(
-                docResult._localIndex,
+                fifthDocResult._localIndex,
                 4,
                 "upsert doc4 from new third author (but oldest), localIndex is now 5",
             );
             assertEquals(
                 driver.getMaxLocalIndex(),
-                docResult._localIndex,
+                fifthDocResult._localIndex,
                 "driver.getMaxLocalIndex() matches doc._localIndex",
             );
 
@@ -345,7 +387,7 @@ export function runStorageDriverTests(scenario: TestScenario) {
             // test querying
 
             type Vector = { query: Query; expectedContent: string[] };
-            let vectors: Vector[] = [
+            const vectors: Vector[] = [
                 {
                     query: {
                         historyMode: "all",
@@ -425,9 +467,9 @@ export function runStorageDriverTests(scenario: TestScenario) {
                 },
             ];
 
-            for (let { query, expectedContent } of vectors) {
-                let qr = await driver.queryDocs(query);
-                let actualContent = qr.map((doc) => doc.content);
+            for (const { query, expectedContent } of vectors) {
+                const qr = await driver.queryDocs(query);
+                const actualContent = qr.map((doc) => doc.content);
                 assertEquals(
                     actualContent,
                     expectedContent,
@@ -447,6 +489,6 @@ export function runStorageDriverTests(scenario: TestScenario) {
     );
 }
 
-for (let scenario of testScenarios) {
-    runStorageDriverTests(scenario);
+for (const scenario of testScenarios) {
+    runReplicaDriverTests(scenario);
 }

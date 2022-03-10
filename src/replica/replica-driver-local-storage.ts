@@ -40,10 +40,10 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
         // but all docs are stored together inside this one item, as a giant JSON object
         this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${share}`;
 
-        let existingData = localStorage.getItem(this._localStorageKeyDocs);
+        const existingData = localStorage.getItem(this._localStorageKeyDocs);
         if (existingData !== null) {
             logger.debug("...constructor: loading data from localStorage");
-            let parsed = JSON.parse(existingData);
+            const parsed = JSON.parse(existingData);
 
             if (!isSerializedDriverDocs(parsed)) {
                 console.warn(
@@ -58,11 +58,17 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
             this.docsByPathNewestFirst = new Map(
                 Object.entries(parsed.byPathNewestFirst),
             );
+
+            const localIndexes = Array.from(this.docByPathAndAuthor.values()).map((doc) =>
+                doc._localIndex as number
+            );
+            this._maxLocalIndex = Math.max(...localIndexes);
         } else {
             logger.debug(
                 "...constructor: there was no existing data in localStorage",
             );
         }
+
         logger.debug("...constructor is done.");
     }
 
@@ -154,7 +160,7 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
 
     async upsert(doc: Doc): Promise<Doc> {
         if (this._isClosed) throw new ReplicaIsClosedError();
-        let upsertedDoc = await super.upsert(doc);
+        const upsertedDoc = await super.upsert(doc);
 
         // After every upsert, for now, we save everything
         // to localStorage as a single giant JSON blob.
