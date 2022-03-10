@@ -9,7 +9,7 @@ export class SyncCoordinator {
     _connection: IConnection<SyncerBag>;
     _syncerBag: SyncerBag;
     _shareStates: Record<ShareAddress, ShareState> = {};
-    _interval: number | null = null;
+    _timeout: number | null = null;
 
     commonShares: ShareAddress[] = [];
     partnerLastSeenAt: number | null = null;
@@ -39,10 +39,22 @@ export class SyncCoordinator {
 
         // Get the share states from the partner
 
-        const pull = async () => {
-            await this._getShareStates();
+        this._connection.onClose(() => {
+            this.close();
+        });
 
-            Object.keys(this._shareStates).forEach((key) => {
+        await this.pull();
+    }
+
+    async pull() {
+        if (this.state === "closed") {
+            return;
+        }
+
+        await this._getShareStates();
+
+        const docPulls = Object.keys(this._shareStates).map((key) => {
+            return new Promise((resolve) => {
                 const state = this._shareStates[key];
 
                 this._pullDocs({
@@ -54,17 +66,13 @@ export class SyncCoordinator {
                     },
                     storageId: state.partnerStorageId,
                     share: state.share,
-                });
+                }).then(resolve);
             });
-        };
-
-        this._interval = setInterval(pull, 1000);
-
-        this._connection.onClose(() => {
-            this.close();
         });
 
-        await pull();
+        await Promise.all(docPulls);
+
+        this._timeout = setTimeout(() => this.pull(), 1000);
     }
 
     async _getShareStates() {
@@ -97,15 +105,46 @@ export class SyncCoordinator {
             queryResponse,
         );
 
-        this._shareStates = shareStates;
+        this._mergeShareStates(shareStates);
         this.partnerLastSeenAt = lastSeenAt;
 
         return pulled;
     }
 
+    _mergeShareStates(newShareStates: Record<string, ShareState>) {
+        const nextShareStates: Record<string, ShareState> = {};
+
+        // Because pulls can happen asynchronously, they may return a lower partnerMaxLocalIndexOverall / soFar than the one saved in the coordinator's state.
+        // We want to make sure the higher value is returned every time, so that we don't repeatedly refetch documents from the same low localIndex.
+        for (const shareAddress in newShareStates) {
+            const newShareState = newShareStates[shareAddress];
+            const existingShareState = this._shareStates[shareAddress];
+
+            if (!existingShareState) {
+                nextShareStates[shareAddress] = newShareState;
+                break;
+            }
+
+            nextShareStates[shareAddress] = {
+                ...newShareState,
+                lastSeenAt: Math.max(newShareState.lastSeenAt, existingShareState.lastSeenAt),
+                partnerMaxLocalIndexOverall: Math.max(
+                    newShareState.partnerMaxLocalIndexOverall,
+                    existingShareState.partnerMaxLocalIndexOverall,
+                ),
+                partnerMaxLocalIndexSoFar: Math.max(
+                    newShareState.partnerMaxLocalIndexSoFar,
+                    existingShareState.partnerMaxLocalIndexSoFar,
+                ),
+            };
+        }
+
+        this._shareStates = nextShareStates;
+    }
+
     close() {
-        if (this._interval) {
-            clearTimeout(this._interval);
+        if (this._timeout) {
+            clearTimeout(this._timeout);
         }
 
         this.state = "closed";

@@ -66,7 +66,7 @@ function testSyncer(
             await writeRandomDocs(keypairA, targetStorage, 10);
 
             // Check if everything synced again
-            await sleep(1000);
+            await sleep(1500);
 
             await test.step({
                 name: "Storages synced (again)",
