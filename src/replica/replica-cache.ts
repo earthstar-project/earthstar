@@ -110,13 +110,24 @@ export class ReplicaCache {
 
     _isClosed = false;
 
+    _onFireCacheUpdatedsWrapper = (cb: () => void) => cb();
+
     /**
      * Create a new ReplicaCache.
      * @param timeToLive - The number of milliseconds a cached document is considered valid for.
+     * @param onCacheUpdatedWrapper - A function which wraps the firing of all callbacks. Useful for libraries with batching abstractions.
      */
-    constructor(replica: IReplica, timeToLive?: number) {
+    constructor(
+        replica: IReplica,
+        timeToLive?: number,
+        onCacheUpdatedWrapper?: (cb: () => void) => void,
+    ) {
         this._replica = replica;
         this._timeToLive = timeToLive || 1000;
+
+        if (onCacheUpdatedWrapper) {
+            this._onFireCacheUpdatedsWrapper = onCacheUpdatedWrapper;
+        }
     }
 
     async close() {
@@ -442,8 +453,10 @@ export class ReplicaCache {
     _fireOnCacheUpdateds(entry: string) {
         this.version++;
 
-        this._onCacheUpdatedCallbacks.forEach((cb) => {
-            cb(entry);
+        this._onFireCacheUpdatedsWrapper(() => {
+            this._onCacheUpdatedCallbacks.forEach((cb) => {
+                cb(entry);
+            });
         });
     }
 
