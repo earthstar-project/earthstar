@@ -29,11 +29,11 @@ const universalStorageScenarios: JustStorageScenario[] = [
     },
     {
         name: "ReplicaDriverSqlite",
-        persistent: false,
+        persistent: true,
         makeDriver: (ws) =>
             new ReplicaDriverSqlite({
-                filename: ":memory:",
-                mode: "create",
+                filename: `src/test/${ws}.db`,
+                mode: "create-or-open",
                 share: ws,
             }),
         builtInConfigKeys: ["schemaVersion", "share"],

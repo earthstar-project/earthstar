@@ -2,7 +2,7 @@ import { Cmp } from "./util-types.ts";
 import { Doc, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
 import { IReplicaDriver } from "./replica-types.ts";
-import { ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
+import { isErr, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
 
 import { compareArrays, compareByObjKey, sortedInPlace } from "./compare.ts";
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
@@ -10,6 +10,7 @@ import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { checkShareIsValid } from "../core-validators/addresses.ts";
 let logger = new Logger("storage driver async memory", "yellow");
 
 //================================================================================
@@ -60,6 +61,13 @@ export class ReplicaDriverMemory implements IReplicaDriver {
      */
     constructor(share: ShareAddress) {
         logger.debug("constructor");
+
+        const addressIsValidResult = checkShareIsValid(share);
+
+        if (isErr(addressIsValidResult)) {
+            throw addressIsValidResult;
+        }
+
         this.share = share;
     }
 

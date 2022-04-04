@@ -5,6 +5,7 @@ import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { checkShareIsValid } from "../core-validators/addresses.ts";
 let logger = new Logger("storage driver localStorage", "yellowBright");
 
 //================================================================================

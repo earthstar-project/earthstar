@@ -1,5 +1,5 @@
 import { Doc, ShareAddress } from "../util/doc-types.ts";
-import { EarthstarError, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
+import { EarthstarError, isErr, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
 import { IReplicaDriver } from "./replica-types.ts";
 import { Database as SqliteDatabase, default as sqlite } from "https://esm.sh/better-sqlite3?dts";
 import * as fs from "https://deno.land/std@0.123.0/node/fs.ts";
@@ -24,6 +24,7 @@ import { bytesToString, stringToBytes } from "../util/bytes.ts";
 import { Query } from "../query/query-types.ts";
 import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
+import { checkShareIsValid } from "../core-validators/addresses.ts";
 const logger = new Logger("storage driver sqlite node", "yellow");
 
 /** A strorage driver which persists to SQLite. Works in Node. */
@@ -92,13 +93,20 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
             );
         }
 
+        const addressIsValidResult = opts.share ? checkShareIsValid(opts.share) : true;
+
+        if (isErr(addressIsValidResult)) {
+            throw addressIsValidResult;
+        }
+
         this._db = sqlite(this._filename);
         this._ensureTables();
 
         const maxLocalIndexFromDb =
             this._db.prepare(MAX_LOCAL_INDEX_QUERY).get()["MAX(localIndex)"];
 
-        this._maxLocalIndex = maxLocalIndexFromDb ? maxLocalIndexFromDb : -1;
+        // We have to do this because the maxLocalIndexDb could be 0, which is falsy.
+        this._maxLocalIndex = maxLocalIndexFromDb !== null ? maxLocalIndexFromDb : -1;
 
         // check share
         if (opts.mode === "create") {

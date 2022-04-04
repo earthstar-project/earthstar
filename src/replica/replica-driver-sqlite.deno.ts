@@ -25,6 +25,7 @@ import { bytesToString, stringToBytes } from "../util/bytes.ts";
 import { Query } from "../query/query-types.ts";
 import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
+import { checkShareIsValid } from "../core-validators/addresses.ts";
 
 const logger = new Logger("storage driver sqlite node", "yellow");
 
@@ -58,7 +59,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     //--------------------------------------------------
     // LIFECYCLE
 
-    close(erase: boolean): Promise<void> {
+    async close(erase: boolean): Promise<void> {
         logger.debug("close");
         if (this._isClosed) {
             throw new ReplicaIsClosedError();
@@ -70,7 +71,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
         if (erase === true && this._filename !== ":memory:") {
             logger.log(`...close: and erase`);
             try {
-                Deno.removeSync(this._filename);
+                await Deno.remove(this._filename);
             } catch (err) {
                 logger.error("Failed to delete Sqlite file.");
                 logger.error(err);
@@ -135,6 +136,12 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
             );
         }
 
+        const addressIsValidResult = opts.share ? checkShareIsValid(opts.share) : true;
+
+        if (isErr(addressIsValidResult)) {
+            throw addressIsValidResult;
+        }
+
         this._db = new Sqlite.DB(this._filename, { memory: this._filename === ":memory:" });
         this._ensureTables();
 
@@ -143,6 +150,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
         const [maxLocalIndexFromDb] = maxLocalIndexQuery.one();
         maxLocalIndexQuery.finalize();
 
+        // We have to do this because the maxLocalIndexDb could be 0, which is falsy.
         this._maxLocalIndex = maxLocalIndexFromDb !== null ? maxLocalIndexFromDb : -1;
 
         // check share
