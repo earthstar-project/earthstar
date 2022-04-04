@@ -8,6 +8,7 @@ await build({
         { name: "./node", path: "./src/entries/node.ts" },
         { name: "./browser", path: "./src/entries/browser.ts" },
     ],
+    testPattern: "**/!(fs-sync)/*.test.{ts,tsx,js,mjs,jsx}",
     outDir: "./npm",
     shims: {
         deno: {
