@@ -95,9 +95,10 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
         this._db = sqlite(this._filename);
         this._ensureTables();
 
-        const maxLocalIndexFromDb = this._db.prepare(MAX_LOCAL_INDEX_QUERY).get();
+        const maxLocalIndexFromDb =
+            this._db.prepare(MAX_LOCAL_INDEX_QUERY).get()["MAX(localIndex)"];
 
-        this._maxLocalIndex = maxLocalIndexFromDb["MAX(localIndex)"] || -1;
+        this._maxLocalIndex = maxLocalIndexFromDb ? maxLocalIndexFromDb : -1;
 
         // check share
         if (opts.mode === "create") {

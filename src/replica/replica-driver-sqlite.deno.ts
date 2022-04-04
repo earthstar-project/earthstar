@@ -1,5 +1,5 @@
 import { Doc, ShareAddress } from "../util/doc-types.ts";
-import { EarthstarError, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
+import { EarthstarError, isErr, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
 import { IReplicaDriver } from "./replica-types.ts";
 import {
     CREATE_CONFIG_TABLE_QUERY,
@@ -97,12 +97,16 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
                     // If no file is found, this will throw.
                     Deno.openSync(opts.filename);
 
-                    this.close(false);
                     throw new EarthstarError(
                         `Tried to create an sqlite file but it already exists: ${opts.filename}`,
                     );
-                } finally {
-                    // Continue as normal
+                } catch (err) {
+                    // Only throw if the error was an Earthstar error thrown by us.
+                    // Otherwise it's the error thrown by the file not being found. Which is good.
+                    if (isErr(err)) {
+                        this.close(false);
+                        throw err;
+                    }
                 }
             }
         } else if (opts.mode === "open") {
@@ -139,7 +143,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
         const [maxLocalIndexFromDb] = maxLocalIndexQuery.one();
         maxLocalIndexQuery.finalize();
 
-        this._maxLocalIndex = maxLocalIndexFromDb || -1;
+        this._maxLocalIndex = maxLocalIndexFromDb !== null ? maxLocalIndexFromDb : -1;
 
         // check share
         if (opts.mode === "create") {
