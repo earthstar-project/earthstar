@@ -49,6 +49,29 @@ Deno.test("SyncCoordinator", async () => {
     targetPeer.addReplica(storageC2);
     targetPeer.addReplica(storageD2);
 
+    // Write some docs to the same path so that we test all history being synced.
+    await storageA1.set(keypairA, {
+        content: "Written by A",
+        path: "/popular-path",
+        format: "es.4",
+    });
+    await storageA2.set(keypairB, {
+        content: "Written by B",
+        path: "/popular-path",
+        format: "es.4",
+    });
+    await storageD1.set(keypairA, {
+        content: "Written by A",
+        path: "/popular-path",
+        format: "es.4",
+    });
+    await storageD2.set(keypairB, {
+        content: "Written by B",
+        path: "/popular-path",
+        format: "es.4",
+    });
+
+    // And a bunch more for good measure.
     await writeRandomDocs(keypairA, storageA1, 10);
     await writeRandomDocs(keypairB, storageA2, 10);
     await writeRandomDocs(keypairA, storageD1, 10);
@@ -79,11 +102,11 @@ Deno.test("SyncCoordinator", async () => {
     await sleep(100);
 
     assertEquals(coordinator.commonShares, [ADDRESS_A, ADDRESS_D]);
-    const storageADocs = await storageA1.getLatestDocs();
-    const storageDDocs = await storageD1.getLatestDocs();
+    const storageADocs = await storageA1.getAllDocs();
+    const storageDDocs = await storageD1.getAllDocs();
 
-    assertEquals(storageADocs.length, 20, "Storage A1 contains 20 docs");
-    assertEquals(storageDDocs.length, 20, "Storage D1 contains 20 docs");
+    assertEquals(storageADocs.length, 22, "Storage A1 contains 22 docs");
+    assertEquals(storageDDocs.length, 22, "Storage D1 contains 22 docs");
     assert(
         await storageHasAllStoragesDocs(storageA1, storageA2),
         `${ADDRESS_A} storages are synced.`,
@@ -98,11 +121,11 @@ Deno.test("SyncCoordinator", async () => {
 
     await sleep(1000);
 
-    const storageADocsAgain = await storageA1.getLatestDocs();
-    const storageDDocsAgain = await storageD1.getLatestDocs();
+    const storageADocsAgain = await storageA1.getAllDocs();
+    const storageDDocsAgain = await storageD1.getAllDocs();
 
-    assertEquals(storageADocsAgain.length, 30, "Storage A1 contains 30 docs");
-    assertEquals(storageDDocsAgain.length, 30, "Storage D1 contains 30 docs");
+    assertEquals(storageADocsAgain.length, 32, "Storage A1 contains 32 docs");
+    assertEquals(storageDDocsAgain.length, 32, "Storage D1 contains 32 docs");
 
     assert(
         await storageHasAllStoragesDocs(storageA1, storageA2),

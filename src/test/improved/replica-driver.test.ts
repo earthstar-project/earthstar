@@ -406,6 +406,22 @@ export function runReplicaDriverTests(scenario: TestScenario) {
             const vectors: Vector[] = [
                 {
                     query: {
+                        historyMode: "latest",
+                        orderBy: "localIndex ASC",
+                        startAfter: { localIndex: -1 },
+                    },
+                    expectedContent: ["Hello 1"],
+                },
+                {
+                    query: {
+                        historyMode: "all",
+                        startAfter: { localIndex: -1 },
+                        orderBy: "localIndex ASC",
+                    },
+                    expectedContent: ["Hello 1", "Hello 3", "Hello 4"],
+                },
+                {
+                    query: {
                         historyMode: "all",
                         orderBy: "localIndex ASC",
                     },

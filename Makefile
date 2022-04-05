@@ -10,7 +10,7 @@ test:
 	deno test --allow-net --allow-read --allow-write --no-check=remote src
 
 test-watch:
-	deno test --watch --allow-net --allow-read src 
+	deno test --watch --allow-net --allow-read --no-check=remote src 
 
 test-coverage:
 	deno test --no-check --coverage=cov_profile src

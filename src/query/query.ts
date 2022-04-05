@@ -7,7 +7,7 @@ import { stringLengthInBytes } from "../util/bytes.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-let logger = new Logger("query", "greenBright");
+const logger = new Logger("query", "greenBright");
 
 //================================================================================
 
@@ -23,12 +23,12 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
     // check for filters that obviously result in nothing and return a canonical empty query: { limit: 0 }
 
     // apply default values
-    let query = { ...DEFAULT_QUERY, ...inputQuery };
+    const query = { ...DEFAULT_QUERY, ...inputQuery };
 
     //--------------------------------------------------
     // VALIDITY
 
-    let invalidResponse: CleanUpQueryResult = {
+    const invalidResponse: CleanUpQueryResult = {
         query: { limit: 0 },
         isValid: false,
         willMatch: "nothing",
@@ -122,7 +122,7 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
 
     // filter combinations that result in no matches --> nothing
     if (query.filter !== undefined) {
-        let filter = query.filter;
+        const filter = query.filter;
         if (
             filter.path && filter.pathStartsWith &&
             !filter.path.startsWith(filter.pathStartsWith)
@@ -229,7 +229,7 @@ export function docMatchesFilter(doc: Doc, filter: QueryFilter): boolean {
     ) {
         return false;
     }
-    let contentLength = stringLengthInBytes(doc.content);
+    const contentLength = stringLengthInBytes(doc.content);
     if (
         filter.contentLength !== undefined &&
         contentLength !== filter.contentLength
