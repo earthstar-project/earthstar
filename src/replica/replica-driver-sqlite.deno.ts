@@ -1,5 +1,5 @@
 import { Doc, ShareAddress } from "../util/doc-types.ts";
-import { EarthstarError, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
+import { EarthstarError, isErr, ReplicaIsClosedError, ValidationError } from "../util/errors.ts";
 import { IReplicaDriver } from "./replica-types.ts";
 import {
     CREATE_CONFIG_TABLE_QUERY,
@@ -25,6 +25,7 @@ import { bytesToString, stringToBytes } from "../util/bytes.ts";
 import { Query } from "../query/query-types.ts";
 import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
+import { checkShareIsValid } from "../core-validators/addresses.ts";
 
 const logger = new Logger("storage driver sqlite node", "yellow");
 
@@ -58,7 +59,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     //--------------------------------------------------
     // LIFECYCLE
 
-    close(erase: boolean): Promise<void> {
+    async close(erase: boolean): Promise<void> {
         logger.debug("close");
         if (this._isClosed) {
             throw new ReplicaIsClosedError();
@@ -70,7 +71,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
         if (erase === true && this._filename !== ":memory:") {
             logger.log(`...close: and erase`);
             try {
-                Deno.removeSync(this._filename);
+                await Deno.remove(this._filename);
             } catch (err) {
                 logger.error("Failed to delete Sqlite file.");
                 logger.error(err);
@@ -97,12 +98,16 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
                     // If no file is found, this will throw.
                     Deno.openSync(opts.filename);
 
-                    this.close(false);
                     throw new EarthstarError(
                         `Tried to create an sqlite file but it already exists: ${opts.filename}`,
                     );
-                } finally {
-                    // Continue as normal
+                } catch (err) {
+                    // Only throw if the error was an Earthstar error thrown by us.
+                    // Otherwise it's the error thrown by the file not being found. Which is good.
+                    if (isErr(err)) {
+                        this.close(false);
+                        throw err;
+                    }
                 }
             }
         } else if (opts.mode === "open") {
@@ -131,6 +136,12 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
             );
         }
 
+        const addressIsValidResult = opts.share ? checkShareIsValid(opts.share) : true;
+
+        if (isErr(addressIsValidResult)) {
+            throw addressIsValidResult;
+        }
+
         this._db = new Sqlite.DB(this._filename, { memory: this._filename === ":memory:" });
         this._ensureTables();
 
@@ -139,7 +150,8 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
         const [maxLocalIndexFromDb] = maxLocalIndexQuery.one();
         maxLocalIndexQuery.finalize();
 
-        this._maxLocalIndex = maxLocalIndexFromDb || -1;
+        // We have to do this because the maxLocalIndexDb could be 0, which is falsy.
+        this._maxLocalIndex = maxLocalIndexFromDb !== null ? maxLocalIndexFromDb : -1;
 
         // check share
         if (opts.mode === "create") {

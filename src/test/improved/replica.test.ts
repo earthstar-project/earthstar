@@ -382,6 +382,8 @@ export function runRelpicaTests(scenario: TestScenario) {
 
             const storage = makeReplica(validShare);
             assert(storage);
+
+            storage.close(true);
         },
     );
 }

@@ -1,4 +1,4 @@
-import { assertEquals } from "../asserts.ts";
+import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
 import { Doc } from "../../util/doc-types.ts";
 import { Query } from "../../query/query-types.ts";
@@ -17,6 +17,22 @@ let J = JSON.stringify;
 
 export function runReplicaDriverTests(scenario: TestScenario) {
     const SUBTEST_NAME = scenario.name;
+
+    Deno.test(`${SUBTEST_NAME}: validates addresses`, () => {
+        if (scenario.persistent) {
+            const validShare = "+gardening.abcde";
+            const invalidShare = "PEANUTS.123";
+
+            assertThrows(() => {
+                scenario.makeDriver(invalidShare);
+            });
+
+            const storage = scenario.makeDriver(validShare);
+            assert(storage);
+
+            storage.close(true);
+        }
+    });
 
     Deno.test(`${SUBTEST_NAME}: maxLocalIndex`, async () => {
         const share = "+gardening.abcde";

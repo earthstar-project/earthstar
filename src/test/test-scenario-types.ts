@@ -21,6 +21,8 @@ export interface TestScenario {
 
     // Config keys that come with the driver
     builtInConfigKeys: string[];
+
+    cleanup?: () => Promise<void>;
 }
 
 export interface CryptoScenario {

@@ -123,6 +123,10 @@ export let runPeerTests = (
             }, ended as ${(GlobalCryptoDriver as any).name}`,
         );
 
+        for (const storage of storages) {
+            await storage.close(true);
+        }
+
         // TODO: eventually test peer.bus events when we have them
     });
 };
