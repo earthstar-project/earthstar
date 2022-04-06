@@ -43,6 +43,18 @@ function testSyncer(
             await writeRandomDocs(keypairA, storage, 10);
             await writeRandomDocs(keypairB, targetStorage, 10);
 
+            // Also write some docs to the same path to make sure all versions of docs are synced.
+            await storage.set(keypairA, {
+                content: "Written by A",
+                path: "/popular-path",
+                format: "es.4",
+            });
+            await targetStorage.set(keypairB, {
+                content: "Written by B",
+                path: "/popular-path",
+                format: "es.4",
+            });
+
             // Create Syncers
             const syncer = new Syncer(scenario.clientPeer, () => scenario.clientTransport);
             const otherSyncer = new Syncer(scenario.targetPeer, () => scenario.targetTransport);
@@ -57,6 +69,8 @@ function testSyncer(
                 sanitizeOps: false,
                 sanitizeResources: false,
                 fn: async () => {
+                    const storageDocs = await storage.getAllDocs();
+                    assertEquals(storageDocs.length, 22, "Storage has 22 docs");
                     assert(await storagesAreSynced([storage, targetStorage]), "storages synced");
                 },
             });
@@ -73,8 +87,8 @@ function testSyncer(
                 sanitizeOps: false,
                 sanitizeResources: false,
                 fn: async () => {
-                    const storageDocs = await storage.getLatestDocs();
-                    assertEquals(storageDocs.length, 40, "Storage has 40 docs");
+                    const storageDocs = await storage.getAllDocs();
+                    assertEquals(storageDocs.length, 42, "Storage has 42 docs");
                     assert(
                         await storagesAreSynced([storage, targetStorage]),
                         "storages synced (again)",

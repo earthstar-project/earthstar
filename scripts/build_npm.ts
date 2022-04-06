@@ -53,13 +53,13 @@ await build({
     },
     // typeCheck: false,
     mappings: {
-        "https://esm.sh/earthstar-streaming-rpc@4.0.1": {
+        "https://esm.sh/earthstar-streaming-rpc@4.0.3": {
             name: "earthstar-streaming-rpc",
-            version: "4.0.1",
+            version: "4.0.3",
         },
-        "https://deno.land/x/earthstar_streaming_rpc@v4.0.1/src/entries/node.ts": {
+        "https://deno.land/x/earthstar_streaming_rpc@v4.0.3/src/entries/node.ts": {
             name: "earthstar-streaming-rpc",
-            version: "4.0.1",
+            version: "4.0.3",
             subPath: "node",
         },
         "./src/streaming_rpc/streaming_rpc.ts": "./src/streaming_rpc/streaming_rpc.node.ts",

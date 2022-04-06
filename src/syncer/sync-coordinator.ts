@@ -58,6 +58,7 @@ export class SyncCoordinator {
 
                 this._pullDocs({
                     query: {
+                        historyMode: "all",
                         orderBy: "localIndex ASC",
                         startAfter: {
                             localIndex: state.partnerMaxLocalIndexSoFar,

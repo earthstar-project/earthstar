@@ -18,7 +18,7 @@ let J = JSON.stringify;
 export function runReplicaDriverTests(scenario: TestScenario) {
     const SUBTEST_NAME = scenario.name;
 
-    Deno.test(`${SUBTEST_NAME}: validates addresses`, () => {
+    Deno.test(`${SUBTEST_NAME}: validates addresses`, async () => {
         if (scenario.persistent) {
             const validShare = "+gardening.abcde";
             const invalidShare = "PEANUTS.123";
@@ -30,7 +30,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
             const storage = scenario.makeDriver(validShare);
             assert(storage);
 
-            storage.close(true);
+            await storage.close(true);
         }
     });
 
@@ -404,6 +404,22 @@ export function runReplicaDriverTests(scenario: TestScenario) {
 
             type Vector = { query: Query; expectedContent: string[] };
             const vectors: Vector[] = [
+                {
+                    query: {
+                        historyMode: "latest",
+                        orderBy: "localIndex ASC",
+                        startAfter: { localIndex: -1 },
+                    },
+                    expectedContent: ["Hello 1"],
+                },
+                {
+                    query: {
+                        historyMode: "all",
+                        startAfter: { localIndex: -1 },
+                        orderBy: "localIndex ASC",
+                    },
+                    expectedContent: ["Hello 1", "Hello 3", "Hello 4"],
+                },
                 {
                     query: {
                         historyMode: "all",

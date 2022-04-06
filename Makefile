@@ -7,7 +7,7 @@ example:
 	deno run ./example-app.ts
 
 test:
-	deno test --allow-net --allow-read --allow-write --no-check=remote src
+	deno test --allow-net --allow-read --allow-write src
 
 test-watch:
 	deno test --watch --allow-net --allow-read src 
