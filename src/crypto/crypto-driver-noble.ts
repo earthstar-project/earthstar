@@ -15,43 +15,45 @@ const logger = new Logger("crypto-driver-noble", "cyan");
  * Works in the browser.
  */
 export const CryptoDriverNoble: ICryptoDriver = class {
-    static sha256(input: string | Uint8Array): Promise<Uint8Array> {
-        if (typeof input === "string") {
-            return Promise.resolve(createHash("sha256").update(input, "utf-8").digest());
-        } else {
-            return Promise.resolve(createHash("sha256").update(input).digest());
-        }
+  static sha256(input: string | Uint8Array): Promise<Uint8Array> {
+    if (typeof input === "string") {
+      return Promise.resolve(
+        createHash("sha256").update(input, "utf-8").digest(),
+      );
+    } else {
+      return Promise.resolve(createHash("sha256").update(input).digest());
     }
-    static async generateKeypairBytes(): Promise<KeypairBytes> {
-        logger.debug("generateKeypairBytes");
-        const secret = ed.utils.randomPrivateKey();
-        const pubkey = await ed.getPublicKey(secret);
+  }
+  static async generateKeypairBytes(): Promise<KeypairBytes> {
+    logger.debug("generateKeypairBytes");
+    const secret = ed.utils.randomPrivateKey();
+    const pubkey = await ed.getPublicKey(secret);
 
-        return {
-            pubkey,
-            secret,
-        };
+    return {
+      pubkey,
+      secret,
+    };
+  }
+  static sign(
+    keypairBytes: KeypairBytes,
+    msg: string | Uint8Array,
+  ): Promise<Uint8Array> {
+    logger.debug("sign");
+    if (typeof msg === "string") msg = stringToBytes(msg);
+    return ed.sign(msg, keypairBytes.secret);
+  }
+  static async verify(
+    publicKey: Uint8Array,
+    sig: Uint8Array,
+    msg: string | Uint8Array,
+  ): Promise<boolean> {
+    logger.debug("verify");
+    try {
+      if (typeof msg === "string") msg = stringToBytes(msg);
+      const result = await ed.verify(sig, msg, publicKey);
+      return result;
+    } catch {
+      return false;
     }
-    static sign(
-        keypairBytes: KeypairBytes,
-        msg: string | Uint8Array,
-    ): Promise<Uint8Array> {
-        logger.debug("sign");
-        if (typeof msg === "string") msg = stringToBytes(msg);
-        return ed.sign(msg, keypairBytes.secret);
-    }
-    static async verify(
-        publicKey: Uint8Array,
-        sig: Uint8Array,
-        msg: string | Uint8Array,
-    ): Promise<boolean> {
-        logger.debug("verify");
-        try {
-            if (typeof msg === "string") msg = stringToBytes(msg);
-            const result = await ed.verify(sig, msg, publicKey);
-            return result;
-        } catch {
-            return false;
-        }
-    }
+  }
 };

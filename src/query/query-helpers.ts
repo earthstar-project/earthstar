@@ -18,10 +18,10 @@ let logger = new Logger("query helpers", "yellowBright");
 const escapeRegex = /[.*+?^${}()|[\]\\]/g;
 
 export function escapeStringForRegex(s: string): string {
-    // Javascript regex syntax characters:
-    // https://tc39.es/ecma262/#prod-SyntaxCharacter
-    //    ^ $ \ . * + ? ( ) [ ] { } |
-    return s.replace(escapeRegex, "\\$&"); // $& means the whole matched string
+  // Javascript regex syntax characters:
+  // https://tc39.es/ecma262/#prod-SyntaxCharacter
+  //    ^ $ \ . * + ? ( ) [ ] { } |
+  return s.replace(escapeRegex, "\\$&"); // $& means the whole matched string
 }
 
 // same as string.matchAll(regex) which is only supported in node 12+
@@ -33,15 +33,15 @@ export function escapeStringForRegex(s: string): string {
 //    groups: undefined
 // }, {}, ...]
 export let _matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
-    if (re.flags.indexOf("g") === -1) {
-        throw new TypeError('matchAll requires a regex with the "g" flag set');
-    }
-    let matches: RegExpExecArray[] = [];
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(str)) !== null) {
-        matches.push(m);
-    }
-    return matches;
+  if (re.flags.indexOf("g") === -1) {
+    throw new TypeError('matchAll requires a regex with the "g" flag set');
+  }
+  let matches: RegExpExecArray[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(str)) !== null) {
+    matches.push(m);
+  }
+  return matches;
 };
 
 //================================================================================
@@ -55,35 +55,35 @@ export let _matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
  *   if it's not needed because it can make a good enough Earthstar query.
  */
 export let globToRegex = (
-    glob: string,
-    forceEntireMatch: boolean = true,
+  glob: string,
+  forceEntireMatch: boolean = true,
 ): string => {
-    // Just turn a glob into a regex.
-    // '/hello/**/world/*.txt' --> '/hello/.*/world/[^/]*.txt'
-    // forceEntireMatch: make the regex match all way from beginning to end of string
-    // by surrounding it in ^ and $.
+  // Just turn a glob into a regex.
+  // '/hello/**/world/*.txt' --> '/hello/.*/world/[^/]*.txt'
+  // forceEntireMatch: make the regex match all way from beginning to end of string
+  // by surrounding it in ^ and $.
 
-    // Three stars in a row are not allowed - throw
-    if (glob.indexOf("***") !== -1) {
-        throw new ValidationError(
-            "invalid glob query has three stars in a row: " + glob,
-        );
-    }
-    // Convert the glob into a regex.
-    // First replace * and ** with characters that are not allowed in earthstar strings,
-    // and are also not regex control characters...
-    let regex = replaceAll(glob, "**", ";");
-    regex = replaceAll(regex, "*", "#");
-    // Then escape the string for regex safety...
-    regex = escapeStringForRegex(regex);
-    // Then finally replace the standin characters with active regex pieces.
-    regex = replaceAll(regex, ";", ".*"); // any characters
-    regex = replaceAll(regex, "#", "[^/]*"); // anything but slashes
-    // Force the regex to match all way from beginning to end of string
-    if (forceEntireMatch) {
-        regex = "^" + regex + "$";
-    }
-    return regex;
+  // Three stars in a row are not allowed - throw
+  if (glob.indexOf("***") !== -1) {
+    throw new ValidationError(
+      "invalid glob query has three stars in a row: " + glob,
+    );
+  }
+  // Convert the glob into a regex.
+  // First replace * and ** with characters that are not allowed in earthstar strings,
+  // and are also not regex control characters...
+  let regex = replaceAll(glob, "**", ";");
+  regex = replaceAll(regex, "*", "#");
+  // Then escape the string for regex safety...
+  regex = escapeStringForRegex(regex);
+  // Then finally replace the standin characters with active regex pieces.
+  regex = replaceAll(regex, ";", ".*"); // any characters
+  regex = replaceAll(regex, "#", "[^/]*"); // anything but slashes
+  // Force the regex to match all way from beginning to end of string
+  if (forceEntireMatch) {
+    regex = "^" + regex + "$";
+  }
+  return regex;
 };
 
 /*
@@ -139,47 +139,47 @@ export let globToRegex = (
  *    let posts = await queryByGlob(myReplica, '/posts/*.txt');
  */
 export let globToQueryAndRegex = (
-    glob: string,
+  glob: string,
 ): { query: Query; regex: string | null } => {
-    // Turn a glob into a query and an optional regex, if a regex is needed.
+  // Turn a glob into a query and an optional regex, if a regex is needed.
 
-    // If no stars at all, this is just a direct path query.
-    if (glob.indexOf("*") === -1) {
-        return { query: { filter: { path: glob } }, regex: null };
-    }
+  // If no stars at all, this is just a direct path query.
+  if (glob.indexOf("*") === -1) {
+    return { query: { filter: { path: glob } }, regex: null };
+  }
 
-    // Get the parts of the glob before the first star and after the last star.
-    // These will become our pathStartWith and pathEndsWith query paramters.
-    let globParts = glob.split("*");
-    let firstPart = globParts[0];
-    let lastPart = globParts[globParts.length - 1];
+  // Get the parts of the glob before the first star and after the last star.
+  // These will become our pathStartWith and pathEndsWith query paramters.
+  let globParts = glob.split("*");
+  let firstPart = globParts[0];
+  let lastPart = globParts[globParts.length - 1];
 
-    // Put startsWith and endsWith into the filter if needed
-    let filter: QueryFilter = {};
-    let query: Query = {};
+  // Put startsWith and endsWith into the filter if needed
+  let filter: QueryFilter = {};
+  let query: Query = {};
 
-    if (firstPart) filter.pathStartsWith = firstPart;
-    if (lastPart) filter.pathEndsWith = lastPart;
+  if (firstPart) filter.pathStartsWith = firstPart;
+  if (lastPart) filter.pathEndsWith = lastPart;
 
-    // Special case for "**foo" or "foo**" -- no regex is needed for these,
-    // we can rely completely on pathStartsWith or pathEndsWith
-    let regex: string | null = "?";
-    if (globParts.length === 3) {
-        let [a, b, c] = globParts;
-        if (a === "" && b === "") regex = null;
-        if (b === "" && c === "") regex = null;
-    }
-    // special case did not apply, calculate the regex
-    if (regex === "?") {
-        regex = globToRegex(glob);
-    }
+  // Special case for "**foo" or "foo**" -- no regex is needed for these,
+  // we can rely completely on pathStartsWith or pathEndsWith
+  let regex: string | null = "?";
+  if (globParts.length === 3) {
+    let [a, b, c] = globParts;
+    if (a === "" && b === "") regex = null;
+    if (b === "" && c === "") regex = null;
+  }
+  // special case did not apply, calculate the regex
+  if (regex === "?") {
+    regex = globToRegex(glob);
+  }
 
-    // We only want to add the filter to the query if the filter IS NOT empty.
-    if (!isObjectEmpty(filter)) {
-        query.filter = filter;
-    }
+  // We only want to add the filter to the query if the filter IS NOT empty.
+  if (!isObjectEmpty(filter)) {
+    query.filter = filter;
+  }
 
-    return { query, regex };
+  return { query, regex };
 };
 
 //================================================================================
@@ -198,19 +198,19 @@ export let globToQueryAndRegex = (
  * intend to override the glob's query.
  */
 export let queryByGlobAsync = async (
-    replica: IReplica,
-    glob: string,
-    moreQueryOptions: Query = {},
+  replica: IReplica,
+  glob: string,
+  moreQueryOptions: Query = {},
 ): Promise<Doc[]> => {
-    let { query, regex } = globToQueryAndRegex(glob);
-    query = { ...query, ...moreQueryOptions };
-    let docs = await replica.queryDocs(query);
+  let { query, regex } = globToQueryAndRegex(glob);
+  query = { ...query, ...moreQueryOptions };
+  let docs = await replica.queryDocs(query);
 
-    if (regex !== null) {
-        let re = new RegExp(regex);
-        docs = docs.filter((doc) => re.test(doc.path));
-    }
-    return docs;
+  if (regex !== null) {
+    let re = new RegExp(regex);
+    docs = docs.filter((doc) => re.test(doc.path));
+  }
+  return docs;
 };
 
 //==========================================================================================
@@ -235,10 +235,10 @@ while ((m = variableRe.exec(template)) !== null) {
 */
 
 interface ParsedTemplate {
-    template: string;
-    varNames: string[]; // the names of the variables, in the order they occur, without brackets
-    glob: string; // the template with all the variables replaced by '*'
-    namedCaptureRegex: string; // a regex string that will match paths and do named captures of the variables
+  template: string;
+  varNames: string[]; // the names of the variables, in the order they occur, without brackets
+  glob: string; // the template with all the variables replaced by '*'
+  namedCaptureRegex: string; // a regex string that will match paths and do named captures of the variables
 }
 /*
  *  This is a low-level helper for the template matching code; probably don't use it directly.
@@ -267,100 +267,100 @@ interface ParsedTemplate {
  *
  */
 export function parseTemplate(template: string): ParsedTemplate {
-    //--------------------------------------------------------------------------------
-    // VALIDATE TEMPLATE and extract variable names
+  //--------------------------------------------------------------------------------
+  // VALIDATE TEMPLATE and extract variable names
 
-    if (template.indexOf("}{") !== -1) {
-        throw new ValidationError(
-            "template is not allowed to have to adjacent variables {like}{this}",
-        );
+  if (template.indexOf("}{") !== -1) {
+    throw new ValidationError(
+      "template is not allowed to have to adjacent variables {like}{this}",
+    );
+  }
+
+  if (template.indexOf("*{") !== -1 || template.indexOf("}*") !== -1) {
+    throw new ValidationError(
+      "template cannot have a star touching a variable *{likeThis}",
+    );
+  }
+
+  let numLBrackets = countChars(template, "{");
+  let numRBrackets = countChars(template, "}");
+  if (numLBrackets !== numRBrackets) {
+    throw new ValidationError("unbalanced curly braces");
+  }
+
+  let bracketVarRe = /\{(.*?)\}/g; // match and capture anything in curly braces, lazily, to get smallest matches
+  let validVarName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // requirement for variable names: (alpha alphanum*)
+
+  let varMatches = _matchAll(bracketVarRe, template);
+  // capture anything in braces...
+  let varNames = varMatches.map((match) => match[1]);
+  // ...then check if it's a valid variable name, and throw errors if it's not
+  for (let varName of varNames) {
+    if (!validVarName.test(varName)) {
+      throw new ValidationError(
+        "variable name in template is not valid.  can only contain alphanumeric and underscore, and not start with number",
+      );
+    }
+  }
+  if (numLBrackets !== varNames.length || numRBrackets !== varNames.length) {
+    throw new ValidationError("weird curly brace mismatch, maybe }backwards{");
+  }
+
+  // check for duplicate varNames
+  let varNamesSet = new Set(varNames);
+  if (varNamesSet.size !== varNames.length) {
+    throw new ValidationError("variable names may not be repeated");
+  }
+
+  //--------------------------------------------------
+  // MAKE GLOB VERSION
+
+  // replace all the {vars} with *
+  let glob = template.replace(bracketVarRe, "*");
+
+  //--------------------------------------------------------------------------------
+  // MAKE PATH REGEX
+
+  // normally we would put each path part through escapeStringForRegex()...
+  // but we want to allow stars to be mixed in with template variables,
+  // so instead we use globToRegex() with false to prevent it from
+  // wrapping each part in ^ and $.
+  let parts: string[] = [];
+  if (varMatches.length === 0) {
+    parts.push(globToRegex(template, false));
+  }
+  for (let ii = 0; ii < varMatches.length; ii++) {
+    let bracketMatch = varMatches[ii];
+    let varName = bracketMatch[1];
+    let matchStart = bracketMatch.index;
+    let matchEnd = bracketMatch.index + bracketMatch[0].length;
+
+    if (ii === 0) {
+      let begin = template.slice(0, matchStart);
+      parts.push(globToRegex(begin, false));
     }
 
-    if (template.indexOf("*{") !== -1 || template.indexOf("}*") !== -1) {
-        throw new ValidationError(
-            "template cannot have a star touching a variable *{likeThis}",
-        );
+    // make a regex to capture the actual value of this variable in a path
+    let reForThisVariable = "(?<" + varName + ">[^/]*)";
+    parts.push(reForThisVariable);
+
+    if (ii <= varMatches.length - 2) {
+      let nextMatch = varMatches[ii + 1];
+      let between = template.slice(matchEnd, nextMatch.index);
+      parts.push(globToRegex(between, false));
+    } else {
+      let end = template.slice(matchEnd);
+      parts.push(globToRegex(end, false));
     }
+  }
+  let namedCaptureRegex = "^" + parts.join("") + "$";
 
-    let numLBrackets = countChars(template, "{");
-    let numRBrackets = countChars(template, "}");
-    if (numLBrackets !== numRBrackets) {
-        throw new ValidationError("unbalanced curly braces");
-    }
-
-    let bracketVarRe = /\{(.*?)\}/g; // match and capture anything in curly braces, lazily, to get smallest matches
-    let validVarName = /^[a-zA-Z_][a-zA-Z0-9_]*$/; // requirement for variable names: (alpha alphanum*)
-
-    let varMatches = _matchAll(bracketVarRe, template);
-    // capture anything in braces...
-    let varNames = varMatches.map((match) => match[1]);
-    // ...then check if it's a valid variable name, and throw errors if it's not
-    for (let varName of varNames) {
-        if (!validVarName.test(varName)) {
-            throw new ValidationError(
-                "variable name in template is not valid.  can only contain alphanumeric and underscore, and not start with number",
-            );
-        }
-    }
-    if (numLBrackets !== varNames.length || numRBrackets !== varNames.length) {
-        throw new ValidationError("weird curly brace mismatch, maybe }backwards{");
-    }
-
-    // check for duplicate varNames
-    let varNamesSet = new Set(varNames);
-    if (varNamesSet.size !== varNames.length) {
-        throw new ValidationError("variable names may not be repeated");
-    }
-
-    //--------------------------------------------------
-    // MAKE GLOB VERSION
-
-    // replace all the {vars} with *
-    let glob = template.replace(bracketVarRe, "*");
-
-    //--------------------------------------------------------------------------------
-    // MAKE PATH REGEX
-
-    // normally we would put each path part through escapeStringForRegex()...
-    // but we want to allow stars to be mixed in with template variables,
-    // so instead we use globToRegex() with false to prevent it from
-    // wrapping each part in ^ and $.
-    let parts: string[] = [];
-    if (varMatches.length === 0) {
-        parts.push(globToRegex(template, false));
-    }
-    for (let ii = 0; ii < varMatches.length; ii++) {
-        let bracketMatch = varMatches[ii];
-        let varName = bracketMatch[1];
-        let matchStart = bracketMatch.index;
-        let matchEnd = bracketMatch.index + bracketMatch[0].length;
-
-        if (ii === 0) {
-            let begin = template.slice(0, matchStart);
-            parts.push(globToRegex(begin, false));
-        }
-
-        // make a regex to capture the actual value of this variable in a path
-        let reForThisVariable = "(?<" + varName + ">[^/]*)";
-        parts.push(reForThisVariable);
-
-        if (ii <= varMatches.length - 2) {
-            let nextMatch = varMatches[ii + 1];
-            let between = template.slice(matchEnd, nextMatch.index);
-            parts.push(globToRegex(between, false));
-        } else {
-            let end = template.slice(matchEnd);
-            parts.push(globToRegex(end, false));
-        }
-    }
-    let namedCaptureRegex = "^" + parts.join("") + "$";
-
-    return {
-        template,
-        varNames,
-        glob,
-        namedCaptureRegex,
-    };
+  return {
+    template,
+    varNames,
+    glob,
+    namedCaptureRegex,
+  };
 }
 
 /*
@@ -374,12 +374,12 @@ export function parseTemplate(template: string): ParsedTemplate {
  *  A template can have zero variables; in this case we return {} on match and null on no match.
  */
 export let extractTemplateVariablesFromPathUsingRegex = (
-    namedCaptureRegex: string,
-    path: string,
+  namedCaptureRegex: string,
+  path: string,
 ): Record<string, string> | null => {
-    const matches2 = path.match(new RegExp(namedCaptureRegex));
-    if (matches2 === null) return null;
-    return { ...matches2.groups };
+  const matches2 = path.match(new RegExp(namedCaptureRegex));
+  if (matches2 === null) return null;
+  return { ...matches2.groups };
 };
 
 /*
@@ -424,16 +424,16 @@ export let extractTemplateVariablesFromPathUsingRegex = (
  *  for details on how those wildcards work.
  */
 export let extractTemplateVariablesFromPath = (
-    template: string,
-    path: string,
+  template: string,
+  path: string,
 ): Record<string, string> | null => {
-    // if template has no variables, just compare it directly with the path and avoid all this regex nonsense
-    if (template.indexOf("{") === -1 && template.indexOf("}") === -1) {
-        return (template === path ? {} : null);
-    }
-    // this also returns { varnames, glob } but we don't use them here
-    let { namedCaptureRegex } = parseTemplate(template);
-    return extractTemplateVariablesFromPathUsingRegex(namedCaptureRegex, path);
+  // if template has no variables, just compare it directly with the path and avoid all this regex nonsense
+  if (template.indexOf("{") === -1 && template.indexOf("}") === -1) {
+    return (template === path ? {} : null);
+  }
+  // this also returns { varnames, glob } but we don't use them here
+  let { namedCaptureRegex } = parseTemplate(template);
+  return extractTemplateVariablesFromPathUsingRegex(namedCaptureRegex, path);
 };
 
 /*
@@ -454,13 +454,13 @@ export let extractTemplateVariablesFromPath = (
  * insertVariablesIntoTemplate(vars, template) === '/posts/gardening/{postId}.json'
  */
 export let insertVariablesIntoTemplate = (
-    vars: Record<string, string>,
-    template: string,
+  vars: Record<string, string>,
+  template: string,
 ): string => {
-    for (let [varName, value] of Object.entries(vars)) {
-        template = template.replace("{" + varName + "}", value);
-    }
-    return template;
+  for (let [varName, value] of Object.entries(vars)) {
+    template = template.replace("{" + varName + "}", value);
+  }
+  return template;
 };
 
 //================================================================================
@@ -482,18 +482,18 @@ export let insertVariablesIntoTemplate = (
  *      }
  */
 export let queryByTemplateAsync = async (
-    replica: IReplica,
-    template: string,
-    moreQueryOptions: Query = {},
+  replica: IReplica,
+  template: string,
+  moreQueryOptions: Query = {},
 ): Promise<Doc[]> => {
-    let { glob } = parseTemplate(template);
-    let { query, regex } = globToQueryAndRegex(glob);
-    query = { ...query, ...moreQueryOptions };
+  let { glob } = parseTemplate(template);
+  let { query, regex } = globToQueryAndRegex(glob);
+  query = { ...query, ...moreQueryOptions };
 
-    let docs = await replica.queryDocs(query);
-    if (regex != null) {
-        let re = new RegExp(regex);
-        docs = docs.filter((doc) => re.test(doc.path));
-    }
-    return docs;
+  let docs = await replica.queryDocs(query);
+  if (regex != null) {
+    let re = new RegExp(regex);
+    docs = docs.filter((doc) => re.test(doc.path));
+  }
+  return docs;
 };
