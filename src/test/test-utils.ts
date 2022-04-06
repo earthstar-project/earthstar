@@ -48,8 +48,32 @@ export function docsAreEquivalent(docsA: Doc[], docsB: Doc[]) {
         return false;
     }
 
-    const aStripped = docsA.map(stripLocalIndexFromDoc);
-    const bStripped = docsB.map(stripLocalIndexFromDoc);
+    const sortByPathThenAuthor = (docA: Doc, docB: Doc) => {
+        const { path: pathA, author: authorA } = docA;
+        const { path: pathB, author: authorB } = docB;
+
+        if (pathA < pathB) {
+            return -1;
+        }
+
+        if (pathA > pathB) {
+            return 1;
+        }
+
+        if (authorA < authorB) {
+            return -1;
+        }
+
+        if (authorA > authorB) {
+            return 1;
+        }
+
+        // Shouldn't happen.
+        return 0 as never;
+    };
+
+    const aStripped = docsA.map(stripLocalIndexFromDoc).sort(sortByPathThenAuthor);
+    const bStripped = docsB.map(stripLocalIndexFromDoc).sort(sortByPathThenAuthor);
 
     return deepEqual(aStripped, bStripped);
 }
@@ -83,7 +107,6 @@ export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
     // Create an array where each element is a collection of all the docs from a storage.
     for await (const storage of storages) {
         const allDocs = await storage.getAllDocs();
-
         allDocsSets.push(allDocs);
     }
 

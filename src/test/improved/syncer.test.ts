@@ -69,6 +69,8 @@ function testSyncer(
                 sanitizeOps: false,
                 sanitizeResources: false,
                 fn: async () => {
+                    const storageDocs = await storage.getAllDocs();
+                    assertEquals(storageDocs.length, 22, "Storage has 22 docs");
                     assert(await storagesAreSynced([storage, targetStorage]), "storages synced");
                 },
             });
