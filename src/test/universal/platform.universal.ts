@@ -10,12 +10,12 @@ import { StorageDriverAsyncMemory } from "../../storage/storage-driver-async-mem
 //================================================================================
 
 export let cryptoDrivers_universal: ICryptoDriver[] = [
-    CryptoDriverTweetnacl,
-    CryptoDriverNoble,
+  CryptoDriverTweetnacl,
+  CryptoDriverNoble,
 ];
 
 export let storageDriversAsync_universal: ClassThatImplements<
-    IStorageDriverAsync
+  IStorageDriverAsync
 >[] = [
-    StorageDriverAsyncMemory,
+  StorageDriverAsyncMemory,
 ];

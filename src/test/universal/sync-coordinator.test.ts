@@ -6,7 +6,11 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { SyncCoordinator } from "../../syncer/sync-coordinator.ts";
 import { makeSyncerBag } from "../../syncer/_syncer-bag.ts";
-import { makeNReplicas, storageHasAllStoragesDocs, writeRandomDocs } from "../test-utils.ts";
+import {
+  makeNReplicas,
+  storageHasAllStoragesDocs,
+  writeRandomDocs,
+} from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 
 // after start()
@@ -21,124 +25,124 @@ import { sleep } from "../../util/misc.ts";
 //   Does it leave hanging ops?
 
 Deno.test("SyncCoordinator", async () => {
-    //const time = new FakeTime();
+  //const time = new FakeTime();
 
-    // Set up two peers with two shares in common
-    // And different sets of docs.
-    const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
-    const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
+  // Set up two peers with two shares in common
+  // And different sets of docs.
+  const keypairA = await Crypto.generateAuthorKeypair("suzy") as AuthorKeypair;
+  const keypairB = await Crypto.generateAuthorKeypair("devy") as AuthorKeypair;
 
-    const ADDRESS_A = "+apples.a123";
-    const ADDRESS_B = "+bananas.b234";
-    const ADDRESS_C = "+coconuts.c345";
-    const ADDRESS_D = "+dates.d456";
+  const ADDRESS_A = "+apples.a123";
+  const ADDRESS_B = "+bananas.b234";
+  const ADDRESS_C = "+coconuts.c345";
+  const ADDRESS_D = "+dates.d456";
 
-    const [storageA1, storageA2] = makeNReplicas(ADDRESS_A, 2);
-    const [storageB1] = makeNReplicas(ADDRESS_B, 1);
-    const [storageC2] = makeNReplicas(ADDRESS_C, 1);
-    const [storageD1, storageD2] = makeNReplicas(ADDRESS_D, 2);
+  const [storageA1, storageA2] = makeNReplicas(ADDRESS_A, 2);
+  const [storageB1] = makeNReplicas(ADDRESS_B, 1);
+  const [storageC2] = makeNReplicas(ADDRESS_C, 1);
+  const [storageD1, storageD2] = makeNReplicas(ADDRESS_D, 2);
 
-    const peer = new Peer();
-    const targetPeer = new Peer();
+  const peer = new Peer();
+  const targetPeer = new Peer();
 
-    peer.addReplica(storageA1);
-    peer.addReplica(storageB1);
-    peer.addReplica(storageD1);
+  peer.addReplica(storageA1);
+  peer.addReplica(storageB1);
+  peer.addReplica(storageD1);
 
-    targetPeer.addReplica(storageA2);
-    targetPeer.addReplica(storageC2);
-    targetPeer.addReplica(storageD2);
+  targetPeer.addReplica(storageA2);
+  targetPeer.addReplica(storageC2);
+  targetPeer.addReplica(storageD2);
 
-    // Write some docs to the same path so that we test all history being synced.
-    await storageA1.set(keypairA, {
-        content: "Written by A",
-        path: "/popular-path",
-        format: "es.4",
-    });
-    await storageA2.set(keypairB, {
-        content: "Written by B",
-        path: "/popular-path",
-        format: "es.4",
-    });
-    await storageD1.set(keypairA, {
-        content: "Written by A",
-        path: "/popular-path",
-        format: "es.4",
-    });
-    await storageD2.set(keypairB, {
-        content: "Written by B",
-        path: "/popular-path",
-        format: "es.4",
-    });
+  // Write some docs to the same path so that we test all history being synced.
+  await storageA1.set(keypairA, {
+    content: "Written by A",
+    path: "/popular-path",
+    format: "es.4",
+  });
+  await storageA2.set(keypairB, {
+    content: "Written by B",
+    path: "/popular-path",
+    format: "es.4",
+  });
+  await storageD1.set(keypairA, {
+    content: "Written by A",
+    path: "/popular-path",
+    format: "es.4",
+  });
+  await storageD2.set(keypairB, {
+    content: "Written by B",
+    path: "/popular-path",
+    format: "es.4",
+  });
 
-    // And a bunch more for good measure.
-    await writeRandomDocs(keypairA, storageA1, 10);
-    await writeRandomDocs(keypairB, storageA2, 10);
-    await writeRandomDocs(keypairA, storageD1, 10);
-    await writeRandomDocs(keypairB, storageD2, 10);
+  // And a bunch more for good measure.
+  await writeRandomDocs(keypairA, storageA1, 10);
+  await writeRandomDocs(keypairB, storageA2, 10);
+  await writeRandomDocs(keypairA, storageD1, 10);
+  await writeRandomDocs(keypairB, storageD2, 10);
 
-    // Set up a coordinator with the two peers
+  // Set up a coordinator with the two peers
 
-    const localTransport = new Rpc.TransportLocal({
-        deviceId: peer.peerId,
-        description: `Local:${peer.peerId}`,
-        methods: makeSyncerBag(peer),
-    });
+  const localTransport = new Rpc.TransportLocal({
+    deviceId: peer.peerId,
+    description: `Local:${peer.peerId}`,
+    methods: makeSyncerBag(peer),
+  });
 
-    const targetTransport = new Rpc.TransportLocal({
-        deviceId: targetPeer.peerId,
-        description: `Local:${targetPeer.peerId}`,
-        methods: makeSyncerBag(targetPeer),
-    });
+  const targetTransport = new Rpc.TransportLocal({
+    deviceId: targetPeer.peerId,
+    description: `Local:${targetPeer.peerId}`,
+    methods: makeSyncerBag(targetPeer),
+  });
 
-    const { thisConn } = localTransport.addConnection(targetTransport);
+  const { thisConn } = localTransport.addConnection(targetTransport);
 
-    const coordinator = new SyncCoordinator(peer, thisConn);
+  const coordinator = new SyncCoordinator(peer, thisConn);
 
-    // Start it up
+  // Start it up
 
-    await coordinator.start();
+  await coordinator.start();
 
-    await sleep(100);
+  await sleep(100);
 
-    assertEquals(coordinator.commonShares, [ADDRESS_A, ADDRESS_D]);
-    const storageADocs = await storageA1.getAllDocs();
-    const storageDDocs = await storageD1.getAllDocs();
+  assertEquals(coordinator.commonShares, [ADDRESS_A, ADDRESS_D]);
+  const storageADocs = await storageA1.getAllDocs();
+  const storageDDocs = await storageD1.getAllDocs();
 
-    assertEquals(storageADocs.length, 22, "Storage A1 contains 22 docs");
-    assertEquals(storageDDocs.length, 22, "Storage D1 contains 22 docs");
-    assert(
-        await storageHasAllStoragesDocs(storageA1, storageA2),
-        `${ADDRESS_A} storages are synced.`,
-    );
-    assert(
-        await storageHasAllStoragesDocs(storageD1, storageD2),
-        `${ADDRESS_D} storages are synced.`,
-    );
+  assertEquals(storageADocs.length, 22, "Storage A1 contains 22 docs");
+  assertEquals(storageDDocs.length, 22, "Storage D1 contains 22 docs");
+  assert(
+    await storageHasAllStoragesDocs(storageA1, storageA2),
+    `${ADDRESS_A} storages are synced.`,
+  );
+  assert(
+    await storageHasAllStoragesDocs(storageD1, storageD2),
+    `${ADDRESS_D} storages are synced.`,
+  );
 
-    await writeRandomDocs(keypairB, storageA2, 10);
-    await writeRandomDocs(keypairB, storageD2, 10);
+  await writeRandomDocs(keypairB, storageA2, 10);
+  await writeRandomDocs(keypairB, storageD2, 10);
 
-    await sleep(1000);
+  await sleep(1000);
 
-    const storageADocsAgain = await storageA1.getAllDocs();
-    const storageDDocsAgain = await storageD1.getAllDocs();
+  const storageADocsAgain = await storageA1.getAllDocs();
+  const storageDDocsAgain = await storageD1.getAllDocs();
 
-    assertEquals(storageADocsAgain.length, 32, "Storage A1 contains 32 docs");
-    assertEquals(storageDDocsAgain.length, 32, "Storage D1 contains 32 docs");
+  assertEquals(storageADocsAgain.length, 32, "Storage A1 contains 32 docs");
+  assertEquals(storageDDocsAgain.length, 32, "Storage D1 contains 32 docs");
 
-    assert(
-        await storageHasAllStoragesDocs(storageA1, storageA2),
-        `${ADDRESS_A} storages are synced (again).`,
-    );
-    assert(
-        await storageHasAllStoragesDocs(storageD1, storageD2),
-        `${ADDRESS_D} storages are synced (again).`,
-    );
+  assert(
+    await storageHasAllStoragesDocs(storageA1, storageA2),
+    `${ADDRESS_A} storages are synced (again).`,
+  );
+  assert(
+    await storageHasAllStoragesDocs(storageD1, storageD2),
+    `${ADDRESS_D} storages are synced (again).`,
+  );
 
-    // Close up
+  // Close up
 
-    coordinator.close();
-    localTransport.close();
-    targetTransport.close();
+  coordinator.close();
+  localTransport.close();
+  targetTransport.close();
 });

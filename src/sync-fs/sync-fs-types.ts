@@ -9,33 +9,33 @@ import { AuthorKeypair } from "../util/doc-types.ts";
  * - `allowDirtyDirWithoutManifest`: Whether to allow syncing of a folder with pre-existing contents which has never been synced before.
  */
 export type SyncOptions = {
-    dirPath: string;
-    replica: Replica;
-    keypair: AuthorKeypair;
-    allowDirtyDirWithoutManifest: boolean;
+  dirPath: string;
+  replica: Replica;
+  keypair: AuthorKeypair;
+  allowDirtyDirWithoutManifest: boolean;
 };
 
 export type Manifest = {
-    share: string;
-    entries: Record<string, FileInfoEntry | AbsenceEntry>;
+  share: string;
+  entries: Record<string, FileInfoEntry | AbsenceEntry>;
 };
 
 export interface AbsenceEntry {
-    path: string;
-    fileLastSeenMs: number;
-    noticedOnMs: number;
+  path: string;
+  fileLastSeenMs: number;
+  noticedOnMs: number;
 }
 
 export interface FileInfoEntry {
-    baseName: string;
-    dirName: string;
-    path: string;
-    abspath: string;
-    size: number;
-    contentsSize: number;
-    inode: number | null;
-    atimeMs: number | null; // access time (read)
-    mtimeMs: number | null; // modified time (write)
-    birthtimeMs: number | null; // created time
-    hash: string;
+  baseName: string;
+  dirName: string;
+  path: string;
+  abspath: string;
+  size: number;
+  contentsSize: number;
+  inode: number | null;
+  atimeMs: number | null; // access time (read)
+  mtimeMs: number | null; // modified time (write)
+  birthtimeMs: number | null; // created time
+  hash: string;
 }

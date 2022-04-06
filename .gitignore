@@ -7,3 +7,4 @@ cov_profile/
 cov_html/
 npm/*
 earthstar.bundle.js
+test.db

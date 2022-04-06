@@ -6,61 +6,61 @@ import { SyncerBag } from "../syncer/_syncer-bag.ts";
 import { Rpc } from "./test-deps.ts";
 
 export interface TestScenario {
-    // name of test, to show in list of tests
-    name: string;
+  // name of test, to show in list of tests
+  name: string;
 
-    // which crypto driver to use
-    cryptoDriver: ICryptoDriver;
+  // which crypto driver to use
+  cryptoDriver: ICryptoDriver;
 
-    // is this storage scenario expected to persist (to disk, etc)?
-    persistent: boolean;
+  // is this storage scenario expected to persist (to disk, etc)?
+  persistent: boolean;
 
-    // in here you will instantiate a StorageDriver and then
-    // use it to instantiate a Storage:
-    makeDriver: (share: ShareAddress) => IReplicaDriver;
+  // in here you will instantiate a StorageDriver and then
+  // use it to instantiate a Storage:
+  makeDriver: (share: ShareAddress) => IReplicaDriver;
 
-    // Config keys that come with the driver
-    builtInConfigKeys: string[];
+  // Config keys that come with the driver
+  builtInConfigKeys: string[];
 
-    cleanup?: () => Promise<void>;
+  cleanup?: () => Promise<void>;
 }
 
 export interface CryptoScenario {
-    name: string;
-    driver: ICryptoDriver;
+  name: string;
+  driver: ICryptoDriver;
 }
 
 export interface TransportTestHelper {
-    name: string;
-    clientPeer: Peer;
-    targetPeer: Peer;
-    clientTransport: Rpc.ITransport<SyncerBag>;
-    targetTransport: Rpc.ITransport<SyncerBag>;
-    connect: () => Promise<void>;
-    teardown: () => Promise<void>;
+  name: string;
+  clientPeer: Peer;
+  targetPeer: Peer;
+  clientTransport: Rpc.ITransport<SyncerBag>;
+  targetTransport: Rpc.ITransport<SyncerBag>;
+  connect: () => Promise<void>;
+  teardown: () => Promise<void>;
 }
 
 export interface TransportScenario {
-    name: string;
-    make: (peer: Peer, targetPeer: Peer) => TransportTestHelper;
+  name: string;
+  make: (peer: Peer, targetPeer: Peer) => TransportTestHelper;
 }
 
 export type Syncable = Peer | string;
 
 export interface PeerSyncHelper {
-    name: string;
-    setUpTargetPeers(
-        aStorages: IReplica[],
-        bStorages: IReplica[],
-        cStorages: IReplica[],
-    ): Promise<Syncable[]>;
-    addNonSyncingStorages(
-        dStorages: IReplica[],
-    ): void;
-    close(): Promise<void>;
+  name: string;
+  setUpTargetPeers(
+    aStorages: IReplica[],
+    bStorages: IReplica[],
+    cStorages: IReplica[],
+  ): Promise<Syncable[]>;
+  addNonSyncingStorages(
+    dStorages: IReplica[],
+  ): void;
+  close(): Promise<void>;
 }
 
 export interface PeerSyncScenario {
-    name: string;
-    make: () => PeerSyncHelper;
+  name: string;
+  make: () => PeerSyncHelper;
 }

@@ -68,103 +68,103 @@ let mapdebug = "        🗺";
 export type SuperbusMapEvents = "added" | "changed" | "deleted";
 
 export class SuperbusMap<K extends string, V> {
-    bus: Superbus<string>;
-    _map: Map<K, V>;
-    _sep: string; // character used to separate channel name from id, like 'changed:123'
-    constructor(
-        mapToClone?:
-            | SuperbusMap<K, V>
-            | Map<K, V>
-            | Array<[K, V]>
-            | Iterable<[K, V]>
-            | null
-            | undefined,
-        sep: string = ":",
-    ) {
-        this._sep = sep;
-        if (mapToClone instanceof SuperbusMap) {
-            // note we don't copy the sep char from the other cloned superbusMap
-            this._map = new Map<K, V>(mapToClone._map);
-        } else if (mapToClone != null) {
-            this._map = new Map<K, V>(mapToClone);
-        } else {
-            this._map = new Map<K, V>();
-        }
+  bus: Superbus<string>;
+  _map: Map<K, V>;
+  _sep: string; // character used to separate channel name from id, like 'changed:123'
+  constructor(
+    mapToClone?:
+      | SuperbusMap<K, V>
+      | Map<K, V>
+      | Array<[K, V]>
+      | Iterable<[K, V]>
+      | null
+      | undefined,
+    sep: string = ":",
+  ) {
+    this._sep = sep;
+    if (mapToClone instanceof SuperbusMap) {
+      // note we don't copy the sep char from the other cloned superbusMap
+      this._map = new Map<K, V>(mapToClone._map);
+    } else if (mapToClone != null) {
+      this._map = new Map<K, V>(mapToClone);
+    } else {
+      this._map = new Map<K, V>();
+    }
 
-        this.bus = new Superbus<string>(sep);
-    }
-    // WRITE
-    async set(key: K, value: V): Promise<"added" | "changed" | "unchanged"> {
-        // return:
-        //   if new, 'added'
-        //   if changed, 'changed'
-        //   if same as before, 'unchanged'
-        log(`${mapdebug} set("${key}", ${JSON.stringify(value)})`);
-        let oldValue = this.get(key);
-        this._map.set(key, value);
-        if (oldValue === undefined) {
-            await this.bus.sendAndWait("added" + this._sep + key, {
-                key,
-                value,
-            });
-            return "added";
-        } else {
-            if (!deepEqual(value, oldValue)) {
-                // only send 'changed' when the data is actually different
-                await this.bus.sendAndWait("changed" + this._sep + key, {
-                    key,
-                    value,
-                    oldValue,
-                });
-                return "changed";
-            } else {
-                // no event is sent for this
-                return "unchanged";
-            }
-        }
-    }
-    async clear(): Promise<void> {
-        log(`${mapdebug} clear()`);
-        for (let key of this.keys()) {
-            await this.delete(key);
-        }
-    }
-    async delete(key: K): Promise<boolean> {
-        log(`${mapdebug} delete("${key}")`);
-        let oldValue = this.get(key);
-        if (oldValue === undefined) {
-            log(`${mapdebug} ...delete("${key}") - already gone`);
-            return false;
-        }
-        this._map.delete(key);
-        await this.bus.sendAndWait("deleted" + this._sep + key, {
-            key,
-            oldValue,
+    this.bus = new Superbus<string>(sep);
+  }
+  // WRITE
+  async set(key: K, value: V): Promise<"added" | "changed" | "unchanged"> {
+    // return:
+    //   if new, 'added'
+    //   if changed, 'changed'
+    //   if same as before, 'unchanged'
+    log(`${mapdebug} set("${key}", ${JSON.stringify(value)})`);
+    let oldValue = this.get(key);
+    this._map.set(key, value);
+    if (oldValue === undefined) {
+      await this.bus.sendAndWait("added" + this._sep + key, {
+        key,
+        value,
+      });
+      return "added";
+    } else {
+      if (!deepEqual(value, oldValue)) {
+        // only send 'changed' when the data is actually different
+        await this.bus.sendAndWait("changed" + this._sep + key, {
+          key,
+          value,
+          oldValue,
         });
-        return true;
+        return "changed";
+      } else {
+        // no event is sent for this
+        return "unchanged";
+      }
     }
-    // READ
-    get size(): number {
-        return this._map.size;
+  }
+  async clear(): Promise<void> {
+    log(`${mapdebug} clear()`);
+    for (let key of this.keys()) {
+      await this.delete(key);
     }
-    get(key: K): V | undefined {
-        return this._map.get(key);
+  }
+  async delete(key: K): Promise<boolean> {
+    log(`${mapdebug} delete("${key}")`);
+    let oldValue = this.get(key);
+    if (oldValue === undefined) {
+      log(`${mapdebug} ...delete("${key}") - already gone`);
+      return false;
     }
-    has(key: K): boolean {
-        return this._map.has(key);
-    }
-    keys() {
-        return this._map.keys();
-    }
-    values() {
-        return this._map.values();
-    }
-    entries() {
-        return this._map.entries();
-    }
-    forEach(cb: (value: V, key: K) => void) {
-        this._map.forEach(cb);
-    }
+    this._map.delete(key);
+    await this.bus.sendAndWait("deleted" + this._sep + key, {
+      key,
+      oldValue,
+    });
+    return true;
+  }
+  // READ
+  get size(): number {
+    return this._map.size;
+  }
+  get(key: K): V | undefined {
+    return this._map.get(key);
+  }
+  has(key: K): boolean {
+    return this._map.has(key);
+  }
+  keys() {
+    return this._map.keys();
+  }
+  values() {
+    return this._map.values();
+  }
+  entries() {
+    return this._map.entries();
+  }
+  forEach(cb: (value: V, key: K) => void) {
+    this._map.forEach(cb);
+  }
 }
 
 // all about Maps

@@ -1,8 +1,8 @@
 import { type Buffer } from "https://deno.land/std@0.122.0/node/buffer.ts";
 
 export interface KeyPair {
-    publicKey: Buffer;
-    secretKey: Buffer;
+  publicKey: Buffer;
+  secretKey: Buffer;
 }
 // *** hash ***
 // sha512
@@ -19,41 +19,41 @@ export function crypto_sign_seed_keypair(seed: Buffer): KeyPair;
 export function crypto_sign(message: Buffer, secretKey: Buffer): Buffer;
 export function crypto_sign_open(signed: Buffer, publicKey: Buffer): Buffer;
 export function crypto_sign_detached(
-    message: Buffer,
-    secretKey: Buffer,
+  message: Buffer,
+  secretKey: Buffer,
 ): Buffer;
 export function crypto_sign_verify_detached(
-    signed: Buffer,
-    message: Buffer,
-    publicKey: Buffer,
+  signed: Buffer,
+  message: Buffer,
+  publicKey: Buffer,
 ): Buffer;
 
 // *** Box ***
 export function crypto_box_keypair(): KeyPair;
 export function crypto_box_seed_keypair(seed: Buffer): KeyPair;
 export function crypto_box_easy(
-    data: Buffer,
-    nonce: Buffer,
-    publicKey: Buffer,
-    secretKey: Buffer,
+  data: Buffer,
+  nonce: Buffer,
+  publicKey: Buffer,
+  secretKey: Buffer,
 ): Buffer;
 export function crypto_box_open_easy(
-    boxed: Buffer,
-    nonce: Buffer,
-    publicKey: Buffer,
-    secretKey: Buffer,
+  boxed: Buffer,
+  nonce: Buffer,
+  publicKey: Buffer,
+  secretKey: Buffer,
 ): Buffer;
 
 // *** SecretBox ***
 export function crypto_secretbox_easy(
-    plainText: Buffer,
-    nonce: Buffer,
-    key: Buffer,
+  plainText: Buffer,
+  nonce: Buffer,
+  key: Buffer,
 ): Buffer;
 export function crypto_secretbox_open_easy(
-    encrypted: Buffer,
-    nonce: Buffer,
-    key: Buffer,
+  encrypted: Buffer,
+  nonce: Buffer,
+  key: Buffer,
 ): Buffer;
 
 // *** random bytes ***
@@ -62,9 +62,9 @@ export function randombytes(buf: Buffer): void;
 // *** auth ***
 export function crypto_auth(data: Buffer, key: Buffer): Buffer;
 export function crypto_auth_verify(
-    signed: Buffer,
-    data: Buffer,
-    key: Buffer,
+  signed: Buffer,
+  data: Buffer,
+  key: Buffer,
 ): boolean;
 
 // *** scalar multiplication ***

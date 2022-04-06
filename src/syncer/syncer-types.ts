@@ -6,71 +6,71 @@ import { SyncerBag } from "./_syncer-bag.ts";
 import { type ITransport } from "../../deps.ts";
 
 export interface ISyncer<TransportType extends ITransport<SyncerBag>> {
-    transport: TransportType;
-    close(): void;
+  transport: TransportType;
+  close(): void;
 }
 
 // Salted handshake types
 
 export interface SaltedHandshakeResponse {
-    peerId: PeerId;
-    salt: string;
-    saltedShares: string[];
+  peerId: PeerId;
+  salt: string;
+  saltedShares: string[];
 }
 
 export interface SaltedHandshakeResult {
-    partnerPeerId: PeerId;
-    partnerLastSeenAt: number;
-    commonShares: ShareAddress[];
+  partnerPeerId: PeerId;
+  partnerLastSeenAt: number;
+  commonShares: ShareAddress[];
 }
 
 // Share state types
 
 export interface ShareState {
-    share: ShareAddress;
-    partnerStorageId: ReplicaId;
-    partnerMaxLocalIndexOverall: number;
-    partnerMaxLocalIndexSoFar: number; // -1 if unknown
-    storageId: ReplicaId;
-    lastSeenAt: number;
+  share: ShareAddress;
+  partnerStorageId: ReplicaId;
+  partnerMaxLocalIndexOverall: number;
+  partnerMaxLocalIndexSoFar: number; // -1 if unknown
+  storageId: ReplicaId;
+  lastSeenAt: number;
 }
 
 export type ShareStateFromResponse = Pick<
-    ShareState,
-    "share" | "partnerStorageId" | "partnerMaxLocalIndexOverall"
+  ShareState,
+  "share" | "partnerStorageId" | "partnerMaxLocalIndexOverall"
 >;
 
 export interface AllShareStatesRequest {
-    commonShares: ShareAddress[];
+  commonShares: ShareAddress[];
 }
 export type AllShareStatesResponse = {
-    partnerPeerId: PeerId;
-    shareStates: Record<
-        ShareAddress,
-        ShareStateFromResponse
-    >;
+  partnerPeerId: PeerId;
+  shareStates: Record<
+    ShareAddress,
+    ShareStateFromResponse
+  >;
 };
 export type AllShareStatesResult = Record<
-    ShareAddress,
-    ShareState
+  ShareAddress,
+  ShareState
 >;
 
 // Share query types
 
 export interface ShareQueryRequest {
-    share: ShareAddress;
-    storageId: ReplicaId;
-    query: Query;
+  share: ShareAddress;
+  storageId: ReplicaId;
+  query: Query;
 }
 export interface ShareQueryResponse {
-    share: ShareAddress;
-    storageId: ReplicaId;
-    partnerMaxLocalIndexOverall: number;
-    docs: Doc[];
+  share: ShareAddress;
+  storageId: ReplicaId;
+  partnerMaxLocalIndexOverall: number;
+  docs: Doc[];
 }
 
 export interface ShareQueryResult {
-    pulled: number;
-    lastSeenAt: number;
-    shareStates: Record<ShareAddress, ShareState>;
+  pulled: number;
+  lastSeenAt: number;
+  shareStates: Record<ShareAddress, ShareState>;
 }

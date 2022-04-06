@@ -6,22 +6,22 @@ import { deepEqual } from "../util/misc.ts";
 export type SortOrder = "ASC" | "DESC";
 
 export function sortedInPlace<T>(array: T[]): T[] {
-    array.sort();
-    return array;
+  array.sort();
+  return array;
 }
 
 // myStrings.sort(baseCompare)
 export function compareBasic(a: any, b: any, order: SortOrder = "ASC"): Cmp {
-    if (deepEqual(a, b)) return Cmp.EQ;
-    if (order === "ASC" || order === undefined) {
-        return (a < b) ? Cmp.LT : Cmp.GT;
-    } else if (order === "DESC") {
-        return (a > b) ? Cmp.LT : Cmp.GT;
-    } else {
-        throw new Error(
-            "unexpected sort order to compareBasic: " + JSON.stringify(order),
-        );
-    }
+  if (deepEqual(a, b)) return Cmp.EQ;
+  if (order === "ASC" || order === undefined) {
+    return (a < b) ? Cmp.LT : Cmp.GT;
+  } else if (order === "DESC") {
+    return (a > b) ? Cmp.LT : Cmp.GT;
+  } else {
+    throw new Error(
+      "unexpected sort order to compareBasic: " + JSON.stringify(order),
+    );
+  }
 }
 
 /**
@@ -62,40 +62,42 @@ export function compareBasic(a: any, b: any, order: SortOrder = "ASC"): Cmp {
  *  - [2],  // but first element is still sorted ASC
  */
 export function compareArrays(
-    a: any[],
-    b: any[],
-    sortOrders?: SortOrder[],
+  a: any[],
+  b: any[],
+  sortOrders?: SortOrder[],
 ): Cmp {
-    let minLen = Math.min(a.length, b.length);
-    for (let ii = 0; ii < minLen; ii++) {
-        let sortOrder = sortOrders?.[ii] ?? "ASC"; // default to ASC if sortOrders is undefined or too short
-        let elemCmp = compareBasic(a[ii], b[ii], sortOrder);
-        if (elemCmp !== Cmp.EQ) return elemCmp;
-    }
-    // arrays are the same length, and all elements are the same
-    if (a.length === b.length) return Cmp.EQ;
-
-    // arrays are not the same length.
-    // use the sort order for one past the end of the shorter array,
-    // and apply it to the lengths of the array (so that DESC makes the
-    // shorter one come first).
-    let ii = Math.min(a.length, b.length);
+  let minLen = Math.min(a.length, b.length);
+  for (let ii = 0; ii < minLen; ii++) {
     let sortOrder = sortOrders?.[ii] ?? "ASC"; // default to ASC if sortOrders is undefined or too short
-    return compareBasic(a.length, b.length, sortOrder);
+    let elemCmp = compareBasic(a[ii], b[ii], sortOrder);
+    if (elemCmp !== Cmp.EQ) return elemCmp;
+  }
+  // arrays are the same length, and all elements are the same
+  if (a.length === b.length) return Cmp.EQ;
+
+  // arrays are not the same length.
+  // use the sort order for one past the end of the shorter array,
+  // and apply it to the lengths of the array (so that DESC makes the
+  // shorter one come first).
+  let ii = Math.min(a.length, b.length);
+  let sortOrder = sortOrders?.[ii] ?? "ASC"; // default to ASC if sortOrders is undefined or too short
+  return compareBasic(a.length, b.length, sortOrder);
 }
 
 // myArray.sort(compareByObjKey('signature', 'ASC'));
 export function compareByObjKey(key: string, sortOrder: SortOrder = "ASC") {
-    return (a: Record<string, any>, b: Record<string, any>): Cmp =>
-        compareBasic(a[key], b[key], sortOrder);
+  return (a: Record<string, any>, b: Record<string, any>): Cmp =>
+    compareBasic(a[key], b[key], sortOrder);
 }
 
 // myArray.sort(compareByFn((x) => x.signature + x.path));
 export function compareByFn(fn: (x: any) => any) {
-    return (a: Record<string, any>, b: Record<string, any>): Cmp => compareBasic(fn(a), fn(b));
+  return (a: Record<string, any>, b: Record<string, any>): Cmp =>
+    compareBasic(fn(a), fn(b));
 }
 
 // myArray.sort(compareByObjArrayFn((x) => [x.signature, x.path]));
 export function compareByObjArrayFn(fn: (x: any) => any[]) {
-    return (a: Record<string, any>, b: Record<string, any>): Cmp => compareArrays(fn(a), fn(b));
+  return (a: Record<string, any>, b: Record<string, any>): Cmp =>
+    compareArrays(fn(a), fn(b));
 }

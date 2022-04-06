@@ -11,8 +11,8 @@ export type SyncOrAsyncCallback<T> = (data: T) => Promise<void> | void;
 export type ClassThatImplements<T> = new (...args: any[]) => T;
 
 export enum Cmp {
-    // this sorts ascendingly
-    LT = -1,
-    EQ = 0,
-    GT = 1,
+  // this sorts ascendingly
+  LT = -1,
+  EQ = 0,
+  GT = 1,
 }
