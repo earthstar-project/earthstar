@@ -108,9 +108,32 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Throws if you try to change a file at an owned path
   await test.step("throws when you try to change a file at someone else's owned path", async () => {
+    const replica = makeReplica(TEST_SHARE);
+
     const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
 
-    await ensureDir(ownedPath);
+    await replica.set(keypairB, {
+      path: `/~${keypairB.address}/mine.txt`,
+      content: "Only Keypair B can change this",
+      format: "es.4",
+    });
+
+    // Sync the owned doc to the fs.
+    await syncReplicaAndFsDir({
+      dirPath: TEST_DIR,
+      allowDirtyDirWithoutManifest: true,
+      keypair: keypairA,
+      replica: replica,
+    });
+
+    // This should not throw.
+    await syncReplicaAndFsDir({
+      dirPath: TEST_DIR,
+      allowDirtyDirWithoutManifest: true,
+      keypair: keypairA,
+      replica: replica,
+    });
+
     await Deno.writeTextFile(
       join(ownedPath, "mine.txt"),
       "Ho",
@@ -122,7 +145,7 @@ Deno.test("syncShareAndDir", async (test) => {
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
           keypair: keypairA,
-          replica: makeReplica(TEST_SHARE),
+          replica: replica,
         });
       },
       undefined,
@@ -339,18 +362,13 @@ Deno.test("syncShareAndDir", async (test) => {
       format: "es.4",
     });
 
-    await replica.set(keypairB, {
-      content: "",
-      path: "/sub/to-delete.txt",
-      format: "es.4",
-    });
+    await Deno.remove(join(TEST_DIR, "sub", "to-delete.txt"));
 
     await replica.set(keypairB, {
       content: "",
       path: "/sub2/to-delete.txt",
       format: "es.4",
     });
-
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
@@ -364,7 +382,7 @@ Deno.test("syncShareAndDir", async (test) => {
       },
       undefined,
       undefined,
-      "/to-delete.txt is gone",
+      "stat /to-delete.txt",
     );
 
     await assertRejects(
@@ -373,7 +391,7 @@ Deno.test("syncShareAndDir", async (test) => {
       },
       undefined,
       undefined,
-      "/sub/to-delete.txt is gone",
+      "stat /sub/to-delete.txt",
     );
 
     await assertRejects(
@@ -382,7 +400,7 @@ Deno.test("syncShareAndDir", async (test) => {
       },
       undefined,
       undefined,
-      `tried to read deleted ${join(TEST_DIR, "sub")} folder`,
+      `stat /sub/ dir`,
     );
 
     await assertRejects(
@@ -391,7 +409,7 @@ Deno.test("syncShareAndDir", async (test) => {
       },
       undefined,
       undefined,
-      "/sub2/to-delete.txt is gone",
+      "stat /sub2/to-delete.txt",
     );
 
     assert(await Deno.stat(join(TEST_DIR, "sub2", "dont-delete.txt")));

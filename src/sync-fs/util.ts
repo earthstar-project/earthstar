@@ -4,6 +4,7 @@ import {
   dirname,
   extname,
   join,
+  parse,
 } from "https://deno.land/std@0.132.0/path/mod.ts";
 import {
   decode,
@@ -153,7 +154,7 @@ export async function writeDocToDir(doc: Doc, dir: string) {
   if (doc.content.length === 0) {
     try {
       await Deno.remove(join(dir, doc.path));
-      return removeEmptyDir(enclosingDir);
+      return removeEmptyDir(enclosingDir, dir);
     } catch {
       // Document is gone from the FS already.
       return;
@@ -171,11 +172,13 @@ export async function writeDocToDir(doc: Doc, dir: string) {
   return Deno.writeTextFile(pathToWrite, doc.content);
 }
 
-export async function removeEmptyDir(dir: string) {
+export async function removeEmptyDir(dir: string, rootDir: string) {
   try {
-    await Deno.remove(dir);
+    if (dir !== rootDir) {
+      await Deno.remove(dir);
+    }
   } catch {
-    // There was something in there.
+    // There was something there. That's fine.
   }
 }
 
@@ -183,8 +186,18 @@ export async function writeEntryToReplica(
   entry: FileInfoEntry | AbsenceEntry,
   replica: Replica,
   keypair: AuthorKeypair,
+  rootDir: string,
 ) {
+  const correspondingDoc = await replica.getLatestDocAtPath(entry.path);
+
   if (isAbsenceEntry(entry)) {
+    if (
+      correspondingDoc &&
+      correspondingDoc.timestamp > entry.fileLastSeenMs * 1000
+    ) {
+      return;
+    }
+
     return replica.set(keypair, {
       path: entry.path,
       content: "",
@@ -193,13 +206,11 @@ export async function writeEntryToReplica(
   }
 
   const extension = extname(entry.path);
-
-  const correspondingDoc = await replica.getLatestDocAtPath(entry.path);
   const deleteAfter = correspondingDoc ? correspondingDoc.deleteAfter : null;
 
   if (correspondingDoc && deleteAfter && Date.now() * 1000 > deleteAfter) {
     await Deno.remove(entry.abspath);
-    return removeEmptyDir(entry.dirName);
+    return removeEmptyDir(entry.dirName, rootDir);
   }
 
   if (!bytesExtensions.includes(extension)) {
