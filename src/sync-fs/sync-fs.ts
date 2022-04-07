@@ -250,7 +250,13 @@ export async function syncReplicaAndFsDir(
       const sizeIsOkay = entry.contentsSize <= ES4_MAX_CONTENT_LENGTH;
 
       if (isErr(canWriteToPath)) {
-        errors.push(canWriteToPath);
+        const correspondingDoc = await opts.replica.getLatestDocAtPath(
+          entry.path,
+        );
+
+        if (!correspondingDoc || correspondingDoc?.contentHash !== entry.hash) {
+          errors.push(canWriteToPath);
+        }
       }
 
       if (isErr(pathIsValid)) {
@@ -271,8 +277,6 @@ export async function syncReplicaAndFsDir(
     throw errors[0];
   }
 
-  const latestDocsBeforeMerge = await opts.replica.getLatestDocs();
-
   for (const path in reconciledManifest.entries) {
     const entry = reconciledManifest.entries[path];
 
@@ -287,21 +291,34 @@ export async function syncReplicaAndFsDir(
           Date.now() * 1000 > correspondingEphemeralDoc.deleteAfter)
       ) {
         await Deno.remove(entry.abspath);
-        await removeEmptyDir(entry.dirName);
+        await removeEmptyDir(entry.dirName, opts.dirPath);
         continue;
       }
     }
 
-    await writeEntryToReplica(entry, opts.replica, opts.keypair);
+    await writeEntryToReplica(entry, opts.replica, opts.keypair, opts.dirPath);
   }
 
-  for (const doc of latestDocsBeforeMerge) {
+  const latestDocs = await opts.replica.getLatestDocs();
+
+  for (const doc of latestDocs) {
     // Make sure not to re-write any ephemeral docs to the filesystem.
     if (doc.deleteAfter && Date.now() * 1000 > doc.deleteAfter) {
       return;
     }
 
     await writeDocToDir(doc, opts.dirPath);
+  }
+
+  // Wipe any empty dirs
+  try {
+    for await (const entry of walk(opts.dirPath)) {
+      if (entry.isDirectory) {
+        await removeEmptyDir(entry.path, opts.dirPath);
+      }
+    }
+  } catch {
+    // Not sure why this fails sometimes...
   }
 
   const manifestAfterOps = await reconcileManifestWithDirContents(
