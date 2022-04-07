@@ -14,6 +14,7 @@ import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts
 import {
   bytesExtensions,
   ES4_MAX_CONTENT_LENGTH,
+  IGNORED_FILES,
   MANIFEST_FILE_NAME,
 } from "./constants.ts";
 import { FileInfoEntry, Manifest, SyncOptions } from "./sync-fs-types.ts";
@@ -56,7 +57,7 @@ export async function reconcileManifestWithDirContents(
   const fileEntries: Record<string, FileInfoEntry> = {};
 
   for await (const entry of walk(fsDirPath)) {
-    if (entry.name === MANIFEST_FILE_NAME) {
+    if (IGNORED_FILES.includes(entry.name)) {
       continue;
     }
 
