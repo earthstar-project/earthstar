@@ -166,7 +166,6 @@ Deno.test("syncShareAndDir", async (test) => {
       share: TEST_SHARE,
       entries: {
         [`/~${keypairB.address}/mine.txt`]: {
-          noticedOnMs: 0,
           fileLastSeenMs: 0,
           path: `/~${keypairB.address}/mine.txt`,
         },

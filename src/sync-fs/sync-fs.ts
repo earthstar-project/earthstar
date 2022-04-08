@@ -1,7 +1,6 @@
 import { encode } from "https://deno.land/std@0.126.0/encoding/base64.ts";
 import { walk } from "https://deno.land/std@0.132.0/fs/mod.ts";
 import {
-  basename,
   dirname,
   extname,
   join,
@@ -80,14 +79,11 @@ export async function reconcileManifestWithDirContents(
       const esPath = `/${relative(fsDirPath, path)}`;
 
       const record: FileInfoEntry = {
-        baseName: basename(path),
         dirName: dirname(path),
         path: esPath,
         abspath: resolve(path),
         size: stat.size,
         contentsSize: textEncoder.encode(contents).length,
-        inode: stat.ino,
-        atimeMs: stat.atime?.getTime() || null,
         mtimeMs: stat.mtime?.getTime() || null,
         birthtimeMs: stat.birthtime?.getTime() || null,
         hash,
@@ -113,7 +109,6 @@ export async function reconcileManifestWithDirContents(
       }
 
       return {
-        noticedOnMs: Date.now(),
         fileLastSeenMs: entryA.mtimeMs || 0,
         path: entryA.path,
       };

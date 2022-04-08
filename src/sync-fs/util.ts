@@ -18,7 +18,7 @@ import { Replica } from "../replica/replica.ts";
 export function isAbsenceEntry(
   o: AbsenceEntry | FileInfoEntry | Doc,
 ): o is AbsenceEntry {
-  if ("noticedOnMs" in o) {
+  if ("fileLastSeenMs" in o) {
     return true;
   }
 
@@ -28,7 +28,7 @@ export function isAbsenceEntry(
 export function isFileInfoEntry(
   o: AbsenceEntry | FileInfoEntry | Doc,
 ): o is FileInfoEntry {
-  if ("inode" in o) {
+  if ("abspath" in o) {
     return true;
   }
 
