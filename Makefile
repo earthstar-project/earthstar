@@ -7,10 +7,10 @@ example:
 	deno run ./example-app.ts
 
 test:
-	deno test --allow-net --allow-read --allow-write src
+	deno test --allow-all src
 
 test-watch:
-	deno test --watch --allow-net --allow-read src 
+	deno test --watch --allow-all src 
 
 test-coverage:
 	deno test --no-check --coverage=cov_profile src

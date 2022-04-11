@@ -152,6 +152,58 @@ Deno.test("syncShareAndDir", async (test) => {
       `author ${keypairA.address} can't write to path`,
       "throws when trying to write a file at someone's else's own path",
     );
+
+    replica.close(true);
+
+    await emptyDir(TEST_DIR);
+
+    const replica2 = makeReplica(TEST_SHARE);
+
+    // Want to guard against a specific sequence of events.
+    await replica2.set(keypairB, {
+      path: `/~${keypairB.address}/special-case.txt`,
+      content: "A",
+      format: "es.4",
+    });
+
+    await syncReplicaAndFsDir({
+      dirPath: TEST_DIR,
+      allowDirtyDirWithoutManifest: true,
+      keypair: keypairA,
+      replica: replica2,
+    });
+
+    await replica2.set(keypairB, {
+      path: `/~${keypairB.address}/special-case.txt`,
+      content: "B",
+      format: "es.4",
+    });
+
+    const specialCasePath = join(
+      TEST_DIR,
+      `~${keypairB.address}`,
+      `special-case.txt`,
+    );
+
+    const touch = Deno.run({ cmd: ["touch", specialCasePath] });
+    await touch.status();
+    touch.close();
+
+    // This shouldn't throw.
+    await syncReplicaAndFsDir({
+      dirPath: TEST_DIR,
+      allowDirtyDirWithoutManifest: true,
+      keypair: keypairA,
+      replica: replica2,
+    });
+
+    const specialContents = await Deno.readTextFile(specialCasePath);
+
+    assertEquals(
+      specialContents,
+      "B",
+      "Document at owned path is new value, even though it was modified out of order.",
+    );
   });
 
   await emptyDir(TEST_DIR);
@@ -166,7 +218,6 @@ Deno.test("syncShareAndDir", async (test) => {
       share: TEST_SHARE,
       entries: {
         [`/~${keypairB.address}/mine.txt`]: {
-          noticedOnMs: 0,
           fileLastSeenMs: 0,
           path: `/~${keypairB.address}/mine.txt`,
         },

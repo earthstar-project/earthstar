@@ -23,18 +23,14 @@ export type Manifest = {
 export interface AbsenceEntry {
   path: string;
   fileLastSeenMs: number;
-  noticedOnMs: number;
 }
 
 export interface FileInfoEntry {
-  baseName: string;
   dirName: string;
   path: string;
   abspath: string;
   size: number;
   contentsSize: number;
-  inode: number | null;
-  atimeMs: number | null; // access time (read)
   mtimeMs: number | null; // modified time (write)
   birthtimeMs: number | null; // created time
   hash: string;
