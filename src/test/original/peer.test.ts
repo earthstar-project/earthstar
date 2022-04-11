@@ -14,44 +14,47 @@ import { TestScenario } from "../test-scenario-types.ts";
 
 import { Logger } from "../../util/log.ts";
 
-let loggerTest = new Logger("test", "whiteBright");
-let loggerTestCb = new Logger("test cb", "white");
-let J = JSON.stringify;
+const loggerTest = new Logger("test", "whiteBright");
+const loggerTestCb = new Logger("test cb", "white");
+const J = JSON.stringify;
 
 //setDefaultLogLevel(LogLevel.None);
 //setLogLevel('peer', LogLevel.Debug);
 
 //================================================================================
 
-export let runPeerTests = (
+function runPeerTests(
   scenario: TestScenario,
-) => {
+) {
   const { name, makeDriver } = scenario;
 
-  let TEST_NAME = "peer shared tests";
-  let SUBTEST_NAME = name;
+  const SUBTEST_NAME = name;
 
   function makeStorage(share: ShareAddress): IReplica {
-    let stDriver = makeDriver(share);
-    let storage = new Replica(share, FormatValidatorEs4, stDriver);
+    const stDriver = makeDriver(share);
+    const storage = new Replica(share, FormatValidatorEs4, stDriver);
     return storage;
   }
 
   Deno.test(SUBTEST_NAME + ": peer basics", async () => {
-    let initialCryptoDriver = GlobalCryptoDriver;
+    const initialCryptoDriver = GlobalCryptoDriver;
 
-    let shares = [
+    const shares = [
       "+one.ws",
       "+two.ws",
       "+three.ws",
     ];
-    let storages = shares.map((ws) => makeStorage(ws));
+    const storages = shares.map((ws) => makeStorage(ws));
 
-    let sortedShares = sortedInPlace([...shares]);
-    let sortedStorages = [...storages];
+    const sortedShares = sortedInPlace([...shares]);
+    const sortedStorages = [...storages];
     sortedStorages.sort(compareByFn((storage) => storage.share));
 
-    let peer = new Peer();
+    const peer = new Peer();
+
+    peer.syncerStatuses.bus.on("*", () => {
+      console.log(Array.from(peer.syncerStatuses.entries()));
+    });
 
     assert(
       typeof peer.peerId === "string" && peer.peerId.length > 5,
@@ -67,7 +70,7 @@ export let runPeerTests = (
     assertEquals(peer.replicas(), [], "has no replicas");
     assertEquals(peer.size(), 0, "size is zero");
 
-    for (let storage of storages) {
+    for (const storage of storages) {
       await peer.addReplica(storage);
     }
 
@@ -129,7 +132,7 @@ export let runPeerTests = (
 
     // TODO: eventually test peer.bus events when we have them
   });
-};
+}
 
 for (const scenario of testScenarios) {
   runPeerTests(scenario);

@@ -1,5 +1,7 @@
 # next
 
+- Feature: Peer.syncStatuses. Subscribable map of Peer's sync operations'
+  statuses.
 - Feature: Syncer.syncStatuses. Subscribable map of syncer's connections' sync
   statuses.
 - Feature: SyncCoordinator.syncStatuses. Subscribable map of coordinator's
