@@ -39,19 +39,19 @@ Deno.test("SyncCoordinator", async () => {
 
   const [storageA1, storageA2] = makeNReplicas(ADDRESS_A, 2);
   const [storageB1] = makeNReplicas(ADDRESS_B, 1);
-  const [storageC2] = makeNReplicas(ADDRESS_C, 1);
+  const [storageC1, storageC2] = makeNReplicas(ADDRESS_C, 2);
   const [storageD1, storageD2] = makeNReplicas(ADDRESS_D, 2);
 
   const peer = new Peer();
   const targetPeer = new Peer();
 
-  peer.addReplica(storageA1);
-  peer.addReplica(storageB1);
-  peer.addReplica(storageD1);
+  await peer.addReplica(storageA1);
+  await peer.addReplica(storageB1);
+  await peer.addReplica(storageD1);
 
-  targetPeer.addReplica(storageA2);
-  targetPeer.addReplica(storageC2);
-  targetPeer.addReplica(storageD2);
+  await targetPeer.addReplica(storageA2);
+  await targetPeer.addReplica(storageC2);
+  await targetPeer.addReplica(storageD2);
 
   // Write some docs to the same path so that we test all history being synced.
   await storageA1.set(keypairA, {
@@ -138,6 +138,24 @@ Deno.test("SyncCoordinator", async () => {
   assert(
     await storageHasAllStoragesDocs(storageD1, storageD2),
     `${ADDRESS_D} storages are synced (again).`,
+  );
+
+  // Test addition of new replicas.
+  await writeRandomDocs(keypairA, storageC1, 10);
+  await writeRandomDocs(keypairB, storageC2, 10);
+
+  await peer.addReplica(storageC1);
+
+  await sleep(1000);
+
+  assert(
+    coordinator.commonShares.includes(ADDRESS_C),
+    `Common shares now inlududes ${ADDRESS_C}`,
+  );
+
+  assert(
+    await storageHasAllStoragesDocs(storageC1, storageC2),
+    `${ADDRESS_C} storages are synced.`,
   );
 
   // Close up
