@@ -10,6 +10,11 @@ export interface ISyncer<TransportType extends ITransport<SyncerBag>> {
   close(): void;
 }
 
+export interface SyncSessionStatus {
+  ingestedCount: number;
+  isCaughtUp: boolean;
+}
+
 // Salted handshake types
 
 export interface SaltedHandshakeResponse {
@@ -71,6 +76,7 @@ export interface ShareQueryResponse {
 
 export interface ShareQueryResult {
   pulled: number;
+  ingested: number;
   lastSeenAt: number;
   shareStates: Record<ShareAddress, ShareState>;
 }

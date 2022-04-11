@@ -1,8 +1,12 @@
-import { type IConnection } from "../../deps.ts";
+import { type IConnection, Simplebus, SuperbusMap } from "../../deps.ts";
 import { Peer } from "../peer/peer.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
 import { ShareAddress } from "../util/doc-types.ts";
-import { ShareQueryRequest, ShareState } from "./syncer-types.ts";
+import {
+  ShareQueryRequest,
+  ShareState,
+  SyncSessionStatus,
+} from "./syncer-types.ts";
 
 /** Orchestrates different requests in order to syncrhronise a Peer using a connection */
 export class SyncCoordinator {
@@ -12,9 +16,15 @@ export class SyncCoordinator {
   private timeout: number | null = null;
   private peerReplicaMapUnsub: () => void;
 
-  commonShares: ShareAddress[] = [];
+  syncStatuses: SuperbusMap<ShareAddress, SyncSessionStatus> =
+    new SuperbusMap();
+
   partnerLastSeenAt: number | null = null;
   state: "ready" | "active" | "closed" = "ready";
+
+  get commonShares() {
+    return Array.from(this.syncStatuses.keys());
+  }
 
   constructor(peer: Peer, connection: IConnection<SyncerBag>) {
     this.syncerBag = makeSyncerBag(peer);
@@ -22,7 +32,7 @@ export class SyncCoordinator {
 
     this.peerReplicaMapUnsub = peer.replicaMap.bus.on("*", () => {
       this.performSaltedHandshake().then(() => {
-        this._getShareStates();
+        this.getShareStates();
       });
     });
   }
@@ -41,7 +51,7 @@ export class SyncCoordinator {
       this.close();
     });
 
-    await this._getShareStates();
+    await this.getShareStates();
     await this.pull();
   }
 
@@ -55,7 +65,23 @@ export class SyncCoordinator {
     const { commonShares, partnerLastSeenAt } = await this.syncerBag
       .processSaltedHandshake(saltedHandshakeRes);
 
-    this.commonShares = commonShares;
+    // Add a new sync status entry for each share
+    for (const share of commonShares) {
+      if (!this.syncStatuses.has(share)) {
+        await this.syncStatuses.set(share, {
+          ingestedCount: 0,
+          isCaughtUp: false,
+        });
+      }
+    }
+
+    // Make sure to remove any status entries for shares no longer in common
+    for (const shareAddress in this.syncStatuses) {
+      if (!commonShares.includes(shareAddress)) {
+        await this.syncStatuses.delete(shareAddress);
+      }
+    }
+
     this.partnerLastSeenAt = partnerLastSeenAt;
   }
 
@@ -65,10 +91,10 @@ export class SyncCoordinator {
     }
 
     const docPulls = Object.keys(this.shareStates).map((key) => {
-      return new Promise((resolve) => {
+      return new Promise<void>((resolve) => {
         const state = this.shareStates[key];
 
-        this._pullDocs({
+        this.pullDocs({
           query: {
             historyMode: "all",
             orderBy: "localIndex ASC",
@@ -78,7 +104,22 @@ export class SyncCoordinator {
           },
           storageId: state.partnerStorageId,
           share: state.share,
-        }).then(resolve);
+        }).then((result) => {
+          const syncStatus = this.syncStatuses.get(result.share);
+
+          if (!syncStatus) {
+            return;
+          }
+
+          this.syncStatuses.set(result.share, {
+            ingestedCount: syncStatus.ingestedCount + result.ingested,
+            isCaughtUp: result.pulled === 0
+              ? syncStatus.isCaughtUp === false
+              : syncStatus.isCaughtUp === false,
+          });
+
+          resolve();
+        });
       });
     });
 
@@ -87,9 +128,9 @@ export class SyncCoordinator {
     this.timeout = setTimeout(() => this.pull(), 1000);
   }
 
-  async _getShareStates() {
+  private async getShareStates() {
     const shareStatesRequest = {
-      commonShares: this.commonShares,
+      commonShares: Array.from(this.syncStatuses.keys()),
     };
 
     const shareStatesResponse = await this.connection.request(
@@ -109,25 +150,27 @@ export class SyncCoordinator {
     this.shareStates = shareStates;
   }
 
-  async _pullDocs(shareQuery: ShareQueryRequest): Promise<number> {
+  private async pullDocs(
+    shareQuery: ShareQueryRequest,
+  ): Promise<{ pulled: number; ingested: number; share: string }> {
     const queryResponse = await this.connection.request(
       "serveShareQuery",
       shareQuery,
     );
 
-    const { lastSeenAt, shareStates, pulled } = await this.syncerBag
+    const { lastSeenAt, shareStates, pulled, ingested } = await this.syncerBag
       .processShareQuery(
         this.shareStates,
         queryResponse,
       );
 
-    this._mergeShareStates(shareStates);
+    this.mergeShareStates(shareStates);
     this.partnerLastSeenAt = lastSeenAt;
 
-    return pulled;
+    return { pulled, ingested, share: shareQuery.share };
   }
 
-  _mergeShareStates(newShareStates: Record<string, ShareState>) {
+  private mergeShareStates(newShareStates: Record<string, ShareState>) {
     const nextShareStates: Record<string, ShareState> = {};
 
     // Because pulls can happen asynchronously, they may return a lower partnerMaxLocalIndexOverall / soFar than the one saved in the coordinator's state.

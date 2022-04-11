@@ -220,7 +220,7 @@ export function makeSyncerBag(peer: Peer) {
       // For each doc create a promise for ingesting it.
       const ingests = docs.map((doc) => {
         return new Promise<
-          { pulled: boolean; localIndex: number }
+          { pulled: boolean; ingested: boolean; localIndex: number }
         >((resolve, reject) => {
           // get the share every time in case something else is changing it?
           const shareState = existingShareStates[share];
@@ -247,11 +247,16 @@ export function makeSyncerBag(peer: Peer) {
               // in which case we should stop and try later, or if it's
               // invalid for another reason, in which case we should ignore it
               // and continue.
-              return resolve({ pulled: false, localIndex: -1 });
+              return resolve({
+                pulled: false,
+                ingested: false,
+                localIndex: -1,
+              });
             }
 
             return resolve({
               pulled: true,
+              ingested: ingestEvent.kind === "success",
               localIndex: doc._localIndex ?? -1,
             });
           });
@@ -260,9 +265,11 @@ export function makeSyncerBag(peer: Peer) {
 
       const ingestResults = await Promise.all(ingests);
       const pulled = ingestResults.filter(({ pulled }) => pulled);
+      const ingested = ingestResults.filter(({ ingested }) => ingested);
 
       return {
         pulled: pulled.length,
+        ingested: ingested.length,
         lastSeenAt: microsecondNow(),
         shareStates: {
           ...existingShareStates,

@@ -120,6 +120,11 @@ Deno.test("SyncCoordinator", async () => {
     `${ADDRESS_D} storages are synced.`,
   );
 
+  assertEquals(Array.from(coordinator.syncStatuses.entries()), [
+    ["+apples.a123", { ingestedCount: 11, isCaughtUp: true }],
+    ["+dates.d456", { ingestedCount: 11, isCaughtUp: true }],
+  ], "Sync status map is correct after initial sync");
+
   await writeRandomDocs(keypairB, storageA2, 10);
   await writeRandomDocs(keypairB, storageD2, 10);
 
@@ -157,6 +162,12 @@ Deno.test("SyncCoordinator", async () => {
     await storageHasAllStoragesDocs(storageC1, storageC2),
     `${ADDRESS_C} storages are synced.`,
   );
+
+  assertEquals(Array.from(coordinator.syncStatuses.entries()), [
+    ["+apples.a123", { ingestedCount: 21, isCaughtUp: true }],
+    ["+dates.d456", { ingestedCount: 21, isCaughtUp: true }],
+    ["+coconuts.c345", { ingestedCount: 10, isCaughtUp: true }],
+  ], "Sync status map is correct after initial sync");
 
   // Close up
 
