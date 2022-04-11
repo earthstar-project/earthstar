@@ -135,7 +135,9 @@ export async function reconcileManifestWithDirContents(
         entryB.mtimeMs || 0,
       );
 
-      if (latestA > latestB) {
+      // If entry a has been modified more recently, it should win.
+      // But if the content hasn't changed, we want to preserve the old timestamp.
+      if (latestA > latestB || entryA.hash === entryB.hash) {
         return entryA;
       }
 
@@ -250,7 +252,17 @@ export async function syncReplicaAndFsDir(
           entry.path,
         );
 
-        if (!correspondingDoc || correspondingDoc?.contentHash !== entry.hash) {
+        if (!correspondingDoc) {
+          errors.push(canWriteToPath);
+        }
+
+        // Only push this error if the corresponding doc's timestamp is older than the fileinfoentry's
+        // AND if the hash is different.
+        if (
+          correspondingDoc && entry.mtimeMs &&
+          (entry.mtimeMs * 1000 > correspondingDoc.timestamp &&
+            correspondingDoc.contentHash !== entry.hash)
+        ) {
           errors.push(canWriteToPath);
         }
       }
