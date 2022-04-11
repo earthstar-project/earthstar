@@ -16,12 +16,14 @@ export class SyncCoordinator {
   private timeout: number | null = null;
   private peerReplicaMapUnsub: () => void;
 
+  /** A subscribable map of shares and the status of their synchronisation operations. */
   syncStatuses: SuperbusMap<ShareAddress, SyncSessionStatus> =
     new SuperbusMap();
 
   partnerLastSeenAt: number | null = null;
   state: "ready" | "active" | "closed" = "ready";
 
+  /** The shares which this SyncCoordinator has in common with the peer at the other end of the connection. */
   get commonShares() {
     return Array.from(this.syncStatuses.keys());
   }
@@ -111,11 +113,19 @@ export class SyncCoordinator {
             return;
           }
 
+          let nextIsCaughtUp = syncStatus.isCaughtUp;
+
+          if (result.pulled === 0 && syncStatus.isCaughtUp === false) {
+            nextIsCaughtUp = true;
+          }
+
+          if (result.pulled > 0 && syncStatus.isCaughtUp === true) {
+            nextIsCaughtUp = false;
+          }
+
           this.syncStatuses.set(result.share, {
             ingestedCount: syncStatus.ingestedCount + result.ingested,
-            isCaughtUp: result.pulled === 0
-              ? syncStatus.isCaughtUp === false
-              : syncStatus.isCaughtUp === false,
+            isCaughtUp: nextIsCaughtUp,
           });
 
           resolve();

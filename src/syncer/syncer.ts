@@ -1,9 +1,10 @@
 import { Peer } from "../peer/peer.ts";
 import { PeerId } from "../peer/peer-types.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
-import { type ITransport } from "../../deps.ts";
+import { type ITransport, SuperbusMap } from "../../deps.ts";
 import { SyncCoordinator } from "./sync-coordinator.ts";
-import { ISyncer } from "./syncer-types.ts";
+import { ISyncer, SyncSessionStatus } from "./syncer-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 
 /** A generic syncer which can be used with any kind of Transport.
  */
@@ -11,8 +12,14 @@ export class Syncer<TransportType extends ITransport<SyncerBag>>
   implements ISyncer<TransportType> {
   /** The transport used by the syncer. Can be used to add new connections. */
   transport: TransportType;
-  _coordinators: Map<PeerId, SyncCoordinator> = new Map();
-  _peer: Peer;
+  private coordinators: Map<PeerId, SyncCoordinator> = new Map();
+  private peer: Peer;
+
+  /** A subscribable map containing the syncer's connections' sync statuses. */
+  syncStatuses: SuperbusMap<
+    string,
+    Record<ShareAddress, SyncSessionStatus>
+  > = new SuperbusMap();
 
   /**
    * Instantiate a new Syncer
@@ -23,34 +30,46 @@ export class Syncer<TransportType extends ITransport<SyncerBag>>
     peer: Peer,
     makeTransport: (methods: SyncerBag) => TransportType,
   ) {
-    this._peer = peer;
+    this.peer = peer;
 
     this.transport = makeTransport(makeSyncerBag(peer));
 
     this.transport.connections.onAdd((connection) => {
-      const coordinator = new SyncCoordinator(this._peer, connection);
-      this._coordinators.set(connection._deviceId, coordinator);
+      const coordinator = new SyncCoordinator(this.peer, connection);
+      this.coordinators.set(connection.description, coordinator);
       coordinator.start();
+
+      coordinator.syncStatuses.bus.on("*", () => {
+        const syncStatuses: Record<ShareAddress, SyncSessionStatus> = {};
+
+        for (const [share, status] of coordinator.syncStatuses.entries()) {
+          syncStatuses[share] = status;
+        }
+
+        this.syncStatuses.set(connection.description, syncStatuses);
+      });
     });
 
     this.transport.connections.onDelete((connection) => {
-      const coordinator = this._coordinators.get(connection.description);
+      const coordinator = this.coordinators.get(connection.description);
 
       if (coordinator) {
         coordinator.close();
       }
 
-      this._coordinators.delete(connection.description);
+      this.syncStatuses.delete(connection.description);
+
+      this.coordinators.delete(connection.description);
     });
   }
 
   /** Close the syncer's transport and all synchronisations. */
   close() {
-    this._coordinators.forEach((coordinator) => {
+    this.coordinators.forEach((coordinator) => {
       coordinator.close();
     });
 
-    this._coordinators.clear();
+    this.coordinators.clear();
 
     this.transport.close();
   }
