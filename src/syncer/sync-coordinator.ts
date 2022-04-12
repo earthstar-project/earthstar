@@ -88,10 +88,6 @@ export class SyncCoordinator {
   }
 
   async pull() {
-    if (this.state === "closed") {
-      return;
-    }
-
     const docPulls = Object.keys(this.shareStates).map((key) => {
       return new Promise<boolean>((resolve) => {
         const state = this.shareStates[key];
@@ -124,10 +120,12 @@ export class SyncCoordinator {
             nextIsCaughtUp = false;
           }
 
-          this.syncStatuses.set(result.share, {
-            ingestedCount: syncStatus.ingestedCount + result.ingested,
-            isCaughtUp: nextIsCaughtUp,
-          });
+          if (result.ingested > 0 || nextIsCaughtUp !== syncStatus.isCaughtUp) {
+            this.syncStatuses.set(result.share, {
+              ingestedCount: syncStatus.ingestedCount + result.ingested,
+              isCaughtUp: nextIsCaughtUp,
+            });
+          }
 
           resolve(nextIsCaughtUp);
         });
@@ -136,9 +134,13 @@ export class SyncCoordinator {
 
     const pullResults = await Promise.all(docPulls);
 
+    if (this.state === "closed") {
+      return;
+    }
+
     this.timeout = setTimeout(
       () => this.pull(),
-      pullResults.every((res) => res) ? 1000 : 0,
+      pullResults.every((res) => res) ? 1000 : 10,
     );
   }
 

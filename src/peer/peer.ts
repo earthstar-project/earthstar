@@ -171,7 +171,7 @@ export class Peer implements IPeer {
   }
 
   /**
-   * Begin synchronising with something with a remote or local peer.
+   * Begin synchronising with a remote or local peer.
    * @param target - A HTTP URL, Websocket URL, or an instance of `Peer`.
    * @returns A function which stops the synchronisation when called.
    */
@@ -259,5 +259,61 @@ export class Peer implements IPeer {
       this.localSyncer.close();
       this.localSyncer = null;
     }
+  }
+
+  /** Sync with many peers until there is nothing left to pull, and then stops.
+   * @param targets - An array made up of HTTP URLs, Websocket URLs, or `Peer` instances.
+   * @returns A report of all the peers which were synced with.
+   */
+  async syncUntilCaughtUp(targets: (IPeer | string)[]) {
+    let unsubscribeFromBus: (() => void) | null = null;
+
+    const stopSyncers = targets.map((target) => this.sync(target));
+
+    const report = await new Promise<
+      Record<string, Record<ShareAddress, SyncSessionStatus>>
+    >(
+      (resolve) => {
+        // Every time the syncer statuses change...
+        unsubscribeFromBus = this.syncerStatuses.bus.on("*", () => {
+          // This is an iterable of record of shares to sync statuses for each.
+          const statuses = this.syncerStatuses.values();
+
+          // Make a list of all sync ops' 'isCaughtUp' property.
+          const caughtUps = [];
+
+          for (const status of statuses) {
+            for (const shareAddress in status) {
+              caughtUps.push(status[shareAddress].isCaughtUp);
+            }
+          }
+
+          // If all of them are caught up, report.
+          if (caughtUps.every((isCaughtUp) => isCaughtUp)) {
+            const report: Record<
+              string,
+              Record<ShareAddress, SyncSessionStatus>
+            > = {};
+
+            // Need to turn the SuperbusMap into a plain object.
+            for (
+              const [peerDescription, statuses] of this.syncerStatuses.entries()
+            ) {
+              report[peerDescription] = statuses;
+            }
+
+            resolve(report);
+          }
+        });
+      },
+    );
+
+    stopSyncers.forEach((stop) => stop());
+
+    if (unsubscribeFromBus !== null) {
+      (unsubscribeFromBus as () => void)();
+    }
+
+    return Promise.resolve(report);
   }
 }

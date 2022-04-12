@@ -52,10 +52,6 @@ function runPeerTests(
 
     const peer = new Peer();
 
-    peer.syncerStatuses.bus.on("*", () => {
-      console.log(Array.from(peer.syncerStatuses.entries()));
-    });
-
     assert(
       typeof peer.peerId === "string" && peer.peerId.length > 5,
       "peer has a peerId",

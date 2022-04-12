@@ -136,6 +136,7 @@ function testSyncScenario(
 
     // Now close the connections
     closers.forEach((closer) => closer());
+    peer.stopSyncing();
 
     // Add a new storage which won't be synced
     const keypairB = await Crypto.generateAuthorKeypair(
@@ -170,9 +171,34 @@ function testSyncScenario(
       },
     });
 
+    await Promise.all(allStorages.map((storage) => {
+      return writeRandomDocs(keypairA, storage, 10);
+    }));
+
+    await peer.syncUntilCaughtUp(syncables);
+
+    await test.step({
+      name: "Storages are synced using syncUntilCaughtUp",
+      sanitizeOps: false,
+      sanitizeResources: false,
+      fn: async () => {
+        assert(
+          await storagesAreSynced(storagesATriplet),
+          `All ${ADDRESS_A} storages synced`,
+        );
+        assert(
+          await storagesAreSynced(storagesBTriplet),
+          `All ${ADDRESS_B} storages synced`,
+        );
+        assert(
+          await storagesAreSynced(storagesCTriplet),
+          `All ${ADDRESS_C} storages synced`,
+        );
+      },
+    });
+
     // Wrap up.
 
-    peer.stopSyncing();
     await helper.close();
     const storageClosers = [
       ...storagesATriplet,

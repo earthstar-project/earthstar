@@ -12,7 +12,7 @@ export class Syncer<TransportType extends ITransport<SyncerBag>>
   implements ISyncer<TransportType> {
   /** The transport used by the syncer. Can be used to add new connections. */
   transport: TransportType;
-  private coordinators: Map<PeerId, SyncCoordinator> = new Map();
+  private coordinators: Map<string, SyncCoordinator> = new Map();
   private peer: Peer;
 
   /** A subscribable map containing the syncer's connections' sync statuses. */
@@ -58,7 +58,6 @@ export class Syncer<TransportType extends ITransport<SyncerBag>>
       }
 
       this.syncStatuses.delete(connection.description);
-
       this.coordinators.delete(connection.description);
     });
   }

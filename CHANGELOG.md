@@ -1,5 +1,7 @@
 # next
 
+- Feature: Peer.syncUntilCaughtUp. Syncs with targets until there's nothing left
+  to pull from them.
 - Fix: SyncCoordinator will now request 10 docs at a time instead of everything
   a peer has.
 - Feature: Peer.syncStatuses. Subscribable map of Peer's sync operations'
