@@ -1,4 +1,4 @@
-import { type IConnection, Simplebus, SuperbusMap } from "../../deps.ts";
+import { type IConnection, SuperbusMap } from "../../deps.ts";
 import { Peer } from "../peer/peer.ts";
 import { makeSyncerBag, SyncerBag } from "./_syncer-bag.ts";
 import { ShareAddress } from "../util/doc-types.ts";
@@ -93,7 +93,7 @@ export class SyncCoordinator {
     }
 
     const docPulls = Object.keys(this.shareStates).map((key) => {
-      return new Promise<void>((resolve) => {
+      return new Promise<boolean>((resolve) => {
         const state = this.shareStates[key];
 
         this.pullDocs({
@@ -103,6 +103,7 @@ export class SyncCoordinator {
             startAfter: {
               localIndex: state.partnerMaxLocalIndexSoFar,
             },
+            limit: 10,
           },
           storageId: state.partnerStorageId,
           share: state.share,
@@ -128,14 +129,17 @@ export class SyncCoordinator {
             isCaughtUp: nextIsCaughtUp,
           });
 
-          resolve();
+          resolve(nextIsCaughtUp);
         });
       });
     });
 
-    await Promise.all(docPulls);
+    const pullResults = await Promise.all(docPulls);
 
-    this.timeout = setTimeout(() => this.pull(), 1000);
+    this.timeout = setTimeout(
+      () => this.pull(),
+      pullResults.every((res) => res) ? 1000 : 0,
+    );
   }
 
   private async getShareStates() {

@@ -1,5 +1,7 @@
 # next
 
+- Fix: SyncCoordinator will now request 10 docs at a time instead of everything
+  a peer has.
 - Feature: Peer.syncStatuses. Subscribable map of Peer's sync operations'
   statuses.
 - Feature: Syncer.syncStatuses. Subscribable map of syncer's connections' sync
