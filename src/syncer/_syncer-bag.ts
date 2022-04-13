@@ -278,11 +278,11 @@ export function makeSyncerBag(
           ...existingShareStates,
           [share]: {
             ...myShareState,
-            partnerMaxLocalIndexSoFar: pulled.length > 0
-              ? Math.max(
-                ...pulled.map(({ localIndex }) => localIndex),
-              )
-              : myShareState.partnerMaxLocalIndexSoFar,
+            partnerMaxLocalIndexOverall: response.partnerMaxLocalIndexOverall,
+            partnerMaxLocalIndexSoFar: Math.max(
+              ...pulled.map(({ localIndex }) => localIndex),
+              myShareState.partnerMaxLocalIndexSoFar,
+            ),
             lastSeenAt: microsecondNow(),
           },
         },

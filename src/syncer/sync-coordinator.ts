@@ -13,8 +13,8 @@ export class SyncCoordinator {
   private connection: IConnection<SyncerBag>;
   private syncerBag: SyncerBag;
   private shareStates: Record<ShareAddress, ShareState> = {};
-  private timeout: number | null = null;
   private peerReplicaMapUnsub: () => void;
+  private pullTimeouts: Map<string, number> = new Map();
 
   /** A subscribable map of shares and the status of their synchronisation operations. */
   syncStatuses: SuperbusMap<ShareAddress, SyncSessionStatus> =
@@ -54,7 +54,10 @@ export class SyncCoordinator {
     });
 
     await this.getShareStates();
-    await this.pull();
+
+    for (const address in this.shareStates) {
+      this.pull(address);
+    }
   }
 
   async performSaltedHandshake() {
@@ -88,79 +91,73 @@ export class SyncCoordinator {
     this.partnerLastSeenAt = partnerLastSeenAt;
   }
 
-  async pull() {
-    if (this.state === "closed") {
+  async pull(shareAddress: string) {
+    const state = this.shareStates[shareAddress];
+
+    if (this.state === "closed" || !state) {
+      console.error(
+        `%c Could not find ${shareAddress} in share states...`,
+        "background-color: red;",
+      );
       return;
     }
 
-    const docPulls = [];
-
-    for (const shareStateKey in this.shareStates) {
-      const promise = new Promise<boolean>((resolve) => {
-        const state = this.shareStates[shareStateKey];
-
-        this.pullDocs({
-          query: {
-            historyMode: "all",
-            orderBy: "localIndex ASC",
-            startAfter: {
-              localIndex: state.partnerMaxLocalIndexSoFar,
-            },
-            limit: 10,
+    const isCaughtUp = await new Promise<boolean>((resolve) => {
+      this.pullDocs({
+        query: {
+          historyMode: "all",
+          orderBy: "localIndex ASC",
+          startAfter: {
+            localIndex: state.partnerMaxLocalIndexSoFar,
           },
-          storageId: state.partnerStorageId,
-          share: state.share,
-        }).then((result) => {
-          const syncStatus = this.syncStatuses.get(result.share);
+          limit: 10,
+        },
+        storageId: state.partnerStorageId,
+        share: state.share,
+      }).then((result) => {
+        const syncStatus = this.syncStatuses.get(result.shareState.share);
 
-          if (!syncStatus) {
-            return;
-          }
+        if (!syncStatus) {
+          return;
+        }
 
-          let nextIsCaughtUp = syncStatus.isCaughtUp;
+        const nextIsCaughtUp = state.partnerMaxLocalIndexSoFar >=
+          result.shareState.partnerMaxLocalIndexOverall;
 
-          if (result.pulled === 0 && syncStatus.isCaughtUp === false) {
-            nextIsCaughtUp = true;
-          }
+        if (result.ingested > 0 || nextIsCaughtUp !== syncStatus.isCaughtUp) {
+          this.syncStatuses.set(result.shareState.share, {
+            ingestedCount: syncStatus.ingestedCount + result.ingested,
+            isCaughtUp: nextIsCaughtUp,
+            partnerIsCaughtUp: syncStatus.partnerIsCaughtUp,
+          });
+        }
 
-          if (result.pulled > 0 && syncStatus.isCaughtUp === true) {
-            nextIsCaughtUp = false;
-          }
+        if (nextIsCaughtUp !== syncStatus.isCaughtUp) {
+          this.connection.notify(
+            "notifyCaughtUpChange",
+            result.shareState.storageId,
+            nextIsCaughtUp,
+          );
+        }
 
-          if (result.ingested > 0 || nextIsCaughtUp !== syncStatus.isCaughtUp) {
-            this.syncStatuses.set(result.share, {
-              ingestedCount: syncStatus.ingestedCount + result.ingested,
-              isCaughtUp: nextIsCaughtUp,
-              partnerIsCaughtUp: syncStatus.partnerIsCaughtUp,
-            });
-          }
-
-          if (nextIsCaughtUp !== syncStatus.isCaughtUp) {
-            this.connection.notify(
-              "notifyCaughtUpChange",
-              result.storageId,
-              nextIsCaughtUp,
-            );
-          }
-
-          resolve(nextIsCaughtUp);
-        });
+        resolve(nextIsCaughtUp);
       });
-
-      docPulls.push(promise);
-    }
-
-    const pullResults = await Promise.all(docPulls);
+    });
 
     if ((this.state as "ready" | "active" | "closed") === "closed") {
       return;
     }
 
-    this.timeout = setTimeout(
-      () => {
-        this.pull();
-      },
-      pullResults.every((res) => res) ? 1000 : 10,
+    clearTimeout(this.pullTimeouts.get(shareAddress));
+
+    this.pullTimeouts.set(
+      shareAddress,
+      setTimeout(
+        () => {
+          this.pull(shareAddress);
+        },
+        isCaughtUp ? 1000 : 100,
+      ),
     );
   }
 
@@ -183,13 +180,29 @@ export class SyncCoordinator {
 
     this.partnerLastSeenAt = lastSeenAt;
 
+    const prevShares = Object.keys(this.shareStates);
+    const nextShares = Object.keys(shareStates);
+
     this.shareStates = shareStates;
+
+    // Start / end pulls for new / deleted shares, respectively.
+    for (const nextShare in shareStates) {
+      if (!prevShares.includes(nextShare)) {
+        this.pull(nextShare);
+      }
+    }
+
+    for (const oldShare of prevShares) {
+      if (!nextShares.includes(oldShare)) {
+        this.pullTimeouts.delete(oldShare);
+      }
+    }
   }
 
   private async pullDocs(
     shareQuery: ShareQueryRequest,
   ): Promise<
-    { pulled: number; ingested: number; share: string; storageId: string }
+    { pulled: number; ingested: number; shareState: ShareState }
   > {
     const queryResponse = await this.connection.request(
       "serveShareQuery",
@@ -205,21 +218,16 @@ export class SyncCoordinator {
     this.mergeShareStates(shareStates);
     this.partnerLastSeenAt = lastSeenAt;
 
-    const shareState = shareStates[shareQuery.share];
-
     return {
       pulled,
       ingested,
-      share: shareQuery.share,
-      storageId: shareState.storageId,
+      shareState: shareStates[shareQuery.share],
     };
   }
 
   private mergeShareStates(newShareStates: Record<string, ShareState>) {
     const nextShareStates: Record<string, ShareState> = {};
 
-    // Because pulls can happen asynchronously, they may return a lower partnerMaxLocalIndexOverall / soFar than the one saved in the coordinator's state.
-    // We want to make sure the higher value is returned every time, so that we don't repeatedly refetch documents from the same low localIndex.
     for (const shareAddress in newShareStates) {
       const newShareState = newShareStates[shareAddress];
       const existingShareState = this.shareStates[shareAddress];
@@ -233,16 +241,9 @@ export class SyncCoordinator {
         ...newShareState,
         lastSeenAt: Math.max(
           newShareState.lastSeenAt,
-          existingShareState.lastSeenAt,
         ),
-        partnerMaxLocalIndexOverall: Math.max(
-          newShareState.partnerMaxLocalIndexOverall,
-          existingShareState.partnerMaxLocalIndexOverall,
-        ),
-        partnerMaxLocalIndexSoFar: Math.max(
-          newShareState.partnerMaxLocalIndexSoFar,
-          existingShareState.partnerMaxLocalIndexSoFar,
-        ),
+        partnerMaxLocalIndexOverall: newShareState.partnerMaxLocalIndexOverall,
+        partnerMaxLocalIndexSoFar: newShareState.partnerMaxLocalIndexSoFar,
       };
     }
 
@@ -264,9 +265,7 @@ export class SyncCoordinator {
   }
 
   close() {
-    if (this.timeout) {
-      clearTimeout(this.timeout);
-    }
+    this.pullTimeouts.forEach((timeout) => clearTimeout(timeout));
 
     this.peerReplicaMapUnsub();
 
