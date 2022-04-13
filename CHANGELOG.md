@@ -1,5 +1,7 @@
-# next
+# 9.0.0
 
+- Breaking: Syncing has been updated so that peers inform each other when they
+  are caught up. v7 - v8 peers will not be able to sync with each other.
 - Patch: Addressed an issue affecting synchronisation with HTTP peers.
 - Feature: Peer.syncUntilCaughtUp. Syncs with targets until both sides of the
   synchronisation have nothing left to pull from each other.
