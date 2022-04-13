@@ -13,6 +13,7 @@ export interface ISyncer<TransportType extends ITransport<SyncerBag>> {
 export interface SyncSessionStatus {
   ingestedCount: number;
   isCaughtUp: boolean;
+  partnerIsCaughtUp: boolean;
 }
 
 // Salted handshake types

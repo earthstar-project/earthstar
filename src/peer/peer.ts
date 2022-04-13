@@ -285,6 +285,7 @@ export class Peer implements IPeer {
           for (const status of statuses) {
             for (const shareAddress in status) {
               caughtUps.push(status[shareAddress].isCaughtUp);
+              caughtUps.push(status[shareAddress].partnerIsCaughtUp);
             }
           }
 

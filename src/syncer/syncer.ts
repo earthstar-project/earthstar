@@ -32,7 +32,12 @@ export class Syncer<TransportType extends ITransport<SyncerBag>>
   ) {
     this.peer = peer;
 
-    this.transport = makeTransport(makeSyncerBag(peer));
+    this.transport = makeTransport(
+      makeSyncerBag(
+        peer,
+        (storageId, isCaughtUp) => this.onCaughtUp(storageId, isCaughtUp),
+      ),
+    );
 
     this.transport.connections.onAdd((connection) => {
       const coordinator = new SyncCoordinator(this.peer, connection);
@@ -59,6 +64,12 @@ export class Syncer<TransportType extends ITransport<SyncerBag>>
 
       this.syncStatuses.delete(connection.description);
       this.coordinators.delete(connection.description);
+    });
+  }
+
+  private onCaughtUp(storageId: string, isCaughtUp: boolean) {
+    this.coordinators.forEach((coordinator) => {
+      coordinator.storageCaughtUp(storageId, isCaughtUp);
     });
   }
 

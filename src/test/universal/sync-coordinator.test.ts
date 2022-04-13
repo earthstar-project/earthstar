@@ -121,8 +121,16 @@ Deno.test("SyncCoordinator", async () => {
   );
 
   assertEquals(Array.from(coordinator.syncStatuses.entries()), [
-    ["+apples.a123", { ingestedCount: 11, isCaughtUp: true }],
-    ["+dates.d456", { ingestedCount: 11, isCaughtUp: true }],
+    ["+apples.a123", {
+      ingestedCount: 11,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
+    ["+dates.d456", {
+      ingestedCount: 11,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
   ], "Sync status map is correct after initial sync");
 
   await writeRandomDocs(keypairB, storageA2, 10);
@@ -164,9 +172,21 @@ Deno.test("SyncCoordinator", async () => {
   );
 
   assertEquals(Array.from(coordinator.syncStatuses.entries()), [
-    ["+apples.a123", { ingestedCount: 21, isCaughtUp: true }],
-    ["+dates.d456", { ingestedCount: 21, isCaughtUp: true }],
-    ["+coconuts.c345", { ingestedCount: 10, isCaughtUp: true }],
+    ["+apples.a123", {
+      ingestedCount: 21,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
+    ["+dates.d456", {
+      ingestedCount: 21,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
+    ["+coconuts.c345", {
+      ingestedCount: 10,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
   ], "Sync status map is correct after initial sync");
 
   // Close up

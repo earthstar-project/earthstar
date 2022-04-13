@@ -73,6 +73,7 @@ export class SyncCoordinator {
         await this.syncStatuses.set(share, {
           ingestedCount: 0,
           isCaughtUp: false,
+          partnerIsCaughtUp: false,
         });
       }
     }
@@ -130,7 +131,16 @@ export class SyncCoordinator {
             this.syncStatuses.set(result.share, {
               ingestedCount: syncStatus.ingestedCount + result.ingested,
               isCaughtUp: nextIsCaughtUp,
+              partnerIsCaughtUp: syncStatus.partnerIsCaughtUp,
             });
+          }
+
+          if (nextIsCaughtUp !== syncStatus.isCaughtUp) {
+            this.connection.notify(
+              "notifyCaughtUpChange",
+              result.storageId,
+              nextIsCaughtUp,
+            );
           }
 
           resolve(nextIsCaughtUp);
@@ -178,7 +188,9 @@ export class SyncCoordinator {
 
   private async pullDocs(
     shareQuery: ShareQueryRequest,
-  ): Promise<{ pulled: number; ingested: number; share: string }> {
+  ): Promise<
+    { pulled: number; ingested: number; share: string; storageId: string }
+  > {
     const queryResponse = await this.connection.request(
       "serveShareQuery",
       shareQuery,
@@ -193,7 +205,14 @@ export class SyncCoordinator {
     this.mergeShareStates(shareStates);
     this.partnerLastSeenAt = lastSeenAt;
 
-    return { pulled, ingested, share: shareQuery.share };
+    const shareState = shareStates[shareQuery.share];
+
+    return {
+      pulled,
+      ingested,
+      share: shareQuery.share,
+      storageId: shareState.storageId,
+    };
   }
 
   private mergeShareStates(newShareStates: Record<string, ShareState>) {
@@ -228,6 +247,20 @@ export class SyncCoordinator {
     }
 
     this.shareStates = nextShareStates;
+  }
+
+  storageCaughtUp(storageId: string, isCaughtUp: boolean) {
+    for (const shareAddress in this.shareStates) {
+      const shareState = this.shareStates[shareAddress];
+      const syncStatus = this.syncStatuses.get(shareAddress);
+
+      if (shareState.partnerStorageId === storageId && syncStatus) {
+        this.syncStatuses.set(shareState.share, {
+          ...syncStatus,
+          partnerIsCaughtUp: isCaughtUp,
+        });
+      }
+    }
   }
 
   close() {

@@ -25,7 +25,10 @@ function saltAndHashShare(
 
 /** Produce a bag of syncing methods to pass to earthstar-streaming-rpc. */
 // Contains both client and server methods.
-export function makeSyncerBag(peer: Peer) {
+export function makeSyncerBag(
+  peer: Peer,
+  onCaughtUp?: (storageId: string, isCaughtUp: boolean) => void,
+) {
   return {
     // -----------------------------------------
     // SALTED HANDSHAKE
@@ -284,6 +287,12 @@ export function makeSyncerBag(peer: Peer) {
           },
         },
       };
+    },
+
+    notifyCaughtUpChange(storageId: string, isCaughtUp: boolean) {
+      if (onCaughtUp) {
+        onCaughtUp(storageId, isCaughtUp);
+      }
     },
   };
 }
