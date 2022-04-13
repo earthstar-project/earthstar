@@ -103,6 +103,9 @@ await build({
     // package.json properties
     name: "earthstar",
     version: Deno.args[0],
+    "engines": {
+      "node": ">=14.19.1",
+    },
     description:
       "Earthstar is a specification and Javascript library for building online tools you can truly call your own.",
     license: "LGPL-3.0-only",

@@ -120,18 +120,13 @@ Deno.test("SyncCoordinator", async () => {
     `${ADDRESS_D} storages are synced.`,
   );
 
-  assertEquals(Array.from(coordinator.syncStatuses.entries()), [
-    ["+apples.a123", {
-      ingestedCount: 11,
-      isCaughtUp: true,
-      partnerIsCaughtUp: false,
-    }],
-    ["+dates.d456", {
-      ingestedCount: 11,
-      isCaughtUp: true,
-      partnerIsCaughtUp: false,
-    }],
-  ], "Sync status map is correct after initial sync");
+  const applesSyncStatus = coordinator.syncStatuses.get(ADDRESS_A);
+  const datesSyncStatus = coordinator.syncStatuses.get(ADDRESS_D);
+
+  assert(applesSyncStatus?.isCaughtUp);
+  assert(datesSyncStatus?.isCaughtUp);
+  assertEquals(applesSyncStatus.ingestedCount, 11);
+  assertEquals(datesSyncStatus.ingestedCount, 11);
 
   await writeRandomDocs(keypairB, storageA2, 10);
   await writeRandomDocs(keypairB, storageD2, 10);
