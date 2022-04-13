@@ -103,7 +103,7 @@ Deno.test("SyncCoordinator", async () => {
 
   await coordinator.start();
 
-  await sleep(100);
+  await sleep(500);
 
   assertEquals(coordinator.commonShares, [ADDRESS_A, ADDRESS_D]);
   const storageADocs = await storageA1.getAllDocs();
