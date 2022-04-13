@@ -88,9 +88,15 @@ export class SyncCoordinator {
   }
 
   async pull() {
-    const docPulls = Object.keys(this.shareStates).map((key) => {
-      return new Promise<boolean>((resolve) => {
-        const state = this.shareStates[key];
+    if (this.state === "closed") {
+      return;
+    }
+
+    const docPulls = [];
+
+    for (const shareStateKey in this.shareStates) {
+      const promise = new Promise<boolean>((resolve) => {
+        const state = this.shareStates[shareStateKey];
 
         this.pullDocs({
           query: {
@@ -130,16 +136,20 @@ export class SyncCoordinator {
           resolve(nextIsCaughtUp);
         });
       });
-    });
+
+      docPulls.push(promise);
+    }
 
     const pullResults = await Promise.all(docPulls);
 
-    if (this.state === "closed") {
+    if ((this.state as "ready" | "active" | "closed") === "closed") {
       return;
     }
 
     this.timeout = setTimeout(
-      () => this.pull(),
+      () => {
+        this.pull();
+      },
       pullResults.every((res) => res) ? 1000 : 10,
     );
   }
