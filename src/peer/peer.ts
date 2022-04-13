@@ -268,7 +268,11 @@ export class Peer implements IPeer {
   async syncUntilCaughtUp(targets: (IPeer | string)[]) {
     let unsubscribeFromBus: (() => void) | null = null;
 
-    const stopSyncers = targets.map((target) => this.sync(target));
+    const stopSyncers = [];
+
+    for (const target of targets) {
+      stopSyncers.push(this.sync(target));
+    }
 
     const report = await new Promise<
       Record<string, Record<ShareAddress, SyncSessionStatus>>

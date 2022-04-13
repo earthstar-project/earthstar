@@ -12,6 +12,7 @@ export interface ISyncer<TransportType extends ITransport<SyncerBag>> {
 
 export interface SyncSessionStatus {
   ingestedCount: number;
+  pulledCount: number;
   isCaughtUp: boolean;
   partnerIsCaughtUp: boolean;
 }

@@ -2,7 +2,6 @@ import { assert, assertEquals } from "../asserts.ts";
 import { Peer } from "../../peer/peer.ts";
 import {
   makeNReplicas,
-  storageHasAllStoragesDocs,
   storagesAreSynced,
   writeRandomDocs,
 } from "../test-utils.ts";

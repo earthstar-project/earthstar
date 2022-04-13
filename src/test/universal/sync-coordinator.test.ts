@@ -169,16 +169,19 @@ Deno.test("SyncCoordinator", async () => {
   assertEquals(Array.from(coordinator.syncStatuses.entries()), [
     ["+apples.a123", {
       ingestedCount: 21,
+      pulledCount: 31,
       isCaughtUp: true,
       partnerIsCaughtUp: false,
     }],
     ["+dates.d456", {
       ingestedCount: 21,
+      pulledCount: 21,
       isCaughtUp: true,
       partnerIsCaughtUp: false,
     }],
     ["+coconuts.c345", {
       ingestedCount: 10,
+      pulledCount: 10,
       isCaughtUp: true,
       partnerIsCaughtUp: false,
     }],

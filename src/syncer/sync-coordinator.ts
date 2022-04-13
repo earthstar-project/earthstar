@@ -54,10 +54,6 @@ export class SyncCoordinator {
     });
 
     await this.getShareStates();
-
-    for (const address in this.shareStates) {
-      this.pull(address);
-    }
   }
 
   async performSaltedHandshake() {
@@ -75,6 +71,7 @@ export class SyncCoordinator {
       if (!this.syncStatuses.has(share)) {
         await this.syncStatuses.set(share, {
           ingestedCount: 0,
+          pulledCount: 0,
           isCaughtUp: false,
           partnerIsCaughtUp: false,
         });
@@ -102,8 +99,9 @@ export class SyncCoordinator {
       return;
     }
 
-    const isCaughtUp = await new Promise<boolean>((resolve) => {
-      this.pullDocs({
+    const queryResponse = await this.connection.request(
+      "serveShareQuery",
+      {
         query: {
           historyMode: "all",
           orderBy: "localIndex ASC",
@@ -114,39 +112,49 @@ export class SyncCoordinator {
         },
         storageId: state.partnerStorageId,
         share: state.share,
-      }).then((result) => {
-        const syncStatus = this.syncStatuses.get(result.shareState.share);
+      },
+    );
 
-        if (!syncStatus) {
-          return;
-        }
+    const { lastSeenAt, shareStates, ingested, pulled } = await this.syncerBag
+      .processShareQuery(
+        this.shareStates,
+        queryResponse,
+      );
 
-        const nextIsCaughtUp = state.partnerMaxLocalIndexSoFar >=
-          result.shareState.partnerMaxLocalIndexOverall;
+    this.mergeShareStates(shareStates);
+    this.partnerLastSeenAt = lastSeenAt;
 
-        if (result.ingested > 0 || nextIsCaughtUp !== syncStatus.isCaughtUp) {
-          this.syncStatuses.set(result.shareState.share, {
-            ingestedCount: syncStatus.ingestedCount + result.ingested,
-            isCaughtUp: nextIsCaughtUp,
-            partnerIsCaughtUp: syncStatus.partnerIsCaughtUp,
-          });
-        }
+    const mergedShareState = this.shareStates[shareAddress];
 
-        if (nextIsCaughtUp !== syncStatus.isCaughtUp) {
-          this.connection.notify(
-            "notifyCaughtUpChange",
-            result.shareState.storageId,
-            nextIsCaughtUp,
-          );
-        }
+    const syncStatus = this.syncStatuses.get(shareAddress);
 
-        resolve(nextIsCaughtUp);
+    if (!syncStatus) {
+      return;
+    }
+
+    const nextIsCaughtUp = mergedShareState.partnerMaxLocalIndexSoFar >=
+      mergedShareState.partnerMaxLocalIndexOverall;
+
+    if (
+      ingested > 0 || pulled > 0 || nextIsCaughtUp !== syncStatus.isCaughtUp
+    ) {
+      await this.syncStatuses.set(shareAddress, {
+        ingestedCount: syncStatus.ingestedCount + ingested,
+        pulledCount: syncStatus.pulledCount + pulled,
+        isCaughtUp: nextIsCaughtUp,
+        partnerIsCaughtUp: syncStatus.partnerIsCaughtUp,
       });
-    });
+    }
 
     if ((this.state as "ready" | "active" | "closed") === "closed") {
       return;
     }
+
+    this.connection.notify(
+      "notifyCaughtUpChange",
+      mergedShareState.storageId,
+      nextIsCaughtUp,
+    );
 
     clearTimeout(this.pullTimeouts.get(shareAddress));
 
@@ -156,7 +164,7 @@ export class SyncCoordinator {
         () => {
           this.pull(shareAddress);
         },
-        isCaughtUp ? 1000 : 100,
+        nextIsCaughtUp ? 1000 : 0,
       ),
     );
   }
@@ -186,6 +194,7 @@ export class SyncCoordinator {
     this.shareStates = shareStates;
 
     // Start / end pulls for new / deleted shares, respectively.
+
     for (const nextShare in shareStates) {
       if (!prevShares.includes(nextShare)) {
         this.pull(nextShare);
@@ -197,32 +206,6 @@ export class SyncCoordinator {
         this.pullTimeouts.delete(oldShare);
       }
     }
-  }
-
-  private async pullDocs(
-    shareQuery: ShareQueryRequest,
-  ): Promise<
-    { pulled: number; ingested: number; shareState: ShareState }
-  > {
-    const queryResponse = await this.connection.request(
-      "serveShareQuery",
-      shareQuery,
-    );
-
-    const { lastSeenAt, shareStates, pulled, ingested } = await this.syncerBag
-      .processShareQuery(
-        this.shareStates,
-        queryResponse,
-      );
-
-    this.mergeShareStates(shareStates);
-    this.partnerLastSeenAt = lastSeenAt;
-
-    return {
-      pulled,
-      ingested,
-      shareState: shareStates[shareQuery.share],
-    };
   }
 
   private mergeShareStates(newShareStates: Record<string, ShareState>) {
@@ -250,13 +233,13 @@ export class SyncCoordinator {
     this.shareStates = nextShareStates;
   }
 
-  storageCaughtUp(storageId: string, isCaughtUp: boolean) {
+  async storageCaughtUp(storageId: string, isCaughtUp: boolean) {
     for (const shareAddress in this.shareStates) {
       const shareState = this.shareStates[shareAddress];
       const syncStatus = this.syncStatuses.get(shareAddress);
 
       if (shareState.partnerStorageId === storageId && syncStatus) {
-        this.syncStatuses.set(shareState.share, {
+        await this.syncStatuses.set(shareState.share, {
           ...syncStatus,
           partnerIsCaughtUp: isCaughtUp,
         });

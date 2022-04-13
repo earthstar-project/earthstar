@@ -1,3 +1,9 @@
+# 9.1.0
+
+- Added a `pulled` property to syncer statuses.
+- Fixed an issue where SyncCoordinators would pull twice as much as they needed
+  to.
+
 # 9.0.0
 
 - Breaking: Syncing has been updated so that peers inform each other when they
