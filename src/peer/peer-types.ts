@@ -1,5 +1,6 @@
 import { ShareAddress } from "../util/doc-types.ts";
 import { IReplica } from "../replica/replica-types.ts";
+import { SyncSessionStatus } from "../syncer/syncer-types.ts";
 
 //================================================================================
 // PEER
@@ -28,4 +29,8 @@ export interface IPeer {
   ): () => void;
 
   stopSyncing(): void;
+
+  syncUntilCaughtUp(
+    targets: (IPeer | string)[],
+  ): Promise<Record<string, Record<ShareAddress, SyncSessionStatus>>>;
 }

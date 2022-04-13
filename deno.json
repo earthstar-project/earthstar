@@ -1,7 +1,7 @@
 {
   "tasks": {
     "test": "deno test --allow-all src",
-    "test-watch": "deno test --watch --allow-all src",
+    "test-watch": "deno test --watch --allow-all --no-check src",
     "bundle": "deno bundle --no-check=remote ./mod.browser.ts ./earthstar.bundle.js",
     "npm": "deno run --allow-all scripts/build_npm.ts",
     "run-bundle": "deno run --allow-all ./earthstar.bundle.js --help",

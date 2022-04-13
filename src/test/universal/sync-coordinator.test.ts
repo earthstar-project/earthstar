@@ -39,19 +39,19 @@ Deno.test("SyncCoordinator", async () => {
 
   const [storageA1, storageA2] = makeNReplicas(ADDRESS_A, 2);
   const [storageB1] = makeNReplicas(ADDRESS_B, 1);
-  const [storageC2] = makeNReplicas(ADDRESS_C, 1);
+  const [storageC1, storageC2] = makeNReplicas(ADDRESS_C, 2);
   const [storageD1, storageD2] = makeNReplicas(ADDRESS_D, 2);
 
   const peer = new Peer();
   const targetPeer = new Peer();
 
-  peer.addReplica(storageA1);
-  peer.addReplica(storageB1);
-  peer.addReplica(storageD1);
+  await peer.addReplica(storageA1);
+  await peer.addReplica(storageB1);
+  await peer.addReplica(storageD1);
 
-  targetPeer.addReplica(storageA2);
-  targetPeer.addReplica(storageC2);
-  targetPeer.addReplica(storageD2);
+  await targetPeer.addReplica(storageA2);
+  await targetPeer.addReplica(storageC2);
+  await targetPeer.addReplica(storageD2);
 
   // Write some docs to the same path so that we test all history being synced.
   await storageA1.set(keypairA, {
@@ -120,6 +120,14 @@ Deno.test("SyncCoordinator", async () => {
     `${ADDRESS_D} storages are synced.`,
   );
 
+  const applesSyncStatus = coordinator.syncStatuses.get(ADDRESS_A);
+  const datesSyncStatus = coordinator.syncStatuses.get(ADDRESS_D);
+
+  assert(applesSyncStatus?.isCaughtUp);
+  assert(datesSyncStatus?.isCaughtUp);
+  assertEquals(applesSyncStatus.ingestedCount, 11);
+  assertEquals(datesSyncStatus.ingestedCount, 11);
+
   await writeRandomDocs(keypairB, storageA2, 10);
   await writeRandomDocs(keypairB, storageD2, 10);
 
@@ -139,6 +147,42 @@ Deno.test("SyncCoordinator", async () => {
     await storageHasAllStoragesDocs(storageD1, storageD2),
     `${ADDRESS_D} storages are synced (again).`,
   );
+
+  // Test addition of new replicas.
+  await writeRandomDocs(keypairA, storageC1, 10);
+  await writeRandomDocs(keypairB, storageC2, 10);
+
+  await peer.addReplica(storageC1);
+
+  await sleep(1000);
+
+  assert(
+    coordinator.commonShares.includes(ADDRESS_C),
+    `Common shares now inlududes ${ADDRESS_C}`,
+  );
+
+  assert(
+    await storageHasAllStoragesDocs(storageC1, storageC2),
+    `${ADDRESS_C} storages are synced.`,
+  );
+
+  assertEquals(Array.from(coordinator.syncStatuses.entries()), [
+    ["+apples.a123", {
+      ingestedCount: 21,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
+    ["+dates.d456", {
+      ingestedCount: 21,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
+    ["+coconuts.c345", {
+      ingestedCount: 10,
+      isCaughtUp: true,
+      partnerIsCaughtUp: false,
+    }],
+  ], "Sync status map is correct after initial sync");
 
   // Close up
 

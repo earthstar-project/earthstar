@@ -71,6 +71,7 @@ function testSyncer(
         scenario.clientPeer,
         () => scenario.clientTransport,
       );
+
       const otherSyncer = new Syncer(
         scenario.targetPeer,
         () => scenario.targetTransport,
@@ -79,7 +80,7 @@ function testSyncer(
       await scenario.connect();
 
       // Check if everything synced
-      await sleep(1000);
+      await sleep(1500);
 
       await test.step({
         name: "Storages synced",

@@ -1,4 +1,5 @@
 import {
+  ITransport,
   SuperbusMap,
   TransportHttpClient,
   TransportLocal,
@@ -16,6 +17,7 @@ import { randomId } from "../util/misc.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { SyncSessionStatus } from "../syncer/syncer-types.ts";
 const logger = new Logger("peer", "blueBright");
 const J = JSON.stringify;
 
@@ -25,12 +27,16 @@ const J = JSON.stringify;
 export class Peer implements IPeer {
   peerId: PeerId;
 
-  //bus: Superbus<PeerEvent>;
-  replicaMap: SuperbusMap<ShareAddress, IReplica>;
+  /** A subscribable map of the replicas stored in this peer. */
+  replicaMap: SuperbusMap<ShareAddress, IReplica> = new SuperbusMap();
+
+  /** A subscribable map of each of this Peer's sync operations' statuses */
+  syncerStatuses: SuperbusMap<string, Record<ShareAddress, SyncSessionStatus>> =
+    new SuperbusMap();
+
   constructor() {
     logger.debug("constructor");
-    //this.bus = new Superbus<PeerEvent>();
-    this.replicaMap = new SuperbusMap<ShareAddress, IReplica>();
+
     this.peerId = "peer:" + randomId();
   }
 
@@ -95,54 +101,77 @@ export class Peer implements IPeer {
   // Syncing stuff
 
   // A few variables to store syncers for re-use.
-  _httpSyncer: Syncer<TransportHttpClient<SyncerBag>> | null = null;
-  _websocketSyncer: Syncer<TransportWebsocketClient<SyncerBag>> | null = null;
-  _localSyncer: Syncer<TransportLocal<SyncerBag>> | null = null;
-  _targetLocalSyncers: Map<string, Syncer<TransportLocal<SyncerBag>>> =
+  private httpSyncer: Syncer<TransportHttpClient<SyncerBag>> | null = null;
+  private websocketSyncer: Syncer<TransportWebsocketClient<SyncerBag>> | null =
+    null;
+  private localSyncer: Syncer<TransportLocal<SyncerBag>> | null = null;
+  private targetLocalSyncers: Map<string, Syncer<TransportLocal<SyncerBag>>> =
     new Map();
 
-  _addOrGetWebsocketSyncer(): Syncer<TransportWebsocketClient<SyncerBag>> {
-    if (!this._websocketSyncer) {
-      this._websocketSyncer = new Syncer(this, (methods) => {
+  private subscribeSyncerStatuses<TransportType extends ITransport<SyncerBag>>(
+    syncer: Syncer<TransportType>,
+  ) {
+    syncer.syncStatuses.bus.on("*", () => {
+      for (const [connectionDesc, statuses] of syncer.syncStatuses.entries()) {
+        this.syncerStatuses.set(connectionDesc, statuses);
+      }
+    });
+
+    syncer.syncStatuses.bus.on("deleted", (_channel, data) => {
+      this.syncerStatuses.delete(data.key);
+    });
+  }
+
+  private addOrGetWebsocketSyncer(): Syncer<
+    TransportWebsocketClient<SyncerBag>
+  > {
+    if (!this.websocketSyncer) {
+      this.websocketSyncer = new Syncer(this, (methods) => {
         return new TransportWebsocketClient({
           deviceId: this.peerId,
           methods,
         });
       });
+
+      this.subscribeSyncerStatuses(this.websocketSyncer);
     }
 
-    return this._websocketSyncer;
+    return this.websocketSyncer;
   }
 
-  _addOrGetHttpSyncer(): Syncer<TransportHttpClient<SyncerBag>> {
-    if (!this._httpSyncer) {
-      this._httpSyncer = new Syncer(this, (methods) => {
+  private addOrGetHttpSyncer(): Syncer<TransportHttpClient<SyncerBag>> {
+    if (!this.httpSyncer) {
+      this.httpSyncer = new Syncer(this, (methods) => {
         return new TransportHttpClient({
           deviceId: this.peerId,
           methods,
         });
       });
+
+      this.subscribeSyncerStatuses(this.httpSyncer);
     }
 
-    return this._httpSyncer;
+    return this.httpSyncer;
   }
 
-  _addOrGetLocalSyncer(): Syncer<TransportLocal<SyncerBag>> {
-    if (!this._localSyncer) {
-      this._localSyncer = new Syncer(this, (methods) => {
+  private addOrGetLocalSyncer(): Syncer<TransportLocal<SyncerBag>> {
+    if (!this.localSyncer) {
+      this.localSyncer = new Syncer(this, (methods) => {
         return new TransportLocal({
           deviceId: this.peerId,
           methods,
           description: `Local:${this.peerId}}`,
         });
       });
+
+      this.subscribeSyncerStatuses(this.localSyncer);
     }
 
-    return this._localSyncer;
+    return this.localSyncer;
   }
 
   /**
-   * Begin synchronising with something with a remote or local peer.
+   * Begin synchronising with a remote or local peer.
    * @param target - A HTTP URL, Websocket URL, or an instance of `Peer`.
    * @returns A function which stops the synchronisation when called.
    */
@@ -153,7 +182,7 @@ export class Peer implements IPeer {
 
       // Check if it's a websocket syncer
       if (url.protocol.startsWith("ws")) {
-        const websocketSyncer = this._addOrGetWebsocketSyncer();
+        const websocketSyncer = this.addOrGetWebsocketSyncer();
         const connection = websocketSyncer.transport.addConnection(
           url.toString(),
         );
@@ -164,7 +193,7 @@ export class Peer implements IPeer {
       }
 
       // Set up a HttpSyncer
-      const httpSyncer = this._addOrGetHttpSyncer();
+      const httpSyncer = this.addOrGetHttpSyncer();
       const connection = httpSyncer.transport.addConnection(url.toString());
 
       return () => {
@@ -172,7 +201,7 @@ export class Peer implements IPeer {
       };
     } catch {
       // Not a URL, so it must be a peer.
-      const localSyncer = this._addOrGetLocalSyncer();
+      const localSyncer = this.addOrGetLocalSyncer();
 
       // Make sure a peer can't sync with itself — seems bad.
       if (this === target) {
@@ -180,7 +209,7 @@ export class Peer implements IPeer {
       }
 
       // Check if there's already a sync operation with this Peer
-      const maybeExistingSyncer = this._targetLocalSyncers.get(
+      const maybeExistingSyncer = this.targetLocalSyncers.get(
         (target as Peer).peerId,
       );
       if (maybeExistingSyncer) {
@@ -197,14 +226,14 @@ export class Peer implements IPeer {
           description: (target as Peer).peerId,
         });
       });
-      this._targetLocalSyncers.set((target as Peer).peerId, otherSyncer);
+      this.targetLocalSyncers.set((target as Peer).peerId, otherSyncer);
       localSyncer.transport.addConnection(
         otherSyncer.transport,
       );
 
       return () => {
         // Remove the target syncer and close it — this will also close the connection from our Peer's side.
-        this._targetLocalSyncers.delete((target as Peer).peerId);
+        this.targetLocalSyncers.delete((target as Peer).peerId);
         otherSyncer.close();
       };
     }
@@ -212,23 +241,80 @@ export class Peer implements IPeer {
 
   /** Stop all synchronisations. */
   stopSyncing() {
-    if (this._httpSyncer) {
-      this._httpSyncer.close();
-      this._httpSyncer = null;
+    if (this.httpSyncer) {
+      this.httpSyncer.close();
+      this.httpSyncer = null;
     }
 
-    if (this._websocketSyncer) {
-      this._websocketSyncer.close();
-      this._websocketSyncer = null;
+    if (this.websocketSyncer) {
+      this.websocketSyncer.close();
+      this.websocketSyncer = null;
     }
 
-    if (this._localSyncer) {
-      this._targetLocalSyncers.forEach((targetSyncer) => {
+    if (this.localSyncer) {
+      this.targetLocalSyncers.forEach((targetSyncer) => {
         targetSyncer.close();
       });
-      this._targetLocalSyncers.clear();
-      this._localSyncer.close();
-      this._localSyncer = null;
+      this.targetLocalSyncers.clear();
+      this.localSyncer.close();
+      this.localSyncer = null;
     }
+  }
+
+  /** Sync with many peers until there is nothing left to pull, and then stops.
+   * @param targets - An array made up of HTTP URLs, Websocket URLs, or `Peer` instances.
+   * @returns A report of all the peers which were synced with.
+   */
+  async syncUntilCaughtUp(targets: (IPeer | string)[]) {
+    let unsubscribeFromBus: (() => void) | null = null;
+
+    const stopSyncers = targets.map((target) => this.sync(target));
+
+    const report = await new Promise<
+      Record<string, Record<ShareAddress, SyncSessionStatus>>
+    >(
+      (resolve) => {
+        // Every time the syncer statuses change...
+        unsubscribeFromBus = this.syncerStatuses.bus.on("*", () => {
+          // This is an iterable of record of shares to sync statuses for each.
+          const statuses = this.syncerStatuses.values();
+
+          // Make a list of all sync ops' 'isCaughtUp' property.
+          const caughtUps = [];
+
+          for (const status of statuses) {
+            for (const shareAddress in status) {
+              caughtUps.push(status[shareAddress].isCaughtUp);
+              caughtUps.push(status[shareAddress].partnerIsCaughtUp);
+            }
+          }
+
+          // If all of them are caught up, report.
+          if (caughtUps.every((isCaughtUp) => isCaughtUp)) {
+            const report: Record<
+              string,
+              Record<ShareAddress, SyncSessionStatus>
+            > = {};
+
+            // Need to turn the SuperbusMap into a plain object.
+            for (
+              const [peerDescription, statuses] of this.syncerStatuses.entries()
+            ) {
+              report[peerDescription] = statuses;
+            }
+
+            resolve(report);
+          }
+        });
+      },
+    );
+
+    stopSyncers.forEach((stop) => stop());
+
+    if (unsubscribeFromBus !== null) {
+      (unsubscribeFromBus as () => void)();
+    }
+
+    return Promise.resolve(report);
   }
 }

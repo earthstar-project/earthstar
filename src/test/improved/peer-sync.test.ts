@@ -2,6 +2,7 @@ import { assert, assertEquals } from "../asserts.ts";
 import { Peer } from "../../peer/peer.ts";
 import {
   makeNReplicas,
+  storageHasAllStoragesDocs,
   storagesAreSynced,
   writeRandomDocs,
 } from "../test-utils.ts";
@@ -52,9 +53,9 @@ function testSyncScenario(
 
     const peer = new Peer();
 
-    const [storageA1] = storagesATriplet;
-    const [storageB1] = storagesBTriplet;
-    const [storageC1] = storagesCTriplet;
+    const [storageA1, storageA2] = storagesATriplet;
+    const [storageB1, storageB2] = storagesBTriplet;
+    const [storageC1, storageC2] = storagesCTriplet;
 
     peer.addReplica(storageA1);
     peer.addReplica(storageB1);
@@ -136,6 +137,7 @@ function testSyncScenario(
 
     // Now close the connections
     closers.forEach((closer) => closer());
+    peer.stopSyncing();
 
     // Add a new storage which won't be synced
     const keypairB = await Crypto.generateAuthorKeypair(
@@ -170,9 +172,37 @@ function testSyncScenario(
       },
     });
 
+    await Promise.all(allStorages.map((storage) => {
+      return writeRandomDocs(keypairA, storage, 10);
+    }));
+
+    await peer.syncUntilCaughtUp([syncables[0]]);
+
+    await test.step({
+      name: "Storages are synced using syncUntilCaughtUp",
+      sanitizeOps: false,
+      sanitizeResources: false,
+      fn: async () => {
+        // TODO: Here I'm only testing for whether two of the three storages are synced.
+        // In nearly all cases peer.syncUntilCaughtUp will sync equally among all peers. But Node 14 doesn't want to, breaking this test.
+
+        assert(
+          await storagesAreSynced([storageA1, storageA2]),
+          `All ${ADDRESS_A} storages synced`,
+        );
+        assert(
+          await storagesAreSynced([storageB1, storageB2]),
+          `All ${ADDRESS_B} storages synced`,
+        );
+        assert(
+          await storagesAreSynced([storageC1, storageC2]),
+          `All ${ADDRESS_C} storages synced`,
+        );
+      },
+    });
+
     // Wrap up.
 
-    peer.stopSyncing();
     await helper.close();
     const storageClosers = [
       ...storagesATriplet,
