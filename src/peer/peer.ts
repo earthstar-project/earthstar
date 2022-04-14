@@ -111,9 +111,9 @@ export class Peer implements IPeer {
   private subscribeSyncerStatuses<TransportType extends ITransport<SyncerBag>>(
     syncer: Syncer<TransportType>,
   ) {
-    syncer.syncStatuses.bus.on("*", () => {
+    syncer.syncStatuses.bus.on("*", async () => {
       for (const [connectionDesc, statuses] of syncer.syncStatuses.entries()) {
-        this.syncerStatuses.set(connectionDesc, statuses);
+        await this.syncerStatuses.set(connectionDesc, statuses);
       }
     });
 

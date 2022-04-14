@@ -150,7 +150,7 @@ export class SyncCoordinator {
       return;
     }
 
-    this.connection.notify(
+    await this.connection.notify(
       "notifyCaughtUpChange",
       mergedShareState.storageId,
       nextIsCaughtUp,

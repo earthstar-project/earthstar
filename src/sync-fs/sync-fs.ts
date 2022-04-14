@@ -16,7 +16,11 @@ import {
   IGNORED_FILES,
   MANIFEST_FILE_NAME,
 } from "./constants.ts";
-import { FileInfoEntry, Manifest, SyncOptions } from "./sync-fs-types.ts";
+import {
+  FileInfoEntry,
+  SyncFsManifest,
+  SyncFsOptions,
+} from "./sync-fs-types.ts";
 import {
   dirBelongsToDifferentShare,
   getDirAssociatedShare,
@@ -36,9 +40,9 @@ const textEncoder = new TextEncoder();
 export async function reconcileManifestWithDirContents(
   fsDirPath: string,
   forShare: string,
-): Promise<Manifest> {
+): Promise<SyncFsManifest> {
   // Open up existing manifest.
-  let manifest: Manifest = {
+  let manifest: SyncFsManifest = {
     share: forShare,
     entries: {},
   };
@@ -148,7 +152,7 @@ export async function reconcileManifestWithDirContents(
     return entryA as never;
   });
 
-  const nextManifest: Manifest = {
+  const nextManifest: SyncFsManifest = {
     share: forShare,
     entries: {},
   };
@@ -186,7 +190,7 @@ Outline of how this function works:
  * - If a file has a path containing a `!` (i.e. an ephemeral path), *it will be deleted unless a correspending document is found in the replica*.
  */
 export async function syncReplicaAndFsDir(
-  opts: SyncOptions,
+  opts: SyncFsOptions,
 ) {
   // Check if dir was every synced with a different share, throw if so.
   if (await dirBelongsToDifferentShare(opts.dirPath, opts.replica.share)) {
@@ -247,7 +251,7 @@ export async function syncReplicaAndFsDir(
       // Size of file is not too big.
       const sizeIsOkay = entry.contentsSize <= ES4_MAX_CONTENT_LENGTH;
 
-      if (isErr(canWriteToPath)) {
+      if (isErr(canWriteToPath) && !opts.overwriteFilesAtOwnedPaths) {
         const correspondingDoc = await opts.replica.getLatestDocAtPath(
           entry.path,
         );
@@ -265,6 +269,10 @@ export async function syncReplicaAndFsDir(
         ) {
           errors.push(canWriteToPath);
         }
+      } else if (
+        isErr(canWriteToPath) && opts.overwriteFilesAtOwnedPaths === true
+      ) {
+        delete reconciledManifest.entries[key];
       }
 
       if (isErr(pathIsValid)) {

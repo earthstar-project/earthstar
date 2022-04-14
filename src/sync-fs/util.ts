@@ -1,10 +1,13 @@
 import { MANIFEST_FILE_NAME } from "./constants.ts";
-import { AbsenceEntry, FileInfoEntry, Manifest } from "./sync-fs-types.ts";
+import {
+  AbsenceEntry,
+  FileInfoEntry,
+  SyncFsManifest,
+} from "./sync-fs-types.ts";
 import {
   dirname,
   extname,
   join,
-  parse,
 } from "https://deno.land/std@0.132.0/path/mod.ts";
 import {
   decode,
@@ -51,10 +54,10 @@ export async function hasFilesButNoManifest(
   try {
     await Deno.stat(join(fsDirPath, MANIFEST_FILE_NAME));
 
-    // Manifest is present.
+    // SyncFsManifestis present.
     return false;
   } catch {
-    // Manifest is not present.
+    // SyncFsManifestis not present.
     const items = [];
     for await (const dirEntry of Deno.readDir(fsDirPath)) {
       items.push(dirEntry);
@@ -71,7 +74,7 @@ export async function dirBelongsToDifferentShare(
 ) {
   try {
     const contents = await Deno.readTextFile(join(dirPath, MANIFEST_FILE_NAME));
-    const manifest: Manifest = JSON.parse(contents);
+    const manifest: SyncFsManifest = JSON.parse(contents);
 
     return manifest.share !== shareAddress;
   } catch {
@@ -79,7 +82,7 @@ export async function dirBelongsToDifferentShare(
   }
 }
 
-export function writeManifest(manifest: Manifest, dirPath: string) {
+export function writeManifest(manifest: SyncFsManifest, dirPath: string) {
   return Deno.writeTextFile(
     join(dirPath, MANIFEST_FILE_NAME),
     JSON.stringify(manifest),
@@ -91,7 +94,7 @@ export async function getDirAssociatedShare(
 ) {
   try {
     const contents = await Deno.readTextFile(join(dirPath, MANIFEST_FILE_NAME));
-    const manifest: Manifest = JSON.parse(contents);
+    const manifest: SyncFsManifest = JSON.parse(contents);
 
     return manifest.share;
   } catch {
