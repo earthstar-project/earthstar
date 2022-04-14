@@ -7,7 +7,7 @@ import {
 } from "https://deno.land/std@0.132.0/testing/asserts.ts";
 import { MANIFEST_FILE_NAME } from "../../sync-fs/constants.ts";
 import { reconcileManifestWithDirContents } from "../../sync-fs/sync-fs.ts";
-import { FileInfoEntry, Manifest } from "../../sync-fs/sync-fs-types.ts";
+import { FileInfoEntry, SyncFsManifest } from "../../sync-fs/sync-fs-types.ts";
 import { isAbsenceEntry } from "../../sync-fs/util.ts";
 
 const TEST_DIR = "src/test/fs-sync/dirs/reconcile_manifest";
@@ -163,7 +163,7 @@ Deno.test("reconcileManifestWithDirContents", async (test) => {
   await emptyDir(TEST_DIR);
 });
 
-export function writeManifest(dirPath: string, manifest: Manifest) {
+export function writeManifest(dirPath: string, manifest: SyncFsManifest) {
   return Deno.writeTextFile(
     join(dirPath, MANIFEST_FILE_NAME),
     JSON.stringify(manifest),

@@ -44,14 +44,14 @@ export class Syncer<TransportType extends ITransport<SyncerBag>>
       this.coordinators.set(connection.description, coordinator);
       coordinator.start();
 
-      coordinator.syncStatuses.bus.on("*", () => {
+      coordinator.syncStatuses.bus.on("*", async () => {
         const syncStatuses: Record<ShareAddress, SyncSessionStatus> = {};
 
         for (const [share, status] of coordinator.syncStatuses.entries()) {
           syncStatuses[share] = status;
         }
 
-        this.syncStatuses.set(connection.description, syncStatuses);
+        await this.syncStatuses.set(connection.description, syncStatuses);
       });
     });
 

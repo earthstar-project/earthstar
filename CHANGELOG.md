@@ -1,3 +1,9 @@
+# next
+
+- Added 'overwriteFilesAtOwnedPaths' option to SyncFsOptions. This will forcibly
+  overwrite any files at paths owned by other identities with ones from the
+  replica.
+
 # 9.1.0
 
 - Added a `pulled` property to syncer statuses.

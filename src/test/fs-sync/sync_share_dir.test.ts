@@ -11,7 +11,7 @@ import {
   MANIFEST_FILE_NAME,
 } from "../../sync-fs/constants.ts";
 import { syncReplicaAndFsDir } from "../../sync-fs/sync-fs.ts";
-import { Manifest } from "../../sync-fs/sync-fs-types.ts";
+import { SyncFsManifest } from "../../sync-fs/sync-fs-types.ts";
 import {
   decode,
   encode,
@@ -209,12 +209,64 @@ Deno.test("syncShareAndDir", async (test) => {
   await emptyDir(TEST_DIR);
 
   // Throws if you try to delete a file at an owned path
+  await test.step("can forcibly overwrite files at owned paths", async () => {
+    const ownedPath = join(TEST_DIR, `~${keypairB.address}/doc.txt`);
+
+    await ensureDir(join(TEST_DIR, `~${keypairB.address}`));
+
+    const replica = makeReplica(TEST_SHARE);
+
+    await Deno.writeTextFile(
+      ownedPath,
+      "Not okay!",
+    );
+
+    await assertRejects(
+      () => {
+        return syncReplicaAndFsDir({
+          dirPath: TEST_DIR,
+          allowDirtyDirWithoutManifest: true,
+          keypair: keypairA,
+          replica,
+        });
+      },
+      undefined,
+      `author ${keypairA.address} can't write to path`,
+      "trying to delete a file at someone's else's own path",
+    );
+
+    await replica.set(keypairB, {
+      content: "Okay",
+      format: "es.4",
+      path: `/~${keypairB.address}/doc.txt`,
+    });
+
+    await syncReplicaAndFsDir({
+      dirPath: TEST_DIR,
+      allowDirtyDirWithoutManifest: true,
+      keypair: keypairA,
+      replica,
+      overwriteFilesAtOwnedPaths: true,
+    });
+
+    const ownedContents = await Deno.readTextFile(ownedPath);
+
+    assertEquals(
+      ownedContents,
+      "Okay",
+      "File at owned path was forcibly overwritten.",
+    );
+  });
+
+  await emptyDir(TEST_DIR);
+
+  // Throws if you try to delete a file at an owned path
   await test.step("throws when you try to delete a file at someone else's owned path", async () => {
     const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
 
     await ensureDir(ownedPath);
 
-    const manifest: Manifest = {
+    const manifest: SyncFsManifest = {
       share: TEST_SHARE,
       entries: {
         [`/~${keypairB.address}/mine.txt`]: {

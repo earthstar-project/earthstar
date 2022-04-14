@@ -8,14 +8,15 @@ import { AuthorKeypair } from "../util/doc-types.ts";
  * - `keypair`: The keypair to be used to sign all writes derived from changes on the filesystem.
  * - `allowDirtyDirWithoutManifest`: Whether to allow syncing of a folder with pre-existing contents which has never been synced before.
  */
-export type SyncOptions = {
+export type SyncFsOptions = {
   dirPath: string;
   replica: Replica;
   keypair: AuthorKeypair;
   allowDirtyDirWithoutManifest: boolean;
+  overwriteFilesAtOwnedPaths?: boolean;
 };
 
-export type Manifest = {
+export type SyncFsManifest = {
   share: string;
   entries: Record<string, FileInfoEntry | AbsenceEntry>;
 };
