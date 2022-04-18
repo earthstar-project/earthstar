@@ -2,6 +2,9 @@
 
 ## next
 
+- Feature: Replica will now permanently delete all expired documents on
+  instantiation, and delete expired docs every hour thereafter. Previously it
+  would only stop returning expired docs in user queries.
 - Feature: Added `Replica.queryAuthors` and `Replica.queryPaths`, which returns
   an array of (unique) authors of paths from the docs resulting from that query.
 

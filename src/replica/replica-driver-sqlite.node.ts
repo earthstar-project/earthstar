@@ -21,6 +21,7 @@ import {
   MAX_LOCAL_INDEX_QUERY,
   ReplicaSqliteOpts,
   SELECT_CONFIG_CONTENT_QUERY,
+  SELECT_EXPIRED_DOC_QUERY,
   SELECT_KEY_CONFIG_QUERY,
   UPSERT_CONFIG_QUERY,
   UPSERT_DOC_QUERY,
@@ -339,9 +340,13 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
       throw new ReplicaIsClosedError();
     }
 
-    this._db.prepare(DELETE_EXPIRED_DOC_QUERY).run({ now: Date.now() * 1000 });
+    const now = Date.now() * 1000;
 
-    return Promise.resolve();
+    const toDelete = this._db.prepare(SELECT_EXPIRED_DOC_QUERY).all({ now });
+
+    this._db.prepare(DELETE_EXPIRED_DOC_QUERY).run({ now });
+
+    return Promise.resolve(toDelete.map(({ path }) => path));
   }
 
   //--------------------------------------------------

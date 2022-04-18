@@ -191,4 +191,6 @@ Deno.test("ReplicaCache", async () => {
     1,
     "Quickly expiring cache was updated once, even after second request",
   );
+
+  await storage.close(true);
 });

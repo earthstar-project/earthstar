@@ -49,13 +49,15 @@ Deno.test("syncShareAndDir", async (test) => {
   await Deno.writeTextFile(join(TEST_DIR, "dirty.txt"), "heh");
 
   await test.step("can't sync a dirty folder without a manifest", async () => {
+    const replica = makeReplica(TEST_SHARE);
+
     await assertRejects(
       () => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: false,
           keypair: keypairA,
-          replica: makeReplica(TEST_SHARE),
+          replica: replica,
         });
       },
       undefined,
@@ -68,11 +70,13 @@ Deno.test("syncShareAndDir", async (test) => {
         allowDirtyDirWithoutManifest: true,
         dirPath: TEST_DIR,
         keypair: keypairA,
-        replica: makeReplica(TEST_SHARE),
+        replica: replica,
       }),
       undefined,
       "does not throw on trying to sync dirty folder without manifest when manually overridden",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -80,13 +84,14 @@ Deno.test("syncShareAndDir", async (test) => {
   // Throws if the replica address does not match the manifest address
 
   await test.step("can't sync a directory which was synced with another share", async () => {
+    const replica = makeReplica(TEST_SHARE);
     const otherReplica = makeReplica("+other.b123");
 
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: false,
       keypair: keypairA,
-      replica: makeReplica(TEST_SHARE),
+      replica: replica,
     });
 
     await assertRejects(
@@ -102,6 +107,9 @@ Deno.test("syncShareAndDir", async (test) => {
       "Tried to sync a replica for",
       "throws when trying to sync with a folder which had been synced with another share",
     );
+
+    await replica.close(true);
+    await otherReplica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -204,6 +212,8 @@ Deno.test("syncShareAndDir", async (test) => {
       "B",
       "Document at owned path is new value, even though it was modified out of order.",
     );
+
+    await replica2.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -288,12 +298,16 @@ Deno.test("syncShareAndDir", async (test) => {
       "Okay",
       "File at owned path was forcibly overwritten.",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
 
   // Throws if you try to delete a file at an owned path
   await test.step("throws when you try to delete a file at someone else's owned path", async () => {
+    const replica = makeReplica(TEST_SHARE);
+
     const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
 
     await ensureDir(ownedPath);
@@ -319,19 +333,23 @@ Deno.test("syncShareAndDir", async (test) => {
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: false,
           keypair: keypairA,
-          replica: makeReplica(TEST_SHARE),
+          replica,
         });
       },
       undefined,
       `author ${keypairA.address} can't write to path`,
       "throws when trying to delete a file at someone's else's own path",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
 
   // Throws if a file has an invalid path
   await test.step("throws when you write a file at an invalid path", async () => {
+    const replica = makeReplica(TEST_SHARE);
+
     const invalidPath = join(TEST_DIR, `/@invalid.png`);
 
     await Deno.writeTextFile(
@@ -345,13 +363,15 @@ Deno.test("syncShareAndDir", async (test) => {
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
           keypair: keypairA,
-          replica: makeReplica(TEST_SHARE),
+          replica,
         });
       },
       undefined,
       `invalid path`,
       "throws when trying to write an invalid path",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -361,19 +381,23 @@ Deno.test("syncShareAndDir", async (test) => {
     const bytes = Uint8Array.from(Array(ES4_MAX_CONTENT_LENGTH + 100));
     await Deno.writeFile(join(TEST_DIR, "big.jpg"), bytes);
 
+    const replica = makeReplica(TEST_SHARE);
+
     await assertRejects(
       () => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
           keypair: keypairA,
-          replica: makeReplica(TEST_SHARE),
+          replica,
         });
       },
       undefined,
       `File too big for the es.4 format`,
       "throws because big.jpg is too big",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -414,6 +438,8 @@ Deno.test("syncShareAndDir", async (test) => {
       "B",
       "Content of /sub/text.txt is as expected",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -452,6 +478,8 @@ Deno.test("syncShareAndDir", async (test) => {
       "B",
       "Content of /sub/text.txt is as expected",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -548,6 +576,8 @@ Deno.test("syncShareAndDir", async (test) => {
     );
 
     assert(await Deno.stat(join(TEST_DIR, "sub2", "dont-delete.txt")));
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -694,6 +724,8 @@ Deno.test("syncShareAndDir", async (test) => {
       undefined,
       "ephemeral doc defined on fs-side is gone",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -726,6 +758,8 @@ Deno.test("syncShareAndDir", async (test) => {
     const contents = versions.map(({ content }) => content).sort();
 
     assertEquals(contents, ["A", "B"], "contents of versions are as expected");
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);
@@ -771,6 +805,8 @@ Deno.test("syncShareAndDir", async (test) => {
       decoder.decode(pngData),
       "file content was decoded from base64",
     );
+
+    await replica.close(true);
   });
 
   await emptyDir(TEST_DIR);

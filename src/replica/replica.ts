@@ -64,8 +64,9 @@ export class Replica implements IReplica {
   replicaDriver: IReplicaDriver;
   bus: Superbus<ReplicaBusChannel>;
 
-  _isClosed = false;
-  _ingestLock: Lock<IngestEvent>;
+  private _isClosed = false;
+  private ingestLock: Lock<IngestEvent>;
+  private eraseInterval: number;
 
   constructor(
     share: ShareAddress,
@@ -87,7 +88,17 @@ export class Replica implements IReplica {
     this.formatValidator = validator;
     this.replicaDriver = driver;
     this.bus = new Superbus<ReplicaBusChannel>("|");
-    this._ingestLock = new Lock<IngestEvent>();
+    this.ingestLock = new Lock<IngestEvent>();
+
+    this.eraseExpiredDocs();
+
+    this.eraseInterval = setInterval(() => {
+      if (!this.isClosed()) {
+        this.eraseExpiredDocs();
+      } else {
+        clearInterval(this.eraseInterval);
+      }
+    });
   }
 
   //--------------------------------------------------
@@ -116,6 +127,7 @@ export class Replica implements IReplica {
     logger.debug("    sending didClose nonblockingly...");
     await this.bus.sendAndWait("didClose");
     logger.debug("...closing done");
+    clearInterval(this.eraseInterval);
 
     return Promise.resolve();
   }
@@ -440,7 +452,7 @@ export class Replica implements IReplica {
     };
 
     loggerIngest.debug(" >> ingest: running protected region...");
-    let ingestEvent: IngestEvent = await this._ingestLock.run(
+    let ingestEvent: IngestEvent = await this.ingestLock.run(
       writeToDriverWithLock,
     );
     loggerIngest.debug(" >> ingest: ...done running protected region");
@@ -522,5 +534,16 @@ export class Replica implements IReplica {
       `    ...done; ${numOverwritten} overwritten to be empty; ${numAlreadyEmpty} were already empty; out of total ${docsToOverwrite.length} docs`,
     );
     return numOverwritten;
+  }
+
+  private async eraseExpiredDocs() {
+    const erasedPath = await this.replicaDriver.eraseExpiredDocs();
+
+    for (const path of erasedPath) {
+      await this.bus.sendAndWait(
+        `expire`,
+        path,
+      );
+    }
   }
 }

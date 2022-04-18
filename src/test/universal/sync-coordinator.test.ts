@@ -189,6 +189,20 @@ Deno.test("SyncCoordinator", async () => {
 
   // Close up
 
+  for (
+    const replica of [
+      storageA1,
+      storageA2,
+      storageB1,
+      storageC1,
+      storageC2,
+      storageD1,
+      storageD2,
+    ]
+  ) {
+    await replica.close(true);
+  }
+
   coordinator.close();
   localTransport.close();
   targetTransport.close();

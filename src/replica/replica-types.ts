@@ -20,7 +20,8 @@ export type ReplicaId = string;
 export type ReplicaBusChannel =
   | "ingest"
   | // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
-  "willClose"
+  "expire"
+  | "willClose"
   | "didClose";
 
 export interface QueryResult {
@@ -101,6 +102,11 @@ export interface IdleEvent {
   kind: "idle";
 }
 
+export interface ExpireEvent {
+  kind: "expire";
+  path: string;
+}
+
 /**
  * - IngestEventSuccess — a new doc was written
  * - IngestEventFailure — refused an invalid doc
@@ -126,7 +132,8 @@ export type LiveQueryEvent =
   | // waiting for an ingest to happen...
   IngestEvent
   | // an ingest happened
-  ReplicaEventWillClose
+  ExpireEvent
+  | ReplicaEventWillClose
   | ReplicaEventDidClose
   | QueryFollowerDidClose;
 
@@ -305,6 +312,6 @@ export interface IReplicaDriver extends IReplicaConfig {
   // return a copy of the doc, frozen, with _localIndex set.
   upsert(doc: Doc): Promise<Doc>;
 
-  /** Erase all expired docs from the replica permanently, leaving no trace of the documents. */
-  eraseExpiredDocs(): Promise<void>;
+  /** Erase all expired docs from the replica permanently, leaving no trace of the documents. Returns the paths of the expired documents. */
+  eraseExpiredDocs(): Promise<Path[]>;
 }

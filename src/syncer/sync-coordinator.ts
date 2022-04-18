@@ -69,7 +69,7 @@ export class SyncCoordinator {
     // Add a new sync status entry for each share
     for (const share of commonShares) {
       if (!this.syncStatuses.has(share)) {
-        await this.syncStatuses.set(share, {
+        this.syncStatuses.set(share, {
           ingestedCount: 0,
           pulledCount: 0,
           isCaughtUp: false,
