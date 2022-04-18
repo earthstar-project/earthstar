@@ -45,6 +45,9 @@ export const UPSERT_DOC_QUERY =
   `INSERT OR REPLACE INTO docs (format, workspace, path, contentHash, content, author, timestamp, deleteAfter, signature, localIndex)
 VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature, :_localIndex);`;
 
+export const DELETE_EXPIRED_DOC_QUERY =
+  `DELETE FROM docs WHERE deleteAfter <= :now`;
+
 export const SET_ENCODING_QUERY = `PRAGMA encoding = "UTF-8";`;
 
 export const GET_ENCODING_QUERY = `PRAGMA encoding;`;

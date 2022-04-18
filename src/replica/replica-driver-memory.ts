@@ -9,7 +9,11 @@ import {
 } from "../util/errors.ts";
 
 import { compareArrays, compareByObjKey, sortedInPlace } from "./compare.ts";
-import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
+import {
+  cleanUpQuery,
+  docIsExpired,
+  docMatchesFilter,
+} from "../query/query.ts";
 
 //--------------------------------------------------
 
@@ -283,5 +287,22 @@ export class ReplicaDriverMemory implements IReplicaDriver {
     this.docsByPathNewestFirst.set(doc.path, docsByPath);
 
     return Promise.resolve(doc);
+  }
+
+  eraseExpiredDocs() {
+    const expiredDocs = [];
+
+    for (const [, doc] of this.docByPathAndAuthor) {
+      if (docIsExpired(doc)) {
+        expiredDocs.push(doc);
+      }
+    }
+
+    for (const expiredDoc of expiredDocs) {
+      this.docsByPathNewestFirst.delete(expiredDoc.path);
+      this.docByPathAndAuthor.delete(combinePathAndAuthor(expiredDoc));
+    }
+
+    return Promise.resolve();
   }
 }

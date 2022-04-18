@@ -250,3 +250,14 @@ export function docMatchesFilter(doc: Doc, filter: QueryFilter): boolean {
   }
   return true;
 }
+
+/** Return whether a document is expired or not */
+export function docIsExpired(doc: Doc, now?: number) {
+  const nowToUse = now || Date.now() * 1000;
+
+  if (doc.deleteAfter === null) {
+    return false;
+  }
+
+  return nowToUse > doc.deleteAfter;
+}

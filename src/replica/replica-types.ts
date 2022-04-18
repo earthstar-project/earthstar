@@ -304,4 +304,7 @@ export interface IReplicaDriver extends IReplicaConfig {
   // overwrite existing doc even if this doc is older.
   // return a copy of the doc, frozen, with _localIndex set.
   upsert(doc: Doc): Promise<Doc>;
+
+  /** Erase all expired docs from the replica permanently, leaving no trace of the documents. */
+  eraseExpiredDocs(): Promise<void>;
 }
