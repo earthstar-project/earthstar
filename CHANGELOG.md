@@ -1,6 +1,6 @@
 # Changelog
 
-## next
+## v9.3.0
 
 - Feature: Replica will now permanently delete all expired documents on
   instantiation, and delete expired docs every hour thereafter. Previously it
