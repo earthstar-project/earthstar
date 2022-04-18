@@ -1,4 +1,4 @@
-# next
+# 9.2.0
 
 - Feature: Added `generateShareAddress` utility to generate valid, safe share
   addresses.
