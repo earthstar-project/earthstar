@@ -1,4 +1,5 @@
 import {
+  AuthorAddress,
   AuthorKeypair,
   Doc,
   DocToSet,
@@ -226,8 +227,11 @@ export interface IReplica extends IReplicaConfig {
   */
   queryDocs(query?: Query): Promise<Doc[]>;
 
-  //    queryPaths(query?: Query): Path[];
-  //    queryAuthors(query?: Query): AuthorAddress[];
+  /** Returns an array of all unique paths of documents returned by a given query. */
+  queryPaths(query?: Query): Promise<Path[]>;
+
+  /** Returns an array of all unique authors of documents returned by a given query. */
+  queryAuthors(query?: Query): Promise<AuthorAddress[]>;
 
   //--------------------------------------------------
   // SET

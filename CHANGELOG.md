@@ -1,23 +1,30 @@
-# 9.2.0
+# Changelog
+
+## next
+
+- Feature: Added `Replica.queryAuthors` and `Replica.queryPaths`, which returns
+  an array of (unique) authors of paths from the docs resulting from that query.
+
+## 9.2.0
 
 - Feature: Added `generateShareAddress` utility to generate valid, safe share
   addresses.
 - Feature: Updated filesystem sync so that deleted (not just modified) files can
   be overwritten using the `overwriteFilesAtOwnedPaths` option.
 
-# 9.1.0
+## 9.1.0
 
 - Feature: Added 'overwriteFilesAtOwnedPaths' option to SyncFsOptions. This will
   forcibly overwrite any files at paths owned by other identities with ones from
   the replica.
 
-# 9.0.1
+## 9.0.1
 
 - Added a `pulled` property to syncer statuses.
 - Fixed an issue where SyncCoordinators would pull twice as much as they needed
   to.
 
-# 9.0.0
+## 9.0.0
 
 - Breaking: Syncing has been updated so that peers inform each other when they
   are caught up. v7 - v8 peers will not be able to sync with each other.
@@ -39,14 +46,14 @@
   a file has changed or not, fixing issues where files at owned paths which had
   not been changed would cause the function to throw.
 
-# 8.3.1
+## 8.3.1
 
 - Patch: Made `syncReplicaAndFsDir` ignore `.DS_Store` files.
 - Patch: Improve how `syncReplicaAndFsDir` determines the latest version of a
   document, fixing an issue with 'zombie' files which would return after
   deletion.
 
-# 8.3.0
+## 8.3.0
 
 - Feature: Added a new export, `syncReplicaAndFsDir`, which bidirectionally
   syncs the contents of a replica and filesystem directory.

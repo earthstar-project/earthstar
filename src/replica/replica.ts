@@ -1,6 +1,7 @@
 import { Lock, Superbus } from "../../deps.ts";
 import { Cmp } from "./util-types.ts";
 import {
+  AuthorAddress,
   AuthorKeypair,
   Doc,
   DocToSet,
@@ -227,8 +228,19 @@ export class Replica implements IReplica {
     return await this.replicaDriver.queryDocs(query);
   }
 
-  //queryPaths(query?: Query): Path[];
-  //queryAuthors(query?: Query): AuthorAddress[];
+  /** Returns an array of all unique paths of documents returned by a given query. */
+  async queryPaths(query?: Query) {
+    const docs = await this.queryDocs(query);
+    const pathsSet = new Set(docs.map(({ path }) => path));
+    return Array.from(pathsSet).sort();
+  }
+
+  /** Returns an array of all unique authors of documents returned by a given query. */
+  async queryAuthors(query?: Query) {
+    const docs = await this.queryDocs(query);
+    const authorsSet = new Set(docs.map(({ author }) => author));
+    return Array.from(authorsSet).sort();
+  }
 
   //--------------------------------------------------
   // SET
