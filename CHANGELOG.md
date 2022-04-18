@@ -1,8 +1,13 @@
+# next
+
+- Feature: Updated filesystem sync so that deleted (not just modified) files can
+  be overwritten using the `overwriteFilesAtOwnedPaths` option.
+
 # 9.1.0
 
-- Added 'overwriteFilesAtOwnedPaths' option to SyncFsOptions. This will forcibly
-  overwrite any files at paths owned by other identities with ones from the
-  replica.
+- Feature: Added 'overwriteFilesAtOwnedPaths' option to SyncFsOptions. This will
+  forcibly overwrite any files at paths owned by other identities with ones from
+  the replica.
 
 # 9.0.1
 

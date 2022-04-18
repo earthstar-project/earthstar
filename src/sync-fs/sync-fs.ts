@@ -233,7 +233,7 @@ export async function syncReplicaAndFsDir(
       const canWriteToPath = FormatValidatorEs4
         ._checkAuthorCanWriteToPath(opts.keypair.address, entry.path);
 
-      if (isErr(canWriteToPath)) {
+      if (isErr(canWriteToPath) && !opts.overwriteFilesAtOwnedPaths) {
         errors.push(canWriteToPath);
       }
     }

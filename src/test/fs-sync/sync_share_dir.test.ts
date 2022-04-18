@@ -232,7 +232,7 @@ Deno.test("syncShareAndDir", async (test) => {
       },
       undefined,
       `author ${keypairA.address} can't write to path`,
-      "trying to delete a file at someone's else's own path",
+      "trying to modify a file at someone's else's owned path",
     );
 
     await replica.set(keypairB, {
@@ -253,6 +253,38 @@ Deno.test("syncShareAndDir", async (test) => {
 
     assertEquals(
       ownedContents,
+      "Okay",
+      "File at owned path was forcibly overwritten.",
+    );
+
+    await Deno.remove(ownedPath);
+
+    await assertRejects(
+      () => {
+        return syncReplicaAndFsDir({
+          dirPath: TEST_DIR,
+          allowDirtyDirWithoutManifest: true,
+          keypair: keypairA,
+          replica,
+        });
+      },
+      undefined,
+      `author ${keypairA.address} can't write to path`,
+      "trying to delete a file at someone's else's owned path",
+    );
+
+    await syncReplicaAndFsDir({
+      dirPath: TEST_DIR,
+      allowDirtyDirWithoutManifest: true,
+      keypair: keypairA,
+      replica,
+      overwriteFilesAtOwnedPaths: true,
+    });
+
+    const ownedContents2 = await Deno.readTextFile(ownedPath);
+
+    assertEquals(
+      ownedContents2,
       "Okay",
       "File at owned path was forcibly overwritten.",
     );
