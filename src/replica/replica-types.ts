@@ -1,4 +1,5 @@
 import {
+  AuthorAddress,
   AuthorKeypair,
   Doc,
   DocToSet,
@@ -19,7 +20,8 @@ export type ReplicaId = string;
 export type ReplicaBusChannel =
   | "ingest"
   | // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
-  "willClose"
+  "expire"
+  | "willClose"
   | "didClose";
 
 export interface QueryResult {
@@ -100,6 +102,11 @@ export interface IdleEvent {
   kind: "idle";
 }
 
+export interface ExpireEvent {
+  kind: "expire";
+  path: string;
+}
+
 /**
  * - IngestEventSuccess — a new doc was written
  * - IngestEventFailure — refused an invalid doc
@@ -125,7 +132,8 @@ export type LiveQueryEvent =
   | // waiting for an ingest to happen...
   IngestEvent
   | // an ingest happened
-  ReplicaEventWillClose
+  ExpireEvent
+  | ReplicaEventWillClose
   | ReplicaEventDidClose
   | QueryFollowerDidClose;
 
@@ -226,8 +234,11 @@ export interface IReplica extends IReplicaConfig {
   */
   queryDocs(query?: Query): Promise<Doc[]>;
 
-  //    queryPaths(query?: Query): Path[];
-  //    queryAuthors(query?: Query): AuthorAddress[];
+  /** Returns an array of all unique paths of documents returned by a given query. */
+  queryPaths(query?: Query): Promise<Path[]>;
+
+  /** Returns an array of all unique authors of documents returned by a given query. */
+  queryAuthors(query?: Query): Promise<AuthorAddress[]>;
 
   //--------------------------------------------------
   // SET
@@ -300,4 +311,7 @@ export interface IReplicaDriver extends IReplicaConfig {
   // overwrite existing doc even if this doc is older.
   // return a copy of the doc, frozen, with _localIndex set.
   upsert(doc: Doc): Promise<Doc>;
+
+  /** Erase all expired docs from the replica permanently, leaving no trace of the documents. Returns the paths of the expired documents. */
+  eraseExpiredDocs(): Promise<Path[]>;
 }

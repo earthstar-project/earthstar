@@ -11,11 +11,13 @@ import {
   CREATE_DOCS_TABLE_QUERY,
   CREATE_LOCAL_INDEX_INDEX_QUERY,
   DELETE_CONFIG_QUERY,
+  DELETE_EXPIRED_DOC_QUERY,
   GET_ENCODING_QUERY,
   makeDocQuerySql,
   MAX_LOCAL_INDEX_QUERY,
   ReplicaSqliteOpts,
   SELECT_CONFIG_CONTENT_QUERY,
+  SELECT_EXPIRED_DOC_QUERY,
   SELECT_KEY_CONFIG_QUERY,
   SET_ENCODING_QUERY,
   UPSERT_CONFIG_QUERY,
@@ -28,7 +30,7 @@ import * as Sqlite from "https://deno.land/x/sqlite@v3.2.0/mod.ts";
 import { Logger } from "../util/log.ts";
 import { bytesToString, stringToBytes } from "../util/bytes.ts";
 import { Query } from "../query/query-types.ts";
-import { cleanUpQuery } from "../query/query.ts";
+import { cleanUpQuery, docIsExpired } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
 
@@ -400,6 +402,19 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     this._db.query(UPSERT_DOC_QUERY, docWithBytes);
 
     return Promise.resolve(docWithLocalIndex);
+  }
+
+  eraseExpiredDocs() {
+    if (this._isClosed) {
+      throw new ReplicaIsClosedError();
+    }
+
+    const now = Date.now() * 1000;
+
+    const toDelete = this._db.query(SELECT_EXPIRED_DOC_QUERY, { now });
+    this._db.query(DELETE_EXPIRED_DOC_QUERY, { now });
+
+    return Promise.resolve(toDelete.map(([path]) => path as string));
   }
 
   //--------------------------------------------------

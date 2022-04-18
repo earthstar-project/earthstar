@@ -190,6 +190,96 @@ export function runRelpicaTests(scenario: TestScenario) {
   // TODO: test querying
 
   Deno.test(
+    SUBTEST_NAME + ": queryAuthors + queryPaths",
+    async (tester) => {
+      const initialCryptoDriver = GlobalCryptoDriver;
+
+      const share = "+gardening.abcde";
+      const replica = makeReplica(share);
+
+      const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
+      const keypair2 = await Crypto.generateAuthorKeypair("bbbb");
+      if (isErr(keypair1) || isErr(keypair2)) {
+        assert(false, "error making keypair");
+      }
+
+      await replica.set(keypair1, {
+        path: "/doc.txt",
+        content: "content1",
+        format: "es.4",
+      });
+
+      await replica.set(keypair2, {
+        path: "/doc2.txt",
+        content: "content2",
+        format: "es.4",
+      });
+
+      await replica.set(keypair1, {
+        path: "/doc3.txt",
+        content: "content3",
+        format: "es.4",
+      });
+
+      await tester.step({
+        name: "query authors",
+        fn: async () => {
+          const authors = await replica.queryAuthors();
+
+          assertEquals(
+            authors,
+            [keypair1.address, keypair2.address],
+            "Returns all authors",
+          );
+
+          const authors2 = await replica.queryAuthors({
+            filter: {
+              path: "/doc2.txt",
+            },
+          });
+
+          assertEquals(
+            authors2,
+            [keypair2.address],
+            "Returns authors of docs from query",
+          );
+        },
+        sanitizeOps: false,
+        sanitizeResources: false,
+      });
+
+      await tester.step({
+        name: "query paths",
+        fn: async () => {
+          const paths = await replica.queryPaths();
+
+          assertEquals(
+            paths,
+            ["/doc.txt", "/doc2.txt", "/doc3.txt"],
+            "Returns all paths",
+          );
+
+          const paths2 = await replica.queryPaths({
+            filter: {
+              author: keypair2.address,
+            },
+          });
+
+          assertEquals(
+            paths2,
+            ["/doc2.txt"],
+            "Returns paths of docs from query",
+          );
+        },
+        sanitizeOps: false,
+        sanitizeResources: false,
+      });
+
+      await replica.close(true);
+    },
+  );
+
+  Deno.test(
     SUBTEST_NAME + ": replica overwriteAllDocsByAuthor",
     async () => {
       const initialCryptoDriver = GlobalCryptoDriver;
@@ -372,7 +462,7 @@ export function runRelpicaTests(scenario: TestScenario) {
 
   Deno.test(
     SUBTEST_NAME + ": validates addresses",
-    () => {
+    async () => {
       const validShare = "+gardening.abcde";
       const invalidShare = "PEANUTS.123";
 
@@ -383,7 +473,7 @@ export function runRelpicaTests(scenario: TestScenario) {
       const storage = makeReplica(validShare);
       assert(storage);
 
-      storage.close(true);
+      await storage.close(true);
     },
   );
 }

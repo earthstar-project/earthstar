@@ -10,6 +10,8 @@ import { testScenarios } from "../test-scenarios.ts";
 //================================================================================
 
 import { LogLevel, setDefaultLogLevel } from "../../util/log.ts";
+import { sleep } from "../../util/misc.ts";
+import { isErr } from "../../util/errors.ts";
 //setDefaultLogLevel(LogLevel.Debug);
 let J = JSON.stringify;
 
@@ -525,6 +527,84 @@ export function runReplicaDriverTests(scenario: TestScenario) {
           (initialCryptoDriver as any).name
         }, ended as ${(GlobalCryptoDriver as any).name}`,
       );
+    },
+  );
+
+  Deno.test(
+    `${SUBTEST_NAME}: erasing expired docs`,
+    async (test) => {
+      const initialCryptoDriver = GlobalCryptoDriver;
+
+      const share = "+gardening.abcde";
+      const driver = scenario.makeDriver(share);
+
+      const now = Date.now() * 1000;
+
+      const expiredDoc0: Doc = {
+        format: "es.4",
+        author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
+        content: "Hello 0",
+        contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+        deleteAfter: now + 1000,
+        path: "/posts/!post-0000.txt",
+        timestamp: now,
+        workspace: "+gardening.abc",
+        signature: "whatever0", // upsert does not check signature or validate doc
+      };
+
+      const expiredDoc1: Doc = {
+        format: "es.4",
+        author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
+        content: "Hello 1",
+        contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+        deleteAfter: now + now, // Really far in the future.
+        path: "/posts/!post-0001.txt",
+        timestamp: now,
+        workspace: "+gardening.abc",
+        signature: "whatever0", // upsert does not check signature or validate doc
+      };
+
+      const normalDoc0: Doc = {
+        format: "es.4",
+        author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
+        content: "Hello 1",
+        contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+        deleteAfter: null,
+        path: "/posts/post-0002.txt",
+        timestamp: now,
+        workspace: "+gardening.abc",
+        signature: "whatever0", // upsert does not check signature or validate doc
+      };
+
+      await driver.upsert(expiredDoc0);
+      await driver.upsert(expiredDoc1);
+      await driver.upsert(normalDoc0);
+
+      await sleep(100);
+
+      await test.step({
+        name: "eraseExpiredDocs",
+        fn: async () => {
+          const deletedPaths = await driver.eraseExpiredDocs();
+
+          assertEquals(deletedPaths, ["/posts/!post-0000.txt"]);
+
+          const remainingEphemeralDocs = await driver.queryDocs({
+            filter: {
+              pathStartsWith: "/posts/",
+            },
+          });
+
+          assertEquals(remainingEphemeralDocs.map(({ path }) => path), [
+            "/posts/!post-0001.txt",
+            "/posts/post-0002.txt",
+          ], "only the non-expired ephemeral doc remains");
+        },
+        sanitizeOps: false,
+        sanitizeResources: false,
+      });
+
+      await driver.close(true);
     },
   );
 }
