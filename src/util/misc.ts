@@ -1,3 +1,10 @@
+import { checkShareIsValid } from "../core-validators/addresses.ts";
+import {
+  alphaLower,
+  workspaceKeyChars,
+} from "../core-validators/characters.ts";
+import { isErr, ValidationError } from "./errors.ts";
+
 export { fast_deep_equal as deepEqual } from "../../deps.ts";
 
 //================================================================================
@@ -35,4 +42,28 @@ export function countChars(str: string, char: string) {
 
 export function isObjectEmpty(obj: Object): Boolean {
   return Object.keys(obj).length === 0;
+}
+
+//================================================================================
+// Share
+
+export function generateShareAddress(name: string): string | ValidationError {
+  const randomFromString = (str: string) => {
+    return str[Math.floor(Math.random() * str.length)];
+  };
+
+  const firstLetter = randomFromString(alphaLower);
+  const rest = Array.from(Array(11), () => randomFromString(workspaceKeyChars))
+    .join("");
+
+  const suffix = `${firstLetter}${rest}`;
+  const address = `+${name}.${suffix}`;
+
+  const isValid = checkShareIsValid(address);
+
+  if (isErr(isValid)) {
+    return isValid;
+  }
+
+  return address;
 }

@@ -1,5 +1,7 @@
 # next
 
+- Feature: Added `generateShareAddress` utility to generate valid, safe share
+  addresses.
 - Feature: Updated filesystem sync so that deleted (not just modified) files can
   be overwritten using the `overwriteFilesAtOwnedPaths` option.
 
