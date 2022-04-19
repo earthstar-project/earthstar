@@ -16,36 +16,6 @@ await build({
     },
     timers: true,
     weakRef: true,
-    customDev: [
-      {
-        package: {
-          name: "@types/chloride",
-          version: "2.4.0",
-        },
-        globalNames: [],
-      },
-      {
-        package: {
-          name: "@types/better-sqlite3",
-          version: "7.4.2",
-        },
-        globalNames: [],
-      },
-      {
-        package: {
-          name: "@types/express",
-          version: "4.17.13",
-        },
-        globalNames: [],
-      },
-      {
-        package: {
-          name: "@types/node-fetch",
-          version: "2.5.12",
-        },
-        globalNames: [],
-      },
-    ],
   },
   compilerOptions: {
     // This is for Node v14 support
@@ -53,13 +23,13 @@ await build({
   },
   // typeCheck: false,
   mappings: {
-    "https://esm.sh/earthstar-streaming-rpc@4.0.3": {
+    "https://esm.sh/earthstar-streaming-rpc@5.0.0": {
       name: "earthstar-streaming-rpc",
-      version: "4.0.3",
+      version: "5.0.0",
     },
-    "https://deno.land/x/earthstar_streaming_rpc@v4.0.3/src/entries/node.ts": {
+    "https://deno.land/x/earthstar_streaming_rpc@v5.0.0/src/entries/node.ts": {
       name: "earthstar-streaming-rpc",
-      version: "4.0.3",
+      version: "5.0.0",
       subPath: "node",
     },
     "./src/streaming_rpc/streaming_rpc.ts":
@@ -120,6 +90,12 @@ await build({
     },
     bugs: {
       url: "https://github.com/earthstar-project/earthstar/issues",
+    },
+    devDependencies: {
+      "@types/better-sqlite3": "7.4.2",
+      "@types/express": "4.17.13",
+      "@types/chloride": "2.4.0",
+      "@types/node-fetch": "2.5.12",
     },
   },
 });

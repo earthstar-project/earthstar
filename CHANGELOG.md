@@ -1,5 +1,9 @@
 # Changelog
 
+## next
+
+- Updated earthstar_streaming_rcp to v5.0.0
+
 ## v9.3.0
 
 - Feature: Replica will now permanently delete all expired documents on

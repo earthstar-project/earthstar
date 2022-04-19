@@ -122,13 +122,11 @@ class WebsocketPeerScenario implements PeerSyncHelper {
 
   constructor() {
     this._transport2 = new Rpc.TransportWebsocketServer({
-      url: "",
       deviceId: this._peer2.peerId,
       methods: makeSyncerBag(this._peer2),
     });
 
     this._transport3 = new Rpc.TransportWebsocketServer({
-      url: "",
       deviceId: this._peer3.peerId,
       methods: makeSyncerBag(this._peer3),
     });
@@ -158,12 +156,12 @@ class WebsocketPeerScenario implements PeerSyncHelper {
     this._peer3.addReplica(storageC3);
 
     this._serverPromise2 = serve(
-      this._transport2.reqHandler,
+      this._transport2.handler,
       { hostname: "0.0.0.0", port: 9091, signal: this._controller2.signal },
     );
 
     this._serverPromise3 = serve(
-      this._transport3.reqHandler,
+      this._transport3.handler,
       { hostname: "0.0.0.0", port: 9092, signal: this._controller3.signal },
     );
 

@@ -3,5 +3,5 @@ export {
   type ITransport,
   TransportHttpClient,
   TransportLocal,
-} from "https://esm.sh/earthstar-streaming-rpc@4.0.3";
-export { TransportWebsocketClient } from "https://esm.sh/earthstar-streaming-rpc@4.0.3/browser";
+} from "https://esm.sh/earthstar-streaming-rpc@5.0.0";
+export { TransportWebsocketClient } from "https://esm.sh/earthstar-streaming-rpc@5.0.0/browser";

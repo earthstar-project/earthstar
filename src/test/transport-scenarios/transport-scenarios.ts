@@ -123,8 +123,6 @@ class TransportHelperWebsocket implements TransportTestHelper {
 
     // Set up server
     this.targetTransport = new Rpc.TransportWebsocketServer({
-      // This is unused ... should ditch this option.
-      url: "",
       deviceId: targetPeer.peerId,
       methods: makeSyncerBag(targetPeer),
     });
@@ -133,7 +131,7 @@ class TransportHelperWebsocket implements TransportTestHelper {
 
     this._serverPromise = serve(
       //
-      this.targetTransport.reqHandler,
+      this.targetTransport.handler,
       { hostname: "0.0.0.0", port: 3456, signal: this._controller.signal },
     );
 
