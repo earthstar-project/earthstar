@@ -1,5 +1,9 @@
 # Changelog
 
+## v9.3.2
+
+- Updated earthstar_streaming_rcp to v5.0.1
+
 ## v9.3.1
 
 - Updated earthstar_streaming_rcp to v5.0.0
