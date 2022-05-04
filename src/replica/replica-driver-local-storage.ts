@@ -1,4 +1,4 @@
-import { Doc, Path, ShareAddress } from "../util/doc-types.ts";
+import { Path, ShareAddress } from "../util/doc-types.ts";
 import { ReplicaIsClosedError } from "../util/errors.ts";
 import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 
@@ -6,12 +6,17 @@ import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 
 import { Logger } from "../util/log.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
+import {
+  DocEs4,
+  FormatValidatorEs4,
+} from "../format-validators/format-validator-es4.ts";
+import { ExtractDocType } from "../format-validators/format-validator-types.ts";
 let logger = new Logger("storage driver localStorage", "yellowBright");
 
 //================================================================================
 type SerializedDriverDocs = {
-  byPathAndAuthor: Record<string, Doc>;
-  byPathNewestFirst: Record<Path, Doc[]>;
+  byPathAndAuthor: Record<string, DocEs4>;
+  byPathNewestFirst: Record<Path, DocEs4[]>;
 };
 
 function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
@@ -159,7 +164,9 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
   //--------------------------------------------------
   // SET
 
-  async upsert(doc: Doc): Promise<Doc> {
+  async upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+    doc: DocType,
+  ): Promise<DocType> {
     if (this._isClosed) throw new ReplicaIsClosedError();
     const upsertedDoc = await super.upsert(doc);
 

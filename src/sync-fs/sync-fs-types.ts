@@ -1,4 +1,5 @@
-import { Replica } from "../replica/replica.ts";
+import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { ReplicaForValidator } from "../replica/replica-types.ts";
 import { AuthorKeypair } from "../util/doc-types.ts";
 
 /**
@@ -10,7 +11,7 @@ import { AuthorKeypair } from "../util/doc-types.ts";
  */
 export type SyncFsOptions = {
   dirPath: string;
-  replica: Replica;
+  replica: ReplicaForValidator<typeof FormatValidatorEs4>;
   keypair: AuthorKeypair;
   allowDirtyDirWithoutManifest: boolean;
   overwriteFilesAtOwnedPaths?: boolean;

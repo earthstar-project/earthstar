@@ -3,8 +3,9 @@ import { Cmp } from "./util-types.ts";
 import {
   AuthorAddress,
   AuthorKeypair,
-  Doc,
-  DocToSet,
+  DocBase,
+  DocInputBase,
+  FormatName,
   LocalIndex,
   Path,
   ShareAddress,
@@ -16,8 +17,16 @@ import {
   IReplicaDriver,
   ReplicaBusChannel,
   ReplicaId,
+  ReplicaOpts,
 } from "./replica-types.ts";
-import { IFormatValidator } from "../format-validators/format-validator-types.ts";
+import {
+  ExtractDocType,
+  ExtractFormatType,
+  ExtractInputType,
+  ExtractValidatorFromInput,
+  ExtractValidatorWithFormat,
+  IFormatValidator,
+} from "../format-validators/format-validator-types.ts";
 import {
   isErr,
   ReplicaIsClosedError,
@@ -39,7 +48,14 @@ const loggerIngest = new Logger("replica ingest", "yellowBright");
 
 //================================================================================
 
-function docCompareNewestFirst(a: Doc, b: Doc): Cmp {
+function docCompareNewestFirst<
+  FormatType extends FormatName,
+  DocA extends DocBase<FormatType>,
+  DocB extends DocBase<FormatType>,
+>(
+  a: DocA,
+  b: DocB,
+): Cmp {
   // Sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
   return compareArrays(
     [a.timestamp, a.signature],
@@ -55,25 +71,42 @@ function docCompareNewestFirst(a: Doc, b: Doc): Cmp {
  * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
  * ```
  */
-export class Replica implements IReplica {
+export class Replica<
+  FormatType extends FormatName,
+  DocInputType extends DocInputBase<FormatType>,
+  DocType extends DocBase<FormatType>,
+  ValidatorType extends IFormatValidator<
+    FormatType,
+    DocInputType,
+    DocType
+  >,
+> implements IReplica<FormatType, DocInputType, DocType, ValidatorType> {
   replicaId: ReplicaId; // todo: save it to the driver too, and reload it when starting up
   /** The address of the share this replica belongs to. */
   share: ShareAddress;
   /** The validator used to validate ingested documents. */
-  formatValidator: IFormatValidator;
-  replicaDriver: IReplicaDriver;
+  formatValidators: ValidatorLookupType<ValidatorType>;
+  replicaDriver: IReplicaDriver<
+    FormatType,
+    DocInputType,
+    DocType,
+    ValidatorType
+  >;
   bus: Superbus<ReplicaBusChannel>;
 
   private _isClosed = false;
-  private ingestLock: Lock<IngestEvent>;
+  private ingestLock: Lock<IngestEvent<FormatType, DocType>>;
   private eraseInterval: number;
 
   constructor(
-    share: ShareAddress,
-    validator: IFormatValidator,
-    driver: IReplicaDriver,
+    { driver, validators }: ReplicaOpts<
+      FormatType,
+      DocInputType,
+      DocType,
+      ValidatorType
+    >,
   ) {
-    const addressIsValidResult = checkShareIsValid(share);
+    const addressIsValidResult = checkShareIsValid(driver.share);
 
     if (isErr(addressIsValidResult)) {
       throw addressIsValidResult;
@@ -84,11 +117,11 @@ export class Replica implements IReplica {
     );
 
     this.replicaId = "replica-" + randomId();
-    this.share = share;
-    this.formatValidator = validator;
+    this.share = driver.share;
+    this.formatValidators = this.makeValidatorLookup(validators);
     this.replicaDriver = driver;
     this.bus = new Superbus<ReplicaBusChannel>("|");
-    this.ingestLock = new Lock<IngestEvent>();
+    this.ingestLock = new Lock<IngestEvent<FormatType, DocType>>();
 
     this.eraseExpiredDocs();
 
@@ -165,12 +198,12 @@ export class Replica implements IReplica {
     historyMode: HistoryMode,
     startAfter: LocalIndex,
     limit?: number,
-  ): Promise<Doc[]> {
+  ): Promise<ExtractDocType<ValidatorType>[]> {
     logger.debug(
       `getDocsAfterLocalIndex(${historyMode}, ${startAfter}, ${limit})`,
     );
     if (this._isClosed) throw new ReplicaIsClosedError();
-    let query: Query = {
+    const query: Query = {
       historyMode: historyMode,
       orderBy: "localIndex ASC",
       startAfter: {
@@ -182,7 +215,7 @@ export class Replica implements IReplica {
   }
 
   /** Returns all documents, including historical versions of documents by other identities. */
-  async getAllDocs(): Promise<Doc[]> {
+  async getAllDocs(): Promise<ExtractDocType<ValidatorType>[]> {
     logger.debug(`getAllDocs()`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs({
@@ -191,7 +224,7 @@ export class Replica implements IReplica {
     });
   }
   /** Returns latest document from every path. */
-  async getLatestDocs(): Promise<Doc[]> {
+  async getLatestDocs(): Promise<ExtractDocType<ValidatorType>[]> {
     logger.debug(`getLatestDocs()`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs({
@@ -200,7 +233,7 @@ export class Replica implements IReplica {
     });
   }
   /** Returns all versions of a document by different authors from a specific path. */
-  async getAllDocsAtPath(path: Path): Promise<Doc[]> {
+  async getAllDocsAtPath(path: Path): Promise<ExtractDocType<ValidatorType>[]> {
     logger.debug(`getAllDocsAtPath("${path}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs({
@@ -210,10 +243,14 @@ export class Replica implements IReplica {
     });
   }
   /** Returns the most recently written version of a document at a path. */
-  async getLatestDocAtPath(path: Path): Promise<Doc | undefined> {
+  async getLatestDocAtPath(
+    path: Path,
+  ): Promise<
+    ExtractDocType<ValidatorType> | undefined
+  > {
     logger.debug(`getLatestDocsAtPath("${path}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    let docs = await this.replicaDriver.queryDocs({
+    const docs = await this.replicaDriver.queryDocs({
       historyMode: "latest",
       orderBy: "path ASC",
       filter: { path: path },
@@ -234,21 +271,21 @@ export class Replica implements IReplica {
     const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
     ```
     */
-  async queryDocs(query: Query = {}): Promise<Doc[]> {
+  async queryDocs(query: Query = {}): Promise<ExtractDocType<ValidatorType>[]> {
     logger.debug(`queryDocs`, query);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs(query);
   }
 
   /** Returns an array of all unique paths of documents returned by a given query. */
-  async queryPaths(query?: Query) {
+  async queryPaths(query?: Query): Promise<Path[]> {
     const docs = await this.queryDocs(query);
     const pathsSet = new Set(docs.map(({ path }) => path));
     return Array.from(pathsSet).sort();
   }
 
   /** Returns an array of all unique authors of documents returned by a given query. */
-  async queryAuthors(query?: Query) {
+  async queryAuthors(query?: Query): Promise<AuthorAddress[]> {
     const docs = await this.queryDocs(query);
     const authorsSet = new Set(docs.map(({ author }) => author));
     return Array.from(authorsSet).sort();
@@ -260,10 +297,20 @@ export class Replica implements IReplica {
   /**
    * Adds a new document to the replica. If a document signed by the same identity exists at the same path, it will be overwritten.
    */
-  async set(
+  async set<
+    InputType extends ExtractInputType<ValidatorType>,
+    OutputType extends ExtractDocType<
+      ExtractValidatorWithFormat<ValidatorType, InputType["format"]>
+    >,
+  >(
     keypair: AuthorKeypair,
-    docToSet: DocToSet,
-  ): Promise<IngestEvent> {
+    docToSet: InputType,
+  ): Promise<
+    IngestEvent<
+      FormatType,
+      OutputType
+    >
+  > {
     loggerSet.debug(`set`, docToSet);
     if (this._isClosed) throw new ReplicaIsClosedError();
 
@@ -271,51 +318,38 @@ export class Replica implements IReplica {
       "...deciding timestamp: getting latest doc at the same path (from any author)",
     );
 
+    const latestDocSamePath = await this.getLatestDocAtPath(docToSet.path);
+
     let timestamp: number;
     if (typeof docToSet.timestamp === "number") {
       timestamp = docToSet.timestamp;
-      loggerSet.debug(
-        "...docToSet already has a timestamp; not changing it from ",
-        timestamp,
-      );
     } else {
       // bump timestamp if needed to win over existing latest doc at same path
-      let latestDocSamePath = await this.getLatestDocAtPath(
-        docToSet.path,
-      );
+
       if (latestDocSamePath === undefined) {
         timestamp = microsecondNow();
-        loggerSet.debug(
-          "...no existing latest doc, setting timestamp to now() =",
-          timestamp,
-        );
       } else {
         timestamp = Math.max(
           microsecondNow(),
           latestDocSamePath.timestamp + 1,
         );
-        loggerSet.debug(
-          "...existing latest doc found, bumping timestamp to win if needed =",
-          timestamp,
-        );
       }
     }
 
-    let doc: Doc = {
-      format: "es.4",
-      author: keypair.address,
-      content: docToSet.content,
-      contentHash: await Crypto.sha256base32(docToSet.content),
-      deleteAfter: docToSet.deleteAfter ?? null,
-      path: docToSet.path,
-      timestamp,
-      workspace: this.share,
-      signature: "?", // signature will be added in just a moment
-      // _localIndex will be added during upsert.  it's not needed for the signature.
-    };
-
     loggerSet.debug("...signing doc");
-    let signedDoc = await this.formatValidator.signDocument(keypair, doc);
+
+    const format = docToSet.format;
+    const validator = this.formatValidators[format];
+
+    // HERE
+    // The return type is DocBase. Shouldn't it be the abstract type of the validator?
+    const signedDoc = await validator.generateDocument({
+      keypair,
+      input: docToSet,
+      share: this.share,
+      timestamp,
+    });
+
     if (isErr(signedDoc)) {
       return {
         kind: "failure",
@@ -328,7 +362,7 @@ export class Replica implements IReplica {
 
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
-    let ingestEvent = await this.ingest(signedDoc);
+    const ingestEvent = await this.ingest(signedDoc as OutputType);
     loggerSet.debug("-----------------------");
     loggerSet.debug("...done ingesting");
     loggerSet.debug("...set is done.");
@@ -338,12 +372,26 @@ export class Replica implements IReplica {
   /**
    * Ingest an existing signed document to the replica.
    */
-  async ingest(docToIngest: Doc): Promise<IngestEvent> {
+  async ingest<
+    DocType extends ExtractDocType<ValidatorType>,
+    IngestType extends IngestEvent<
+      DocType["format"],
+      DocType
+    >,
+  >(
+    docToIngest: DocType,
+  ): Promise<
+    IngestType
+  > {
     loggerIngest.debug(`ingest`, docToIngest);
     if (this._isClosed) throw new ReplicaIsClosedError();
 
     loggerIngest.debug("...removing extra fields");
-    let removeResultsOrErr = this.formatValidator.removeExtraFields(
+
+    const docFormat = docToIngest.format;
+    const validator = this.formatValidators[docFormat];
+
+    const removeResultsOrErr = validator.removeExtraFields(
       docToIngest,
     );
     if (isErr(removeResultsOrErr)) {
@@ -352,39 +400,42 @@ export class Replica implements IReplica {
         reason: "invalid_document",
         err: removeResultsOrErr,
         maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-      };
+      } as IngestType;
     }
-    docToIngest = removeResultsOrErr.doc; // a copy of doc without extra fields
-    let extraFields = removeResultsOrErr.extras; // any extra fields starting with underscores
+    docToIngest = removeResultsOrErr.doc as DocType; // a copy of doc without extra fields
+
+    const extraFields = removeResultsOrErr.extras; // any extra fields starting with underscores
     if (Object.keys(extraFields).length > 0) {
       loggerIngest.debug(`...extra fields found: ${J(extraFields)}`);
     }
 
     // now actually check doc validity against core schema
-    let docIsValid = this.formatValidator.checkDocumentIsValid(docToIngest);
+    const docIsValid = validator.checkDocumentIsValid(docToIngest);
     if (isErr(docIsValid)) {
       return {
         kind: "failure",
         reason: "invalid_document",
         err: docIsValid,
         maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-      };
+      } as IngestType;
     }
 
-    let writeToDriverWithLock = async (): Promise<IngestEvent> => {
+    const writeToDriverWithLock = async (): Promise<
+      IngestEvent<FormatType, DocType>
+    > => {
       // get other docs at the same path
       loggerIngest.debug(" >> ingest: start of protected region");
       loggerIngest.debug(
         "  > getting other history docs at the same path by any author",
       );
-      let existingDocsSamePath = await this.getAllDocsAtPath(
+      const existingDocsSamePath = await this.getAllDocsAtPath(
         docToIngest.path,
       );
       loggerIngest.debug(`  > ...got ${existingDocsSamePath.length}`);
 
       loggerIngest.debug("  > getting prevLatest and prevSameAuthor");
-      let prevLatest: Doc | null = existingDocsSamePath[0] ?? null;
-      let prevSameAuthor: Doc | null =
+      const prevLatest = existingDocsSamePath[0] ?? null;
+      const prevSameAuthor =
         existingDocsSamePath.filter((d) =>
           d.author === docToIngest.author
         )[0] ??
@@ -395,7 +446,7 @@ export class Replica implements IReplica {
       );
       existingDocsSamePath.push(docToIngest);
       existingDocsSamePath.sort(docCompareNewestFirst);
-      let isLatest = existingDocsSamePath[0] === docToIngest;
+      const isLatest = existingDocsSamePath[0] === docToIngest;
       loggerIngest.debug(`  > ...isLatest: ${isLatest}`);
 
       if (!isLatest && prevSameAuthor !== null) {
@@ -403,7 +454,7 @@ export class Replica implements IReplica {
           "  > new doc is not latest and there is another one from the same author...",
         );
         // check if this is obsolete or redudant from the same author
-        let docComp = docCompareNewestFirst(
+        const docComp = docCompareNewestFirst(
           docToIngest,
           prevSameAuthor,
         );
@@ -433,10 +484,10 @@ export class Replica implements IReplica {
 
       // save it
       loggerIngest.debug("  > upserting into ReplicaDriver...");
-      let docAsWritten = await this.replicaDriver.upsert(docToIngest); // TODO: pass existingDocsSamePath to save another lookup
+      const docAsWritten = await this.replicaDriver.upsert(docToIngest); // TODO: pass existingDocsSamePath to save another lookup
       loggerIngest.debug("  > ...done upserting into ReplicaDriver");
       loggerIngest.debug("  > ...getting ReplicaDriver maxLocalIndex...");
-      let maxLocalIndex = this.replicaDriver.getMaxLocalIndex();
+      const maxLocalIndex = this.replicaDriver.getMaxLocalIndex();
 
       loggerIngest.debug(
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
@@ -446,13 +497,13 @@ export class Replica implements IReplica {
         maxLocalIndex,
         doc: docAsWritten, // with updated extra properties like _localIndex
         docIsLatest: isLatest,
-        prevDocFromSameAuthor: prevSameAuthor,
-        prevLatestDoc: prevLatest,
+        prevDocFromSameAuthor: prevSameAuthor as DocType,
+        prevLatestDoc: prevLatest as DocType,
       };
     };
 
     loggerIngest.debug(" >> ingest: running protected region...");
-    let ingestEvent: IngestEvent = await this.ingestLock.run(
+    const ingestEvent = await this.ingestLock.run(
       writeToDriverWithLock,
     );
     loggerIngest.debug(" >> ingest: ...done running protected region");
@@ -464,7 +515,7 @@ export class Replica implements IReplica {
       ingestEvent,
     ); // include the path in the channel even on failures
 
-    return ingestEvent;
+    return ingestEvent as IngestType;
   }
 
   /**
@@ -487,33 +538,17 @@ export class Replica implements IReplica {
     let numOverwritten = 0;
     let numAlreadyEmpty = 0;
     for (const doc of docsToOverwrite) {
-      if (doc.content.length === 0) {
-        numAlreadyEmpty += 1;
-        continue;
-      }
+      const validator = this.formatValidators[doc.format];
 
-      // remove extra fields
-      const cleanedResult = this.formatValidator.removeExtraFields(doc);
-      if (isErr(cleanedResult)) return cleanedResult;
-      const cleanedDoc = cleanedResult.doc;
+      const wipedDoc = await validator.wipeDocument(keypair, doc);
 
-      // make new doc which is empty and just barely newer than the original
-      const emptyDoc: Doc = {
-        ...cleanedDoc,
-        content: "",
-        contentHash: await Crypto.sha256base32(""),
-        timestamp: doc.timestamp + 1,
-        signature: "?",
-      };
+      if (isErr(wipedDoc)) return wipedDoc;
 
-      // sign and ingest it
-      const signedDoc = await this.formatValidator.signDocument(
-        keypair,
-        emptyDoc,
+      const ingestEvent = await this.ingest(
+        wipedDoc as ExtractDocType<
+          ExtractValidatorWithFormat<ValidatorType, typeof wipedDoc["format"]>
+        >,
       );
-      if (isErr(signedDoc)) return signedDoc;
-
-      const ingestEvent = await this.ingest(signedDoc);
       if (ingestEvent.kind === "failure") {
         return new ValidationError(
           "ingestion error during overwriteAllDocsBySameAuthor: " +
@@ -546,4 +581,33 @@ export class Replica implements IReplica {
       );
     }
   }
+
+  private makeValidatorLookup<
+    FormatType extends FormatName,
+    DocInputType extends DocInputBase<FormatType>,
+    DocType extends DocBase<FormatType>,
+    ValidatorType extends IFormatValidator<
+      FormatType,
+      DocInputType,
+      DocType
+    >,
+  >(
+    validators: ValidatorType[],
+  ): ValidatorLookupType<ValidatorType> {
+    return validators.reduce((acc, validator) => {
+      return { ...acc, [validator.format]: validator };
+    }, {} as ValidatorLookupType<ValidatorType>);
+  }
 }
+
+// TODOM3: Explain this.
+type ValidatorLookupType<ValidatorType> = [ValidatorType] extends [
+  IFormatValidator<
+    infer _FormatType,
+    infer _DocInputType,
+    infer _DocOutputType
+  >,
+] ? {
+  [P in ValidatorType["format"]]: Extract<ValidatorType, { name: P }>;
+}
+  : never;

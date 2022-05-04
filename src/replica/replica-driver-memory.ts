@@ -1,7 +1,7 @@
 import { Cmp } from "./util-types.ts";
-import { Doc, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
+import { LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
-import { IReplicaDriver } from "./replica-types.ts";
+import { DriverForValidator, IReplicaDriver } from "./replica-types.ts";
 import {
   isErr,
   ReplicaIsClosedError,
@@ -19,17 +19,23 @@ import {
 
 import { Logger } from "../util/log.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
+import {
+  DocEs4,
+  DocInputEs4,
+  FormatValidatorEs4,
+} from "../format-validators/format-validator-es4.ts";
+import { ExtractDocType } from "../format-validators/format-validator-types.ts";
 let logger = new Logger("storage driver async memory", "yellow");
 
 //================================================================================
 
-function combinePathAndAuthor(doc: Doc) {
+function combinePathAndAuthor(doc: DocEs4) {
   // This is used as a key into the path&author index
   // It must use a separator character that's not valid in either paths or author addresses
   return `${doc.path}|${doc.author}`;
 }
 
-function docComparePathASCthenNewestFirst(a: Doc, b: Doc): Cmp {
+function docComparePathASCthenNewestFirst(a: DocEs4, b: DocEs4): Cmp {
   // Sorts docs by path ASC.
   // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
   return compareArrays(
@@ -39,7 +45,7 @@ function docComparePathASCthenNewestFirst(a: Doc, b: Doc): Cmp {
   );
 }
 
-function docComparePathDESCthenNewestFirst(a: Doc, b: Doc): Cmp {
+function docComparePathDESCthenNewestFirst(a: DocEs4, b: DocEs4): Cmp {
   // Sorts docs by path DESC.
   // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
   return compareArrays(
@@ -52,7 +58,8 @@ function docComparePathDESCthenNewestFirst(a: Doc, b: Doc): Cmp {
 /** An in-memory replica driver. Its contents will be lost when it is closed.
  * Works everywhere.
  */
-export class ReplicaDriverMemory implements IReplicaDriver {
+export class ReplicaDriverMemory
+  implements DriverForValidator<typeof FormatValidatorEs4> {
   share: ShareAddress;
   _maxLocalIndex: LocalIndex = -1; // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
   _isClosed: boolean = false;
@@ -61,8 +68,8 @@ export class ReplicaDriverMemory implements IReplicaDriver {
   // Our indexes.
   // These maps all share the same Doc objects, so memory usage is not bad.
   // The Doc objects are frozen.
-  docByPathAndAuthor: Map<string, Doc> = new Map(); // path+author --> doc
-  docsByPathNewestFirst: Map<Path, Doc[]> = new Map(); // path --> array of docs with that path, sorted newest first
+  docByPathAndAuthor: Map<string, DocEs4> = new Map(); // path+author --> doc
+  docsByPathNewestFirst: Map<Path, DocEs4[]> = new Map(); // path --> array of docs with that path, sorted newest first
 
   /**
    * @param share - The address of the share the replica belongs to.
@@ -134,15 +141,15 @@ export class ReplicaDriverMemory implements IReplicaDriver {
     return this._maxLocalIndex;
   }
 
-  async _getAllDocs(): Promise<Doc[]> {
+  async _getAllDocs(): Promise<DocEs4[]> {
     // return in unsorted order
     if (this._isClosed) throw new ReplicaIsClosedError();
     return [...this.docByPathAndAuthor.values()];
   }
-  async _getLatestDocs(): Promise<Doc[]> {
+  async _getLatestDocs(): Promise<DocEs4[]> {
     // return in unsorted order
     if (this._isClosed) throw new ReplicaIsClosedError();
-    let docs: Doc[] = [];
+    let docs: DocEs4[] = [];
     for (let docArray of this.docsByPathNewestFirst.values()) {
       // this array is kept sorted newest-first
       docs.push(docArray[0]);
@@ -150,7 +157,7 @@ export class ReplicaDriverMemory implements IReplicaDriver {
     return docs;
   }
 
-  async queryDocs(queryToClean: Query): Promise<Doc[]> {
+  async queryDocs(queryToClean: Query): Promise<DocEs4[]> {
     // Query the documents.
 
     logger.debug("queryDocs", queryToClean);
@@ -185,7 +192,7 @@ export class ReplicaDriverMemory implements IReplicaDriver {
       );
     }
 
-    let filteredDocs: Doc[] = [];
+    let filteredDocs: DocEs4[] = [];
     logger.debug(`    filtering docs`);
     for (let doc of docs) {
       // skip ahead until we reach startAfter
@@ -258,7 +265,9 @@ export class ReplicaDriverMemory implements IReplicaDriver {
   //--------------------------------------------------
   // SET
 
-  upsert(doc: Doc): Promise<Doc> {
+  upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+    doc: DocType,
+  ): Promise<DocType> {
     // add a doc.  don't enforce any rules on it.
     // overwrite existing doc even if this doc is older.
     // return a copy of the doc, frozen, with _localIndex set.

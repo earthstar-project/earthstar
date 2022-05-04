@@ -6,9 +6,14 @@ import {
   TransportWebsocketClient,
 } from "../../deps.ts";
 
-import { ShareAddress } from "../util/doc-types.ts";
-import { IReplica } from "../replica/replica-types.ts";
-import { IPeer, PeerId } from "./peer-types.ts";
+import {
+  DocBase,
+  DocInputBase,
+  FormatName,
+  ShareAddress,
+} from "../util/doc-types.ts";
+import { ReplicaForValidator } from "../replica/replica-types.ts";
+import { PeerForValidator, PeerId } from "./peer-types.ts";
 import { Syncer } from "../syncer/syncer.ts";
 import { SyncerBag } from "../syncer/_syncer-bag.ts";
 
@@ -18,17 +23,28 @@ import { randomId } from "../util/misc.ts";
 
 import { Logger } from "../util/log.ts";
 import { SyncSessionStatus } from "../syncer/syncer-types.ts";
+import { IFormatValidator } from "../format-validators/format-validator-types.ts";
 const logger = new Logger("peer", "blueBright");
 const J = JSON.stringify;
 
 //================================================================================
 
 /** Holds many shares' replicas and manages their synchronisation with other peers. Recommended as the point of contact between your application and Earthstar shares. */
-export class Peer implements IPeer {
+export class Peer<
+  FormatType extends FormatName,
+  DocInputType extends DocInputBase<FormatType>,
+  DocType extends DocBase<FormatType>,
+  ValidatorType extends IFormatValidator<
+    FormatType,
+    DocInputType,
+    DocType
+  >,
+> implements Peer<FormatType, DocInputType, DocType, ValidatorType> {
   peerId: PeerId;
 
   /** A subscribable map of the replicas stored in this peer. */
-  replicaMap: SuperbusMap<ShareAddress, IReplica> = new SuperbusMap();
+  replicaMap: SuperbusMap<ShareAddress, ReplicaForValidator<ValidatorType>> =
+    new SuperbusMap();
 
   /** A subscribable map of each of this Peer's sync operations' statuses */
   syncerStatuses: SuperbusMap<string, Record<ShareAddress, SyncSessionStatus>> =
@@ -51,22 +67,24 @@ export class Peer implements IPeer {
     keys.sort();
     return keys;
   }
-  replicas(): IReplica[] {
+  replicas(): ReplicaForValidator<ValidatorType>[] {
     const keys = [...this.replicaMap.keys()];
     keys.sort();
-    return keys.map((key) => this.replicaMap.get(key) as IReplica);
+    return keys.map((key) =>
+      this.replicaMap.get(key) as ReplicaForValidator<ValidatorType>
+    );
   }
   size(): number {
     return this.replicaMap.size;
   }
-  getReplica(ws: ShareAddress): IReplica | undefined {
+  getReplica(ws: ShareAddress): ReplicaForValidator<ValidatorType> | undefined {
     return this.replicaMap.get(ws);
   }
 
   //--------------------------------------------------
   // setters
 
-  async addReplica(replica: IReplica): Promise<void> {
+  async addReplica(replica: ReplicaForValidator<ValidatorType>): Promise<void> {
     logger.debug(`addReplica(${J(replica.share)})`);
     if (this.replicaMap.has(replica.share)) {
       logger.debug(`already had a replica with that share`);
@@ -83,7 +101,9 @@ export class Peer implements IPeer {
     logger.debug(`removeReplicaByShare(${J(share)})`);
     await this.replicaMap.delete(share);
   }
-  async removeReplica(replica: IReplica): Promise<void> {
+  async removeReplica(
+    replica: ReplicaForValidator<ValidatorType>,
+  ): Promise<void> {
     const existingReplica = this.replicaMap.get(replica.share);
     if (replica === existingReplica) {
       logger.debug(`removeReplica(${J(replica.share)})`);
@@ -175,7 +195,7 @@ export class Peer implements IPeer {
    * @param target - A HTTP URL, Websocket URL, or an instance of `Peer`.
    * @returns A function which stops the synchronisation when called.
    */
-  sync(target: IPeer | string) {
+  sync(target: PeerForValidator<ValidatorType> | string) {
     try {
       // Check if it's a URL of some kind.
       const url = new URL(target as string);
@@ -204,13 +224,13 @@ export class Peer implements IPeer {
       const localSyncer = this.addOrGetLocalSyncer();
 
       // Make sure a peer can't sync with itself — seems bad.
-      if (this === target) {
+      if (this as unknown === target) {
         return () => {};
       }
 
       // Check if there's already a sync operation with this Peer
       const maybeExistingSyncer = this.targetLocalSyncers.get(
-        (target as Peer).peerId,
+        (target as PeerForValidator<ValidatorType>).peerId,
       );
       if (maybeExistingSyncer) {
         return () => {
@@ -219,21 +239,29 @@ export class Peer implements IPeer {
       }
 
       // Otherwise create a new syncer and add it to a private set of target syncers
-      const otherSyncer = new Syncer(target as Peer, (methods) => {
-        return new TransportLocal({
-          deviceId: (target as Peer).peerId,
-          methods,
-          description: (target as Peer).peerId,
-        });
-      });
-      this.targetLocalSyncers.set((target as Peer).peerId, otherSyncer);
+      const otherSyncer = new Syncer(
+        target as PeerForValidator<ValidatorType>,
+        (methods) => {
+          return new TransportLocal({
+            deviceId: (target as PeerForValidator<ValidatorType>).peerId,
+            methods,
+            description: (target as PeerForValidator<ValidatorType>).peerId,
+          });
+        },
+      );
+      this.targetLocalSyncers.set(
+        (target as PeerForValidator<ValidatorType>).peerId,
+        otherSyncer,
+      );
       localSyncer.transport.addConnection(
         otherSyncer.transport,
       );
 
       return () => {
         // Remove the target syncer and close it — this will also close the connection from our Peer's side.
-        this.targetLocalSyncers.delete((target as Peer).peerId);
+        this.targetLocalSyncers.delete(
+          (target as PeerForValidator<ValidatorType>).peerId,
+        );
         otherSyncer.close();
       };
     }
@@ -265,7 +293,9 @@ export class Peer implements IPeer {
    * @param targets - An array made up of HTTP URLs, Websocket URLs, or `Peer` instances.
    * @returns A report of all the peers which were synced with.
    */
-  async syncUntilCaughtUp(targets: (IPeer | string)[]) {
+  async syncUntilCaughtUp(
+    targets: (PeerForValidator<ValidatorType> | string)[],
+  ) {
     let unsubscribeFromBus: (() => void) | null = null;
 
     const stopSyncers = [];
