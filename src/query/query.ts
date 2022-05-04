@@ -7,6 +7,7 @@ import { stringLengthInBytes } from "../util/bytes.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { CoreDoc } from "../replica/replica-types.ts";
 const logger = new Logger("query", "greenBright");
 
 //================================================================================
@@ -196,10 +197,7 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
   };
 }
 
-export function docMatchesFilter<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
->(doc: DocType, filter: QueryFilter): boolean {
+export function docMatchesFilter(doc: CoreDoc, filter: QueryFilter): boolean {
   // Does the doc match the filters?
   if (filter.path !== undefined && doc.path !== filter.path) return false;
   if (
@@ -233,8 +231,6 @@ export function docMatchesFilter<
     return false;
   }
 
-  // TODOM3: How do we check content length, now that not every doc has a content field?
-  /*
   const contentLength = stringLengthInBytes(doc.content);
   if (
     filter.contentLength !== undefined &&
@@ -254,15 +250,12 @@ export function docMatchesFilter<
   ) {
     return false;
   }
-  */
+
   return true;
 }
 
 /** Return whether a document is expired or not */
-export function docIsExpired<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
->(doc: DocType, now?: number) {
+export function docIsExpired(doc: CoreDoc, now?: number) {
   const nowToUse = now || Date.now() * 1000;
 
   if (doc.deleteAfter === null) {

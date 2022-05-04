@@ -4,7 +4,7 @@ import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
-  DocInputBase,
+  DocWithFormat,
   FormatName,
   LocalIndex,
   Path,
@@ -12,6 +12,8 @@ import {
 } from "../util/doc-types.ts";
 import { HistoryMode, Query } from "../query/query-types.ts";
 import {
+  CoreDoc,
+  CoreDocInput,
   IngestEvent,
   IReplica,
   IReplicaDriver,
@@ -20,13 +22,8 @@ import {
   ReplicaOpts,
 } from "./replica-types.ts";
 import {
-  ExtractDocType,
-  ExtractFormatType,
-  ExtractInputType,
-  ExtractValidatorFromInput,
-  ExtractValidatorWithFormat,
-  IFormatValidator,
-} from "../format-validators/format-validator-types.ts";
+  FormatValidatorEs4,
+} from "../format-validators/format-validator-es4.ts";
 import {
   isErr,
   ReplicaIsClosedError,
@@ -35,8 +32,6 @@ import {
 import { microsecondNow, randomId } from "../util/misc.ts";
 import { compareArrays } from "./compare.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
-
-import { Crypto } from "../crypto/crypto.ts";
 
 //--------------------------------------------------
 
@@ -47,6 +42,10 @@ const loggerSet = new Logger("replica set", "yellowBright");
 const loggerIngest = new Logger("replica ingest", "yellowBright");
 
 //================================================================================
+
+const CORE_VALIDATORS = {
+  "es.4": FormatValidatorEs4,
+};
 
 function docCompareNewestFirst<
   FormatType extends FormatName,
@@ -71,40 +70,20 @@ function docCompareNewestFirst<
  * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
  * ```
  */
-export class Replica<
-  FormatType extends FormatName,
-  DocInputType extends DocInputBase<FormatType>,
-  DocType extends DocBase<FormatType>,
-  ValidatorType extends IFormatValidator<
-    FormatType,
-    DocInputType,
-    DocType
-  >,
-> implements IReplica<FormatType, DocInputType, DocType, ValidatorType> {
+export class Replica implements IReplica {
   replicaId: ReplicaId; // todo: save it to the driver too, and reload it when starting up
   /** The address of the share this replica belongs to. */
   share: ShareAddress;
   /** The validator used to validate ingested documents. */
-  formatValidators: ValidatorLookupType<ValidatorType>;
-  replicaDriver: IReplicaDriver<
-    FormatType,
-    DocInputType,
-    DocType,
-    ValidatorType
-  >;
+  replicaDriver: IReplicaDriver;
   bus: Superbus<ReplicaBusChannel>;
 
   private _isClosed = false;
-  private ingestLock: Lock<IngestEvent<FormatType, DocType>>;
+  private ingestLock: Lock<IngestEvent<CoreDoc>>;
   private eraseInterval: number;
 
   constructor(
-    { driver, validators }: ReplicaOpts<
-      FormatType,
-      DocInputType,
-      DocType,
-      ValidatorType
-    >,
+    { driver }: ReplicaOpts,
   ) {
     const addressIsValidResult = checkShareIsValid(driver.share);
 
@@ -118,10 +97,9 @@ export class Replica<
 
     this.replicaId = "replica-" + randomId();
     this.share = driver.share;
-    this.formatValidators = this.makeValidatorLookup(validators);
     this.replicaDriver = driver;
     this.bus = new Superbus<ReplicaBusChannel>("|");
-    this.ingestLock = new Lock<IngestEvent<FormatType, DocType>>();
+    this.ingestLock = new Lock<IngestEvent<CoreDoc>>();
 
     this.eraseExpiredDocs();
 
@@ -198,7 +176,7 @@ export class Replica<
     historyMode: HistoryMode,
     startAfter: LocalIndex,
     limit?: number,
-  ): Promise<ExtractDocType<ValidatorType>[]> {
+  ): Promise<CoreDoc[]> {
     logger.debug(
       `getDocsAfterLocalIndex(${historyMode}, ${startAfter}, ${limit})`,
     );
@@ -215,7 +193,7 @@ export class Replica<
   }
 
   /** Returns all documents, including historical versions of documents by other identities. */
-  async getAllDocs(): Promise<ExtractDocType<ValidatorType>[]> {
+  async getAllDocs(): Promise<CoreDoc[]> {
     logger.debug(`getAllDocs()`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs({
@@ -224,7 +202,7 @@ export class Replica<
     });
   }
   /** Returns latest document from every path. */
-  async getLatestDocs(): Promise<ExtractDocType<ValidatorType>[]> {
+  async getLatestDocs(): Promise<CoreDoc[]> {
     logger.debug(`getLatestDocs()`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs({
@@ -233,7 +211,7 @@ export class Replica<
     });
   }
   /** Returns all versions of a document by different authors from a specific path. */
-  async getAllDocsAtPath(path: Path): Promise<ExtractDocType<ValidatorType>[]> {
+  async getAllDocsAtPath(path: Path): Promise<CoreDoc[]> {
     logger.debug(`getAllDocsAtPath("${path}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs({
@@ -246,7 +224,7 @@ export class Replica<
   async getLatestDocAtPath(
     path: Path,
   ): Promise<
-    ExtractDocType<ValidatorType> | undefined
+    CoreDoc | undefined
   > {
     logger.debug(`getLatestDocsAtPath("${path}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -256,7 +234,7 @@ export class Replica<
       filter: { path: path },
     });
     if (docs.length === 0) return undefined;
-    return docs[0];
+    return docs[0] as CoreDoc;
   }
 
   /** Returns an array of docs for a given query.
@@ -271,7 +249,7 @@ export class Replica<
     const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
     ```
     */
-  async queryDocs(query: Query = {}): Promise<ExtractDocType<ValidatorType>[]> {
+  async queryDocs(query: Query = {}): Promise<CoreDoc[]> {
     logger.debug(`queryDocs`, query);
     if (this._isClosed) throw new ReplicaIsClosedError();
     return await this.replicaDriver.queryDocs(query);
@@ -298,16 +276,13 @@ export class Replica<
    * Adds a new document to the replica. If a document signed by the same identity exists at the same path, it will be overwritten.
    */
   async set<
-    InputType extends ExtractInputType<ValidatorType>,
-    OutputType extends ExtractDocType<
-      ExtractValidatorWithFormat<ValidatorType, InputType["format"]>
-    >,
+    InputType extends CoreDocInput,
+    OutputType extends DocWithFormat<InputType["format"], CoreDoc>,
   >(
     keypair: AuthorKeypair,
     docToSet: InputType,
   ): Promise<
     IngestEvent<
-      FormatType,
       OutputType
     >
   > {
@@ -339,7 +314,7 @@ export class Replica<
     loggerSet.debug("...signing doc");
 
     const format = docToSet.format;
-    const validator = this.formatValidators[format];
+    const validator = CORE_VALIDATORS[format];
 
     // HERE
     // The return type is DocBase. Shouldn't it be the abstract type of the validator?
@@ -362,26 +337,22 @@ export class Replica<
 
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
-    const ingestEvent = await this.ingest(signedDoc as OutputType);
+    const ingestEvent = await this.ingest(signedDoc);
     loggerSet.debug("-----------------------");
     loggerSet.debug("...done ingesting");
     loggerSet.debug("...set is done.");
-    return ingestEvent;
+    return ingestEvent as IngestEvent<OutputType>;
   }
 
   /**
    * Ingest an existing signed document to the replica.
    */
   async ingest<
-    DocType extends ExtractDocType<ValidatorType>,
-    IngestType extends IngestEvent<
-      DocType["format"],
-      DocType
-    >,
+    DocType extends CoreDoc,
   >(
     docToIngest: DocType,
   ): Promise<
-    IngestType
+    IngestEvent<DocType>
   > {
     loggerIngest.debug(`ingest`, docToIngest);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -389,7 +360,7 @@ export class Replica<
     loggerIngest.debug("...removing extra fields");
 
     const docFormat = docToIngest.format;
-    const validator = this.formatValidators[docFormat];
+    const validator = CORE_VALIDATORS[docFormat];
 
     const removeResultsOrErr = validator.removeExtraFields(
       docToIngest,
@@ -400,7 +371,7 @@ export class Replica<
         reason: "invalid_document",
         err: removeResultsOrErr,
         maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-      } as IngestType;
+      };
     }
     docToIngest = removeResultsOrErr.doc as DocType; // a copy of doc without extra fields
 
@@ -417,11 +388,11 @@ export class Replica<
         reason: "invalid_document",
         err: docIsValid,
         maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-      } as IngestType;
+      };
     }
 
     const writeToDriverWithLock = async (): Promise<
-      IngestEvent<FormatType, DocType>
+      IngestEvent<DocType>
     > => {
       // get other docs at the same path
       loggerIngest.debug(" >> ingest: start of protected region");
@@ -515,7 +486,7 @@ export class Replica<
       ingestEvent,
     ); // include the path in the channel even on failures
 
-    return ingestEvent as IngestType;
+    return ingestEvent as IngestEvent<DocType>;
   }
 
   /**
@@ -538,16 +509,14 @@ export class Replica<
     let numOverwritten = 0;
     let numAlreadyEmpty = 0;
     for (const doc of docsToOverwrite) {
-      const validator = this.formatValidators[doc.format];
+      const validator = CORE_VALIDATORS[doc.format];
 
       const wipedDoc = await validator.wipeDocument(keypair, doc);
 
       if (isErr(wipedDoc)) return wipedDoc;
 
       const ingestEvent = await this.ingest(
-        wipedDoc as ExtractDocType<
-          ExtractValidatorWithFormat<ValidatorType, typeof wipedDoc["format"]>
-        >,
+        wipedDoc,
       );
       if (ingestEvent.kind === "failure") {
         return new ValidationError(
@@ -581,33 +550,4 @@ export class Replica<
       );
     }
   }
-
-  private makeValidatorLookup<
-    FormatType extends FormatName,
-    DocInputType extends DocInputBase<FormatType>,
-    DocType extends DocBase<FormatType>,
-    ValidatorType extends IFormatValidator<
-      FormatType,
-      DocInputType,
-      DocType
-    >,
-  >(
-    validators: ValidatorType[],
-  ): ValidatorLookupType<ValidatorType> {
-    return validators.reduce((acc, validator) => {
-      return { ...acc, [validator.format]: validator };
-    }, {} as ValidatorLookupType<ValidatorType>);
-  }
 }
-
-// TODOM3: Explain this.
-type ValidatorLookupType<ValidatorType> = [ValidatorType] extends [
-  IFormatValidator<
-    infer _FormatType,
-    infer _DocInputType,
-    infer _DocOutputType
-  >,
-] ? {
-  [P in ValidatorType["format"]]: Extract<ValidatorType, { name: P }>;
-}
-  : never;

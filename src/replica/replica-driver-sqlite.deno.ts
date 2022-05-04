@@ -5,7 +5,7 @@ import {
   ReplicaIsClosedError,
   ValidationError,
 } from "../util/errors.ts";
-import { DriverForValidator, IReplicaDriver } from "./replica-types.ts";
+import { IReplicaDriver } from "./replica-types.ts";
 import {
   CREATE_CONFIG_TABLE_QUERY,
   CREATE_DOCS_TABLE_QUERY,
@@ -61,8 +61,7 @@ interface DocObject extends Sqlite.RowObject {
 }
 
 /** A strorage driver which persists to SQLite. Works in Deno and browsers. */
-export class ReplicaDriverSqlite
-  implements DriverForValidator<typeof FormatValidatorEs4> {
+export class ReplicaDriverSqlite implements IReplicaDriver {
   share: ShareAddress;
   _filename: string;
   _isClosed = false;

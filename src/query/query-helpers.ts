@@ -1,6 +1,5 @@
-import { Doc } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
-import { IReplica } from "../replica/replica-types.ts";
+import { CoreDoc, IReplica } from "../replica/replica-types.ts";
 import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
@@ -201,7 +200,7 @@ export let queryByGlobAsync = async (
   replica: IReplica,
   glob: string,
   moreQueryOptions: Query = {},
-): Promise<Doc[]> => {
+): Promise<CoreDoc[]> => {
   let { query, regex } = globToQueryAndRegex(glob);
   query = { ...query, ...moreQueryOptions };
   let docs = await replica.queryDocs(query);
@@ -485,7 +484,7 @@ export let queryByTemplateAsync = async (
   replica: IReplica,
   template: string,
   moreQueryOptions: Query = {},
-): Promise<Doc[]> => {
+): Promise<CoreDoc[]> => {
   let { glob } = parseTemplate(template);
   let { query, regex } = globToQueryAndRegex(glob);
   query = { ...query, ...moreQueryOptions };

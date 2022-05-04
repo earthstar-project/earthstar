@@ -105,37 +105,6 @@ export interface IFormatValidator<
   // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
 }
 
-// TODOM3: Explain what all these horrible types do.
-
-export type DocType<ValidatorType> = ValidatorType extends
-  IFormatValidator<infer _FormatType, infer _InputType, infer DocType> ? DocType
-  : never;
-
-export type ExtractValidatorFromInput<
-  ValidatorType,
-  FormatType extends string,
-  DocInputType extends DocInputBase<FormatType>,
-> = [ValidatorType] extends [
-  IFormatValidator<
-    infer _FormatType,
-    infer _DocInputType,
-    infer _DocOutputType
-  >,
-] ? Extract<ValidatorType, { name: DocInputType["format"] }>
-  : never;
-
-export type ExtractValidatorWithFormat<
-  ValidatorType,
-  FormatType extends FormatName,
-> = [ValidatorType] extends [
-  IFormatValidator<
-    infer _FormatType,
-    infer _DocInputType,
-    infer _DocOutputType
-  >,
-] ? Extract<ValidatorType, { name: FormatType }>
-  : never;
-
 export type ExtractInputType<ValidatorType> = ValidatorType extends
   IFormatValidator<infer _FormatType, infer DocInputType, infer _DocType>
   ? DocInputType

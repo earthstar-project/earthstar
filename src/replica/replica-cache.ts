@@ -3,7 +3,7 @@ import {
   fast_json_stable_stringify as stringify,
 } from "../../deps.ts";
 
-import { AuthorKeypair, Doc, DocToSet, Path } from "../util/doc-types.ts";
+import { AuthorKeypair, Path } from "../util/doc-types.ts";
 import {
   ReplicaCacheIsClosedError,
   ReplicaIsClosedError,
@@ -12,7 +12,7 @@ import {
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 import { QueryFollower } from "../query-follower/query-follower.ts";
 import { Query } from "../query/query-types.ts";
-import { IReplica, LiveQueryEvent } from "./replica-types.ts";
+import { CoreDoc, IReplica, LiveQueryEvent } from "./replica-types.ts";
 
 import { Logger } from "../util/log.ts";
 
@@ -20,15 +20,15 @@ const logger = new Logger("replica-cache", "green");
 
 //================================================================================
 
-function justLocalIndex({ _localIndex }: Doc) {
+function justLocalIndex({ _localIndex }: CoreDoc) {
   return _localIndex;
 }
 
 // Lifted from ReplicaDriverMemory
 // Slightly different in that it does not check if doc matches the filter,
 // as this has been done beforehand by now.
-function sortAndLimit(query: Query, docs: Doc[]) {
-  const filteredDocs: Doc[] = [];
+function sortAndLimit(query: Query, docs: CoreDoc[]) {
+  const filteredDocs: CoreDoc[] = [];
 
   for (const doc of docs) {
     if (query.orderBy === "path ASC") {
@@ -88,7 +88,7 @@ function sortAndLimit(query: Query, docs: Doc[]) {
   return filteredDocs;
 }
 
-type CacheEntry = { docs: Doc[]; follower: QueryFollower; expires: number };
+type CacheEntry = { docs: CoreDoc[]; follower: QueryFollower; expires: number };
 
 /** A cached, synchronous interface to a replica, useful for reactive abstractions. Always returns results from its cache, and proxies the query to the backing replica in case of a cache miss.
  * ```
@@ -154,7 +154,7 @@ export class ReplicaCache {
   // SET - just pass along to the backing storage
 
   /** Add a new document directly to the backing replica. */
-  set(keypair: AuthorKeypair, docToSet: DocToSet) {
+  set(keypair: AuthorKeypair, docToSet: CoreDoc) {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
 
     return this._replica.set(keypair, docToSet);
@@ -163,7 +163,7 @@ export class ReplicaCache {
   // GET
 
   /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getAllDocs(): Doc[] {
+  getAllDocs(): CoreDoc[] {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
@@ -175,7 +175,7 @@ export class ReplicaCache {
   }
 
   /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getLatestDocs(): Doc[] {
+  getLatestDocs(): CoreDoc[] {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
@@ -187,7 +187,7 @@ export class ReplicaCache {
   }
 
   /** Fetch all versions of all docs from a certain path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getAllDocsAtPath(path: Path): Doc[] {
+  getAllDocsAtPath(path: Path): CoreDoc[] {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
@@ -200,7 +200,7 @@ export class ReplicaCache {
   }
 
   /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getLatestDocAtPath(path: Path): Doc | undefined {
+  getLatestDocAtPath(path: Path): CoreDoc | undefined {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
@@ -217,7 +217,7 @@ export class ReplicaCache {
   }
 
   /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  queryDocs(query: Query = {}): Doc[] {
+  queryDocs(query: Query = {}): CoreDoc[] {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
@@ -269,7 +269,7 @@ export class ReplicaCache {
       { ...query, historyMode: "all", orderBy: "localIndex ASC" },
     );
 
-    follower.bus.on((event: LiveQueryEvent) => {
+    follower.bus.on((event: LiveQueryEvent<CoreDoc>) => {
       if (event.kind === "existing" || event.kind === "success") {
         logger.debug({ doc: event.doc.path, queryString });
         this._updateCache(queryString, event.doc);
@@ -322,7 +322,7 @@ export class ReplicaCache {
   // CACHE
 
   // Update cache entries as best as we can until results from the backing storage arrive.
-  _updateCache(key: string, doc: Doc): void {
+  _updateCache(key: string, doc: CoreDoc): void {
     const entry = this._docCache.get(key);
 
     // This shouldn't happen really.

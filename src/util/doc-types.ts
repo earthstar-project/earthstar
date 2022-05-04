@@ -41,6 +41,7 @@ export interface DocBase<FormatType extends string> {
   timestamp: Timestamp;
   deleteAfter: Timestamp | null;
   signature: Signature;
+  _localIndex?: number;
 }
 
 export interface DocInputBase<FormatType extends string> {
@@ -48,3 +49,13 @@ export interface DocInputBase<FormatType extends string> {
   path: string;
   timestamp?: Timestamp;
 }
+
+export type DocWithFormat<
+  FormatType extends string,
+  DocType extends DocBase<string>,
+> = Extract<DocType, { "format": FormatType }>;
+
+export type DocInputWithFormat<
+  FormatType extends string,
+  DocInputType extends DocInputBase<string>,
+> = Extract<DocInputType, { "format": FormatType }>;

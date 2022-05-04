@@ -1,6 +1,6 @@
 import { Peer } from "../peer/peer.ts";
 import { microsecondNow, randomId } from "../util/misc.ts";
-import { Doc, ShareAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { sortedInPlace } from "../replica/compare.ts";
 import { ValidationError } from "../util/errors.ts";
@@ -15,6 +15,7 @@ import {
   ShareState,
   ShareStateFromResponse,
 } from "./syncer-types.ts";
+import { CoreDoc } from "../replica/replica-types.ts";
 
 function saltAndHashShare(
   salt: string,
@@ -178,7 +179,7 @@ export function makeSyncerBag(
         throw err;
       }
 
-      const docs: Doc[] = await replica.queryDocs(query);
+      const docs: CoreDoc[] = await replica.queryDocs(query);
 
       return {
         share,

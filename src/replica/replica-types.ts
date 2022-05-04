@@ -2,7 +2,7 @@ import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
-  DocInputBase,
+  DocWithFormat,
   FormatName,
   LocalIndex,
   Path,
@@ -12,11 +12,10 @@ import { HistoryMode, Query } from "../query/query-types.ts";
 import {
   ExtractDocType,
   ExtractInputType,
-  ExtractValidatorWithFormat,
-  IFormatValidator,
 } from "../format-validators/format-validator-types.ts";
 import { Superbus } from "../superbus/superbus.ts";
 import { ValidationError } from "../util/errors.ts";
+import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -61,8 +60,7 @@ export interface IngestEventFailure {
   err: Error | null;
 }
 export interface IngestEventNothingHappened<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
+  DocType extends CoreDoc,
 > {
   kind: "nothing_happened";
   reason: "obsolete_from_same_author" | "already_had_it";
@@ -70,8 +68,7 @@ export interface IngestEventNothingHappened<
   doc: DocType; // won't have a _localIndex because it was not actually ingested
 }
 export interface IngestEventSuccess<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
+  DocType extends CoreDoc,
 > {
   kind: "success";
   maxLocalIndex: number;
@@ -87,8 +84,7 @@ export interface IngestEventSuccess<
   prevLatestDoc: DocType | null;
 }
 export interface DocAlreadyExists<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
+  DocType extends CoreDoc,
 > {
   // for a doc that was previously ingested, when a live query is catching up.
   kind: "existing";
@@ -131,12 +127,11 @@ export interface ExpireEvent {
  * - IngestEventNothingHappened — ingested an obsolete or duplicate doc
  */
 export type IngestEvent<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
+  DocType extends CoreDoc,
 > =
   | IngestEventFailure
-  | IngestEventNothingHappened<FormatType, DocType>
-  | IngestEventSuccess<FormatType, DocType>;
+  | IngestEventNothingHappened<DocType>
+  | IngestEventSuccess<DocType>;
 
 /**
  * - DocAlreadyExists — processing an old doc as you catch up
@@ -147,19 +142,21 @@ export type IngestEvent<
  * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the replica closes)
  */
 export type LiveQueryEvent<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
+  DocType extends CoreDoc,
 > =
-  | DocAlreadyExists<FormatType, DocType>
+  | DocAlreadyExists<DocType>
   | // catching up...
   IdleEvent
   | // waiting for an ingest to happen...
-  IngestEvent<FormatType, DocType>
+  IngestEvent<DocType>
   | // an ingest happened
   ExpireEvent
   | ReplicaEventWillClose
   | ReplicaEventDidClose
   | QueryFollowerDidClose;
+
+export type CoreDocInput = ExtractInputType<typeof FormatValidatorEs4>;
+export type CoreDoc = ExtractDocType<typeof FormatValidatorEs4>;
 
 //================================================================================
 
@@ -182,27 +179,11 @@ export interface IReplicaConfig {
  * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
  * ```
  */
-export interface IReplica<
-  FormatType extends FormatName,
-  DocInputType extends DocInputBase<FormatType>,
-  DocType extends DocBase<FormatType>,
-  ValidatorType extends IFormatValidator<
-    FormatType,
-    DocInputType,
-    DocType
-  >,
-> extends IReplicaConfig {
+export interface IReplica extends IReplicaConfig {
   replicaId: ReplicaId;
   /** The address of the share this replica belongs to. */
   share: ShareAddress;
-  /** The validators used to validate ingested documents. */
-  formatValidators: Record<FormatType, ValidatorType>;
-  replicaDriver: IReplicaDriver<
-    FormatType,
-    DocInputType,
-    DocType,
-    ValidatorType
-  >;
+  replicaDriver: IReplicaDriver;
   bus: Superbus<ReplicaBusChannel>;
 
   //--------------------------------------------------
@@ -248,17 +229,17 @@ export interface IReplica<
     historyMode: HistoryMode,
     startAfter: LocalIndex,
     limit?: number,
-  ): Promise<ExtractDocType<ValidatorType>[]>;
+  ): Promise<CoreDoc[]>;
   /** Returns all documents, including historical versions of documents by other identities. */
-  getAllDocs(): Promise<ExtractDocType<ValidatorType>[]>;
+  getAllDocs(): Promise<CoreDoc[]>;
   /** Returns latest document from every path. */
-  getLatestDocs(): Promise<ExtractDocType<ValidatorType>[]>;
+  getLatestDocs(): Promise<CoreDoc[]>;
   /** Returns all versions of a document by different authors from a specific path. */
-  getAllDocsAtPath(path: Path): Promise<ExtractDocType<ValidatorType>[]>;
+  getAllDocsAtPath(path: Path): Promise<CoreDoc[]>;
   /** Returns the most recently written version of a document at a path. */
   getLatestDocAtPath(
     path: Path,
-  ): Promise<ExtractDocType<ValidatorType> | undefined>;
+  ): Promise<CoreDoc | undefined>;
 
   /** Returns an array of docs for a given query.
   ```
@@ -272,7 +253,7 @@ export interface IReplica<
   const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
   ```
   */
-  queryDocs(query?: Query): Promise<ExtractDocType<ValidatorType>[]>;
+  queryDocs(query?: Query): Promise<CoreDoc[]>;
 
   /** Returns an array of all unique paths of documents returned by a given query. */
   queryPaths(query?: Query): Promise<Path[]>;
@@ -287,16 +268,13 @@ export interface IReplica<
    * Adds a new document to the replica. If a document signed by the same identity exists at the same path, it will be overwritten.
    */
   set<
-    InputType extends ExtractInputType<ValidatorType>,
-    OutputType extends ExtractDocType<
-      ExtractValidatorWithFormat<ValidatorType, InputType["format"]>
-    >,
+    InputType extends CoreDocInput,
+    OutputType extends DocWithFormat<InputType["format"], CoreDoc>,
   >(
     keypair: AuthorKeypair,
     docToSet: InputType,
   ): Promise<
     IngestEvent<
-      FormatType,
       OutputType
     >
   >;
@@ -306,15 +284,11 @@ export interface IReplica<
    */
   // this should freeze the incoming doc if needed
   ingest<
-    DocType extends ExtractDocType<ValidatorType>,
-    IngestType extends IngestEvent<
-      DocType["format"],
-      DocType
-    >,
+    DocType extends CoreDoc,
   >(
     docToIngest: DocType,
   ): Promise<
-    IngestType
+    IngestEvent<DocType>
   >;
 
   /**
@@ -337,16 +311,7 @@ export interface IReplica<
 /**
  * A replica driver provides low-level access to actual replica and is used by IReplica to actually load and save data. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
  */
-export interface IReplicaDriver<
-  FormatType extends FormatName,
-  DocInputType extends DocInputBase<FormatType>,
-  DocType extends DocBase<FormatType>,
-  ValidatorType extends IFormatValidator<
-    FormatType,
-    DocInputType,
-    DocType
-  >,
-> extends IReplicaConfig {
+export interface IReplicaDriver extends IReplicaConfig {
   share: ShareAddress;
   //--------------------------------------------------
   // LIFECYCLE
@@ -374,7 +339,7 @@ export interface IReplicaDriver<
 
   /** Returns an array of Docs given a Query. */
   // these should return frozen docs
-  queryDocs(query: Query): Promise<ExtractDocType<ValidatorType>[]>;
+  queryDocs(query: Query): Promise<CoreDoc[]>;
   //    queryPaths(query: Query): Doc[];
   // TODO: add a special getAllDocsAtPath for use by ingest?
 
@@ -386,7 +351,7 @@ export interface IReplicaDriver<
   // add a doc.  don't enforce any rules on it.
   // overwrite existing doc even if this doc is older.
   // return a copy of the doc, frozen, with _localIndex set.
-  upsert<DocType extends ExtractDocType<ValidatorType>>(
+  upsert<DocType extends CoreDoc>(
     doc: DocType,
   ): Promise<DocType>;
 
@@ -398,37 +363,6 @@ export interface IReplicaDriver<
  * - `validators`: Validators for the kinds of documents this replica will replicate, e.g. FormatValidatorEs4.
  * - `driver`: A driver the replica will use to read and persist documents.
  */
-export interface ReplicaOpts<
-  FormatType extends FormatName,
-  DocInputType extends DocInputBase<FormatType>,
-  DocType extends DocBase<FormatType>,
-  ValidatorType extends IFormatValidator<
-    FormatType,
-    DocInputType,
-    DocType
-  >,
-> {
-  validators: ValidatorType[];
-  driver: IReplicaDriver<
-    FormatType,
-    DocInputType,
-    DocType,
-    ValidatorType
-  >;
+export interface ReplicaOpts {
+  driver: IReplicaDriver;
 }
-
-export type ReplicaForValidator<ValidatorType> = ValidatorType extends
-  IFormatValidator<
-    infer FormatType,
-    infer DocInputType,
-    infer DocType
-  > ? IReplica<FormatType, DocInputType, DocType, ValidatorType>
-  : never;
-
-export type DriverForValidator<ValidatorType> = ValidatorType extends
-  IFormatValidator<
-    infer FormatType,
-    infer DocInputType,
-    infer DocType
-  > ? IReplicaDriver<FormatType, DocInputType, DocType, ValidatorType>
-  : never;

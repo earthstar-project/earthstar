@@ -1,7 +1,7 @@
 import { Cmp } from "./util-types.ts";
-import { LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
+import { DocBase, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
-import { DriverForValidator, IReplicaDriver } from "./replica-types.ts";
+import { CoreDoc, IReplicaDriver } from "./replica-types.ts";
 import {
   isErr,
   ReplicaIsClosedError,
@@ -29,13 +29,13 @@ let logger = new Logger("storage driver async memory", "yellow");
 
 //================================================================================
 
-function combinePathAndAuthor(doc: DocEs4) {
+function combinePathAndAuthor(doc: CoreDoc) {
   // This is used as a key into the path&author index
   // It must use a separator character that's not valid in either paths or author addresses
   return `${doc.path}|${doc.author}`;
 }
 
-function docComparePathASCthenNewestFirst(a: DocEs4, b: DocEs4): Cmp {
+function docComparePathASCthenNewestFirst(a: CoreDoc, b: CoreDoc): Cmp {
   // Sorts docs by path ASC.
   // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
   return compareArrays(
@@ -45,7 +45,7 @@ function docComparePathASCthenNewestFirst(a: DocEs4, b: DocEs4): Cmp {
   );
 }
 
-function docComparePathDESCthenNewestFirst(a: DocEs4, b: DocEs4): Cmp {
+function docComparePathDESCthenNewestFirst(a: CoreDoc, b: CoreDoc): Cmp {
   // Sorts docs by path DESC.
   // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
   return compareArrays(
@@ -58,8 +58,7 @@ function docComparePathDESCthenNewestFirst(a: DocEs4, b: DocEs4): Cmp {
 /** An in-memory replica driver. Its contents will be lost when it is closed.
  * Works everywhere.
  */
-export class ReplicaDriverMemory
-  implements DriverForValidator<typeof FormatValidatorEs4> {
+export class ReplicaDriverMemory implements IReplicaDriver {
   share: ShareAddress;
   _maxLocalIndex: LocalIndex = -1; // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
   _isClosed: boolean = false;
@@ -68,8 +67,8 @@ export class ReplicaDriverMemory
   // Our indexes.
   // These maps all share the same Doc objects, so memory usage is not bad.
   // The Doc objects are frozen.
-  docByPathAndAuthor: Map<string, DocEs4> = new Map(); // path+author --> doc
-  docsByPathNewestFirst: Map<Path, DocEs4[]> = new Map(); // path --> array of docs with that path, sorted newest first
+  docByPathAndAuthor: Map<string, CoreDoc> = new Map(); // path+author --> doc
+  docsByPathNewestFirst: Map<Path, CoreDoc[]> = new Map(); // path --> array of docs with that path, sorted newest first
 
   /**
    * @param share - The address of the share the replica belongs to.
@@ -141,12 +140,12 @@ export class ReplicaDriverMemory
     return this._maxLocalIndex;
   }
 
-  async _getAllDocs(): Promise<DocEs4[]> {
+  async _getAllDocs(): Promise<CoreDoc[]> {
     // return in unsorted order
     if (this._isClosed) throw new ReplicaIsClosedError();
     return [...this.docByPathAndAuthor.values()];
   }
-  async _getLatestDocs(): Promise<DocEs4[]> {
+  async _getLatestDocs(): Promise<CoreDoc[]> {
     // return in unsorted order
     if (this._isClosed) throw new ReplicaIsClosedError();
     let docs: DocEs4[] = [];
@@ -192,7 +191,7 @@ export class ReplicaDriverMemory
       );
     }
 
-    let filteredDocs: DocEs4[] = [];
+    let filteredDocs: CoreDoc[] = [];
     logger.debug(`    filtering docs`);
     for (let doc of docs) {
       // skip ahead until we reach startAfter
@@ -265,7 +264,7 @@ export class ReplicaDriverMemory
   //--------------------------------------------------
   // SET
 
-  upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+  upsert<DocType extends CoreDoc>(
     doc: DocType,
   ): Promise<DocType> {
     // add a doc.  don't enforce any rules on it.
