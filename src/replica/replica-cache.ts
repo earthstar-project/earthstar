@@ -3,7 +3,7 @@ import {
   fast_json_stable_stringify as stringify,
 } from "../../deps.ts";
 
-import { AuthorKeypair, Path } from "../util/doc-types.ts";
+import { AuthorKeypair, DocWithFormat, Path } from "../util/doc-types.ts";
 import {
   ReplicaCacheIsClosedError,
   ReplicaIsClosedError,
@@ -12,7 +12,13 @@ import {
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 import { QueryFollower } from "../query-follower/query-follower.ts";
 import { Query } from "../query/query-types.ts";
-import { CoreDoc, IReplica, LiveQueryEvent } from "./replica-types.ts";
+import {
+  CoreDoc,
+  CoreDocInput,
+  IngestEvent,
+  IReplica,
+  LiveQueryEvent,
+} from "./replica-types.ts";
 
 import { Logger } from "../util/log.ts";
 
@@ -154,7 +160,17 @@ export class ReplicaCache {
   // SET - just pass along to the backing storage
 
   /** Add a new document directly to the backing replica. */
-  set(keypair: AuthorKeypair, docToSet: CoreDoc) {
+  set<
+    InputType extends CoreDocInput,
+    OutputType extends DocWithFormat<InputType["format"], CoreDoc>,
+  >(
+    keypair: AuthorKeypair,
+    docToSet: InputType,
+  ): Promise<
+    IngestEvent<
+      OutputType
+    >
+  > {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
 
     return this._replica.set(keypair, docToSet);

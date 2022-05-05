@@ -1,6 +1,5 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
-import { Doc } from "../../util/doc-types.ts";
 import { Query } from "../../query/query-types.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 
@@ -12,6 +11,7 @@ import { testScenarios } from "../test-scenarios.ts";
 import { LogLevel, setDefaultLogLevel } from "../../util/log.ts";
 import { sleep } from "../../util/misc.ts";
 import { isErr } from "../../util/errors.ts";
+import { CoreDoc } from "../../replica/replica-types.ts";
 //setDefaultLogLevel(LogLevel.Debug);
 let J = JSON.stringify;
 
@@ -42,7 +42,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
 
     assertEquals(driver.getMaxLocalIndex(), -1, "Initial maxLocalIndex is -1");
 
-    const doc: Doc = {
+    const doc: CoreDoc = {
       format: "es.4",
       author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
       content: "Hello 0",
@@ -198,7 +198,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
       const share = "+gardening.abcde";
       const driver = scenario.makeDriver(share);
 
-      const doc0: Doc = {
+      const doc0: CoreDoc = {
         format: "es.4",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
         content: "Hello 0",
@@ -241,7 +241,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
         signature: "whatever4", // everything assumes different docs have different sigs
       };
 
-      const firstDocResult: Doc = await driver.upsert(doc0);
+      const firstDocResult: CoreDoc = await driver.upsert(doc0);
       assertEquals(
         firstDocResult._localIndex,
         0,
@@ -540,7 +540,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
 
       const now = Date.now() * 1000;
 
-      const expiredDoc0: Doc = {
+      const expiredDoc0: CoreDoc = {
         format: "es.4",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
         content: "Hello 0",
@@ -552,7 +552,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
         signature: "whatever0", // upsert does not check signature or validate doc
       };
 
-      const expiredDoc1: Doc = {
+      const expiredDoc1: CoreDoc = {
         format: "es.4",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
         content: "Hello 1",
@@ -564,7 +564,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
         signature: "whatever0", // upsert does not check signature or validate doc
       };
 
-      const normalDoc0: Doc = {
+      const normalDoc0: CoreDoc = {
         format: "es.4",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
         content: "Hello 1",

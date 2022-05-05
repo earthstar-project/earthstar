@@ -26,7 +26,7 @@ export function runRelpicaTests(scenario: TestScenario) {
 
   function makeReplica(ws: ShareAddress): IReplica {
     const driver = scenario.makeDriver(ws);
-    return new Replica(ws, FormatValidatorEs4, driver);
+    return new Replica({ driver });
   }
 
   Deno.test(

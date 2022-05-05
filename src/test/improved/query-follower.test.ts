@@ -1,6 +1,10 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
-import { IReplica, LiveQueryEvent } from "../../replica/replica-types.ts";
+import {
+  CoreDoc,
+  IReplica,
+  LiveQueryEvent,
+} from "../../replica/replica-types.ts";
 import { Query } from "../../query/query-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
@@ -33,7 +37,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
 
   function makeStorage(ws: ShareAddress): IReplica {
     let driver = scenario.makeDriver(ws);
-    return new Replica(ws, FormatValidatorEs4, driver);
+    return new Replica({ driver });
   }
 
   Deno.test(SUBTEST_NAME + ": query rules", async () => {
@@ -221,7 +225,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
     //--------------------------------------------------
     // subscribe to query follower events
 
-    qf.bus.on((event: LiveQueryEvent) => {
+    qf.bus.on((event: LiveQueryEvent<CoreDoc>) => {
       loggerTestCb.debug(">>>>>>>>>>>>>>>>", event);
       if (event.kind && event.kind === "existing") {
         logs.push(
@@ -356,7 +360,7 @@ function runQueryFollowerTests(scenario: TestScenario) {
       orderBy: "localIndex ASC",
       startAfter: { localIndex: -1 },
     });
-    qf.bus.on((event: LiveQueryEvent) => {
+    qf.bus.on((event: LiveQueryEvent<CoreDoc>) => {
       if (event.kind === "existing" || event.kind === "success") {
         itemsFound.push(+event.doc.content);
       }

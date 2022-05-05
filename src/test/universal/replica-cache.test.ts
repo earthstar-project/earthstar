@@ -29,9 +29,7 @@ Deno.test("ReplicaCache", async () => {
   ) as AuthorKeypair;
 
   const storage = new Replica(
-    SHARE_ADDR,
-    FormatValidatorEs4,
-    new ReplicaDriverMemory(SHARE_ADDR),
+    { driver: new ReplicaDriverMemory(SHARE_ADDR) },
   );
 
   const cache = new ReplicaCache(storage);

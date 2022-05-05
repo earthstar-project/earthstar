@@ -20,18 +20,13 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 
 const TEST_DIR = "src/test/fs-sync/dirs/sync_share_dir";
 const TEST_SHARE = "+test.a123";
 
 function makeReplica(address: string) {
   const driver = new ReplicaDriverMemory(address);
-  return new Replica(
-    address,
-    FormatValidatorEs4,
-    driver,
-  );
+  return new Replica({ driver });
 }
 
 Deno.test("syncShareAndDir", async (test) => {

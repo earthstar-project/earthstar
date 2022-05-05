@@ -2,10 +2,8 @@
 
 ## Next
 
-- BREAKING: Replica's constructor arguments changed. It now takes a single
-  options argument instead of three. In these new options, the share address
-  does not need to be given, and it now accepts an array of format validators
-  rather than a single one.
+- BREAKING: Initialising a `Replica` is now simpler: you only need to provide a
+  driver.
 
 ## v9.3.2
 
