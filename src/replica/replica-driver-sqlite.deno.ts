@@ -1,4 +1,4 @@
-import { Doc, ShareAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import {
   EarthstarError,
   isErr,
@@ -33,6 +33,11 @@ import { Query } from "../query/query-types.ts";
 import { cleanUpQuery, docIsExpired } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
+import {
+  DocEs4,
+  FormatValidatorEs4,
+} from "../format-validators/format-validator-es4.ts";
+import { ExtractDocType } from "../format-validators/format-validator-types.ts";
 
 const logger = new Logger("storage driver sqlite node", "yellow");
 
@@ -324,7 +329,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     return this._maxLocalIndex;
   }
 
-  queryDocs(queryToClean: Query): Promise<Doc[]> {
+  queryDocs(queryToClean: Query): Promise<DocEs4[]> {
     // Query the documents
 
     logger.debug("queryDocs", queryToClean);
@@ -370,13 +375,15 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     logger.debug(`  result: ${docs.length} docs`);
 
     docsQuery.finalize();
-    return Promise.resolve(docsWithStringContent);
+    return Promise.resolve(docsWithStringContent as DocEs4[]);
   }
 
   //--------------------------------------------------
   // SET
 
-  upsert(doc: Doc): Promise<Doc> {
+  upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+    doc: DocType,
+  ): Promise<DocType> {
     // Insert new doc, replacing old doc if there is one
     logger.debug(`upsertDocument(doc.path: ${JSON.stringify(doc.path)})`);
 
@@ -399,7 +406,8 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
       content: contentAsBytes,
     };
 
-    this._db.query(UPSERT_DOC_QUERY, docWithBytes);
+    //  TODOM3: Fix this any type.
+    this._db.query(UPSERT_DOC_QUERY, docWithBytes as any);
 
     return Promise.resolve(docWithLocalIndex);
   }

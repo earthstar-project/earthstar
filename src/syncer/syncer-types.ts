@@ -1,6 +1,6 @@
 import { PeerId } from "../peer/peer-types.ts";
-import { Doc, ShareAddress } from "../util/doc-types.ts";
-import { ReplicaId } from "../replica/replica-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
+import { CoreDoc, ReplicaId } from "../replica/replica-types.ts";
 import { Query } from "../query/query-types.ts";
 import { SyncerBag } from "./_syncer-bag.ts";
 import { type ITransport } from "../../deps.ts";
@@ -73,7 +73,7 @@ export interface ShareQueryResponse {
   share: ShareAddress;
   storageId: ReplicaId;
   partnerMaxLocalIndexOverall: number;
-  docs: Doc[];
+  docs: CoreDoc[];
 }
 
 export interface ShareQueryResult {

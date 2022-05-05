@@ -15,11 +15,12 @@ import {
 } from "https://deno.land/std@0.126.0/encoding/base64.ts";
 import { bytesExtensions } from "./constants.ts";
 import { ensureDir } from "https://deno.land/std@0.132.0/fs/mod.ts";
-import { AuthorKeypair, Doc } from "../util/doc-types.ts";
+import { AuthorKeypair } from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
+import { CoreDoc } from "../replica/replica-types.ts";
 
 export function isAbsenceEntry(
-  o: AbsenceEntry | FileInfoEntry | Doc,
+  o: AbsenceEntry | FileInfoEntry | CoreDoc,
 ): o is AbsenceEntry {
   if ("fileLastSeenMs" in o) {
     return true;
@@ -29,7 +30,7 @@ export function isAbsenceEntry(
 }
 
 export function isFileInfoEntry(
-  o: AbsenceEntry | FileInfoEntry | Doc,
+  o: AbsenceEntry | FileInfoEntry | CoreDoc,
 ): o is FileInfoEntry {
   if ("abspath" in o) {
     return true;
@@ -39,8 +40,8 @@ export function isFileInfoEntry(
 }
 
 export function isDoc(
-  o: AbsenceEntry | FileInfoEntry | Doc,
-): o is Doc {
+  o: AbsenceEntry | FileInfoEntry | CoreDoc,
+): o is CoreDoc {
   if ("signature" in o) {
     return true;
   }
@@ -149,7 +150,7 @@ export function getTupleWinners<TypeA, TypeB>(
   return winners;
 }
 
-export async function writeDocToDir(doc: Doc, dir: string) {
+export async function writeDocToDir(doc: CoreDoc, dir: string) {
   const pathToWrite = join(dir, doc.path);
   const extension = extname(doc.path);
   const enclosingDir = dirname(pathToWrite);

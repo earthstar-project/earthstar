@@ -1,7 +1,7 @@
 import { Simplebus } from "../../deps.ts";
 import { Query } from "../query/query-types.ts";
 
-import { IReplica, LiveQueryEvent } from "../replica/replica-types.ts";
+import { CoreDoc, IReplica, LiveQueryEvent } from "../replica/replica-types.ts";
 
 //================================================================================
 
@@ -52,7 +52,7 @@ export interface IQueryFollower {
    * ```
    * (because you can't send an event from inside an event handler)
    */
-  bus: Simplebus<LiveQueryEvent>;
+  bus: Simplebus<LiveQueryEvent<CoreDoc>>;
 
   /** Returns the follower's state, which can be in two modes:
    *   1. catching up with the backlog

@@ -31,8 +31,7 @@ function runPeerTests(
   const SUBTEST_NAME = name;
 
   function makeStorage(share: ShareAddress): IReplica {
-    const stDriver = makeDriver(share);
-    const storage = new Replica(share, FormatValidatorEs4, stDriver);
+    const storage = new Replica({ driver: makeDriver(share) });
     return storage;
   }
 

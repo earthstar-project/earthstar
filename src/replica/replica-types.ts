@@ -1,16 +1,21 @@
 import {
   AuthorAddress,
   AuthorKeypair,
-  Doc,
-  DocToSet,
+  DocBase,
+  DocWithFormat,
+  FormatName,
   LocalIndex,
   Path,
   ShareAddress,
 } from "../util/doc-types.ts";
 import { HistoryMode, Query } from "../query/query-types.ts";
-import { IFormatValidator } from "../format-validators/format-validator-types.ts";
+import {
+  ExtractDocType,
+  ExtractInputType,
+} from "../format-validators/format-validator-types.ts";
+import { Superbus } from "../superbus/superbus.ts";
 import { ValidationError } from "../util/errors.ts";
-import { Superbus } from "../../deps.ts";
+import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -24,9 +29,12 @@ export type ReplicaBusChannel =
   | "willClose"
   | "didClose";
 
-export interface QueryResult {
+export interface QueryResult<
+  FormatType extends FormatName,
+  DocType extends DocBase<FormatType>,
+> {
   // the docs from the query...
-  docs: Doc[];
+  docs: DocType[];
   // ...and the replica Driver's maxLocalIndex at the time
   // just before and just after the query was done.
   // This provided a lower and upper bound for the maxLocalIndex
@@ -51,31 +59,37 @@ export interface IngestEventFailure {
   maxLocalIndex: number;
   err: Error | null;
 }
-export interface IngestEventNothingHappened {
+export interface IngestEventNothingHappened<
+  DocType extends CoreDoc,
+> {
   kind: "nothing_happened";
   reason: "obsolete_from_same_author" | "already_had_it";
   maxLocalIndex: number;
-  doc: Doc; // won't have a _localIndex because it was not actually ingested
+  doc: DocType; // won't have a _localIndex because it was not actually ingested
 }
-export interface IngestEventSuccess {
+export interface IngestEventSuccess<
+  DocType extends CoreDoc,
+> {
   kind: "success";
   maxLocalIndex: number;
-  doc: Doc; // the just-written doc, frozen, with updated extra properties like _localIndex
+  doc: DocType; // the just-written doc, frozen, with updated extra properties like _localIndex
 
   docIsLatest: boolean; // is it the latest at this path (for any author)?
 
   // the most recent doc from the same author, at this path, before the new doc was written.
-  prevDocFromSameAuthor: Doc | null;
+  prevDocFromSameAuthor: DocType | null;
 
   // the latest doc from any author at this path, before the new doc was written.
   // note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
-  prevLatestDoc: Doc | null;
+  prevLatestDoc: DocType | null;
 }
-export interface DocAlreadyExists {
+export interface DocAlreadyExists<
+  DocType extends CoreDoc,
+> {
   // for a doc that was previously ingested, when a live query is catching up.
   kind: "existing";
   maxLocalIndex: number;
-  doc: Doc; // the just-written doc, frozen, with updated extra properties like _localIndex
+  doc: DocType; // the just-written doc, frozen, with updated extra properties like _localIndex
 
   //docIsLatest: boolean,  // is it the latest at this path (for any author)?
 
@@ -112,10 +126,12 @@ export interface ExpireEvent {
  * - IngestEventFailure — refused an invalid doc
  * - IngestEventNothingHappened — ingested an obsolete or duplicate doc
  */
-export type IngestEvent =
+export type IngestEvent<
+  DocType extends CoreDoc,
+> =
   | IngestEventFailure
-  | IngestEventNothingHappened
-  | IngestEventSuccess;
+  | IngestEventNothingHappened<DocType>
+  | IngestEventSuccess<DocType>;
 
 /**
  * - DocAlreadyExists — processing an old doc as you catch up
@@ -125,17 +141,22 @@ export type IngestEvent =
  * - ReplicaEventDidClose — the replica has closed
  * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the replica closes)
  */
-export type LiveQueryEvent =
-  | DocAlreadyExists
+export type LiveQueryEvent<
+  DocType extends CoreDoc,
+> =
+  | DocAlreadyExists<DocType>
   | // catching up...
   IdleEvent
   | // waiting for an ingest to happen...
-  IngestEvent
+  IngestEvent<DocType>
   | // an ingest happened
   ExpireEvent
   | ReplicaEventWillClose
   | ReplicaEventDidClose
   | QueryFollowerDidClose;
+
+export type CoreDocInput = ExtractInputType<typeof FormatValidatorEs4>;
+export type CoreDoc = ExtractDocType<typeof FormatValidatorEs4>;
 
 //================================================================================
 
@@ -162,8 +183,6 @@ export interface IReplica extends IReplicaConfig {
   replicaId: ReplicaId;
   /** The address of the share this replica belongs to. */
   share: ShareAddress;
-  /** The validator used to validate ingested documents. */
-  formatValidator: IFormatValidator;
   replicaDriver: IReplicaDriver;
   bus: Superbus<ReplicaBusChannel>;
 
@@ -210,15 +229,17 @@ export interface IReplica extends IReplicaConfig {
     historyMode: HistoryMode,
     startAfter: LocalIndex,
     limit?: number,
-  ): Promise<Doc[]>;
+  ): Promise<CoreDoc[]>;
   /** Returns all documents, including historical versions of documents by other identities. */
-  getAllDocs(): Promise<Doc[]>;
+  getAllDocs(): Promise<CoreDoc[]>;
   /** Returns latest document from every path. */
-  getLatestDocs(): Promise<Doc[]>;
+  getLatestDocs(): Promise<CoreDoc[]>;
   /** Returns all versions of a document by different authors from a specific path. */
-  getAllDocsAtPath(path: Path): Promise<Doc[]>;
+  getAllDocsAtPath(path: Path): Promise<CoreDoc[]>;
   /** Returns the most recently written version of a document at a path. */
-  getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
+  getLatestDocAtPath(
+    path: Path,
+  ): Promise<CoreDoc | undefined>;
 
   /** Returns an array of docs for a given query.
   ```
@@ -232,7 +253,7 @@ export interface IReplica extends IReplicaConfig {
   const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
   ```
   */
-  queryDocs(query?: Query): Promise<Doc[]>;
+  queryDocs(query?: Query): Promise<CoreDoc[]>;
 
   /** Returns an array of all unique paths of documents returned by a given query. */
   queryPaths(query?: Query): Promise<Path[]>;
@@ -246,13 +267,29 @@ export interface IReplica extends IReplicaConfig {
   /**
    * Adds a new document to the replica. If a document signed by the same identity exists at the same path, it will be overwritten.
    */
-  set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestEvent>;
+  set<
+    InputType extends CoreDocInput,
+    OutputType extends DocWithFormat<InputType["format"], CoreDoc>,
+  >(
+    keypair: AuthorKeypair,
+    docToSet: InputType,
+  ): Promise<
+    IngestEvent<
+      OutputType
+    >
+  >;
 
   /**
    * Ingest an existing signed document to the replica.
    */
   // this should freeze the incoming doc if needed
-  ingest(doc: Doc): Promise<IngestEvent>;
+  ingest<
+    DocType extends CoreDoc,
+  >(
+    docToIngest: DocType,
+  ): Promise<
+    IngestEvent<DocType>
+  >;
 
   /**
    * Overwrite every document from this author, including history versions, with an empty doc.
@@ -267,6 +304,9 @@ export interface IReplica extends IReplicaConfig {
     keypair: AuthorKeypair,
   ): Promise<number | ValidationError>;
 }
+
+/**
+
 
 /**
  * A replica driver provides low-level access to actual replica and is used by IReplica to actually load and save data. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
@@ -299,7 +339,8 @@ export interface IReplicaDriver extends IReplicaConfig {
 
   /** Returns an array of Docs given a Query. */
   // these should return frozen docs
-  queryDocs(query: Query): Promise<Doc[]>; //    queryPaths(query: Query): Doc[];
+  queryDocs(query: Query): Promise<CoreDoc[]>;
+  //    queryPaths(query: Query): Doc[];
   // TODO: add a special getAllDocsAtPath for use by ingest?
 
   //--------------------------------------------------
@@ -310,8 +351,18 @@ export interface IReplicaDriver extends IReplicaConfig {
   // add a doc.  don't enforce any rules on it.
   // overwrite existing doc even if this doc is older.
   // return a copy of the doc, frozen, with _localIndex set.
-  upsert(doc: Doc): Promise<Doc>;
+  upsert<DocType extends CoreDoc>(
+    doc: DocType,
+  ): Promise<DocType>;
 
   /** Erase all expired docs from the replica permanently, leaving no trace of the documents. Returns the paths of the expired documents. */
   eraseExpiredDocs(): Promise<Path[]>;
+}
+
+/** Options for configuring a new replica.
+ * - `validators`: Validators for the kinds of documents this replica will replicate, e.g. FormatValidatorEs4.
+ * - `driver`: A driver the replica will use to read and persist documents.
+ */
+export interface ReplicaOpts {
+  driver: IReplicaDriver;
 }

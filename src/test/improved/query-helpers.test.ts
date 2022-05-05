@@ -39,7 +39,7 @@ let runQueryHelpersTests = async (
 
   function makeStorage(ws: ShareAddress): IReplica {
     let driver = scenario.makeDriver(ws);
-    return new Replica(ws, FormatValidatorEs4, driver);
+    return new Replica({ driver });
   }
 
   let logger = new Logger("query helpers test", "yellowBright");

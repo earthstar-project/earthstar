@@ -4,6 +4,7 @@ import { Thunk } from "../replica/util-types.ts";
 import { Query } from "../query/query-types.ts";
 import { NotImplementedError, ReplicaIsClosedError } from "../util/errors.ts";
 import {
+  CoreDoc,
   DocAlreadyExists,
   IdleEvent,
   IReplica,
@@ -66,7 +67,7 @@ export class QueryFollower implements IQueryFollower {
    * ```
    * (because you can't send an event from inside an event handler)
    */
-  bus: Simplebus<LiveQueryEvent>;
+  bus: Simplebus<LiveQueryEvent<CoreDoc>>;
   _state: QueryFollowerState = "new";
   _unsub: Thunk | null = null; // to unsub from replica events
 
@@ -78,7 +79,7 @@ export class QueryFollower implements IQueryFollower {
     logger.debug("constructor");
     this.replica = replica;
     this.query = cloneDeep(query); // we'll modify the query as we go, changing the startAfter
-    this.bus = new Simplebus<LiveQueryEvent>();
+    this.bus = new Simplebus<LiveQueryEvent<CoreDoc>>();
 
     // enforce rules on supported queries
     logger.debug("...enforcing rules on supported queries");
@@ -189,7 +190,7 @@ export class QueryFollower implements IQueryFollower {
         );
         logger.debug(`...sending docs to bus...`);
         for (let doc of existingDocs) {
-          let event: DocAlreadyExists = {
+          let event: DocAlreadyExists<CoreDoc> = {
             kind: "existing",
             maxLocalIndex: asOf2,
             doc: doc, // TODO: should be the just-written doc, frozen, with updated extra properties like _localIndex
@@ -287,7 +288,7 @@ export class QueryFollower implements IQueryFollower {
         loggerSub.debug(
           `--- QueryFollower subscription: got an event on channel ${channel}`,
         );
-        let event = data as LiveQueryEvent;
+        let event = data as LiveQueryEvent<CoreDoc>;
         if (channel === "willClose") {
           let event: ReplicaEventWillClose = {
             kind: "willClose",

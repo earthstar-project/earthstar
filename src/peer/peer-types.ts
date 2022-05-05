@@ -17,7 +17,9 @@ export interface IPeer {
   shares(): ShareAddress[];
   replicas(): IReplica[];
   size(): number;
-  getReplica(share: ShareAddress): IReplica | undefined;
+  getReplica(
+    share: ShareAddress,
+  ): IReplica | undefined;
 
   // setters
   addReplica(replica: IReplica): Promise<void>;

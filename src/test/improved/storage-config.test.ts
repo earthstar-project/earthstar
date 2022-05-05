@@ -44,9 +44,7 @@ let _runStorageConfigTests = (
     share: ShareAddress,
   ): IReplica | IReplicaDriver => {
     let driver = scenario.makeDriver(share);
-    return mode === "storage"
-      ? new Replica(share, FormatValidatorEs4, driver)
-      : driver;
+    return mode === "storage" ? new Replica({ driver }) : driver;
   };
 
   Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {

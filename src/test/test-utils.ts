@@ -1,10 +1,11 @@
 import { assert } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair, Doc } from "../util/doc-types.ts";
+import { AuthorKeypair } from "../util/doc-types.ts";
 import { deepEqual, randomId } from "../util/misc.ts";
 import { isErr } from "../util/errors.ts";
 import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 import { ReplicaDriverMemory } from "../replica/replica-driver-memory.ts";
+import { CoreDoc } from "../replica/replica-types.ts";
 
 // for testing unicode
 export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -32,23 +33,25 @@ export let doesNotThrow = async (
 };
 
 export function makeReplica(addr: string) {
-  return new Replica(addr, FormatValidatorEs4, new ReplicaDriverMemory(addr));
+  return new Replica({
+    driver: new ReplicaDriverMemory(addr),
+  });
 }
 
 export function makeNReplicas(addr: string, number: number) {
   return Array.from({ length: number }, () => makeReplica(addr));
 }
 
-function stripLocalIndexFromDoc({ _localIndex, ...rest }: Doc) {
+function stripLocalIndexFromDoc({ _localIndex, ...rest }: CoreDoc) {
   return { ...rest };
 }
 
-export function docsAreEquivalent(docsA: Doc[], docsB: Doc[]) {
+export function docsAreEquivalent(docsA: CoreDoc[], docsB: CoreDoc[]) {
   if (docsA.length !== docsB.length) {
     return false;
   }
 
-  const sortByPathThenAuthor = (docA: Doc, docB: Doc) => {
+  const sortByPathThenAuthor = (docA: CoreDoc, docB: CoreDoc) => {
     const { path: pathA, author: authorA } = docA;
     const { path: pathB, author: authorB } = docB;
 
@@ -106,7 +109,7 @@ export function writeRandomDocs(
 }
 
 export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
-  const allDocsSets: Doc[][] = [];
+  const allDocsSets: CoreDoc[][] = [];
 
   // Create an array where each element is a collection of all the docs from a storage.
   for await (const storage of storages) {
@@ -114,7 +117,7 @@ export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
     allDocsSets.push(allDocs);
   }
 
-  return allDocsSets.reduce((isSynced: boolean, docs: Doc[], i: number) => {
+  return allDocsSets.reduce((isSynced: boolean, docs: CoreDoc[], i: number) => {
     if (i === 0) {
       return isSynced;
     }

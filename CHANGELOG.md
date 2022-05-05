@@ -1,5 +1,10 @@
 # Changelog
 
+## Next
+
+- BREAKING: Initialising a `Replica` is now simpler: you only need to provide a
+  driver.
+
 ## v9.3.2
 
 - Updated earthstar_streaming_rcp to v5.0.1

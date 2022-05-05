@@ -1,6 +1,6 @@
 // @deno-types="./indexeddb-types.deno.d.ts"
 
-import { Doc, ShareAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { ReplicaIsClosedError } from "../util/errors.ts";
 import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 import { Query } from "../query/query-types.ts";
@@ -8,6 +8,8 @@ import { Query } from "../query/query-types.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { ExtractDocType } from "../format-validators/format-validator-types.ts";
+import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 const logger = new Logger("replica driver indexeddb", "yellowBright");
 
 //================================================================================
@@ -90,7 +92,7 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
           );
 
           const localIndexes = Array.from(this.docByPathAndAuthor.values()).map(
-            (doc) => doc._localIndex as number
+            (doc) => doc._localIndex as number,
           );
           this._maxLocalIndex = Math.max(...localIndexes);
 
@@ -259,7 +261,9 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
   //--------------------------------------------------
   // SET
 
-  async upsert(doc: Doc): Promise<Doc> {
+  async upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+    doc: DocType,
+  ): Promise<DocType> {
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
     }

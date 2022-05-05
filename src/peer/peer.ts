@@ -6,11 +6,16 @@ import {
   TransportWebsocketClient,
 } from "../../deps.ts";
 
-import { ShareAddress } from "../util/doc-types.ts";
-import { IReplica } from "../replica/replica-types.ts";
+import {
+  DocBase,
+  DocInputBase,
+  FormatName,
+  ShareAddress,
+} from "../util/doc-types.ts";
 import { IPeer, PeerId } from "./peer-types.ts";
-import { Syncer } from "../syncer/syncer.ts";
-import { SyncerBag } from "../syncer/_syncer-bag.ts";
+
+//import { Syncer } from "../syncer/syncer.ts";
+//import { SyncerBag } from "../syncer/_syncer-bag.ts";
 
 import { randomId } from "../util/misc.ts";
 
@@ -18,6 +23,10 @@ import { randomId } from "../util/misc.ts";
 
 import { Logger } from "../util/log.ts";
 import { SyncSessionStatus } from "../syncer/syncer-types.ts";
+import { IFormatValidator } from "../format-validators/format-validator-types.ts";
+import { IReplica } from "../replica/replica-types.ts";
+import { Syncer } from "../syncer/syncer.ts";
+import { SyncerBag } from "../syncer/_syncer-bag.ts";
 const logger = new Logger("peer", "blueBright");
 const J = JSON.stringify;
 
@@ -83,7 +92,9 @@ export class Peer implements IPeer {
     logger.debug(`removeReplicaByShare(${J(share)})`);
     await this.replicaMap.delete(share);
   }
-  async removeReplica(replica: IReplica): Promise<void> {
+  async removeReplica(
+    replica: IReplica,
+  ): Promise<void> {
     const existingReplica = this.replicaMap.get(replica.share);
     if (replica === existingReplica) {
       logger.debug(`removeReplica(${J(replica.share)})`);
@@ -210,7 +221,7 @@ export class Peer implements IPeer {
 
       // Check if there's already a sync operation with this Peer
       const maybeExistingSyncer = this.targetLocalSyncers.get(
-        (target as Peer).peerId,
+        (target as IPeer).peerId,
       );
       if (maybeExistingSyncer) {
         return () => {
@@ -219,21 +230,29 @@ export class Peer implements IPeer {
       }
 
       // Otherwise create a new syncer and add it to a private set of target syncers
-      const otherSyncer = new Syncer(target as Peer, (methods) => {
-        return new TransportLocal({
-          deviceId: (target as Peer).peerId,
-          methods,
-          description: (target as Peer).peerId,
-        });
-      });
-      this.targetLocalSyncers.set((target as Peer).peerId, otherSyncer);
+      const otherSyncer = new Syncer(
+        target as Peer,
+        (methods) => {
+          return new TransportLocal({
+            deviceId: (target as IPeer).peerId,
+            methods,
+            description: (target as IPeer).peerId,
+          });
+        },
+      );
+      this.targetLocalSyncers.set(
+        (target as IPeer).peerId,
+        otherSyncer,
+      );
       localSyncer.transport.addConnection(
         otherSyncer.transport,
       );
 
       return () => {
         // Remove the target syncer and close it — this will also close the connection from our Peer's side.
-        this.targetLocalSyncers.delete((target as Peer).peerId);
+        this.targetLocalSyncers.delete(
+          (target as IPeer).peerId,
+        );
         otherSyncer.close();
       };
     }
@@ -265,7 +284,9 @@ export class Peer implements IPeer {
    * @param targets - An array made up of HTTP URLs, Websocket URLs, or `Peer` instances.
    * @returns A report of all the peers which were synced with.
    */
-  async syncUntilCaughtUp(targets: (IPeer | string)[]) {
+  async syncUntilCaughtUp(
+    targets: (IPeer | string)[],
+  ) {
     let unsubscribeFromBus: (() => void) | null = null;
 
     const stopSyncers = [];

@@ -2,33 +2,63 @@ import {
   AuthorAddress,
   AuthorKeypair,
   Base32String,
-  Doc,
+  DocBase,
+  DocInputBase,
   FormatName,
   Path,
+  ShareAddress,
+  Timestamp,
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
+
+export interface ValidatorGenerateOpts<
+  FormatType extends string,
+  DocInput extends DocInputBase<FormatType>,
+> {
+  keypair: AuthorKeypair;
+  input: DocInput;
+  share: ShareAddress;
+  timestamp: Timestamp;
+}
 
 /** Validators are each responsible for one document format such as "es.4". They are used by Storage instances to check if documents are valid before accepting them and sign new documents.
  */
 // According to the rules of Earthstar: documents are validated statelessly,
 // one document at a time, without knowing about any other documents
 // or what's in the Storage.
-export interface IFormatValidator {
+export interface IFormatValidator<
+  FormatType extends FormatName,
+  DocInputType extends DocInputBase<FormatType>,
+  DocType extends DocBase<FormatType>,
+> {
   /** The string name of the format, like "es.4" */
-  format: FormatName;
+  format: FormatType;
 
   /** Deterministic hash of this version of the document */
-  hashDocument(doc: Doc): Promise<Base32String | ValidationError>;
+  hashDocument(doc: DocType): Promise<Base32String | ValidationError>;
 
   /**
-   * Add an author signature to the document.
-   * The input document needs a signature field to satisfy Typescript, but it will be overwritten here, so you may as well just set signature: '' on the input.
-   * Return a copy of the original document with the signature field changed, or return a ValidationError.
+   * Generate a signed document from the input format the validator expects.
+   */
+  generateDocument(
+    opts: ValidatorGenerateOpts<FormatType, DocInputType>,
+  ): Promise<DocType | ValidationError>;
+
+  /**
+   * Sign an unsigned document.
    */
   signDocument(
     keypair: AuthorKeypair,
-    doc: Doc,
-  ): Promise<Doc | ValidationError>;
+    doc: DocType,
+  ): Promise<DocType | ValidationError>;
+
+  /**
+   * Overwrite the user-written contents of a document, wipes any associated data, and signs the document.
+   */
+  wipeDocument(
+    keypair: AuthorKeypair,
+    docToWipe: DocType,
+  ): Promise<DocType | ValidationError>;
 
   /**
    * Return a copy of the doc without extra fields, plus the extra fields
@@ -37,19 +67,19 @@ export interface IFormatValidator {
    * This should be run before checkDocumentIsValid.  The output doc will be more likely to be valid once the extra fields have been removed.
    */
   removeExtraFields(
-    doc: Doc,
-  ): { doc: Doc; extras: Record<string, any> } | ValidationError;
+    doc: DocType,
+  ): { doc: DocType; extras: Record<string, unknown> } | ValidationError;
 
   /**
    * This calls all the more detailed functions which start with underscores.
    * Returns true if the document is ok.
    */
-  checkDocumentIsValid(doc: Doc, now?: number): true | ValidationError;
+  checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
   // These are broken out for easier unit testing.
   // They will not normally be used directly; use the main assertDocumentIsValid instead.
   // Return true on success.
-  _checkBasicDocumentValidity(doc: Doc): true | ValidationError; // check for correct fields and datatypes
+  _checkBasicDocumentValidity(doc: DocType): true | ValidationError; // check for correct fields and datatypes
   _checkAuthorCanWriteToPath(
     author: AuthorAddress,
     path: Path,
@@ -63,7 +93,7 @@ export interface IFormatValidator {
     path: Path,
     deleteAfter?: number | null,
   ): true | ValidationError;
-  _checkAuthorSignatureIsValid(doc: Doc): Promise<true | ValidationError>;
+  _checkAuthorSignatureIsValid(doc: DocType): Promise<true | ValidationError>;
   _checkContentMatchesHash(
     content: string,
     contentHash: Base32String,
@@ -74,3 +104,18 @@ export interface IFormatValidator {
   // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
   // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
 }
+
+export type ExtractInputType<ValidatorType> = ValidatorType extends
+  IFormatValidator<infer _FormatType, infer DocInputType, infer _DocType>
+  ? DocInputType
+  : never;
+
+export type ExtractDocType<ValidatorType> = ValidatorType extends
+  IFormatValidator<infer _FormatType, infer _DocInputType, infer DocType>
+  ? DocType
+  : never;
+
+export type ExtractFormatType<ValidatorType> = ValidatorType extends
+  IFormatValidator<infer FormatType, infer _DocType, infer _DocInputType>
+  ? FormatType
+  : never;
