@@ -2,6 +2,8 @@
 
 ## Next
 
+- Feature: Added CryptoDriverSodium for Deno. This driver is several magnitudes
+  faster than the default crypto driver. Set it with `setGlobalCryptoDriver`.
 - BREAKING: Initialising a `Replica` is now simpler: you only need to provide a
   driver.
 
