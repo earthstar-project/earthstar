@@ -17,6 +17,7 @@ import {
   TestScenario,
   TransportScenario,
 } from "./test-scenario-types.ts";
+import { CryptoDriverSodium } from "../crypto/crypto-driver-sodium.ts";
 
 // A version of test scenario without crypto specified yet.
 type JustStorageScenario = Omit<TestScenario, "cryptoDriver">;
@@ -69,6 +70,10 @@ const universalCryptoScenarios: CryptoScenario[] = [
   {
     name: "CryptoDriverNoble",
     driver: CryptoDriverNoble,
+  },
+  {
+    name: "CryptoDriverSodium",
+    driver: CryptoDriverSodium,
   },
 ];
 
