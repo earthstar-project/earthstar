@@ -9,28 +9,28 @@ import { ShareAddress } from "../../util/doc-types.ts";
 
 type Scenario<T> = {
   name: string;
-  scenario: T;
+  item: T;
 };
 
 export const cryptoDrivers: Scenario<ICryptoDriver>[] = [{
   name: "Noble",
-  scenario: CryptoDriverNoble,
+  item: CryptoDriverNoble,
 }, {
   name: "Sodium",
-  scenario: CryptoDriverSodium,
+  item: CryptoDriverSodium,
 }];
 
 export const replicaDrivers: Scenario<
   (share: ShareAddress) => IReplicaDriver
 >[] = [
-  { name: "Memory", scenario: (addr) => new ReplicaDriverMemory(addr) },
+  { name: "Memory", item: (addr) => new ReplicaDriverMemory(addr) },
   {
     name: "LocalStorage",
-    scenario: (addr) => new ReplicaDriverLocalStorage(addr),
+    item: (addr) => new ReplicaDriverLocalStorage(addr),
   },
   {
     name: "Sqlite",
-    scenario: (addr) =>
+    item: (addr) =>
       new ReplicaDriverSqlite({
         filename: `${addr}.bench.sqlite`,
         mode: "create-or-open",
@@ -38,3 +38,66 @@ export const replicaDrivers: Scenario<
       }),
   },
 ];
+
+/*
+
+[
+  { name: Noble x Memory, scenarios: {
+    crypto: Noble,
+    replicaDriver: ReplicaDriverMemory
+  } }
+]
+
+*/
+
+export type ItemType<T> = T extends Scenario<infer ItemType>[] ? ItemType
+  : never;
+
+type Scenarios<DescType extends string, ScenarioType> = {
+  description: DescType;
+  scenarios: Scenario<ScenarioType>[];
+};
+
+export type MultiplyOutput<RecordType extends Record<string, any>> = {
+  name: string;
+  subscenarios: RecordType;
+}[];
+
+export function multiplyScenarios<DescType extends string>(
+  ...scenarios: Scenarios<DescType, any>[]
+): MultiplyOutput<any> {
+  const output: MultiplyOutput<any> = [];
+
+  const [head, ...rest] = scenarios;
+
+  if (!head) {
+    return [];
+  }
+
+  for (const scenario of head.scenarios) {
+    const restReses = multiplyScenarios(...rest);
+
+    if (restReses.length === 0) {
+      output.push({
+        name: scenario.name,
+        subscenarios: {
+          [head.description]: scenario.item,
+        },
+      });
+    }
+
+    for (const restRes of restReses) {
+      const thing = {
+        name: `${scenario.name} + ${restRes.name}`,
+        subscenarios: {
+          [head.description]: scenario.item,
+          ...restRes.subscenarios,
+        },
+      };
+
+      output.push(thing);
+    }
+  }
+
+  return output;
+}
