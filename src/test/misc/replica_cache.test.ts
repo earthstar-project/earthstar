@@ -28,11 +28,11 @@ Deno.test("ReplicaCache", async () => {
     "suzy",
   ) as AuthorKeypair;
 
-  const storage = new Replica(
+  const replica = new Replica(
     { driver: new ReplicaDriverMemory(SHARE_ADDR) },
   );
 
-  const cache = new ReplicaCache(storage);
+  const cache = new ReplicaCache(replica);
 
   assertEquals(cache.version, 0, "Cache version is 0");
 
@@ -63,7 +63,7 @@ Deno.test("ReplicaCache", async () => {
     "latestDocAtPath result is undefined",
   );
 
-  cache._replica.set(keypair, {
+  await cache._replica.set(keypair, {
     content: "Hello!",
     path: "/test/hello.txt",
     format: "es.4",
@@ -73,6 +73,7 @@ Deno.test("ReplicaCache", async () => {
   // Cache should have be updated five times
   // Once for allDocs
   // Once for latestDocs
+
   assertEquals(cache.version, 5, "Cache was updated five times");
 
   cache._replica.set(keypair, {
@@ -170,11 +171,12 @@ Deno.test("ReplicaCache", async () => {
   }, ReplicaCacheIsClosedError);
 
   // Test cache expiry with a quickly expiring cache
-  const expiringCache = new ReplicaCache(storage, 10);
+  const expiringCache = new ReplicaCache(replica, 10);
 
   // Heat the cache by getting something.
   expiringCache.getAllDocs();
   await sleep(50);
+
   assertEquals(
     expiringCache.version,
     1,
@@ -190,5 +192,5 @@ Deno.test("ReplicaCache", async () => {
     "Quickly expiring cache was updated once, even after second request",
   );
 
-  await storage.close(true);
+  await replica.close(true);
 });

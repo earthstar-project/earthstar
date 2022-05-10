@@ -1,8 +1,6 @@
 import {
   AuthorAddress,
   AuthorKeypair,
-  DocBase,
-  FormatName,
   LocalIndex,
   Path,
   ShareAddress,
@@ -20,34 +18,12 @@ import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts
 
 export type ReplicaId = string;
 
-export interface QueryResult<
-  FormatType extends FormatName,
-  DocType extends DocBase<FormatType>,
-> {
-  // the docs from the query...
-  docs: DocType[];
-  // ...and the replica Driver's maxLocalIndex at the time
-  // just before and just after the query was done.
-  // This provided a lower and upper bound for the maxLocalIndex
-  // associated with the resulting docs.
-  // (This is the OVERALL max local index for
-  // the whole replica, not just for the resulting docs.)
-  maxLocalIndexBefore: number;
-  maxLocalIndexAfter: number;
-  // The max localIndex out of the returned docs.
-  // This could be much smaller than the overall maxLocalIndex
-  // if the docs have been filtered.
-  // If there are no matching docs, this is -1.
-  maxLocalIndexInResult: number;
-}
-
 // IngestEvents are returned from replica.set() and replica.ingest(),
 // and sent as events on the replica.bus 'ingest' channel.
 
 export interface IngestEventFailure {
   kind: "failure";
   reason: "write_error" | "invalid_document";
-  maxLocalIndex: number;
   err: Error | null;
 }
 export interface IngestEventNothingHappened<
@@ -55,7 +31,6 @@ export interface IngestEventNothingHappened<
 > {
   kind: "nothing_happened";
   reason: "obsolete_from_same_author" | "already_had_it";
-  maxLocalIndex: number;
   doc: DocType; // won't have a _localIndex because it was not actually ingested
 }
 export interface IngestEventSuccess<
@@ -79,7 +54,6 @@ export interface DocAlreadyExists<
 > {
   // for a doc that was previously ingested, when a live query is catching up.
   kind: "existing";
-  maxLocalIndex: number;
   doc: DocType; // the just-written doc, frozen, with updated extra properties like _localIndex
 
   //docIsLatest: boolean,  // is it the latest at this path (for any author)?
@@ -93,19 +67,16 @@ export interface DocAlreadyExists<
 }
 export interface ReplicaEventWillClose {
   kind: "willClose";
-  maxLocalIndex: number;
 }
 export interface ReplicaEventDidClose {
   kind: "didClose";
 }
 
-export interface QueryFollowerDidClose {
-  kind: "queryFollowerDidClose";
-}
-
-export interface ExpireEvent {
+export interface ExpireEvent<
+  DocType extends CoreDoc,
+> {
   kind: "expire";
-  path: string;
+  doc: DocType;
 }
 
 /**
@@ -122,26 +93,41 @@ export type IngestEvent<
 
 /**
  * - DocAlreadyExists — processing an old doc as you catch up
- * - IdleEvent — reached the end of existing docs; waiting for new docs
  * - IngestEvent — the result of a replica ingesting a document
+ * - ExpireEvent - An ephemeral document has expired
  * - ReplicaEventWillClose — the replica is about to close
  * - ReplicaEventDidClose — the replica has closed
- * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the replica closes)
  */
 export type ReplicaEvent<
   DocType extends CoreDoc,
 > =
-  | DocAlreadyExists<DocType>
-  | // waiting for an ingest to happen...
-  IngestEvent<DocType>
-  | // an ingest happened
-  ExpireEvent
+  | IngestEvent<DocType>
+  | ExpireEvent<DocType>
   | ReplicaEventWillClose
-  | ReplicaEventDidClose
-  | QueryFollowerDidClose;
+  | ReplicaEventDidClose;
 
 export type CoreDocInput = ExtractInputType<typeof FormatValidatorEs4>;
 export type CoreDoc = ExtractDocType<typeof FormatValidatorEs4>;
+
+//================================================================================
+
+/**
+ * - ExpireEvent - An ephemeral document has expired
+ * - IngestEvent — the result of a replica ingesting a document
+ * - DocAlreadyExists — processing an old doc as you catch up
+ */
+export type QuerySourceEvent<DocType extends CoreDoc> =
+  | ExpireEvent<DocType>
+  | IngestEventSuccess<DocType>
+  | DocAlreadyExists<DocType>;
+
+export type QuerySourceOpts = {
+  replica: IReplica;
+  query: Query;
+  mode?: QuerySourceMode;
+};
+
+export type QuerySourceMode = "existing" | "new" | "everything";
 
 //================================================================================
 
@@ -286,9 +272,19 @@ export interface IReplica extends IReplicaConfig {
   ): Promise<number | ValidationError>;
 
   /**
-   * Returns a readable stream of replica events.
+   * Returns a readable stream of replica events, such as new ingestions, document expirations, or the replica preparing to close.
    */
   getEventStream(): ReadableStream<ReplicaEvent<CoreDoc>>;
+
+  /**
+   * Returns a stream of events matching a specific document query. Useful for following documents you're interested in in realtime.
+   * @param query - The query to filter events by. If you want all existing docs, make sure to use `history: 'all'`, and `sortBy: 'localIndex ASC'`.
+   * @param mode - Specify if you want events for all existing docs matching the query, only new events, or both.
+   */
+  getQueryStream(
+    query: Query,
+    mode?: QuerySourceMode,
+  ): ReadableStream<QuerySourceEvent<CoreDoc>>;
 
   /**
    * Runs a given callback every time a replica event occurs.
@@ -350,7 +346,7 @@ export interface IReplicaDriver extends IReplicaConfig {
   ): Promise<DocType>;
 
   /** Erase all expired docs from the replica permanently, leaving no trace of the documents. Returns the paths of the expired documents. */
-  eraseExpiredDocs(): Promise<Path[]>;
+  eraseExpiredDocs(): Promise<CoreDoc[]>;
 }
 
 /** Options for configuring a new replica.

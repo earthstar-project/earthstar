@@ -585,9 +585,11 @@ export function runReplicaDriverTests(scenario: TestScenario) {
       await test.step({
         name: "eraseExpiredDocs",
         fn: async () => {
-          const deletedPaths = await driver.eraseExpiredDocs();
+          const deletedDocs = await driver.eraseExpiredDocs();
 
-          assertEquals(deletedPaths, ["/posts/!post-0000.txt"]);
+          assertEquals(deletedDocs.map(({ path }) => path), [
+            "/posts/!post-0000.txt",
+          ]);
 
           const remainingEphemeralDocs = await driver.queryDocs({
             filter: {

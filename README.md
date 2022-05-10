@@ -368,39 +368,6 @@ QueryFollowers ignore the `limit` property though.
 
 (You can also still look up documents by path in the usual old way.)
 
-### QueryFollowers: Reliable streaming locally, to subscribers or indexes
-
-The old `onWrite` events are gone. Now, there's now a new way to subscribe to a
-Storage: with a `QueryFollower`. A query follower is like a pointer that moves
-along the sequence of documents, in order by `localIndex`, running a callback on
-each one, if it matches the given query.
-
-This is a Kafka or Kappa-db style architecture.
-
-You could use this to build an index or Layer that incrementally digests the
-content of an IStorage without ever missing anything, even if it only runs
-occasionally. It just resumes from the last `localIndex` it saw, and proceeds
-from there.
-
-Currently QueryFollowers are always blocking -- they hold up the entire Storage
-until they catch up, and when a new doc is ingested everything waits until the
-QueryFollowers have finished running.
-
-A QueryFollower has one async callback that it runs on each doc in sequence. It
-never allows that callback to overlap with itself, e.g. it waits to finish one
-doc before moving along to the next.
-
-An IStorage may have many QueryFollowers. They will run in parallel with each
-other, while the IStorage waits for them all to finish.
-
-### Starting query followers at the beginning or the end
-
-You can start a QueryFollower anywhere in the sequence: at the beginning (good
-for indexes and Layers), or at the current most recent document (good for live
-syncing new changes).
-
-You do this by setting the `startAt: {localIndex: 123}` property of the query.
-
 ### Reliable streaming over the network, when syncing
 
 (Not implemented in this code yet)

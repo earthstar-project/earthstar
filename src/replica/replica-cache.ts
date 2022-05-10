@@ -7,20 +7,21 @@ import { AuthorKeypair, DocWithFormat, Path } from "../util/doc-types.ts";
 import {
   ReplicaCacheIsClosedError,
   ReplicaIsClosedError,
+  ValidationError,
 } from "../util/errors.ts";
 
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
-import { QueryFollower } from "../query-follower/query-follower.ts";
 import { Query } from "../query/query-types.ts";
 import {
   CoreDoc,
   CoreDocInput,
   IngestEvent,
   IReplica,
-  LiveQueryEvent,
+  QuerySourceEvent,
 } from "./replica-types.ts";
 
-import { Logger } from "../util/log.ts";
+import { Logger, setLogLevel } from "../util/log.ts";
+import { CallbackSink } from "../streams/stream_utils.ts";
 
 const logger = new Logger("replica-cache", "green");
 
@@ -94,7 +95,12 @@ function sortAndLimit(query: Query, docs: CoreDoc[]) {
   return filteredDocs;
 }
 
-type CacheEntry = { docs: CoreDoc[]; follower: QueryFollower; expires: number };
+type CacheEntry = {
+  docs: CoreDoc[];
+  stream: ReadableStream<QuerySourceEvent<CoreDoc>>;
+  expires: number;
+  close: () => void;
+};
 
 /** A cached, synchronous interface to a replica, useful for reactive abstractions. Always returns results from its cache, and proxies the query to the backing replica in case of a cache miss.
  * ```
@@ -147,7 +153,7 @@ export class ReplicaCache {
     this._isClosed = true;
 
     await Promise.all(
-      Array.from(this._docCache.values()).map((entry) => entry.follower.close),
+      Array.from(this._docCache.values()).map((entry) => entry.close()),
     );
 
     this._docCache.clear();
@@ -160,17 +166,10 @@ export class ReplicaCache {
   // SET - just pass along to the backing storage
 
   /** Add a new document directly to the backing replica. */
-  set<
-    InputType extends CoreDocInput,
-    OutputType extends DocWithFormat<InputType["format"], CoreDoc>,
-  >(
+  set(
     keypair: AuthorKeypair,
-    docToSet: InputType,
-  ): Promise<
-    IngestEvent<
-      OutputType
-    >
-  > {
+    docToSet: CoreDocInput,
+  ): Promise<true | ValidationError> {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
 
     return this._replica.set(keypair, docToSet);
@@ -266,7 +265,8 @@ export class ReplicaCache {
           }
 
           this._docCache.set(queryString, {
-            follower: cachedResult.follower,
+            stream: cachedResult.stream,
+            close: cachedResult.close,
             docs,
             expires: Date.now() + this._timeToLive,
           });
@@ -280,34 +280,43 @@ export class ReplicaCache {
     }
 
     // If there's no result, let's follow this query.
-    const follower = new QueryFollower(
-      this._replica,
-      { ...query, historyMode: "all", orderBy: "localIndex ASC" },
-    );
+    const stream = this._replica.getQueryStream(query, "new");
 
-    follower.bus.on((event: LiveQueryEvent<CoreDoc>) => {
+    const callbackSink = new CallbackSink<QuerySourceEvent<CoreDoc>>();
+
+    const unsub = callbackSink.onWrite((event) => {
       if (event.kind === "existing" || event.kind === "success") {
         logger.debug({ doc: event.doc.path, queryString });
         this._updateCache(queryString, event.doc);
       }
     });
 
-    // Hatch the follower.
-    follower.hatch();
+    const callbackStream = new WritableStream(callbackSink);
+
+    const abortController = new AbortController();
+
+    stream.pipeTo(callbackStream, { signal: abortController.signal });
+
+    const close = () => {
+      unsub();
+      //abortController.abort();
+    };
 
     // Set an empty entry in the cache so that calls which happen
     // while we wait for the first request to resolve don't queue up
     // more 'initial' queries.
     this._docCache.set(queryString, {
-      follower,
+      stream,
       docs: [],
       expires: Date.now() + this._timeToLive,
+      close,
     });
 
     // Query the storage, set the eventual result in the cache.
     this._replica.queryDocs(query).then((docs) => {
       this._docCache.set(queryString, {
-        follower,
+        stream,
+        close,
         docs,
         expires: Date.now() + this._timeToLive,
       });

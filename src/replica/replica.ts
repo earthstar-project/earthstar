@@ -14,6 +14,8 @@ import {
   CoreDocInput,
   IReplica,
   IReplicaDriver,
+  QuerySourceEvent,
+  QuerySourceMode,
   ReplicaEvent,
   ReplicaId,
   ReplicaOpts,
@@ -38,6 +40,7 @@ import {
   LockStream,
   MultiStream,
 } from "../streams/stream_utils.ts";
+import { QuerySource } from "./query_source.ts";
 const J = JSON.stringify;
 const logger = new Logger("replica", "yellowBright");
 const loggerSet = new Logger("replica set", "yellowBright");
@@ -142,7 +145,6 @@ export class Replica implements IReplica {
     logger.debug("    sending willClose blockingly...");
     await this.eventWriter.write({
       kind: "willClose",
-      maxLocalIndex: this.getMaxLocalIndex(),
     });
     logger.debug("    marking self as closed...");
     this._isClosed = true;
@@ -433,7 +435,6 @@ export class Replica implements IReplica {
             kind: "nothing_happened",
             reason: "obsolete_from_same_author",
             doc: docToIngest,
-            maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
           });
         }
         if (docComp === Cmp.EQ) {
@@ -444,7 +445,6 @@ export class Replica implements IReplica {
             kind: "nothing_happened",
             reason: "already_had_it",
             doc: docToIngest,
-            maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
           });
           return;
         }
@@ -517,15 +517,10 @@ export class Replica implements IReplica {
   }
 
   private async eraseExpiredDocs() {
-    const erasedPath = await this.replicaDriver.eraseExpiredDocs();
+    const erasedDocs = await this.replicaDriver.eraseExpiredDocs();
 
-    for (const path of erasedPath) {
-      await this.eventWriter.write(
-        {
-          kind: "expire",
-          path,
-        },
-      );
+    for (const doc of erasedDocs) {
+      await this.eventWriter.write({ kind: "expire", doc });
     }
   }
 
@@ -534,6 +529,19 @@ export class Replica implements IReplica {
    */
   getEventStream(): ReadableStream<ReplicaEvent<CoreDoc>> {
     return this.eventMultiStream.getReadableStream();
+  }
+
+  getQueryStream(
+    query: Query,
+    mode?: QuerySourceMode,
+  ): ReadableStream<QuerySourceEvent<CoreDoc>> {
+    const querySource = new QuerySource({
+      replica: this,
+      query,
+      mode,
+    });
+
+    return new ReadableStream(querySource);
   }
 
   /**
