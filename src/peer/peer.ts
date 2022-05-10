@@ -14,9 +14,6 @@ import {
 } from "../util/doc-types.ts";
 import { IPeer, PeerId } from "./peer-types.ts";
 
-//import { Syncer } from "../syncer/syncer.ts";
-//import { SyncerBag } from "../syncer/_syncer-bag.ts";
-
 import { randomId } from "../util/misc.ts";
 
 //--------------------------------------------------

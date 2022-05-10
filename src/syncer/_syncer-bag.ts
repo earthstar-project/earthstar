@@ -237,7 +237,7 @@ export function makeSyncerBag(
 
           // save the doc
           storage.ingest(doc).then((ingestEvent) => {
-            if (ingestEvent.kind === "failure") {
+            if ((ingestEvent as any).kind === "failure") {
               // TODO: big problem:
               // If the server gives a doc from the future, it will be invalid
               // so we can't ingest it.  We will need to get it in a future
@@ -260,7 +260,7 @@ export function makeSyncerBag(
 
             return resolve({
               pulled: true,
-              ingested: ingestEvent.kind === "success",
+              ingested: (ingestEvent as any).kind === "success",
               localIndex: doc._localIndex ?? -1,
             });
           });

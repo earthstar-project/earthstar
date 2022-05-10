@@ -1,7 +1,11 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { doesNotThrow, throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IReplica } from "../../replica/replica-types.ts";
+import {
+  CoreDoc,
+  IReplica,
+  ReplicaEvent,
+} from "../../replica/replica-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
@@ -15,6 +19,7 @@ import { testScenarios } from "../test-scenarios.ts";
 //================================================================================
 
 import { Logger } from "../../util/log.ts";
+import { CallbackSink } from "../../streams/stream_utils.ts";
 const loggerTest = new Logger("test", "whiteBright");
 const loggerTestCb = new Logger("test cb", "white");
 //setLogLevel('test', LogLevel.Debug);
@@ -37,6 +42,7 @@ export function runRelpicaTests(scenario: TestScenario) {
       const share = "+gardening.abcde";
       const storage = makeReplica(share);
       const events: string[] = [];
+      const streamEvents: string[] = [];
 
       assertEquals(
         typeof storage.replicaId,
@@ -46,14 +52,27 @@ export function runRelpicaTests(scenario: TestScenario) {
 
       // subscribe in a different order than they will normally happen,
       // to make sure they really happen in the right order when they happen for real
-      storage.bus.on("didClose", (channel) => {
-        loggerTestCb.debug(">> didClose event handler");
-        events.push(channel);
+      storage.onEvent((event) => {
+        if (event.kind === "didClose") {
+          loggerTestCb.debug(">> didClose event handler");
+          events.push("didClose");
+        }
       });
-      storage.bus.on("willClose", (channel) => {
-        loggerTestCb.debug(">> willClose event handler");
-        events.push(channel);
+
+      storage.onEvent((event) => {
+        if (event.kind === "willClose") {
+          loggerTestCb.debug(">> didClose event handler");
+          events.push("willClose");
+        }
       });
+
+      const eventStream = storage.getEventStream();
+      const callbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
+      callbackSink.onWrite((event) => {
+        streamEvents.push(event.kind);
+      });
+      const callbackStream = new WritableStream(callbackSink);
+      eventStream.pipeTo(callbackStream);
 
       assertEquals(storage.isClosed(), false, "is not initially closed");
       await doesNotThrow(
@@ -101,6 +120,12 @@ export function runRelpicaTests(scenario: TestScenario) {
 
       assertEquals(
         events,
+        ["willClose", "didClose"],
+        "closing events happened",
+      );
+
+      assertEquals(
+        streamEvents,
         ["willClose", "didClose"],
         "closing events happened",
       );

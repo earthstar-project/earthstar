@@ -1,10 +1,8 @@
-import { Lock, Superbus } from "../../deps.ts";
 import { Cmp } from "./util-types.ts";
 import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
-  DocWithFormat,
   FormatName,
   LocalIndex,
   Path,
@@ -14,10 +12,9 @@ import { HistoryMode, Query } from "../query/query-types.ts";
 import {
   CoreDoc,
   CoreDocInput,
-  IngestEvent,
   IReplica,
   IReplicaDriver,
-  ReplicaBusChannel,
+  ReplicaEvent,
   ReplicaId,
   ReplicaOpts,
 } from "./replica-types.ts";
@@ -36,6 +33,11 @@ import { checkShareIsValid } from "../core-validators/addresses.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import {
+  CallbackSink,
+  LockStream,
+  MultiStream,
+} from "../streams/stream_utils.ts";
 const J = JSON.stringify;
 const logger = new Logger("replica", "yellowBright");
 const loggerSet = new Logger("replica set", "yellowBright");
@@ -76,10 +78,14 @@ export class Replica implements IReplica {
   share: ShareAddress;
   /** The validator used to validate ingested documents. */
   replicaDriver: IReplicaDriver;
-  bus: Superbus<ReplicaBusChannel>;
 
   private _isClosed = false;
-  private ingestLock: Lock<IngestEvent<CoreDoc>>;
+  private ingestLockStream = new LockStream();
+  private eventMultiStream: MultiStream<ReplicaEvent<CoreDoc>> =
+    new MultiStream();
+  private eventWriter: WritableStreamDefaultWriter<ReplicaEvent<CoreDoc>>;
+  private callbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
+
   private eraseInterval: number;
 
   constructor(
@@ -98,8 +104,12 @@ export class Replica implements IReplica {
     this.replicaId = "replica-" + randomId();
     this.share = driver.share;
     this.replicaDriver = driver;
-    this.bus = new Superbus<ReplicaBusChannel>("|");
-    this.ingestLock = new Lock<IngestEvent<CoreDoc>>();
+
+    this.eventWriter = this.eventMultiStream.getWritableStream().getWriter();
+
+    this.eventMultiStream.getReadableStream().pipeTo(
+      new WritableStream(this.callbackSink),
+    );
 
     this.eraseExpiredDocs();
 
@@ -109,7 +119,7 @@ export class Replica implements IReplica {
       } else {
         clearInterval(this.eraseInterval);
       }
-    });
+    }, 1000 * 60 * 60);
   }
 
   //--------------------------------------------------
@@ -130,13 +140,18 @@ export class Replica implements IReplica {
     if (this._isClosed) throw new ReplicaIsClosedError();
     // TODO: do this all in a lock?
     logger.debug("    sending willClose blockingly...");
-    await this.bus.sendAndWait("willClose");
+    await this.eventWriter.write({
+      kind: "willClose",
+      maxLocalIndex: this.getMaxLocalIndex(),
+    });
     logger.debug("    marking self as closed...");
     this._isClosed = true;
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
     await this.replicaDriver.close(erase);
     logger.debug("    sending didClose nonblockingly...");
-    await this.bus.sendAndWait("didClose");
+    await this.eventWriter.write({
+      kind: "didClose",
+    });
     logger.debug("...closing done");
     clearInterval(this.eraseInterval);
 
@@ -277,14 +292,11 @@ export class Replica implements IReplica {
    */
   async set<
     InputType extends CoreDocInput,
-    OutputType extends DocWithFormat<InputType["format"], CoreDoc>,
   >(
     keypair: AuthorKeypair,
     docToSet: InputType,
   ): Promise<
-    IngestEvent<
-      OutputType
-    >
+    true | ValidationError
   > {
     loggerSet.debug(`set`, docToSet);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -326,13 +338,9 @@ export class Replica implements IReplica {
     });
 
     if (isErr(signedDoc)) {
-      return {
-        kind: "failure",
-        reason: "invalid_document",
-        err: signedDoc,
-        maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-      };
+      return signedDoc;
     }
+
     loggerSet.debug("...signature =", signedDoc.signature);
 
     loggerSet.debug("...ingesting");
@@ -341,7 +349,7 @@ export class Replica implements IReplica {
     loggerSet.debug("-----------------------");
     loggerSet.debug("...done ingesting");
     loggerSet.debug("...set is done.");
-    return ingestEvent as IngestEvent<OutputType>;
+    return ingestEvent;
   }
 
   /**
@@ -352,7 +360,7 @@ export class Replica implements IReplica {
   >(
     docToIngest: DocType,
   ): Promise<
-    IngestEvent<DocType>
+    true | ValidationError
   > {
     loggerIngest.debug(`ingest`, docToIngest);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -366,12 +374,7 @@ export class Replica implements IReplica {
       docToIngest,
     );
     if (isErr(removeResultsOrErr)) {
-      return {
-        kind: "failure",
-        reason: "invalid_document",
-        err: removeResultsOrErr,
-        maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-      };
+      return removeResultsOrErr;
     }
     docToIngest = removeResultsOrErr.doc as DocType; // a copy of doc without extra fields
 
@@ -383,17 +386,10 @@ export class Replica implements IReplica {
     // now actually check doc validity against core schema
     const docIsValid = validator.checkDocumentIsValid(docToIngest);
     if (isErr(docIsValid)) {
-      return {
-        kind: "failure",
-        reason: "invalid_document",
-        err: docIsValid,
-        maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-      };
+      return docIsValid;
     }
 
-    const writeToDriverWithLock = async (): Promise<
-      IngestEvent<DocType>
-    > => {
+    await this.ingestLockStream.run(async () => {
       // get other docs at the same path
       loggerIngest.debug(" >> ingest: start of protected region");
       loggerIngest.debug(
@@ -406,11 +402,10 @@ export class Replica implements IReplica {
 
       loggerIngest.debug("  > getting prevLatest and prevSameAuthor");
       const prevLatest = existingDocsSamePath[0] ?? null;
-      const prevSameAuthor =
-        existingDocsSamePath.filter((d) =>
-          d.author === docToIngest.author
-        )[0] ??
-          null;
+      const prevSameAuthor = existingDocsSamePath.filter((d) =>
+        d.author === docToIngest.author
+      )[0] ??
+        null;
 
       loggerIngest.debug(
         "  > checking if new doc is latest at this path",
@@ -433,26 +428,27 @@ export class Replica implements IReplica {
           loggerIngest.debug(
             "  > new doc is GT prevSameAuthor, so it is obsolete",
           );
-          return {
+
+          this.eventWriter.write({
             kind: "nothing_happened",
             reason: "obsolete_from_same_author",
             doc: docToIngest,
             maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-          };
+          });
         }
         if (docComp === Cmp.EQ) {
           loggerIngest.debug(
             "  > new doc is EQ prevSameAuthor, so it is redundant (already_had_it)",
           );
-          return {
+          this.eventWriter.write({
             kind: "nothing_happened",
             reason: "already_had_it",
             doc: docToIngest,
             maxLocalIndex: this.replicaDriver.getMaxLocalIndex(),
-          };
+          });
+          return;
         }
       }
-
       // save it
       loggerIngest.debug("  > upserting into ReplicaDriver...");
       const docAsWritten = await this.replicaDriver.upsert(docToIngest); // TODO: pass existingDocsSamePath to save another lookup
@@ -463,30 +459,18 @@ export class Replica implements IReplica {
       loggerIngest.debug(
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
       );
-      return {
+
+      this.eventWriter.write({
         kind: "success",
         maxLocalIndex,
         doc: docAsWritten, // with updated extra properties like _localIndex
         docIsLatest: isLatest,
         prevDocFromSameAuthor: prevSameAuthor as DocType,
         prevLatestDoc: prevLatest as DocType,
-      };
-    };
+      });
+    });
 
-    loggerIngest.debug(" >> ingest: running protected region...");
-    const ingestEvent = await this.ingestLock.run(
-      writeToDriverWithLock,
-    );
-    loggerIngest.debug(" >> ingest: ...done running protected region");
-
-    loggerIngest.debug("...send ingest event after releasing the lock");
-    loggerIngest.debug("...ingest event:", ingestEvent);
-    await this.bus.sendAndWait(
-      `ingest|${docToIngest.path}` as unknown as "ingest",
-      ingestEvent,
-    ); // include the path in the channel even on failures
-
-    return ingestEvent as IngestEvent<DocType>;
+    return true;
   }
 
   /**
@@ -515,20 +499,12 @@ export class Replica implements IReplica {
 
       if (isErr(wipedDoc)) return wipedDoc;
 
-      const ingestEvent = await this.ingest(
+      const didIngest = await this.ingest(
         wipedDoc,
       );
-      if (ingestEvent.kind === "failure") {
-        return new ValidationError(
-          "ingestion error during overwriteAllDocsBySameAuthor: " +
-            ingestEvent.reason + ": " + ingestEvent.err,
-        );
-      }
-      if (ingestEvent.kind === "nothing_happened") {
-        return new ValidationError(
-          "ingestion did nothing during overwriteAllDocsBySameAuthor: " +
-            ingestEvent.reason,
-        );
+
+      if (isErr(didIngest)) {
+        return didIngest;
       } else {
         // success
         numOverwritten += 1;
@@ -544,10 +520,27 @@ export class Replica implements IReplica {
     const erasedPath = await this.replicaDriver.eraseExpiredDocs();
 
     for (const path of erasedPath) {
-      await this.bus.sendAndWait(
-        `expire`,
-        path,
+      await this.eventWriter.write(
+        {
+          kind: "expire",
+          path,
+        },
       );
     }
+  }
+
+  /**
+   * Returns a readable stream of replica events.
+   */
+  getEventStream(): ReadableStream<ReplicaEvent<CoreDoc>> {
+    return this.eventMultiStream.getReadableStream();
+  }
+
+  /**
+   * Provide a callback to be triggered every time a replica event occurs.
+   * @returns A callback which unsubscribes the event.
+   */
+  onEvent(callback: (event: ReplicaEvent<CoreDoc>) => void | Promise<void>) {
+    return this.callbackSink.onWrite(callback);
   }
 }

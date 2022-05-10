@@ -2,6 +2,14 @@
 
 ## Next
 
+- BREAKING: LiveQueryEvent is now ReplicaEvent
+- BREAKING: Replica.ingest no longer returns an IngestEvent or ValidationError.
+  It now returns `true` or a ValidationError.
+- Feature: Added Replica.getEventStream which returns a ReadableStream of
+  replica events
+- Feature: Added Replica.onEvent which will run a given callback every time a
+  replica event occurs
+- BREAKING: Replica no longer has a subscribable `bus` property.
 - Feature: Added CryptoDriverSodium for Deno. This driver is several magnitudes
   faster than the default crypto driver. Set it with `setGlobalCryptoDriver`.
 - BREAKING: Initialising a `Replica` is now simpler: you only need to provide a

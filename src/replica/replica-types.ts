@@ -2,7 +2,6 @@ import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
-  DocWithFormat,
   FormatName,
   LocalIndex,
   Path,
@@ -13,7 +12,6 @@ import {
   ExtractDocType,
   ExtractInputType,
 } from "../format-validators/format-validator-types.ts";
-import { Superbus } from "../superbus/superbus.ts";
 import { ValidationError } from "../util/errors.ts";
 import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 
@@ -21,13 +19,6 @@ import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts
 // TYPES AND EVENTS
 
 export type ReplicaId = string;
-
-export type ReplicaBusChannel =
-  | "ingest"
-  | // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
-  "expire"
-  | "willClose"
-  | "didClose";
 
 export interface QueryResult<
   FormatType extends FormatName,
@@ -112,10 +103,6 @@ export interface QueryFollowerDidClose {
   kind: "queryFollowerDidClose";
 }
 
-export interface IdleEvent {
-  kind: "idle";
-}
-
 export interface ExpireEvent {
   kind: "expire";
   path: string;
@@ -141,12 +128,10 @@ export type IngestEvent<
  * - ReplicaEventDidClose — the replica has closed
  * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the replica closes)
  */
-export type LiveQueryEvent<
+export type ReplicaEvent<
   DocType extends CoreDoc,
 > =
   | DocAlreadyExists<DocType>
-  | // catching up...
-  IdleEvent
   | // waiting for an ingest to happen...
   IngestEvent<DocType>
   | // an ingest happened
@@ -184,7 +169,6 @@ export interface IReplica extends IReplicaConfig {
   /** The address of the share this replica belongs to. */
   share: ShareAddress;
   replicaDriver: IReplicaDriver;
-  bus: Superbus<ReplicaBusChannel>;
 
   //--------------------------------------------------
   // LIFECYCLE
@@ -269,14 +253,11 @@ export interface IReplica extends IReplicaConfig {
    */
   set<
     InputType extends CoreDocInput,
-    OutputType extends DocWithFormat<InputType["format"], CoreDoc>,
   >(
     keypair: AuthorKeypair,
     docToSet: InputType,
   ): Promise<
-    IngestEvent<
-      OutputType
-    >
+    true | ValidationError
   >;
 
   /**
@@ -288,7 +269,7 @@ export interface IReplica extends IReplicaConfig {
   >(
     docToIngest: DocType,
   ): Promise<
-    IngestEvent<DocType>
+    true | ValidationError
   >;
 
   /**
@@ -303,6 +284,19 @@ export interface IReplica extends IReplicaConfig {
   overwriteAllDocsByAuthor(
     keypair: AuthorKeypair,
   ): Promise<number | ValidationError>;
+
+  /**
+   * Returns a readable stream of replica events.
+   */
+  getEventStream(): ReadableStream<ReplicaEvent<CoreDoc>>;
+
+  /**
+   * Runs a given callback every time a replica event occurs.
+   * @returns A callback which unsubscribes the event.
+   */
+  onEvent(
+    callback: (event: ReplicaEvent<CoreDoc>) => void | Promise<void>,
+  ): () => void;
 }
 
 /**
