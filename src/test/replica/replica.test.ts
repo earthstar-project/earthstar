@@ -43,6 +43,7 @@ export function runRelpicaTests(scenario: TestScenario) {
       const storage = makeReplica(share);
       const events: string[] = [];
       const streamEvents: string[] = [];
+      const channelledStreamEvents: string[] = [];
 
       assertEquals(
         typeof storage.replicaId,
@@ -66,6 +67,8 @@ export function runRelpicaTests(scenario: TestScenario) {
         }
       });
 
+      // Events
+
       const eventStream = storage.getEventStream();
       const callbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
       callbackSink.onWrite((event) => {
@@ -73,6 +76,20 @@ export function runRelpicaTests(scenario: TestScenario) {
       });
       const callbackStream = new WritableStream(callbackSink);
       eventStream.pipeTo(callbackStream);
+
+      // Channelled events
+
+      const channeledEventStream = storage.getEventStream("didClose");
+      const channeledCallbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
+      channeledCallbackSink.onWrite((event) => {
+        channelledStreamEvents.push(event.kind);
+      });
+      const channelledCallbackStream = new WritableStream(
+        channeledCallbackSink,
+      );
+      channeledEventStream.pipeTo(channelledCallbackStream);
+
+      // ==================================
 
       assertEquals(storage.isClosed(), false, "is not initially closed");
       await doesNotThrow(
@@ -127,7 +144,13 @@ export function runRelpicaTests(scenario: TestScenario) {
       assertEquals(
         streamEvents,
         ["willClose", "didClose"],
-        "closing events happened",
+        "closing events (via event stream)",
+      );
+
+      assertEquals(
+        channelledStreamEvents,
+        ["didClose"],
+        "closing events happened (via channelled event stream)",
       );
 
       assertEquals(storage.isClosed(), true, "is closed after close()");

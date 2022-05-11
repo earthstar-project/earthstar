@@ -223,3 +223,63 @@ export class LockStream {
     return this.closed;
   }
 }
+
+export type OrCh<Ch extends string> = "*" | Ch;
+
+export type Channelled<ChannelType extends string, KeyType extends string> = {
+  [Key in KeyType]: OrCh<ChannelType>;
+};
+
+export class ChannelTransformer<
+  ChannelType extends string,
+  KeyType extends string,
+  ItemType extends Channelled<ChannelType, KeyType>,
+> implements Transformer<ItemType, ItemType> {
+  private channel: ChannelType;
+  private channelKey: KeyType;
+
+  constructor(channel: ChannelType, key: KeyType) {
+    this.channel = channel;
+    this.channelKey = key;
+  }
+
+  transform(
+    chunk: ItemType,
+    controller: TransformStreamDefaultController<ItemType>,
+  ) {
+    if (this.channel === "*" || this.channel === chunk[this.channelKey]) {
+      controller.enqueue(chunk);
+      return;
+    }
+  }
+}
+
+export class ChannelMultiStream<
+  ChannelType extends string,
+  KeyType extends string,
+  ItemType extends Channelled<ChannelType, KeyType>,
+> {
+  private multistream = new MultiStream<ItemType>();
+  private channelKey: KeyType;
+
+  constructor(key: KeyType) {
+    this.channelKey = key;
+  }
+
+  getWritableStream(): WritableStream<ItemType> {
+    return this.multistream.getWritableStream();
+  }
+
+  getReadableStream(
+    channel: OrCh<ChannelType>,
+  ): ReadableStream<ItemType> {
+    const channelTransform = new TransformStream(
+      new ChannelTransformer<OrCh<ChannelType>, KeyType, ItemType>(
+        channel,
+        this.channelKey,
+      ),
+    );
+
+    return this.multistream.getReadableStream().pipeThrough(channelTransform);
+  }
+}

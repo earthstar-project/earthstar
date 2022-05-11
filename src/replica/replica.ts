@@ -37,8 +37,11 @@ import { checkShareIsValid } from "../core-validators/addresses.ts";
 import { Logger } from "../util/log.ts";
 import {
   CallbackSink,
+  Channelled,
+  ChannelMultiStream,
   LockStream,
   MultiStream,
+  OrCh,
 } from "../streams/stream_utils.ts";
 import { QuerySource } from "./query_source.ts";
 const J = JSON.stringify;
@@ -84,8 +87,11 @@ export class Replica implements IReplica {
 
   private _isClosed = false;
   private ingestLockStream = new LockStream();
-  private eventMultiStream: MultiStream<ReplicaEvent<CoreDoc>> =
-    new MultiStream();
+  private eventMultiStream: ChannelMultiStream<
+    ReplicaEvent<CoreDoc>["kind"],
+    "kind",
+    ReplicaEvent<CoreDoc>
+  > = new ChannelMultiStream("kind");
   private eventWriter: WritableStreamDefaultWriter<ReplicaEvent<CoreDoc>>;
   private callbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
 
@@ -110,7 +116,7 @@ export class Replica implements IReplica {
 
     this.eventWriter = this.eventMultiStream.getWritableStream().getWriter();
 
-    this.eventMultiStream.getReadableStream().pipeTo(
+    this.eventMultiStream.getReadableStream("*").pipeTo(
       new WritableStream(this.callbackSink),
     );
 
@@ -525,10 +531,13 @@ export class Replica implements IReplica {
   }
 
   /**
-   * Returns a readable stream of replica events.
+   * Returns a readable stream of replica events, such as new ingestions, document expirations, or the replica preparing to close.
+   * @param channel - An optional string representing a channel of events to be subscribed to. Defaults to return all events.
    */
-  getEventStream(): ReadableStream<ReplicaEvent<CoreDoc>> {
-    return this.eventMultiStream.getReadableStream();
+  getEventStream(
+    channel: OrCh<ReplicaEvent<CoreDoc>["kind"]> = "*",
+  ): ReadableStream<ReplicaEvent<CoreDoc>> {
+    return this.eventMultiStream.getReadableStream(channel);
   }
 
   getQueryStream(

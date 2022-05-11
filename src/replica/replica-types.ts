@@ -12,6 +12,7 @@ import {
 } from "../format-validators/format-validator-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { Channelled, OrCh } from "../streams/stream_utils.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -273,8 +274,11 @@ export interface IReplica extends IReplicaConfig {
 
   /**
    * Returns a readable stream of replica events, such as new ingestions, document expirations, or the replica preparing to close.
+   * @param channel - An optional string representing a channel of events to be subscribed to. Defaults to return all events.
    */
-  getEventStream(): ReadableStream<ReplicaEvent<CoreDoc>>;
+  getEventStream(
+    channel?: OrCh<ReplicaEvent<CoreDoc>["kind"]>,
+  ): ReadableStream<ReplicaEvent<CoreDoc>>;
 
   /**
    * Returns a stream of events matching a specific document query. Useful for following documents you're interested in in realtime.

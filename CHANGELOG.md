@@ -6,7 +6,8 @@
 - BREAKING: Replica.ingest no longer returns an IngestEvent or ValidationError.
   It now returns `true` or a ValidationError.
 - Feature: Added Replica.getEventStream which returns a ReadableStream of
-  replica events
+  replica events. By default it gets all events, but you can subscribe to
+  specific events by passing a channel name.
 - Feature: Added Replica.onEvent which will run a given callback every time a
   replica event occurs
 - BREAKING: Replica no longer has a subscribable `bus` property.
