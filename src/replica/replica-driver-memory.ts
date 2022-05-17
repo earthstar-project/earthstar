@@ -69,6 +69,7 @@ export class ReplicaDriverMemory implements IReplicaDriver {
   // The Doc objects are frozen.
   docByPathAndAuthor: Map<string, CoreDoc> = new Map(); // path+author --> doc
   docsByPathNewestFirst: Map<Path, CoreDoc[]> = new Map(); // path --> array of docs with that path, sorted newest first
+  latestDocsByPath: Map<string, CoreDoc> = new Map();
 
   /**
    * @param share - The address of the share the replica belongs to.
@@ -149,11 +150,8 @@ export class ReplicaDriverMemory implements IReplicaDriver {
     // return in unsorted order
     if (this._isClosed) throw new ReplicaIsClosedError();
     let docs: DocEs4[] = [];
-    for (let docArray of this.docsByPathNewestFirst.values()) {
-      // this array is kept sorted newest-first
-      docs.push(docArray[0]);
-    }
-    return docs;
+
+    return Array.from(this.latestDocsByPath.values());
   }
 
   async queryDocs(queryToClean: Query): Promise<DocEs4[]> {
@@ -163,37 +161,36 @@ export class ReplicaDriverMemory implements IReplicaDriver {
     if (this._isClosed) throw new ReplicaIsClosedError();
 
     // clean up the query and exit early if possible.
-    let { query, willMatch } = cleanUpQuery(queryToClean);
+    const { query, willMatch } = cleanUpQuery(queryToClean);
     logger.debug(`    cleanUpQuery.  willMatch = ${willMatch}`);
     if (willMatch === "nothing") {
       return [];
     }
 
+    if (query.historyMode === "latest" && query.filter?.path) {
+      const maybeDoc = this.latestDocsByPath.get(query.filter.path);
+
+      return maybeDoc ? [maybeDoc] : [];
+    }
+
+    if (query.historyMode === "all" && query.filter?.path) {
+      const maybeDocs = this.docsByPathNewestFirst.get(query.filter.path);
+
+      return maybeDocs ? maybeDocs : [];
+    }
+
     // get history docs or all docs
     logger.debug(`    getting docs; historyMode = ${query.historyMode}`);
-    let docs = query.historyMode === "all"
+    const docs = query.historyMode === "all"
       ? await this._getAllDocs() // don't sort it here,
       : await this._getLatestDocs(); // we'll sort it below
 
-    // orderBy
-    logger.debug(`    ordering docs: ${query.orderBy}`);
-    if (query.orderBy === "path ASC") {
-      docs.sort(docComparePathASCthenNewestFirst);
-    } else if (query.orderBy === "path DESC") {
-      docs.sort(docComparePathDESCthenNewestFirst);
-    } else if (query.orderBy === "localIndex ASC") {
-      docs.sort(compareByObjKey("_localIndex", "ASC"));
-    } else if (query.orderBy === "localIndex DESC") {
-      docs.sort(compareByObjKey("_localIndex", "DESC"));
-    } else {
-      throw new ValidationError(
-        "unrecognized query orderBy: " + JSON.stringify(query.orderBy),
-      );
-    }
+    // sort
 
-    let filteredDocs: CoreDoc[] = [];
+    const filteredDocs: CoreDoc[] = [];
     logger.debug(`    filtering docs`);
-    for (let doc of docs) {
+
+    for (const doc of docs) {
       // skip ahead until we reach startAfter
       if (query.orderBy === "path ASC") {
         if (query.startAfter !== undefined) {
@@ -245,14 +242,29 @@ export class ReplicaDriverMemory implements IReplicaDriver {
 
       // finally, here's a doc we want
       filteredDocs.push(doc);
+    }
 
-      // stop when hitting limit
-      if (
-        query.limit !== undefined && filteredDocs.length >= query.limit
-      ) {
-        logger.debug(`    ....hit limit of ${query.limit}`);
-        break;
-      }
+    // orderBy
+    logger.debug(`    ordering docs: ${query.orderBy}`);
+    if (query.orderBy === "path ASC") {
+      filteredDocs.sort(docComparePathASCthenNewestFirst);
+    } else if (query.orderBy === "path DESC") {
+      filteredDocs.sort(docComparePathDESCthenNewestFirst);
+    } else if (query.orderBy === "localIndex ASC") {
+      filteredDocs.sort(compareByObjKey("_localIndex", "ASC"));
+    } else if (query.orderBy === "localIndex DESC") {
+      filteredDocs.sort(compareByObjKey("_localIndex", "DESC"));
+    } else if (query.orderBy) {
+      throw new ValidationError(
+        "unrecognized query orderBy: " + JSON.stringify(query.orderBy),
+      );
+    }
+
+    // limit
+    if (
+      query.limit !== undefined && docs.length >= query.limit
+    ) {
+      return filteredDocs.slice(0, query.limit);
     }
 
     logger.debug(
@@ -293,6 +305,9 @@ export class ReplicaDriverMemory implements IReplicaDriver {
     docsByPath.sort(docComparePathASCthenNewestFirst);
     // save the list back to the index
     this.docsByPathNewestFirst.set(doc.path, docsByPath);
+
+    const latestDoc = docsByPath[0];
+    this.latestDocsByPath.set(doc.path, latestDoc);
 
     return Promise.resolve(doc);
   }
