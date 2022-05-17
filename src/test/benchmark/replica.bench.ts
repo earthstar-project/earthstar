@@ -1,6 +1,3 @@
-function deleteTheThing() {
-  throw new Error("Function not implemented.");
-}
 import { Crypto } from "../../crypto/crypto.ts";
 import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { Replica } from "../../replica/replica.ts";
@@ -35,8 +32,21 @@ for (const scenario of scenarios) {
   setGlobalCryptoDriver(crypto);
 
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+  const keypairB = await Crypto.generateAuthorKeypair("nest") as AuthorKeypair;
 
   const replica = new Replica({ driver });
+
+  await replica.set(keypair, {
+    format: "es.4",
+    content: "hello",
+    path: `/stable.txt`,
+  });
+
+  await replica.set(keypairB, {
+    format: "es.4",
+    content: "howdy",
+    path: `/stable.txt`,
+  });
 
   Deno.bench(`Replica.set (${scenario.name})`, { group: "set" }, async () => {
     await replica.set(keypair, {
@@ -51,6 +61,42 @@ for (const scenario of scenarios) {
     { group: "queryDocs" },
     async () => {
       await replica.queryDocs();
+    },
+  );
+
+  Deno.bench(
+    `Replica.queryDocs (path ASC) (${scenario.name})`,
+    { group: "queryDocs.pathAsc" },
+    async () => {
+      await replica.queryDocs({
+        orderBy: "path ASC",
+      });
+    },
+  );
+
+  Deno.bench(
+    `Replica.queryDocs (localIndex ASC) (${scenario.name})`,
+    { group: "queryDocs.localIndexAsc" },
+    async () => {
+      await replica.queryDocs({
+        orderBy: "localIndex ASC",
+      });
+    },
+  );
+
+  Deno.bench(
+    `Replica.getLatestDocAtPath (${scenario.name})`,
+    { group: "getLatestDocAtPath" },
+    async () => {
+      await replica.getLatestDocAtPath("/stable.txt");
+    },
+  );
+
+  Deno.bench(
+    `Replica.getAllDocsAtPath (${scenario.name})`,
+    { group: "getAllDocsAtPath" },
+    async () => {
+      await replica.getAllDocsAtPath("/stable.txt");
     },
   );
 }

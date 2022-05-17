@@ -89,19 +89,16 @@ export function writeRandomDocs(
   keypair: AuthorKeypair,
   storage: Replica,
   n: number,
-): Promise<void[]> {
+) {
+  const fstRand = randomId();
+
   const setPromises = Array.from({ length: n }, () => {
-    return new Promise<void>((resolve, reject) => {
-      storage.set(keypair, {
-        content: `${randomId()}`,
-        path: `/${randomId()}/${randomId()}.txt`,
-        format: "es.4",
-      }).then((result) => {
-        if (isErr(result)) {
-          reject(result);
-        }
-        resolve();
-      });
+    const rand = randomId();
+
+    return storage.set(keypair, {
+      content: `${rand}`,
+      path: `/${fstRand}/${rand}.txt`,
+      format: "es.4",
     });
   });
 

@@ -1,6 +1,6 @@
 import { ShareAddress } from "../util/doc-types.ts";
 import { IReplica } from "../replica/replica-types.ts";
-import { SyncSessionStatus } from "../syncer/syncer-types.ts";
+import { SyncSessionStatus } from "../syncer_old/syncer-types.ts";
 
 //================================================================================
 // PEER

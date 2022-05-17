@@ -21,18 +21,19 @@ export const cryptoDrivers: Scenario<ICryptoDriver>[] = [{
 }];
 
 export const replicaDrivers: Scenario<
-  (share: ShareAddress) => IReplicaDriver
+  (share: ShareAddress, variant?: string) => IReplicaDriver
 >[] = [
   { name: "Memory", item: (addr) => new ReplicaDriverMemory(addr) },
   {
     name: "LocalStorage",
-    item: (addr) => new ReplicaDriverLocalStorage(addr),
+    item: (addr, variant?: string) =>
+      new ReplicaDriverLocalStorage(addr, variant),
   },
   {
     name: "Sqlite",
-    item: (addr) =>
+    item: (addr, variant?: string) =>
       new ReplicaDriverSqlite({
-        filename: `${addr}.bench.sqlite`,
+        filename: `${addr}.${variant ? `${variant}.` : ""}bench.sqlite`,
         mode: "create-or-open",
         share: addr,
       }),

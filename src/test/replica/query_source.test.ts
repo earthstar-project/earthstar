@@ -54,6 +54,9 @@ Deno.test("QuerySource", async () => {
   const existingWantedContent = [];
 
   for await (const event of existingStream) {
+    if (event.kind === "processed_all_existing") {
+      continue;
+    }
     existingWantedContent.push(event.doc.content);
   }
 
@@ -91,12 +94,18 @@ Deno.test("QuerySource", async () => {
   const everythingCallbackSink = new CallbackSink<QuerySourceEvent<CoreDoc>>();
 
   everythingCallbackSink.onWrite((event) => {
+    if (event.kind === "processed_all_existing") {
+      return;
+    }
     everythingWantedContent.push(event.doc.content);
   });
 
   const newCallbackSink = new CallbackSink<QuerySourceEvent<CoreDoc>>();
 
   newCallbackSink.onWrite((event) => {
+    if (event.kind === "processed_all_existing") {
+      return;
+    }
     newWantedContent.push(event.doc.content);
   });
 

@@ -27,7 +27,7 @@ export class CombineStream<T> {
     const writable = new WritableStream<T>({
       async write(chunk) {
         await writer.ready;
-        writer.write(chunk);
+        await writer.write(chunk);
       },
     });
 
@@ -53,6 +53,7 @@ export class CombineStream<T> {
   }
 }
 
+// Only gets chunks from the writable end AFTER the readable stream is constructed.
 export class CloneStream<T> {
   private closed = false;
 
@@ -186,6 +187,36 @@ export class CallbackSink<T> implements UnderlyingSink<T> {
   }
 }
 
+// This bus runs all its callbacks blockingly, so that no two subscribed callbacks are ever called at the same time.
+export class BlockingBus<T> {
+  private callbacks = new Set<(thing: T) => void | Promise<void>>();
+  private lock = new LockStream();
+
+  on(cb: (thing: T) => void | Promise<void>) {
+    this.callbacks.add(cb);
+
+    return () => {
+      this.callbacks.delete(cb);
+    };
+  }
+
+  async send(thing: T) {
+    for (const callback of this.callbacks) {
+      await this.lock.run(() => callback(thing));
+    }
+  }
+}
+
+export class PassThroughTransformer<ChunkType>
+  implements Transformer<ChunkType, ChunkType> {
+  transform(
+    chunk: ChunkType,
+    controller: TransformStreamDefaultController<ChunkType>,
+  ) {
+    controller.enqueue(chunk);
+  }
+}
+
 export class LockStream {
   private writable = new WritableStream<() => void | Promise<void>>({
     async write(cb) {
@@ -208,7 +239,7 @@ export class LockStream {
 
     await this.writer.ready;
 
-    this.writer.write(cb);
+    return this.writer.write(cb);
   }
 
   async close() {
@@ -282,4 +313,20 @@ export class ChannelMultiStream<
 
     return this.multistream.getReadableStream().pipeThrough(channelTransform);
   }
+}
+
+export async function readStream<ChunkType>(
+  stream: ReadableStream<ChunkType>,
+): Promise<ChunkType[]> {
+  const arr: ChunkType[] = [];
+
+  const writable = new WritableStream<ChunkType>({
+    write(entry) {
+      arr.push(entry);
+    },
+  });
+
+  await stream.pipeTo(writable);
+
+  return arr;
 }

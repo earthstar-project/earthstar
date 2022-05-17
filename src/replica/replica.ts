@@ -37,10 +37,8 @@ import { checkShareIsValid } from "../core-validators/addresses.ts";
 import { Logger } from "../util/log.ts";
 import {
   CallbackSink,
-  Channelled,
   ChannelMultiStream,
   LockStream,
-  MultiStream,
   OrCh,
 } from "../streams/stream_utils.ts";
 import { QuerySource } from "./query_source.ts";
@@ -436,8 +434,7 @@ export class Replica implements IReplica {
           loggerIngest.debug(
             "  > new doc is GT prevSameAuthor, so it is obsolete",
           );
-
-          this.eventWriter.write({
+          await this.eventWriter.write({
             kind: "nothing_happened",
             reason: "obsolete_from_same_author",
             doc: docToIngest,
@@ -447,7 +444,7 @@ export class Replica implements IReplica {
           loggerIngest.debug(
             "  > new doc is EQ prevSameAuthor, so it is redundant (already_had_it)",
           );
-          this.eventWriter.write({
+          await this.eventWriter.write({
             kind: "nothing_happened",
             reason: "already_had_it",
             doc: docToIngest,
@@ -466,7 +463,7 @@ export class Replica implements IReplica {
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
       );
 
-      this.eventWriter.write({
+      await this.eventWriter.write({
         kind: "success",
         maxLocalIndex,
         doc: docAsWritten, // with updated extra properties like _localIndex

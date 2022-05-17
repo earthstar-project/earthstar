@@ -19,11 +19,11 @@ import { randomId } from "../util/misc.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-import { SyncSessionStatus } from "../syncer/syncer-types.ts";
+import { SyncSessionStatus } from "../syncer_old/syncer-types.ts";
 import { IFormatValidator } from "../format-validators/format-validator-types.ts";
 import { IReplica } from "../replica/replica-types.ts";
-import { Syncer } from "../syncer/syncer.ts";
-import { SyncerBag } from "../syncer/_syncer-bag.ts";
+import { Syncer } from "../syncer_old/syncer.ts";
+import { SyncerBag } from "../syncer_old/_syncer-bag.ts";
 const logger = new Logger("peer", "blueBright");
 const J = JSON.stringify;
 

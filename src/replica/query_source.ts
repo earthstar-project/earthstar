@@ -38,6 +38,8 @@ export class QuerySource
       }
     }
 
+    controller.enqueue({ kind: "processed_all_existing" });
+
     if (this.mode === "existing") {
       controller.close();
       return;

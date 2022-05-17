@@ -7,10 +7,4 @@ export * as sha256_uint8array from "https://esm.sh/sha256-uint8array@0.10.3";
 export { Superbus } from "./src/superbus/superbus.ts";
 export { SuperbusMap } from "./src/superbus_map/superbus_map.ts";
 export * as ed from "https://raw.githubusercontent.com/sgwilym/noble-ed25519/7af9329476ff2f2a0e524a9f78e36d09704efc63/mod.ts";
-export {
-  type IConnection,
-  type ITransport,
-  TransportHttpClient,
-  TransportLocal,
-  TransportWebsocketClient,
-} from "./src/streaming_rpc/streaming_rpc.ts";
+export { xxHash32 } from "https://raw.githubusercontent.com/gnlow/deno-xxhash/master/mod.ts";
