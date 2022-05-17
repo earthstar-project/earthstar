@@ -1,5 +1,6 @@
 import { CoreDoc, IReplica } from "../replica/replica-types.ts";
-import { Timestamp } from "../util/doc-types.ts";
+import { ShareAddress, Timestamp } from "../util/doc-types.ts";
+import { IPeer } from "../peer/peer-types.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -66,3 +67,32 @@ export type SyncAgentOpts = {
   replica: IReplica;
   mode: "only_existing" | "live";
 };
+
+// ===================
+
+export type SyncerDiscloseEvent = {
+  kind: "DISCLOSE";
+  salt: string;
+  shares: string[];
+};
+
+export type SyncerSyncAgentEvent = SyncAgentEvent & {
+  to: string;
+};
+
+export type SyncerEvent = SyncerSyncAgentEvent | SyncerDiscloseEvent;
+
+export interface ISyncerDriver {
+  readable: ReadableStream<SyncerEvent>;
+  writable: WritableStream<SyncerEvent>;
+}
+
+export type SyncerMode = "once" | "live";
+
+export interface SyncerOpts {
+  peer: IPeer;
+  driver: ISyncerDriver;
+  mode: SyncerMode;
+}
+
+export type SyncerStatus = Record<ShareAddress, SyncAgentStatus>;

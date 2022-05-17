@@ -342,7 +342,7 @@ export class SyncAgent {
     return this.statusBus.on(callback);
   }
 
-  /** Signal the SyncAgent to wrap up syncing. */
+  /** Signal the SyncAgent to wrap up syncing early. */
   async close() {
     this.isPartnerFinished.resolve(true);
     await this.syncEventBus.send({ kind: "DONE" });
