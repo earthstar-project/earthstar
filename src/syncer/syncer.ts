@@ -175,6 +175,13 @@ export class Syncer {
   onStatusChange(callback: (status: SyncerStatus) => void): () => void {
     return this.statusBus.on(callback);
   }
+
+  /** Stop syncing. */
+  cancel() {
+    for (const [_addr, agent] of this.syncAgents) {
+      agent.cancel();
+    }
+  }
 }
 
 function saltAndHashShare(

@@ -12,7 +12,7 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
  */
 export class SyncAgent {
   /** A bus to send events to, and which our readable streams subcribe to. */
-  private syncEventBus = new BlockingBus<SyncAgentEvent>();
+  private outboundEventBus = new BlockingBus<SyncAgentEvent>();
 
   /** Here we keep track of all the root IDs of versions we've `WANT`ed. Used to prevent offering things to another peer which they already have. */
   private rootIdsRequested: Set<string> = new Set();
@@ -42,13 +42,15 @@ export class SyncAgent {
     return {
       requested: this.fulfilledMap.size,
       received: this.fulfilledCount,
-      status: this.initialHash.state === "pending"
+      status: this.isDone.state === "rejected"
+        ? "aborted"
+        : this.initialHash.state === "pending"
         // Hasn't calculated initial hash yet
         ? "preparing"
         : this.fulfilledCount < this.fulfilledMap.size
         // Waiting on unfulfilled WANTs
         ? "syncing"
-        : this.isPartnerFinished.state === "fulfilled"
+        : this.isDone.state === "fulfilled"
         // Partner is finished, no open requests.
         ? "done"
         : // Connection held open for new docs.
@@ -82,6 +84,13 @@ export class SyncAgent {
   }
 
   constructor({ replica, mode }: SyncAgentOpts) {
+    // If the replica closes, we need to abort
+    replica.onEvent((event) => {
+      if (event.kind === "willClose") {
+        this.cancel();
+      }
+    });
+
     const haveEntryKeeper = new HaveEntryKeeper(
       mode === "live" ? "everything" : "existing",
     );
@@ -93,7 +102,7 @@ export class SyncAgent {
 
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
     const {
-      syncEventBus,
+      outboundEventBus,
       statusBus,
       initialHash,
       isPartnerFinished,
@@ -107,14 +116,7 @@ export class SyncAgent {
     const fulfilWant = this.fulfilWant.bind(this);
     const getStatus = this.getStatus.bind(this);
     const isFulfilled = this.isFulfilled.bind(this);
-
-    // If the replica closes, we should signal that we're done.
-    // Might need to abort here?
-    replica.onEvent((event) => {
-      if (event.kind === "willClose" && this.isDone.state !== "fulfilled") {
-        syncEventBus.send({ kind: "DONE" });
-      }
-    });
+    const cancel = this.cancel.bind(this);
 
     // A writable which receives HaveEntry from the keeper, and sends out `HAVE` events for them.
     const haveEntrySink = new WritableStream<HaveEntry>({
@@ -123,7 +125,7 @@ export class SyncAgent {
           return;
         }
 
-        syncEventBus.send({
+        outboundEventBus.send({
           kind: "HAVE",
           ...haveEntry,
         });
@@ -138,17 +140,18 @@ export class SyncAgent {
     haveEntryKeeper.isReady().then(() => {
       const hash = haveEntryKeeper.getHash();
       this.initialHash.resolve(hash);
-      syncEventBus.send({ kind: "HASH", hash });
+      outboundEventBus.send({ kind: "HASH", hash });
     });
 
     // Wait for the partner being finished.
     isPartnerFinished.then(() => {
       // AND wait for all requests to be fulfilled
+
       isFulfilled().then(() => {
         if (this.getStatus().status !== "done") {
           // We mark the other side as done so we can exit immediately and close the stream.
           isPartnerFinished.resolve();
-          syncEventBus.send({ kind: "DONE" });
+          outboundEventBus.send({ kind: "DONE" });
         }
       });
     });
@@ -157,6 +160,10 @@ export class SyncAgent {
     // And we handle them here.
     this.writable = new WritableStream<SyncAgentEvent>({
       async write(event) {
+        if (isDone.state === "rejected") {
+          return;
+        }
+
         switch (event.kind) {
           case "HASH": {
             // Wait for our hash to be calculated before comparing.
@@ -167,7 +174,7 @@ export class SyncAgent {
             // Consider the other side finished and exit.
             if (ourHash === event.hash && mode === "only_existing") {
               isPartnerFinished.resolve(true);
-              syncEventBus.send({ kind: "DONE" });
+              outboundEventBus.send({ kind: "DONE" });
               break;
             }
 
@@ -182,7 +189,7 @@ export class SyncAgent {
             haveEntryKeeper.readable.pipeTo(haveEntrySink).then(() => {
               if (isPartnerFinished.state !== "fulfilled") {
                 isFulfilled().then(() => {
-                  syncEventBus.send({ kind: "DONE" });
+                  outboundEventBus.send({ kind: "DONE" });
                 });
               }
             });
@@ -196,7 +203,7 @@ export class SyncAgent {
             // If not, that means we don't have any docs associated with the path this ID was made from.
             // We want it!
             if (!haveEntryKeeper.hasEntryWithId(event.id)) {
-              syncEventBus.send({ kind: "WANT", id: event.id });
+              outboundEventBus.send({ kind: "WANT", id: event.id });
 
               // Register a WANT for each version, even though we sent out a single one for the root ID.
               // The other side will send back the DOC with the version ID, NOT the root ID.
@@ -223,7 +230,7 @@ export class SyncAgent {
               // That means we don't have any documents by the author associated with this ID at this path.
               // We want it!
               if (!existingEntry) {
-                syncEventBus.send({ kind: "WANT", id: haveId });
+                outboundEventBus.send({ kind: "WANT", id: haveId });
                 registerWant(haveId);
                 rootIdsRequested.add(event.id);
                 continue;
@@ -233,7 +240,7 @@ export class SyncAgent {
               // If the one on record is lower, we want this newer version.
               const existingTimestamp = existingEntry.versions[haveId];
               if (timestamp > existingTimestamp) {
-                syncEventBus.send({ kind: "WANT", id: haveId });
+                outboundEventBus.send({ kind: "WANT", id: haveId });
 
                 rootIdsRequested.add(event.id);
                 registerWant(haveId);
@@ -272,7 +279,7 @@ export class SyncAgent {
 
               // Send it off!
               if (doc) {
-                syncEventBus.send({
+                outboundEventBus.send({
                   kind: "DOC",
                   id,
                   doc,
@@ -300,6 +307,9 @@ export class SyncAgent {
           case "DONE":
             isPartnerFinished.resolve(true);
             break;
+
+          case "ABORT":
+            cancel();
         }
       },
     });
@@ -308,18 +318,28 @@ export class SyncAgent {
     this.readable = new ReadableStream<SyncAgentEvent>({
       start(controller) {
         // Subscribe to the bus for events, and enqueue them.
-        syncEventBus.on(async (event) => {
-          controller.enqueue(event);
+        const unsub = outboundEventBus.on(async (event) => {
+          if (isDone.state !== "rejected") {
+            controller.enqueue(event);
+          }
 
           if (event.kind === "DONE") {
             isDone.resolve();
             // We wait for the partner to signal its finished before closing the queue
             // As it could still be sending us `WANT`s / expecting `DOC` events.
             await isPartnerFinished;
+            unsub();
             statusBus.send(getStatus());
             controller.close();
             return;
           }
+        });
+
+        isDone.catch(() => {
+          controller.enqueue({ kind: "ABORT" });
+          unsub();
+          statusBus.send(getStatus());
+          controller.close();
         });
       },
     });
@@ -343,8 +363,13 @@ export class SyncAgent {
   }
 
   /** Signal the SyncAgent to wrap up syncing early. */
-  async close() {
+  cancel(reason?: string) {
+    // Can't cancel if we're already done or cancelled previously.
+    if (this.isDone.state === "fulfilled" || this.isDone.state === "rejected") {
+      return;
+    }
+
     this.isPartnerFinished.resolve(true);
-    await this.syncEventBus.send({ kind: "DONE" });
+    this.isDone.reject(reason || "Cancelled");
   }
 }

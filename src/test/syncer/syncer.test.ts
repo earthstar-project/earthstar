@@ -6,7 +6,7 @@ import { Syncer } from "../../syncer/syncer.ts";
 import { SyncerDriverLocal } from "../../syncer/syncer_driver_local.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
-import { assert } from "../asserts.ts";
+import { assert, assertEquals } from "../asserts.ts";
 import {
   makeNReplicas,
   storagesAreSynced,
@@ -43,7 +43,7 @@ Deno.test("Syncer", async () => {
 
   const [a1, a2] = storagesADuo;
   const [b1, b2] = storagesBDuo;
-  const [c1] = storagesCDuo;
+  const [c1, c2] = storagesCDuo;
 
   peerA.addReplica(a1);
   peerA.addReplica(b1);
@@ -62,6 +62,29 @@ Deno.test("Syncer", async () => {
   assert(await storagesAreSynced([a1, a2]));
   assert(await storagesAreSynced([b1, b2]));
   assert(await storagesAreSynced(storagesCDuo) === false);
+
+  const peerC = new Peer();
+  const peerD = new Peer();
+
+  peerC.addReplica(c1);
+  peerD.addReplica(c2);
+
+  const syncerToClose = new Syncer({
+    peer: peerC,
+    driver: new SyncerDriverLocal(peerD, "once"),
+    mode: "once",
+  });
+
+  let lastStatus = null;
+
+  syncerToClose.onStatusChange((status) => {
+    lastStatus = status[ADDRESS_C].status;
+    syncerToClose.cancel();
+  });
+
+  await sleep(10);
+
+  assertEquals(lastStatus, "aborted");
 
   await Promise.all(allStorages.map((replica) => replica.close(true)));
 });

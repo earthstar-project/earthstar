@@ -40,12 +40,17 @@ export type SyncAgentFinishedEvent = {
   kind: "DONE";
 };
 
+export type SyncAgentAbortEvent = {
+  kind: "ABORT";
+};
+
 /** A type of message one SyncAgent can send to another. */
 export type SyncAgentEvent =
   | SyncAgentHashEvent
   | SyncAgentHaveEvent
   | SyncAgentWantEvent
   | SyncAgentDocEvent
+  | SyncAgentAbortEvent
   | SyncAgentFinishedEvent;
 
 /** The current status of a SyncAgent
@@ -56,7 +61,7 @@ export type SyncAgentEvent =
 export type SyncAgentStatus = {
   requested: number;
   received: number;
-  status: "preparing" | "syncing" | "idling" | "done";
+  status: "preparing" | "syncing" | "idling" | "done" | "aborted";
 };
 
 /** Options used for initialisng a `SyncAgent`.

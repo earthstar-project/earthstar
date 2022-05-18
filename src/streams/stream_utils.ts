@@ -189,10 +189,10 @@ export class CallbackSink<T> implements UnderlyingSink<T> {
 
 // This bus runs all its callbacks blockingly, so that no two subscribed callbacks are ever called at the same time.
 export class BlockingBus<T> {
-  private callbacks = new Set<(thing: T) => void | Promise<void>>();
+  private callbacks = new Set<(item: T) => void | Promise<void>>();
   private lock = new LockStream();
 
-  on(cb: (thing: T) => void | Promise<void>) {
+  on(cb: (item: T) => void | Promise<void>) {
     this.callbacks.add(cb);
 
     return () => {
@@ -200,9 +200,9 @@ export class BlockingBus<T> {
     };
   }
 
-  async send(thing: T) {
+  async send(item: T) {
     for (const callback of this.callbacks) {
-      await this.lock.run(() => callback(thing));
+      await this.lock.run(() => callback(item));
     }
   }
 }
