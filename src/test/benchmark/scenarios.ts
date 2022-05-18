@@ -8,10 +8,10 @@ import { ReplicaDriverLocalStorage } from "../../replica/replica-driver-local-st
 import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
 import { ReplicaDriverSqlite } from "../../replica/replica-driver-sqlite.deno.ts";
 import { IReplicaDriver } from "../../replica/replica-types.ts";
+import { ReplicaDriverSqliteFfi } from "../../replica/replica_driver_sqlite_ffi.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { SyncerDriverLocal } from "../../syncer/syncer_driver_local.ts";
 import { SyncerDriverWeb } from "../../syncer/syncer_driver_web.ts";
-import { ISyncerDriver } from "../../syncer/syncer_types.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
 
 type Scenario<T> = {
@@ -35,6 +35,15 @@ export const replicaDrivers: Scenario<
     name: "LocalStorage",
     item: (addr, variant?: string) =>
       new ReplicaDriverLocalStorage(addr, variant),
+  },
+  {
+    name: "Sqlite FFI",
+    item: (addr, variant?: string) =>
+      new ReplicaDriverSqliteFfi({
+        filename: `${addr}.${variant ? `${variant}.` : ""}bench.ffi.sqlite`,
+        mode: "create-or-open",
+        share: addr,
+      }),
   },
   {
     name: "Sqlite",

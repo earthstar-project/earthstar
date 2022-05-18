@@ -323,6 +323,7 @@ export class ReplicaDriverMemory implements IReplicaDriver {
 
     for (const expiredDoc of expiredDocs) {
       this.docsByPathNewestFirst.delete(expiredDoc.path);
+      this.latestDocsByPath.delete(expiredDoc.path);
       this.docByPathAndAuthor.delete(combinePathAndAuthor(expiredDoc));
     }
 
