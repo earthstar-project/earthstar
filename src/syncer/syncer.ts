@@ -1,5 +1,6 @@
 // Syncer.
 
+import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus, CloneStream } from "../streams/stream_utils.ts";
@@ -25,6 +26,8 @@ export class Syncer {
   private incomingStreamCloner = new CloneStream<SyncerEvent>();
   private statusBus = new BlockingBus<SyncerStatus>();
 
+  isDone = deferred<true>();
+
   constructor(opts: SyncerOpts) {
     // Have to do this because we'll be using these values in a context where 'this' is different
     // (the streams below)
@@ -36,7 +39,7 @@ export class Syncer {
 
     // Create a new readable stream which is subscribed to events from this syncer.
     // Pipe it to the outgoing stream to the other peer.
-    new ReadableStream({
+    const outgoingStream = new ReadableStream({
       start(controller) {
         outgoingEventBus.on((event) => {
           controller.enqueue(event);
@@ -44,7 +47,15 @@ export class Syncer {
           // TODO: close when a certain event comes through
         });
       },
-    }).pipeTo(opts.driver.writable);
+    });
+
+    const abortController = new AbortController();
+
+    outgoingStream.pipeTo(opts.driver.writable, {
+      signal: abortController.signal,
+    }).catch(() => {
+      // We catch aborting the signal here.
+    });
 
     // Create a sink to handle incoming events, pipe the readable into that
     opts.driver.readable.pipeTo(this.incomingStreamCloner.writable);
@@ -69,6 +80,24 @@ export class Syncer {
         salt,
         shares: saltedShares,
       });
+    });
+
+    // If the syncer is in done mode, it should abort its outgoing stream when all sync agents are done.
+    this.statusBus.on((status) => {
+      if (this.mode === "live") {
+        return;
+      }
+
+      const statuses: string[] = [];
+
+      for (const addr in status) {
+        statuses.push(status[addr].status);
+      }
+
+      if (statuses.every((status) => status === "done")) {
+        this.isDone.resolve(true);
+        abortController.abort();
+      }
     });
   }
 
@@ -111,7 +140,10 @@ export class Syncer {
           });
         },
       }),
-    );
+    ).then(() => {
+      // Sticking a pin here 'cos it's handy.
+      // The sync agent will finish here if in 'only_existing' mode.
+    });
 
     // Get a clone of the incoming event stream.
     const incomingClone = this.incomingStreamCloner.getReadableStream();

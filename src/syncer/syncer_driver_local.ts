@@ -9,7 +9,7 @@ export class SyncerDriverLocal implements ISyncerDriver {
 
   private incomingEventBus = new BlockingBus<SyncerEvent>();
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
-  private partnerSyncer: Syncer;
+  partnerSyncer: Syncer;
 
   constructor(peer: IPeer, mode: SyncerMode) {
     const { incomingEventBus, outgoingEventBus } = this;

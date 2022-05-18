@@ -30,7 +30,7 @@ import * as Sqlite from "https://deno.land/x/sqlite@v3.2.0/mod.ts";
 import { Logger } from "../util/log.ts";
 import { bytesToString, stringToBytes } from "../util/bytes.ts";
 import { Query } from "../query/query-types.ts";
-import { cleanUpQuery, docIsExpired } from "../query/query.ts";
+import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
 import {
