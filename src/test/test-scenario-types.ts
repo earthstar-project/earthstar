@@ -2,7 +2,6 @@ import { Peer } from "../peer/peer.ts";
 import { ShareAddress } from "../util/doc-types.ts";
 import { ICryptoDriver } from "../crypto/crypto-types.ts";
 import { IReplica, IReplicaDriver } from "../replica/replica-types.ts";
-import { SyncerBag } from "../syncer_old/_syncer-bag.ts";
 import { Rpc } from "./test-deps.ts";
 
 export interface TestScenario {
@@ -28,21 +27,6 @@ export interface TestScenario {
 export interface CryptoScenario {
   name: string;
   driver: ICryptoDriver;
-}
-
-export interface TransportTestHelper {
-  name: string;
-  clientPeer: Peer;
-  targetPeer: Peer;
-  clientTransport: Rpc.ITransport<SyncerBag>;
-  targetTransport: Rpc.ITransport<SyncerBag>;
-  connect: () => Promise<void>;
-  teardown: () => Promise<void>;
-}
-
-export interface TransportScenario {
-  name: string;
-  make: (peer: Peer, targetPeer: Peer) => TransportTestHelper;
 }
 
 export type Syncable = Peer | string;

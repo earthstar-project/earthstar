@@ -12,12 +12,9 @@ import { ReplicaDriverIndexedDB } from "../replica/replica-driver-indexeddb.ts";
 import { ReplicaDriverSqlite } from "../replica/replica-driver-sqlite.deno.ts";
 
 // test types
-import {
-  CryptoScenario,
-  TestScenario,
-  TransportScenario,
-} from "./test-scenario-types.ts";
+import { CryptoScenario, TestScenario } from "./test-scenario-types.ts";
 import { CryptoDriverSodium } from "../crypto/crypto-driver-sodium.ts";
+import { ReplicaDriverSqliteFfi } from "../replica/replica_driver_sqlite_ffi.ts";
 
 // A version of test scenario without crypto specified yet.
 type JustStorageScenario = Omit<TestScenario, "cryptoDriver">;
@@ -37,7 +34,7 @@ const universalStorageScenarios: JustStorageScenario[] = [
     persistent: true,
     makeDriver: (ws) =>
       new ReplicaDriverSqlite({
-        filename: `src/test/${ws}.db`,
+        filename: `src/test/${ws}.sqlite`,
         mode: "create-or-open",
         share: ws,
       }),
@@ -51,6 +48,17 @@ const browserStorageScenarios: JustStorageScenario[] = [
     persistent: true,
     makeDriver: (ws) => new ReplicaDriverLocalStorage(ws),
     builtInConfigKeys: [],
+  },
+  {
+    name: "ReplicaDriverSqliteFfi",
+    persistent: true,
+    makeDriver: (ws) =>
+      new ReplicaDriverSqliteFfi({
+        filename: `src/test/${ws}.ffi.sqlite`,
+        mode: "create-or-open",
+        share: ws,
+      }),
+    builtInConfigKeys: ["schemaVersion", "share"],
   },
 ];
 
