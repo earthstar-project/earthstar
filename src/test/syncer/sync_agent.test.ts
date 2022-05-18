@@ -145,13 +145,13 @@ class SyncAgentTestHelper {
     };
   }
 
-  async closeOneSide(side: "target" | "source") {
+  closeOneSide(side: "target" | "source") {
     if (side === "source") {
-      await this.sourceSyncAgent?.close();
+      this.sourceSyncAgent?.cancel();
       return;
     }
 
-    return this.targetSyncAgent?.close();
+    return this.targetSyncAgent?.cancel();
   }
 }
 
@@ -522,10 +522,10 @@ for (const scenario of scenarios) {
 
       const sourceEvents3 = await testHelper.popEventsFromSource();
 
-      assert(statuses3.source.status === "done");
-      assert(statuses3.target.status === "done");
+      assert(statuses3.source.status === "aborted");
+      assert(statuses3.target.status === "aborted");
 
-      assert(sourceEvents3[0].kind === "DONE");
+      assert(sourceEvents3[0].kind === "ABORT");
     });
 
     await testHelper.close();

@@ -10,8 +10,9 @@ import { ReplicaDriverSqlite } from "../../replica/replica-driver-sqlite.deno.ts
 import { IReplicaDriver } from "../../replica/replica-types.ts";
 import { ReplicaDriverSqliteFfi } from "../../replica/replica_driver_sqlite_ffi.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { SyncerDriverLocal } from "../../syncer/syncer_driver_local.ts";
-import { SyncerDriverWeb } from "../../syncer/syncer_driver_web.ts";
+import { PartnerLocal } from "../../syncer/partner_local.ts";
+import { PartnerWeb } from "../../syncer/partner_web.ts";
+
 import { ShareAddress } from "../../util/doc-types.ts";
 
 type Scenario<T> = {
@@ -65,15 +66,17 @@ export interface SyncerDriverScenario {
 
 export class ScenarioLocal implements SyncerDriverScenario {
   setup(peerA: IPeer, peerB: IPeer) {
-    const driver = new SyncerDriverLocal(peerB, "once");
+    const partner = new PartnerLocal(peerB, "once");
 
     const syncerA = new Syncer({
       peer: peerA,
-      driver: driver,
+      partner,
       mode: "once",
     });
 
-    return Promise.resolve([syncerA, driver.partnerSyncer] as [Syncer, Syncer]);
+    return Promise.resolve(
+      [syncerA, partner.partnerSyncer] as [Syncer, Syncer],
+    );
   }
 
   teardown() {
@@ -95,11 +98,11 @@ export class ScenarioWeb implements SyncerDriverScenario {
     const handler = (req: Request) => {
       const { socket, response } = Deno.upgradeWebSocket(req);
 
-      const webRequestDriver = new SyncerDriverWeb({ socket });
+      const partner = new PartnerWeb({ socket });
 
       serverSyncerPromise.resolve(
         new Syncer({
-          driver: webRequestDriver,
+          partner,
           mode: "once",
           peer: peerB,
         }),
@@ -119,7 +122,7 @@ export class ScenarioWeb implements SyncerDriverScenario {
     const clientSocket = new WebSocket("ws://localhost:8083");
 
     const clientSyncer = new Syncer({
-      driver: new SyncerDriverWeb({
+      partner: new PartnerWeb({
         socket: clientSocket,
       }),
       mode: "once",

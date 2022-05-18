@@ -1,9 +1,9 @@
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { Syncer } from "./syncer.ts";
-import { ISyncerDriver, SyncerEvent, SyncerMode } from "./syncer_types.ts";
+import { ISyncPartner, SyncerEvent, SyncerMode } from "./syncer_types.ts";
 
-export class SyncerDriverLocal implements ISyncerDriver {
+export class PartnerLocal implements ISyncPartner {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 
@@ -37,7 +37,7 @@ export class SyncerDriverLocal implements ISyncerDriver {
     // We'll give it one that proxies to the readable / writable pair we defined above.
     this.partnerSyncer = new Syncer({
       peer,
-      driver: {
+      partner: {
         // Events written by the partner syncer will be sent to the outgoing event bus
         // And thus to the readable stream.
         writable: new WritableStream({

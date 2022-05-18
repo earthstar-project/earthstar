@@ -5,7 +5,6 @@ import { IReplica } from "../../replica/replica-types.ts";
 import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { compareByFn, sortedInPlace } from "../../replica/compare.ts";
 import { Replica } from "../../replica/replica.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { Peer } from "../../peer/peer.ts";
 import { testScenarios } from "../test-scenarios.ts";
 import { TestScenario } from "../test-scenario-types.ts";
@@ -50,11 +49,6 @@ function runPeerTests(
     sortedStorages.sort(compareByFn((storage) => storage.share));
 
     const peer = new Peer();
-
-    assert(
-      typeof peer.peerId === "string" && peer.peerId.length > 5,
-      "peer has a peerId",
-    );
 
     assertEquals(
       peer.hasShare("+two.ws"),

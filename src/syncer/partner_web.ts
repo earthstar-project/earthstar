@@ -1,11 +1,11 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-import { ISyncerDriver, SyncerEvent } from "./syncer_types.ts";
+import { ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebServerOpts = {
   socket: WebSocket;
 };
 
-export class SyncerDriverWeb implements ISyncerDriver {
+export class PartnerWeb implements ISyncPartner {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 

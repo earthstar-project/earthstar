@@ -75,29 +75,42 @@ export type SyncAgentOpts = {
 
 // ===================
 
+/** An event for disclosing which shares a Peer has without actually revealing them. Another peer can use the salt to hash their own shares' addresses and see if they match. */
 export type SyncerDiscloseEvent = {
   kind: "DISCLOSE";
   salt: string;
   shares: string[];
 };
 
+/** A SyncAgentEvent addressed to a specific share address. */
 export type SyncerSyncAgentEvent = SyncAgentEvent & {
   to: string;
 };
 
+/** An event a Syncer can send or receive. */
 export type SyncerEvent = SyncerSyncAgentEvent | SyncerDiscloseEvent;
 
-export interface ISyncerDriver {
+export interface ISyncPartner {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 }
 
+/** A mode which determines when the syncer will stop syncing.
+ * - `once` - The syncer will only attempt to sync existing docs and then stop.
+ * - `live` - Indefinite syncing, including existing docs and new ones as they are ingested into the replica.
+ */
 export type SyncerMode = "once" | "live";
 
+/** Options to initialise a Syncer with.
+ * - `peer` - The peer to synchronise.
+ * - `driver` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
+ * - `mode` - Determines what kind of sync to carry out.
+ */
 export interface SyncerOpts {
   peer: IPeer;
-  driver: ISyncerDriver;
+  partner: ISyncPartner;
   mode: SyncerMode;
 }
 
+/** A map of sync statuses by the share address they're associated with. */
 export type SyncerStatus = Record<ShareAddress, SyncAgentStatus>;

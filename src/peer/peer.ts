@@ -7,8 +7,11 @@ import { Logger } from "../util/log.ts";
 
 import { IReplica } from "../replica/replica-types.ts";
 import { Syncer } from "../syncer/syncer.ts";
-import { SyncerDriverLocal } from "../syncer/syncer_driver_local.ts";
+
 import { BlockingBus } from "../streams/stream_utils.ts";
+import { PartnerWeb } from "../syncer/partner_web.ts";
+import { PartnerLocal } from "../syncer/partner_local.ts";
+
 const logger = new Logger("peer", "blueBright");
 const J = JSON.stringify;
 
@@ -92,7 +95,7 @@ export class Peer implements IPeer {
   /**
    * Begin synchronising with a remote or local peer.
    * @param target - A HTTP URL, Websocket URL, or an instance of `Peer`.
-   * @returns A function which stops the synchronisation when called.
+   * @param live - Whether the connection should be kept open for newly written docs, or stop after an initial sync.
    */
   sync(target: IPeer | string, live?: boolean): Syncer {
     try {
@@ -100,13 +103,31 @@ export class Peer implements IPeer {
       const url = new URL(target as string);
 
       // Check if it's a web syncer
-      if (url.protocol.startsWith("ws") || url.protocol.startsWith("http")) {
-        // Not handled here.
+      const withoutProtocol = `${url.host}${url.pathname}`;
+
+      const isSecure = url.protocol === "https" || url.protocol === "wss";
+
+      try {
+        const socket = new WebSocket(
+          isSecure ? `wss://${withoutProtocol}` : `ws://${withoutProtocol}`,
+        );
+
+        const partner = new PartnerWeb({ socket });
+
+        const syncer = new Syncer({
+          partner,
+          mode: live ? "live" : "once",
+          peer: this,
+        });
+
+        return syncer;
+      } catch {
+        // return some kind of error?
       }
     } catch {
       const syncer: Syncer = new Syncer({
         peer: this,
-        driver: new SyncerDriverLocal(target as IPeer, live ? "live" : "once"),
+        partner: new PartnerLocal(target as IPeer, live ? "live" : "once"),
         mode: "live",
       });
 
@@ -114,5 +135,15 @@ export class Peer implements IPeer {
     }
 
     return undefined as never;
+  }
+
+  //----------------------------------------------
+  // Subscribe stuff
+
+  /** Fires a given callback whenever the Peer's store of replicas changes. */
+  onReplicasChange(
+    callback: (map: Map<ShareAddress, IReplica>) => void | Promise<void>,
+  ) {
+    return this.replicaEventBus.on(callback);
   }
 }

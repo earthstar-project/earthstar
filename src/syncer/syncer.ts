@@ -16,8 +16,7 @@ import {
 } from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
 
-// TODO: Handle peer replicas being added / removed.
-
+/** Syncs the contents of a Peer's replicas with that of another peer.  */
 export class Syncer {
   private peer: IPeer;
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
@@ -51,14 +50,14 @@ export class Syncer {
 
     const abortController = new AbortController();
 
-    outgoingStream.pipeTo(opts.driver.writable, {
+    outgoingStream.pipeTo(opts.partner.writable, {
       signal: abortController.signal,
     }).catch(() => {
       // We catch aborting the signal here.
     });
 
     // Create a sink to handle incoming events, pipe the readable into that
-    opts.driver.readable.pipeTo(this.incomingStreamCloner.writable);
+    opts.partner.readable.pipeTo(this.incomingStreamCloner.writable);
 
     const incomingClone = this.incomingStreamCloner.getReadableStream();
 
@@ -98,6 +97,14 @@ export class Syncer {
         this.isDone.resolve(true);
         abortController.abort();
       }
+    });
+
+    this.peer.onReplicasChange((replicas) => {
+      for (const [addr] of replicas) {
+        this.addShare(addr);
+      }
+
+      // Should replicas which are removed from a Peer stop syncing immediately?
     });
   }
 

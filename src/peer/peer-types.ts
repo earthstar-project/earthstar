@@ -27,4 +27,8 @@ export interface IPeer {
     target: IPeer | string,
     live?: boolean,
   ): Syncer;
+
+  onReplicasChange(
+    callback: (map: Map<ShareAddress, IReplica>) => void | Promise<void>,
+  ): () => void;
 }
