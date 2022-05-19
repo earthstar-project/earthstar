@@ -3,6 +3,7 @@ import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { Replica } from "../../replica/replica.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { randomId } from "../../util/misc.ts";
+import { writeRandomDocs } from "../test-utils.ts";
 import {
   cryptoDrivers,
   ItemType,
@@ -27,14 +28,18 @@ for (const scenario of scenarios) {
   const crypto = scenario.subscenarios.crypto;
 
   const SHARE_ADDR = "+test.a123";
-  const driver = replicaDriver(SHARE_ADDR);
-
-  setGlobalCryptoDriver(crypto);
+  const driverToClose = replicaDriver(SHARE_ADDR, scenario.name);
 
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair("nest") as AuthorKeypair;
 
+  const replicaToClose = new Replica({ driver: driverToClose });
+
+  await replicaToClose.close(true);
+  const driver = replicaDriver(SHARE_ADDR, scenario.name);
   const replica = new Replica({ driver });
+
+  await writeRandomDocs(keypair, replica, 100);
 
   await replica.set(keypair, {
     format: "es.4",
@@ -49,6 +54,7 @@ for (const scenario of scenarios) {
   });
 
   Deno.bench(`Replica.set (${scenario.name})`, { group: "set" }, async () => {
+    setGlobalCryptoDriver(crypto);
     await replica.set(keypair, {
       format: "es.4",
       content: "hi",
@@ -60,6 +66,7 @@ for (const scenario of scenarios) {
     `Replica.queryDocs (${scenario.name})`,
     { group: "queryDocs" },
     async () => {
+      setGlobalCryptoDriver(crypto);
       await replica.queryDocs();
     },
   );
@@ -68,6 +75,7 @@ for (const scenario of scenarios) {
     `Replica.queryDocs (path ASC) (${scenario.name})`,
     { group: "queryDocs.pathAsc" },
     async () => {
+      setGlobalCryptoDriver(crypto);
       await replica.queryDocs({
         orderBy: "path ASC",
       });
@@ -78,6 +86,7 @@ for (const scenario of scenarios) {
     `Replica.queryDocs (localIndex ASC) (${scenario.name})`,
     { group: "queryDocs.localIndexAsc" },
     async () => {
+      setGlobalCryptoDriver(crypto);
       await replica.queryDocs({
         orderBy: "localIndex ASC",
       });
@@ -88,6 +97,7 @@ for (const scenario of scenarios) {
     `Replica.getLatestDocAtPath (${scenario.name})`,
     { group: "getLatestDocAtPath" },
     async () => {
+      setGlobalCryptoDriver(crypto);
       await replica.getLatestDocAtPath("/stable.txt");
     },
   );
@@ -96,6 +106,7 @@ for (const scenario of scenarios) {
     `Replica.getAllDocsAtPath (${scenario.name})`,
     { group: "getAllDocsAtPath" },
     async () => {
+      setGlobalCryptoDriver(crypto);
       await replica.getAllDocsAtPath("/stable.txt");
     },
   );

@@ -52,25 +52,11 @@ for (const scenario of scenarios) {
         mode: "only_existing",
       });
 
-      const unsubA = syncAgentA.onStatusUpdate((status) => {
-        console.log("A", status);
-      });
-
-      const unsubB = syncAgentB.onStatusUpdate((status) => {
-        console.log("B", status);
-      });
-
       syncAgentA.readable.pipeTo(syncAgentB.writable);
       syncAgentB.readable.pipeTo(syncAgentA.writable);
 
-      console.log(syncAgentA.getStatus());
-      console.log(syncAgentB.getStatus());
-
       await syncAgentA.isDone;
       await syncAgentB.isDone;
-
-      unsubA();
-      unsubB();
     },
   );
 }
