@@ -9,24 +9,23 @@ import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
 import { storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
 
-import {
-  ItemType,
-  MultiplyOutput,
-  multiplyScenarios,
-  replicaDrivers,
-  syncerDrivers,
-  SyncerDriverScenario,
-} from "../benchmark/scenarios.ts";
+import { partnerScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
 import { IReplicaDriver } from "../../replica/replica-types.ts";
+import {
+  MultiplyScenarioOutput,
+  PartnerScenario,
+  ScenarioItem,
+} from "../scenarios/types.ts";
+import { multiplyScenarios } from "../scenarios/utils.ts";
 
 class SyncerTestHelper {
-  private scenario: SyncerDriverScenario;
+  private scenario: PartnerScenario;
   private aDuo: [Replica, Replica];
   private bDuo: [Replica, Replica];
   private cDuo: [Replica, Replica];
 
   constructor(
-    scenario: SyncerDriverScenario,
+    scenario: PartnerScenario,
     makeReplicaDriver: (addr: string, variant?: string) => IReplicaDriver,
   ) {
     this.scenario = scenario;
@@ -102,22 +101,22 @@ class SyncerTestHelper {
 }
 // Check that replicas are synced at the end.
 
-const scenarios: MultiplyOutput<{
-  "replicaDriver": ItemType<typeof replicaDrivers>;
-  "syncerDriver": ItemType<typeof syncerDrivers>;
+const scenarios: MultiplyScenarioOutput<{
+  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "partner": ScenarioItem<typeof partnerScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriver",
-  scenarios: replicaDrivers,
+  scenarios: replicaScenarios,
 }, {
-  description: "syncerDriver",
-  scenarios: syncerDrivers,
+  description: "partner",
+  scenarios: partnerScenarios,
 });
 
 for (const scenario of scenarios) {
   Deno.test(`Syncer (${scenario.name})`, async () => {
     const helper = new SyncerTestHelper(
-      scenario.subscenarios.syncerDriver(),
-      scenario.subscenarios.replicaDriver,
+      scenario.subscenarios.partner(),
+      scenario.subscenarios.replicaDriver.makeDriver,
     );
 
     await helper.setup();

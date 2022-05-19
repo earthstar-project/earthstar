@@ -5,15 +5,16 @@ import { snowmanBytes, snowmanString } from "../test-utils.ts";
 import { identifyBufOrBytes, stringToBytes } from "../../util/bytes.ts";
 
 import { base32StringToBytes } from "../../crypto/base32.ts";
-import { testCryptoScenarios } from "../test-scenarios.ts";
-import { CryptoScenario } from "../test-scenario-types.ts";
+import { cryptoScenarios } from "../scenarios/scenarios.ts";
+import { Scenario } from "../scenarios/types.ts";
+import { ICryptoDriver } from "../../crypto/crypto-types.ts";
 
 //================================================================================
 
-export function runCryptoDriverTests(scenario: CryptoScenario) {
-  const { driver, name } = scenario;
-  let TEST_NAME = "crypto-driver shared tests";
-  let SUBTEST_NAME = name;
+export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
+  const { item: driver, name } = scenario;
+  const TEST_NAME = "crypto-driver shared tests";
+  const SUBTEST_NAME = name;
 
   Deno.test(
     SUBTEST_NAME + ": sha256(bytes | string) --> bytes",
@@ -146,6 +147,6 @@ export function runCryptoDriverTests(scenario: CryptoScenario) {
   });
 }
 
-for (const scenario of testCryptoScenarios) {
+for (const scenario of cryptoScenarios) {
   runCryptoDriverTests(scenario);
 }

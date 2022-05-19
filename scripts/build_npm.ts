@@ -23,29 +23,12 @@ await build({
   },
   // typeCheck: false,
   mappings: {
-    "https://esm.sh/earthstar-streaming-rpc@5.0.1": {
-      name: "earthstar-streaming-rpc",
-      version: "5.0.1",
-    },
-    "https://deno.land/x/earthstar_streaming_rpc@v5.0.1/src/entries/node.ts": {
-      name: "earthstar-streaming-rpc",
-      version: "5.0.1",
-      subPath: "node",
-    },
-    "./src/streaming_rpc/streaming_rpc.ts":
-      "./src/streaming_rpc/streaming_rpc.node.ts",
-    "https://esm.sh/express?dts": {
-      name: "express",
-      version: "4.17.2",
-    },
+    // "./src/entries/deno.ts": "./src/entries/node.ts",
     "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts": {
       name: "chalk",
       version: "4.1.2",
     },
-    "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts": {
-      name: "concurrency-friends",
-      version: "5.2.0",
-    },
+
     "./src/node/chloride.ts": {
       name: "chloride",
       version: "2.4.1",
@@ -61,13 +44,8 @@ await build({
       },
     "./src/replica/indexeddb-types.deno.d.ts":
       "./src/replica/indexeddb-types.node.d.ts",
-    "./src/test/transport-scenarios/transport-scenarios.ts":
-      "./src/test/transport-scenarios/transport-scenarios.node.ts",
-    "./src/test/peer-sync-scenarios/peer-sync-scenarios.ts":
-      "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
     "./src/replica/replica-driver-sqlite.deno.ts":
       "./src/replica/replica-driver-sqlite.node.ts",
-    "./src/test/test-deps.ts": "./src/test/test-deps.node.ts",
   },
   package: {
     // package.json properties
@@ -93,7 +71,6 @@ await build({
     },
     devDependencies: {
       "@types/better-sqlite3": "7.4.2",
-      "@types/express": "4.17.13",
       "@types/chloride": "2.4.0",
       "@types/node-fetch": "2.5.12",
     },

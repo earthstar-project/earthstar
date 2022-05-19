@@ -9,28 +9,41 @@ import {
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { Replica } from "../../replica/replica.ts";
+import { GlobalCryptoDriver, setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 
-import { TestScenario } from "../test-scenario-types.ts";
-import { testScenarios } from "../test-scenarios.ts";
+import { Replica } from "../../replica/replica.ts";
 
 //================================================================================
 
 import { Logger } from "../../util/log.ts";
 import { CallbackSink } from "../../streams/stream_utils.ts";
+import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
+import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { multiplyScenarios } from "../scenarios/utils.ts";
 const loggerTest = new Logger("test", "whiteBright");
 const loggerTestCb = new Logger("test cb", "white");
 //setLogLevel('test', LogLevel.Debug);
 
 //================================================================================
 
-export function runRelpicaTests(scenario: TestScenario) {
+const scenarios: MultiplyScenarioOutput<{
+  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
+}> = multiplyScenarios({
+  description: "replicaDriver",
+  scenarios: replicaScenarios,
+}, {
+  description: "cryptoDriver",
+  scenarios: cryptoScenarios,
+});
+
+export function runRelpicaTests(scenario: typeof scenarios[number]) {
   const SUBTEST_NAME = scenario.name;
 
+  setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
+
   function makeReplica(ws: ShareAddress): IReplica {
-    const driver = scenario.makeDriver(ws);
+    const driver = scenario.subscenarios.replicaDriver.makeDriver(ws);
     return new Replica({ driver });
   }
 
@@ -526,6 +539,6 @@ export function runRelpicaTests(scenario: TestScenario) {
   );
 }
 
-for (const scenario of testScenarios) {
+for (const scenario of scenarios) {
   runRelpicaTests(scenario);
 }

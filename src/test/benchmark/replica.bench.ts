@@ -4,23 +4,19 @@ import { Replica } from "../../replica/replica.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { randomId } from "../../util/misc.ts";
 import { writeRandomDocs } from "../test-utils.ts";
-import {
-  cryptoDrivers,
-  ItemType,
-  MultiplyOutput,
-  multiplyScenarios,
-  replicaDrivers,
-} from "./scenarios.ts";
+import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
+import { multiplyScenarios } from "../scenarios/utils.ts";
 
-const scenarios: MultiplyOutput<{
-  "replicaDriver": ItemType<typeof replicaDrivers>;
-  "crypto": ItemType<typeof cryptoDrivers>;
+const scenarios: MultiplyScenarioOutput<{
+  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "crypto": ScenarioItem<typeof cryptoScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriver",
-  scenarios: replicaDrivers,
+  scenarios: replicaScenarios,
 }, {
   description: "crypto",
-  scenarios: cryptoDrivers,
+  scenarios: cryptoScenarios,
 });
 
 for (const scenario of scenarios) {
@@ -28,7 +24,7 @@ for (const scenario of scenarios) {
   const crypto = scenario.subscenarios.crypto;
 
   const SHARE_ADDR = "+test.a123";
-  const driverToClose = replicaDriver(SHARE_ADDR, scenario.name);
+  const driverToClose = replicaDriver.makeDriver(SHARE_ADDR, scenario.name);
 
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair("nest") as AuthorKeypair;
@@ -36,7 +32,7 @@ for (const scenario of scenarios) {
   const replicaToClose = new Replica({ driver: driverToClose });
 
   await replicaToClose.close(true);
-  const driver = replicaDriver(SHARE_ADDR, scenario.name);
+  const driver = replicaDriver.makeDriver(SHARE_ADDR, scenario.name);
   const replica = new Replica({ driver });
 
   await writeRandomDocs(keypair, replica, 100);

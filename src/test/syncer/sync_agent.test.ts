@@ -12,22 +12,19 @@ import { SyncAgent } from "../../syncer/sync_agent.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { assert, assertEquals } from "../asserts.ts";
-import {
-  ItemType,
-  MultiplyOutput,
-  multiplyScenarios,
-  replicaDrivers,
-} from "../benchmark/scenarios.ts";
+import { replicaScenarios } from "../scenarios/scenarios.ts";
+import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
+import { multiplyScenarios } from "../scenarios/utils.ts";
 
-const scenarios: MultiplyOutput<{
-  "replicaDriverA": ItemType<typeof replicaDrivers>;
-  "replicaDriverB": ItemType<typeof replicaDrivers>;
+const scenarios: MultiplyScenarioOutput<{
+  "replicaDriverA": ScenarioItem<typeof replicaScenarios>;
+  "replicaDriverB": ScenarioItem<typeof replicaScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriverA",
-  scenarios: replicaDrivers,
+  scenarios: replicaScenarios,
 }, {
   description: "replicaDriverB",
-  scenarios: replicaDrivers,
+  scenarios: replicaScenarios,
 });
 
 const SHARE_ADDR = "+test.a123";
@@ -54,11 +51,17 @@ class SyncAgentTestHelper {
     },
   ) {
     this.targetReplica = new Replica({
-      driver: scenario.subscenarios.replicaDriverA(SHARE_ADDR, "sync_a"),
+      driver: scenario.subscenarios.replicaDriverA.makeDriver(
+        SHARE_ADDR,
+        "sync_a",
+      ),
     });
 
     this.sourceReplica = new Replica({
-      driver: scenario.subscenarios.replicaDriverB(SHARE_ADDR, "sync_b"),
+      driver: scenario.subscenarios.replicaDriverB.makeDriver(
+        SHARE_ADDR,
+        "sync_b",
+      ),
     });
 
     this.ingestDocs("both", commonDocs).then(() => {
