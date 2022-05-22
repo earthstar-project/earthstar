@@ -14,7 +14,7 @@ import { TestScenario } from "../test-scenario-types.ts";
 
 import { Logger } from "../../util/log.ts";
 
-const loggerTest = new Logger("test", "whiteBright");
+const loggerTest = new Logger("test", "brightWhite");
 const loggerTestCb = new Logger("test cb", "white");
 const J = JSON.stringify;
 

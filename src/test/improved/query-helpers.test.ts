@@ -42,7 +42,7 @@ let runQueryHelpersTests = async (
     return new Replica(ws, FormatValidatorEs4, driver);
   }
 
-  let logger = new Logger("query helpers test", "yellowBright");
+  let logger = new Logger("query helpers test", "brightYellow");
 
   //================================================================================
   // HELPERS

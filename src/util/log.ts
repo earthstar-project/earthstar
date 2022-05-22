@@ -103,23 +103,23 @@ export function getLogLevels(): LogLevels {
 
 type ChalkColor =
   | "blue"
-  | "blueBright"
+  | "brightBlue"
   | "bold"
   | "cyan"
-  | "cyanBright"
+  | "brightCyan"
   | "dim"
   | "gray"
   | "green"
-  | "greenBright"
+  | "brightGreen"
   | "grey"
   | "magenta"
-  | "magentaBright"
+  | "brightMagenta"
   | "red"
-  | "redBright"
+  | "brightRed"
   | "white"
-  | "whiteBright"
+  | "brightWhite"
   | "yellow"
-  | "yellowBright";
+  | "brightYellow";
 
 export class Logger {
   source: LogSource;
@@ -127,7 +127,7 @@ export class Logger {
 
   constructor(source: LogSource, color?: ChalkColor) {
     this.source = source;
-    this.color = color || "blueBright";
+    this.color = color || "brightBlue";
   }
 
   _print(level: LogLevel, showTag: boolean, indent: string, ...args: any[]) {
@@ -135,7 +135,7 @@ export class Logger {
       if (showTag) {
         let tag = `[${this.source}]`;
         if (this.color !== undefined) {
-          tag = (chalk as any)[this.color](tag);
+          tag = chalk[`${this.color}`](tag);
         }
         console.log(indent, tag, ...args);
       } else {

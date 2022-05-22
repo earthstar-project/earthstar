@@ -33,9 +33,9 @@ import { Crypto } from "../crypto/crypto.ts";
 
 import { Logger } from "../util/log.ts";
 const J = JSON.stringify;
-const logger = new Logger("replica", "yellowBright");
-const loggerSet = new Logger("replica set", "yellowBright");
-const loggerIngest = new Logger("replica ingest", "yellowBright");
+const logger = new Logger("replica", "brightYellow");
+const loggerSet = new Logger("replica set", "brightYellow");
+const loggerIngest = new Logger("replica ingest", "brightYellow");
 
 //================================================================================
 

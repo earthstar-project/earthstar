@@ -15,7 +15,7 @@ import { testScenarios } from "../test-scenarios.ts";
 //================================================================================
 
 import { Logger } from "../../util/log.ts";
-const loggerTest = new Logger("test", "whiteBright");
+const loggerTest = new Logger("test", "brightWhite");
 const loggerTestCb = new Logger("test cb", "white");
 //setLogLevel('test', LogLevel.Debug);
 

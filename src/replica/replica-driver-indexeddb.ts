@@ -8,7 +8,7 @@ import { Query } from "../query/query-types.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-const logger = new Logger("replica driver indexeddb", "yellowBright");
+const logger = new Logger("replica driver indexeddb", "brightYellow");
 
 //================================================================================
 
