@@ -1,11 +1,12 @@
 import { assert } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
 import { AuthorKeypair } from "../util/doc-types.ts";
-import { deepEqual, randomId } from "../util/misc.ts";
+import { randomId } from "../util/misc.ts";
 import { isErr } from "../util/errors.ts";
 import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 import { ReplicaDriverMemory } from "../replica/replica-driver-memory.ts";
 import { CoreDoc } from "../replica/replica-types.ts";
+import { equal } from "../../deps.ts";
 
 // for testing unicode
 export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -82,7 +83,7 @@ export function docsAreEquivalent(docsA: CoreDoc[], docsB: CoreDoc[]) {
     sortByPathThenAuthor,
   );
 
-  return deepEqual(aStripped, bStripped);
+  return equal(aStripped, bStripped);
 }
 
 export function writeRandomDocs(
@@ -146,7 +147,7 @@ export async function storageHasAllStoragesDocs(
     }
 
     return strippedADocs.find((aDoc) => {
-      return deepEqual(doc, aDoc);
+      return equal(doc, aDoc);
     }) !== undefined;
   }, true);
 

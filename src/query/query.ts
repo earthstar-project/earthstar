@@ -1,13 +1,13 @@
 import { DocBase, FormatName } from "../util/doc-types.ts";
 import { DEFAULT_QUERY, Query, QueryFilter } from "./query-types.ts";
 
-import { deepEqual } from "../util/misc.ts";
 import { stringLengthInBytes } from "../util/bytes.ts";
 
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
 import { CoreDoc } from "../replica/replica-types.ts";
+import { equal } from "../../deps.ts";
 const logger = new Logger("query", "green");
 
 //================================================================================
@@ -106,12 +106,12 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
   let willMatch: WillMatch = query.historyMode === "all" ? "all" : "all-latest";
 
   // if there are filters, match some
-  if (query.filter !== undefined && !deepEqual(query.filter, {})) {
+  if (query.filter !== undefined && !equal(query.filter, {})) {
     willMatch = "some";
   }
 
   // a startAfter makes us match some
-  if (query.startAfter !== undefined && !deepEqual(query.startAfter, {})) {
+  if (query.startAfter !== undefined && !equal(query.startAfter, {})) {
     willMatch = "some";
   }
 

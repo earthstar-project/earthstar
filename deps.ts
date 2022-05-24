@@ -1,4 +1,4 @@
-export { default as fast_deep_equal } from "https://esm.sh/fast-deep-equal@3.1.3";
+export { equal } from "https://deno.land/std@0.140.0/testing/asserts.ts";
 export { default as cloneDeep } from "https://deno.land/x/denodash@v0.1.3/src/lang/cloneDeep.ts";
 export { default as fast_json_stable_stringify } from "https://esm.sh/fast-json-stable-stringify@2.1.0";
 export * as rfc4648 from "https://esm.sh/rfc4648@1.5.0";

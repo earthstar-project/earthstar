@@ -1,7 +1,4 @@
-import {
-  fast_deep_equal as isEqual,
-  fast_json_stable_stringify as stringify,
-} from "../../deps.ts";
+import { equal, fast_json_stable_stringify as stringify } from "../../deps.ts";
 
 import { AuthorKeypair, DocWithFormat, Path } from "../util/doc-types.ts";
 import {
@@ -260,7 +257,7 @@ export class ReplicaCache {
 
           // Return early if the new result is the same as the cached result.
           // (The sets of localIndexes should be identical if they're the same)
-          if (isEqual(localIndexes, cacheLocalIndexes)) {
+          if (equal(localIndexes, cacheLocalIndexes)) {
             return;
           }
 
@@ -470,7 +467,7 @@ export class ReplicaCache {
 
     // If the doc's author or content has changed.
     const docIsDifferent = doc.author !== latestDoc?.author ||
-      !isEqual(doc, latestDoc);
+      !equal(doc, latestDoc);
 
     const docIsLater = doc.timestamp > latestDoc.timestamp;
 
