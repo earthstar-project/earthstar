@@ -34,14 +34,6 @@ export class ReplicaCacheIsClosedError extends EarthstarError {
   }
 }
 
-/** A QueryFollower was used after close() was called on it. */
-export class QueryFollowerIsClosedError extends EarthstarError {
-  constructor(message?: string) {
-    super(message || "a QueryFollower was used after being closed");
-    this.name = "QueryFollowerIsClosedError";
-  }
-}
-
 export class NotFoundError extends EarthstarError {
   constructor(message?: string) {
     super(message || "not found");

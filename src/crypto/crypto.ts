@@ -20,7 +20,7 @@ import { GlobalCryptoDriver } from "./global-crypto-driver.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-let logger = new Logger("crypto", "cyanBright");
+let logger = new Logger("crypto", "cyan");
 
 //================================================================================
 

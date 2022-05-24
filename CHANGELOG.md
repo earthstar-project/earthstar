@@ -2,14 +2,31 @@
 
 ## Next
 
+- Improvement: noble-ed25519 has been updated, and is now audited and 10 - 15%
+  faster.
+- BREAKING: `Peer` no longer has a `peerId` property.
+- BREAKING: `Peer.sync`'s type has changed. It now takes a boolean as its only
+  parameter, indicating whether the sync should be 'live' (connection kept open)
+  or not. It also now returns a syncer. In light of this, the `stopSyncing` and
+  `syncUntilCaughtUp` methods have also been removed.
+- Feature (experimental): Added a new `ReplicaDriverSqliteFfi`, which uses
+  native bindings to Sqlite. It has much better write performance than the
+  ordinary Sqlite driver, which makes it very suitable for replica servers. It
+  has worse read performance, however. Usage requires passing the `--unstable`
+  flag to Deno.
+- Improvement: ReplicaDriverMemory's performance for setting and querying has
+  been massively improved.
+- BREAKING: Syncer has been replaced by a completely new, faster implementation.
+  It is NOT able to sync with v7 - v9 peers.
 - BREAKING: LiveQueryEvent is now ReplicaEvent
 - BREAKING: Replica.ingest no longer returns an IngestEvent or ValidationError.
-  It now returns `true` or a ValidationError.
+  It now returns `true` (indicating success) or a ValidationError.
 - Feature: Added Replica.getEventStream which returns a ReadableStream of
-  replica events
+  replica events. By default it gets all events, but you can subscribe to
+  specific events by passing a channel name.
 - Feature: Added Replica.onEvent which will run a given callback every time a
-  replica event occurs
-- BREAKING: Replica no longer has a subscribable `bus` property.
+  replica event occurs.
+- BREAKING: Replica no longer has a subscribable `bus` property,
 - Feature: Added CryptoDriverSodium for Deno. This driver is several magnitudes
   faster than the default crypto driver. Set it with `setGlobalCryptoDriver`.
 - BREAKING: Initialising a `Replica` is now simpler: you only need to provide a

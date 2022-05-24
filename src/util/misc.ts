@@ -5,8 +5,6 @@ import {
 } from "../core-validators/characters.ts";
 import { isErr, ValidationError } from "./errors.ts";
 
-export { fast_deep_equal as deepEqual } from "../../deps.ts";
-
 //================================================================================
 // TIME
 

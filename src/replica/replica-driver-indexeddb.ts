@@ -10,7 +10,7 @@ import { Query } from "../query/query-types.ts";
 import { Logger } from "../util/log.ts";
 import { ExtractDocType } from "../format-validators/format-validator-types.ts";
 import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
-const logger = new Logger("replica driver indexeddb", "yellowBright");
+const logger = new Logger("replica driver indexeddb", "gold");
 
 //================================================================================
 
