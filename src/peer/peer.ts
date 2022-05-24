@@ -12,7 +12,7 @@ import { BlockingBus } from "../streams/stream_utils.ts";
 import { PartnerWeb } from "../syncer/partner_web.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
 
-const logger = new Logger("peer", "blueBright");
+const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
 
 //================================================================================

@@ -43,9 +43,9 @@ import {
 } from "../streams/stream_utils.ts";
 import { QuerySource } from "./query_source.ts";
 const J = JSON.stringify;
-const logger = new Logger("replica", "yellowBright");
-const loggerSet = new Logger("replica set", "yellowBright");
-const loggerIngest = new Logger("replica ingest", "yellowBright");
+const logger = new Logger("replica", "gold");
+const loggerSet = new Logger("replica set", "gold");
+const loggerIngest = new Logger("replica ingest", "gold");
 
 //================================================================================
 

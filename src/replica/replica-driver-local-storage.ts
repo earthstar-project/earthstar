@@ -11,7 +11,7 @@ import {
   FormatValidatorEs4,
 } from "../format-validators/format-validator-es4.ts";
 import { ExtractDocType } from "../format-validators/format-validator-types.ts";
-let logger = new Logger("storage driver localStorage", "yellowBright");
+let logger = new Logger("storage driver localStorage", "gold");
 
 //================================================================================
 type SerializedDriverDocs = {

@@ -8,7 +8,7 @@ import { stringLengthInBytes } from "../util/bytes.ts";
 
 import { Logger } from "../util/log.ts";
 import { CoreDoc } from "../replica/replica-types.ts";
-const logger = new Logger("query", "greenBright");
+const logger = new Logger("query", "green");
 
 //================================================================================
 

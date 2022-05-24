@@ -9,7 +9,10 @@ import {
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { GlobalCryptoDriver, setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
+import {
+  GlobalCryptoDriver,
+  setGlobalCryptoDriver,
+} from "../../crypto/global-crypto-driver.ts";
 
 import { Replica } from "../../replica/replica.ts";
 
@@ -20,8 +23,8 @@ import { CallbackSink } from "../../streams/stream_utils.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
-const loggerTest = new Logger("test", "whiteBright");
-const loggerTestCb = new Logger("test cb", "white");
+const loggerTest = new Logger("test", "salmon");
+const loggerTestCb = new Logger("test cb", "lightsalmon");
 //setLogLevel('test', LogLevel.Debug);
 
 //================================================================================

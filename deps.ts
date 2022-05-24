@@ -1,4 +1,3 @@
-export { default as chalk } from "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts";
 export { default as fast_deep_equal } from "https://esm.sh/fast-deep-equal@3.1.3";
 export { default as cloneDeep } from "https://deno.land/x/denodash@v0.1.3/src/lang/cloneDeep.ts";
 export { default as fast_json_stable_stringify } from "https://esm.sh/fast-json-stable-stringify@2.1.0";
