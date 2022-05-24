@@ -1,8 +1,6 @@
-import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { ReplicaDriverLocalStorage } from "../../replica/replica-driver-local-storage.ts";
-import { ReplicaDriverSqlite } from "../../replica/replica-driver-sqlite.deno.ts";
-import { ReplicaDriverSqliteFfi } from "../../replica/replica_driver_sqlite_ffi.ts";
+import { ReplicaDriverSqlite } from "../../replica/replica-driver-sqlite.node.ts";
+
 import { PartnerScenario, ReplicaScenario, Scenario } from "./types.ts";
 import {
   universalCryptoDrivers,
@@ -13,40 +11,21 @@ import { Syncer } from "../../syncer/syncer.ts";
 import { PartnerWeb } from "../../syncer/partner_web.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
+//import { WebSocketServer } from "https://esm.sh/ws";
+import { CryptoDriverChloride } from "../../crypto/crypto-driver-chloride.ts";
+import { sleep } from "../../util/misc.ts";
+import { WebSocketServer } from "ws";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
   {
-    name: "Sodium",
-    item: CryptoDriverSodium,
+    name: "Chloride",
+    item: CryptoDriverChloride,
   },
 ];
 
 export const replicaScenarios: Scenario<ReplicaScenario>[] = [
   ...universalReplicaDrivers,
-  {
-    name: "LocalStorage",
-    item: {
-      persistent: true,
-      builtInConfigKeys: [],
-      makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverLocalStorage(addr, variant),
-    },
-  },
-  {
-    name: "Sqlite FFI",
-    item: {
-      persistent: true,
-      builtInConfigKeys: ["schemaVersion", "share"],
-      makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverSqliteFfi({
-          filename: `${addr}.${variant ? `${variant}.` : ""}bench.ffi.sqlite`,
-          mode: "create-or-open",
-          share: addr,
-        }),
-    },
-  },
   {
     name: "Sqlite",
     item: {
@@ -63,20 +42,21 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
 ];
 
 export class PartnerScenarioWeb implements PartnerScenario {
-  private serve: Promise<void> | undefined;
-  private abortController: AbortController;
+  _server: WebSocketServer;
 
   constructor() {
-    this.abortController = new AbortController();
+    this._server = new WebSocketServer({ port: 8083 });
   }
 
   async setup(peerA: IPeer, peerB: IPeer) {
     const serverSyncerPromise = deferred<Syncer>();
 
-    const handler = (req: Request) => {
-      const { socket, response } = Deno.upgradeWebSocket(req);
+    // Set up server
 
-      const partner = new PartnerWeb({ socket });
+    this._server.on("connection", (socket) => {
+      const partner = new PartnerWeb({
+        socket: socket as unknown as WebSocket,
+      });
 
       serverSyncerPromise.resolve(
         new Syncer({
@@ -85,16 +65,6 @@ export class PartnerScenarioWeb implements PartnerScenario {
           peer: peerB,
         }),
       );
-
-      return response;
-    };
-
-    this.abortController = new AbortController();
-
-    this.serve = serve(handler, {
-      hostname: "0.0.0.0",
-      port: 8083,
-      signal: this.abortController.signal,
     });
 
     const clientSocket = new WebSocket("ws://localhost:8083");
@@ -113,13 +83,15 @@ export class PartnerScenarioWeb implements PartnerScenario {
   }
 
   teardown() {
-    this.abortController.abort();
-
-    return this.serve as Promise<void>;
+    this._server.close();
+    return sleep(500);
   }
 }
 
-export const partnerScenarios = [...universalPartners, {
-  name: "Web",
-  item: () => new PartnerScenarioWeb(),
-}];
+export const partnerScenarios = [
+  ...universalPartners,
+  {
+    name: "Web",
+    item: () => new PartnerScenarioWeb(),
+  },
+];

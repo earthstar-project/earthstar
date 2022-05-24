@@ -12,6 +12,11 @@ export class PartnerWeb implements ISyncPartner {
   private socketIsOpen = deferred<true>();
 
   constructor({ socket }: SyncerDriverWebServerOpts) {
+    // Handle the case where the socket is already open when handed to this constructor.
+    if (socket.readyState === WebSocket.OPEN) {
+      this.socketIsOpen.resolve(true);
+    }
+
     socket.onopen = () => this.socketIsOpen.resolve(true);
 
     const { socketIsOpen } = this;
@@ -19,6 +24,7 @@ export class PartnerWeb implements ISyncPartner {
     this.writable = new WritableStream({
       async write(event) {
         await socketIsOpen;
+
         socket.send(JSON.stringify(event));
       },
       close() {
@@ -31,8 +37,8 @@ export class PartnerWeb implements ISyncPartner {
 
     this.readable = new ReadableStream({
       start(controller) {
-        socket.onmessage = (event: MessageEvent<string>) => {
-          const syncEvent = JSON.parse(event.data);
+        socket.onmessage = (event) => {
+          const syncEvent = JSON.parse(event.data.toString());
           controller.enqueue(syncEvent);
         };
 

@@ -1,4 +1,4 @@
-import { build } from "https://deno.land/x/dnt@0.21.0/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.23.0/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
@@ -8,19 +8,24 @@ await build({
     { name: "./node", path: "./src/entries/node.ts" },
     { name: "./browser", path: "./src/entries/browser.ts" },
   ],
-  testPattern: "**/!(fs-sync)/*.test.{ts,tsx,js,mjs,jsx}",
+  testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
   outDir: "./npm",
   shims: {
     deno: {
       test: "dev",
     },
+    undici: true,
+    webSocket: true,
     timers: true,
     weakRef: true,
+    custom: [
+      {
+        module: "node:stream/web",
+        globalNames: ["WritableStream", "TransformStream", "ReadableStream"],
+      },
+    ],
   },
-  compilerOptions: {
-    // This is for Node v14 support
-    target: "ES2020",
-  },
+
   // typeCheck: false,
   mappings: {
     // "./src/entries/deno.ts": "./src/entries/node.ts",
@@ -44,8 +49,8 @@ await build({
       },
     "./src/replica/indexeddb-types.deno.d.ts":
       "./src/replica/indexeddb-types.node.d.ts",
-    "./src/replica/replica-driver-sqlite.deno.ts":
-      "./src/replica/replica-driver-sqlite.node.ts",
+    "./src/test/scenarios/scenarios.ts":
+      "./src/test/scenarios/scenarios.node.ts",
   },
   package: {
     // package.json properties
