@@ -2,7 +2,7 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
 import { CoreDoc, QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
-import { CallbackSink } from "../../streams/stream_utils.ts";
+import { CallbackSink, readStream } from "../../streams/stream_utils.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { assertEquals } from "../asserts.ts";
@@ -51,18 +51,18 @@ Deno.test("QuerySource", async () => {
     },
   }, "existing");
 
-  const existingWantedContent = [];
-
-  for await (const event of existingStream) {
+  const results = await readStream(existingStream);
+  const existingWantedContent = results.map((event) => {
     if (event.kind === "processed_all_existing") {
-      continue;
+      return "STOP";
     }
-    existingWantedContent.push(event.doc.content);
-  }
+
+    return event.doc.content;
+  });
 
   assertEquals(
     existingWantedContent,
-    ["a", "b", "c"],
+    ["a", "b", "c", "STOP"],
     "QueryStream returned existing content which matched filter",
   );
 

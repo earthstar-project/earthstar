@@ -16,7 +16,6 @@ export class QuerySource
   private replica: IReplica;
   private query: Query;
   private mode: QuerySourceMode = "everything";
-  private eventStream: ReadableStream<ReplicaEvent<CoreDoc>> | undefined;
 
   constructor({ replica, query, mode }: QuerySourceOpts) {
     this.replica = replica;
@@ -45,9 +44,15 @@ export class QuerySource
       return;
     }
 
-    this.eventStream = this.replica.getEventStream();
+    const eventStream = this.replica.getEventStream();
 
-    for await (const event of this.eventStream) {
+    const reader = eventStream.getReader();
+
+    while (true) {
+      const { done, value: event } = await reader.read();
+
+      if (done) return;
+
       if (event.kind === "expire" || event.kind === "success") {
         if (this.query.filter) {
           if (docMatchesFilter(event.doc, this.query.filter)) {
