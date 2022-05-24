@@ -94,7 +94,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       );
     }
 
-    driverTwo.close(true);
+    await driverTwo.close(true);
   });
 
   Deno.test(`${SUBTEST_NAME}: empty storage, close`, async () => {
