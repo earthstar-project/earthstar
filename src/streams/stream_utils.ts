@@ -27,7 +27,7 @@ export class CombineStream<T> {
     const writable = new WritableStream<T>({
       async write(chunk) {
         await writer.ready;
-        writer.write(chunk);
+        await writer.write(chunk);
       },
     });
 
@@ -53,15 +53,33 @@ export class CombineStream<T> {
   }
 }
 
-export class CloneStream<T> {
+export class CloneStream<ChunkType> {
+  private transformStream = new TransformStream(
+    new PassThroughTransformer<ChunkType>(),
+  );
+  private sourceReadable = this.transformStream.readable;
+
+  writable = this.transformStream.writable;
+
+  getReadableStream() {
+    const [r1, r2] = this.sourceReadable.tee();
+
+    this.sourceReadable = r1;
+
+    return r2;
+  }
+}
+
+// Only gets chunks from the writable end AFTER the readable stream is constructed.
+export class CloneMidStream<ChunkType> {
   private closed = false;
 
   private subscribers: {
-    transform: TransformStream<T>;
-    writer: WritableStreamDefaultWriter<T>;
+    transform: TransformStream<ChunkType>;
+    writer: WritableStreamDefaultWriter<ChunkType>;
   }[] = [];
 
-  private writables: WritableStream<T>[] = [];
+  private writables: WritableStream<ChunkType>[] = [];
 
   private checkClosed() {
     if (this.closed) {
@@ -69,7 +87,7 @@ export class CloneStream<T> {
     }
   }
 
-  writable: WritableStream<T>;
+  writable: WritableStream<ChunkType>;
 
   constructor() {
     const subscribers = this.subscribers;
@@ -92,7 +110,7 @@ export class CloneStream<T> {
   getReadableStream() {
     this.checkClosed();
 
-    const transform = new TransformStream<T, T>({
+    const transform = new TransformStream<ChunkType, ChunkType>({
       transform(chunk, controller) {
         controller.enqueue(chunk);
       },
@@ -130,7 +148,7 @@ export class MultiStream<T> {
   private closed = false;
 
   private combineStream = new CombineStream<T>();
-  private cloneStream = new CloneStream<T>();
+  private cloneStream: CloneStream<T> | CloneMidStream<T>;
 
   private checkClosed() {
     if (this.closed) {
@@ -138,7 +156,13 @@ export class MultiStream<T> {
     }
   }
 
-  constructor() {
+  constructor(joinMidStream?: boolean) {
+    if (joinMidStream) {
+      this.cloneStream = new CloneMidStream();
+    } else {
+      this.cloneStream = new CloneStream();
+    }
+
     this.combineStream.readable.pipeTo(this.cloneStream.writable);
   }
 
@@ -154,7 +178,7 @@ export class MultiStream<T> {
     this.checkClosed();
 
     this.combineStream.close();
-    this.cloneStream.close();
+    //this.cloneStream.close();
 
     this.closed = true;
   }
@@ -186,6 +210,36 @@ export class CallbackSink<T> implements UnderlyingSink<T> {
   }
 }
 
+// This bus runs all its callbacks blockingly, so that no two subscribed callbacks are ever called at the same time.
+export class BlockingBus<T> {
+  private callbacks = new Set<(item: T) => void | Promise<void>>();
+  private lock = new LockStream();
+
+  on(cb: (item: T) => void | Promise<void>) {
+    this.callbacks.add(cb);
+
+    return () => {
+      this.callbacks.delete(cb);
+    };
+  }
+
+  async send(item: T) {
+    for (const callback of this.callbacks) {
+      await this.lock.run(() => callback(item));
+    }
+  }
+}
+
+export class PassThroughTransformer<ChunkType>
+  implements Transformer<ChunkType, ChunkType> {
+  transform(
+    chunk: ChunkType,
+    controller: TransformStreamDefaultController<ChunkType>,
+  ) {
+    controller.enqueue(chunk);
+  }
+}
+
 export class LockStream {
   private writable = new WritableStream<() => void | Promise<void>>({
     async write(cb) {
@@ -208,7 +262,7 @@ export class LockStream {
 
     await this.writer.ready;
 
-    this.writer.write(cb);
+    return this.writer.write(cb);
   }
 
   async close() {
@@ -259,10 +313,11 @@ export class ChannelMultiStream<
   KeyType extends string,
   ItemType extends Channelled<ChannelType, KeyType>,
 > {
-  private multistream = new MultiStream<ItemType>();
+  private multistream: MultiStream<ItemType>;
   private channelKey: KeyType;
 
-  constructor(key: KeyType) {
+  constructor(key: KeyType, joinMidStream?: boolean) {
+    this.multistream = new MultiStream(joinMidStream);
     this.channelKey = key;
   }
 
@@ -281,5 +336,68 @@ export class ChannelMultiStream<
     );
 
     return this.multistream.getReadableStream().pipeThrough(channelTransform);
+  }
+}
+
+export async function readStream<ChunkType>(
+  stream: ReadableStream<ChunkType>,
+): Promise<ChunkType[]> {
+  const arr: ChunkType[] = [];
+
+  const writable = new WritableStream<ChunkType>({
+    write(entry) {
+      arr.push(entry);
+    },
+  });
+
+  await stream.pipeTo(writable);
+
+  return arr;
+}
+
+export class StreamSplitter<ChunkType> {
+  private transforms = new Map<
+    string,
+    TransformStream<ChunkType, ChunkType>
+  >();
+
+  private incomingCloner = new CloneStream<ChunkType>();
+
+  writable = this.incomingCloner.writable;
+
+  private getKey: (chunk: ChunkType) => string | undefined;
+
+  constructor(getKey: (chunk: ChunkType) => string | undefined) {
+    this.getKey = getKey;
+  }
+
+  getReadable(key: string): ReadableStream<ChunkType> {
+    const { transforms, incomingCloner, getKey } = this;
+
+    const transform = transforms.get(key);
+
+    if (!transform) {
+      const incomingClone = incomingCloner.getReadableStream();
+
+      const newTransform = new TransformStream<ChunkType, ChunkType>(
+        new PassThroughTransformer(),
+      );
+
+      const filterTransform = new TransformStream<ChunkType, ChunkType>({
+        transform(chunk, controller) {
+          if (getKey(chunk) === key) {
+            controller.enqueue(chunk);
+          }
+        },
+      });
+
+      incomingClone.pipeThrough(filterTransform).pipeTo(newTransform.writable);
+
+      transforms.set(key, newTransform);
+
+      return newTransform.readable;
+    }
+
+    return transform.readable;
   }
 }

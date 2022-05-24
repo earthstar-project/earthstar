@@ -1,7 +1,7 @@
 import { randomId } from "../../util/misc.ts";
-import { cryptoDrivers } from "./scenarios.ts";
+import { cryptoScenarios } from "../scenarios/scenarios.ts";
 
-for (const scenario of cryptoDrivers) {
+for (const scenario of cryptoScenarios) {
   const keypairBytes = await scenario.item.generateKeypairBytes();
   const message = "hello" + randomId() + randomId();
   const sigBytes = await scenario.item.sign(keypairBytes, message);

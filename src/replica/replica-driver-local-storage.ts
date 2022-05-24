@@ -11,7 +11,7 @@ import {
   FormatValidatorEs4,
 } from "../format-validators/format-validator-es4.ts";
 import { ExtractDocType } from "../format-validators/format-validator-types.ts";
-let logger = new Logger("storage driver localStorage", "yellowBright");
+let logger = new Logger("storage driver localStorage", "gold");
 
 //================================================================================
 type SerializedDriverDocs = {
@@ -36,15 +36,20 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
 
   /**
    * @param share - The address of the share the replica belongs to.
+   * @param key - An optional key you can use to differentiate storage for the same share on the same device.
    */
-  constructor(share: ShareAddress) {
+  constructor(share: ShareAddress, key?: string) {
     super(share);
     logger.debug("constructor");
 
     // each config item starts with this prefix and gets its own entry in localstorage
-    this._localStorageKeyConfig = `stonesoup:config:${share}`; // TODO: change this to "earthstar:..." later
+    this._localStorageKeyConfig = `stonesoup:config:${share}${
+      key ? `:${key}` : ""
+    }`; // TODO: change this to "earthstar:..." later
     // but all docs are stored together inside this one item, as a giant JSON object
-    this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${share}`;
+    this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${share}${
+      key ? `:${key}` : ""
+    }`;
 
     const existingData = localStorage.getItem(this._localStorageKeyDocs);
     if (existingData !== null) {
@@ -94,7 +99,7 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
 
       logger.debug("...close: erasing localStorage");
       localStorage.removeItem(this._localStorageKeyDocs);
-      for (let key of this._listConfigKeysSync()) {
+      for (const key of this._listConfigKeysSync()) {
         this._deleteConfigSync(key);
       }
       logger.debug("...close: erasing is done");
@@ -168,6 +173,7 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
     doc: DocType,
   ): Promise<DocType> {
     if (this._isClosed) throw new ReplicaIsClosedError();
+
     const upsertedDoc = await super.upsert(doc);
 
     // After every upsert, for now, we save everything

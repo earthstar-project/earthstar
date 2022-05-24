@@ -2,20 +2,23 @@ import { assert, assertEquals } from "../asserts.ts";
 
 import { ShareAddress } from "../../util/doc-types.ts";
 import { IReplica } from "../../replica/replica-types.ts";
-import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
+import {
+  GlobalCryptoDriver,
+  setGlobalCryptoDriver,
+} from "../../crypto/global-crypto-driver.ts";
 import { compareByFn, sortedInPlace } from "../../replica/compare.ts";
 import { Replica } from "../../replica/replica.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { Peer } from "../../peer/peer.ts";
-import { testScenarios } from "../test-scenarios.ts";
-import { TestScenario } from "../test-scenario-types.ts";
 
 //================================================================================
 
 import { Logger } from "../../util/log.ts";
+import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
+import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { multiplyScenarios } from "../scenarios/utils.ts";
 
-const loggerTest = new Logger("test", "whiteBright");
-const loggerTestCb = new Logger("test cb", "white");
+const loggerTest = new Logger("test", "lightsalmon");
+const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
 
 //setDefaultLogLevel(LogLevel.None);
@@ -23,15 +26,28 @@ const J = JSON.stringify;
 
 //================================================================================
 
-function runPeerTests(
-  scenario: TestScenario,
-) {
-  const { name, makeDriver } = scenario;
+const scenarios: MultiplyScenarioOutput<{
+  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
+}> = multiplyScenarios({
+  description: "replicaDriver",
+  scenarios: replicaScenarios,
+}, {
+  description: "cryptoDriver",
+  scenarios: cryptoScenarios,
+});
 
-  const SUBTEST_NAME = name;
+function runPeerTests(
+  scenario: typeof scenarios[number],
+) {
+  const SUBTEST_NAME = scenario.name;
+
+  setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
   function makeStorage(share: ShareAddress): IReplica {
-    const storage = new Replica({ driver: makeDriver(share) });
+    const storage = new Replica({
+      driver: scenario.subscenarios.replicaDriver.makeDriver(share),
+    });
     return storage;
   }
 
@@ -50,11 +66,6 @@ function runPeerTests(
     sortedStorages.sort(compareByFn((storage) => storage.share));
 
     const peer = new Peer();
-
-    assert(
-      typeof peer.peerId === "string" && peer.peerId.length > 5,
-      "peer has a peerId",
-    );
 
     assertEquals(
       peer.hasShare("+two.ws"),
@@ -129,6 +140,6 @@ function runPeerTests(
   });
 }
 
-for (const scenario of testScenarios) {
+for (const scenario of scenarios) {
   runPeerTests(scenario);
 }

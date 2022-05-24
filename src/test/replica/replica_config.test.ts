@@ -1,26 +1,34 @@
 import { assertEquals } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
-//t.runOnly = true;
-
 import { ShareAddress } from "../../util/doc-types.ts";
 import { IReplica, IReplicaDriver } from "../../replica/replica-types.ts";
 import {
   GlobalCryptoDriver,
   setGlobalCryptoDriver,
 } from "../../crypto/global-crypto-driver.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { Replica } from "../../replica/replica.ts";
-
-import { TestScenario } from "../test-scenario-types.ts";
-import { testScenarios } from "../test-scenarios.ts";
+import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 
 //================================================================================
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
-let loggerTest = new Logger("test", "whiteBright");
-let loggerTestCb = new Logger("test cb", "white");
-let J = JSON.stringify;
+import { multiplyScenarios } from "../scenarios/utils.ts";
+const loggerTest = new Logger("test", "lightsalmon");
+const loggerTestCb = new Logger("test cb", "salmon");
+const J = JSON.stringify;
 //setLogLevel('test', LogLevel.Debug);
+
+const scenarios: MultiplyScenarioOutput<{
+  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
+}> = multiplyScenarios({
+  description: "replicaDriver",
+  scenarios: replicaScenarios,
+}, {
+  description: "cryptoDriver",
+  scenarios: cryptoScenarios,
+});
 
 //================================================================================
 
@@ -28,13 +36,13 @@ let J = JSON.stringify;
 // so we run the entire thing twice -- once running the tests on a Storage, and once
 // on its StorageDriver directly.
 
-export function runStorageConfigTests(scenario: TestScenario) {
+export function runStorageConfigTests(scenario: typeof scenarios[number]) {
   _runStorageConfigTests(scenario, "storage");
   _runStorageConfigTests(scenario, "storageDriver");
 }
 
 let _runStorageConfigTests = (
-  scenario: TestScenario,
+  scenario: typeof scenarios[number],
   mode: "storage" | "storageDriver",
 ) => {
   let TEST_NAME = "storage config tests";
@@ -43,12 +51,12 @@ let _runStorageConfigTests = (
   let makeStorageOrDriver = (
     share: ShareAddress,
   ): IReplica | IReplicaDriver => {
-    let driver = scenario.makeDriver(share);
+    let driver = scenario.subscenarios.replicaDriver.makeDriver(share);
     return mode === "storage" ? new Replica({ driver }) : driver;
   };
 
   Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {
-    setGlobalCryptoDriver(scenario.cryptoDriver);
+    setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
     let initialCryptoDriver = GlobalCryptoDriver;
 
     let share = "+gardening.abcde";
@@ -65,7 +73,7 @@ let _runStorageConfigTests = (
     );
     assertEquals(
       await storage.listConfigKeys(),
-      [...scenario.builtInConfigKeys],
+      [...scenario.subscenarios.replicaDriver.builtInConfigKeys],
       `listConfigKeys() only contains built-in config keys`,
     );
     assertEquals(
@@ -82,11 +90,11 @@ let _runStorageConfigTests = (
     assertEquals(await storage.getConfig("a"), "aa", `getConfig works`);
     assertEquals(
       await storage.listConfigKeys(),
-      ["a", "b", ...scenario.builtInConfigKeys],
+      ["a", "b", ...scenario.subscenarios.replicaDriver.builtInConfigKeys],
       `listConfigKeys() is ${[
         "a",
         "b",
-        ...scenario.builtInConfigKeys,
+        ...scenario.subscenarios.replicaDriver.builtInConfigKeys,
       ]} (sorted)`,
     );
 
@@ -115,10 +123,10 @@ let _runStorageConfigTests = (
     );
     assertEquals(
       await storage.listConfigKeys(),
-      ["b", ...scenario.builtInConfigKeys],
+      ["b", ...scenario.subscenarios.replicaDriver.builtInConfigKeys],
       `listConfigKeys() is ${[
         "b",
-        ...scenario.builtInConfigKeys,
+        ...scenario.subscenarios.replicaDriver.builtInConfigKeys,
       ]} after deleting 'a'`,
     );
 
@@ -162,7 +170,7 @@ let _runStorageConfigTests = (
   Deno.test(
     SUBTEST_NAME + ": config persist after closing and reopening",
     async () => {
-      setGlobalCryptoDriver(scenario.cryptoDriver);
+      setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
       let initialCryptoDriver = GlobalCryptoDriver;
 
       let share = "+gardening.abcde";
@@ -177,7 +185,7 @@ let _runStorageConfigTests = (
       let storage2 = makeStorageOrDriver(share);
 
       // see if data is still there (depending on the scenario)
-      if (scenario.persistent) {
+      if (scenario.subscenarios.replicaDriver.persistent) {
         assertEquals(
           await storage2.getConfig("a"),
           "aa",
@@ -207,7 +215,7 @@ let _runStorageConfigTests = (
   Deno.test(
     SUBTEST_NAME + ": config erase should delete data",
     async () => {
-      setGlobalCryptoDriver(scenario.cryptoDriver);
+      setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
       let initialCryptoDriver = GlobalCryptoDriver;
 
       let share = "+gardening.abcde";
@@ -242,6 +250,6 @@ let _runStorageConfigTests = (
   );
 };
 
-for (let scenario of testScenarios) {
+for (const scenario of scenarios) {
   runStorageConfigTests(scenario);
 }

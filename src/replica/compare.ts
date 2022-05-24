@@ -1,5 +1,5 @@
+import { equal } from "../../deps.ts";
 import { Cmp } from "./util-types.ts";
-import { deepEqual } from "../util/misc.ts";
 
 //================================================================================
 
@@ -12,7 +12,7 @@ export function sortedInPlace<T>(array: T[]): T[] {
 
 // myStrings.sort(baseCompare)
 export function compareBasic(a: any, b: any, order: SortOrder = "ASC"): Cmp {
-  if (deepEqual(a, b)) return Cmp.EQ;
+  if (equal(a, b)) return Cmp.EQ;
   if (order === "ASC" || order === undefined) {
     return (a < b) ? Cmp.LT : Cmp.GT;
   } else if (order === "DESC") {

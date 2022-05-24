@@ -1,10 +1,11 @@
 import { CryptoDriverNoble } from "./crypto-driver-noble.ts";
 import { ICryptoDriver } from "./crypto-types.ts";
+import { isDeno, isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-let logger = new Logger("crypto", "cyanBright");
+let logger = new Logger("crypto", "cyan");
 
 //================================================================================
 

@@ -1,35 +1,49 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
 import { Query } from "../../query/query-types.ts";
-import { GlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
-
-import { TestScenario } from "../test-scenario-types.ts";
-import { testScenarios } from "../test-scenarios.ts";
+import {
+  GlobalCryptoDriver,
+  setGlobalCryptoDriver,
+} from "../../crypto/global-crypto-driver.ts";
 
 //================================================================================
 
-import { LogLevel, setDefaultLogLevel } from "../../util/log.ts";
 import { sleep } from "../../util/misc.ts";
-import { isErr } from "../../util/errors.ts";
 import { CoreDoc } from "../../replica/replica-types.ts";
-//setDefaultLogLevel(LogLevel.Debug);
-let J = JSON.stringify;
+import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
+import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { multiplyScenarios } from "../scenarios/utils.ts";
+
+const scenarios: MultiplyScenarioOutput<{
+  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
+}> = multiplyScenarios({
+  description: "replicaDriver",
+  scenarios: replicaScenarios,
+}, {
+  description: "cryptoDriver",
+  scenarios: cryptoScenarios,
+});
 
 //================================================================================
 
-export function runReplicaDriverTests(scenario: TestScenario) {
+export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
   const SUBTEST_NAME = scenario.name;
 
+  setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
+
   Deno.test(`${SUBTEST_NAME}: validates addresses`, async () => {
-    if (scenario.persistent) {
+    if (scenario.subscenarios.replicaDriver.persistent) {
       const validShare = "+gardening.abcde";
       const invalidShare = "PEANUTS.123";
 
       assertThrows(() => {
-        scenario.makeDriver(invalidShare);
+        scenario.subscenarios.replicaDriver.makeDriver(invalidShare);
       });
 
-      const storage = scenario.makeDriver(validShare);
+      const storage = scenario.subscenarios.replicaDriver.makeDriver(
+        validShare,
+      );
       assert(storage);
 
       await storage.close(true);
@@ -38,7 +52,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
 
   Deno.test(`${SUBTEST_NAME}: maxLocalIndex`, async () => {
     const share = "+gardening.abcde";
-    const driver = scenario.makeDriver(share);
+    const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
     assertEquals(driver.getMaxLocalIndex(), -1, "Initial maxLocalIndex is -1");
 
@@ -64,9 +78,9 @@ export function runReplicaDriverTests(scenario: TestScenario) {
 
     await driver.close(false);
 
-    const driverTwo = scenario.makeDriver(share);
+    const driverTwo = scenario.subscenarios.replicaDriver.makeDriver(share);
 
-    if (scenario.persistent) {
+    if (scenario.subscenarios.replicaDriver.persistent) {
       assertEquals(
         driverTwo.getMaxLocalIndex(),
         0,
@@ -80,14 +94,14 @@ export function runReplicaDriverTests(scenario: TestScenario) {
       );
     }
 
-    driverTwo.close(true);
+    await driverTwo.close(true);
   });
 
   Deno.test(`${SUBTEST_NAME}: empty storage, close`, async () => {
     const initialCryptoDriver = GlobalCryptoDriver;
 
     const share = "+gardening.abcde";
-    const driver = scenario.makeDriver(share);
+    const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
     assertEquals(
       driver.getMaxLocalIndex(),
@@ -129,7 +143,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
     const initialCryptoDriver = GlobalCryptoDriver;
 
     const share = "+gardening.abcde";
-    const driver = scenario.makeDriver(share);
+    const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
     // empty...
     assertEquals(
@@ -139,8 +153,10 @@ export function runReplicaDriverTests(scenario: TestScenario) {
     );
     assertEquals(
       await driver.listConfigKeys(),
-      [...scenario.builtInConfigKeys],
-      `listConfigKeys() is ${[...scenario.builtInConfigKeys]}`,
+      [...scenario.subscenarios.replicaDriver.builtInConfigKeys],
+      `listConfigKeys() is ${[
+        ...scenario.subscenarios.replicaDriver.builtInConfigKeys,
+      ]}`,
     );
     assertEquals(
       await driver.deleteConfig("foo"),
@@ -156,11 +172,11 @@ export function runReplicaDriverTests(scenario: TestScenario) {
     assertEquals(await driver.getConfig("a"), "aa", `getConfig works`);
     assertEquals(
       await driver.listConfigKeys(),
-      ["a", "b", ...scenario.builtInConfigKeys],
+      ["a", "b", ...scenario.subscenarios.replicaDriver.builtInConfigKeys],
       `listConfigKeys() is ${[
         "a",
         "b",
-        ...scenario.builtInConfigKeys,
+        ...scenario.subscenarios.replicaDriver.builtInConfigKeys,
       ]} (sorted)`,
     );
 
@@ -196,7 +212,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
       const initialCryptoDriver = GlobalCryptoDriver;
 
       const share = "+gardening.abcde";
-      const driver = scenario.makeDriver(share);
+      const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
       const doc0: CoreDoc = {
         format: "es.4",
@@ -515,7 +531,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
         assertEquals(
           actualContent,
           expectedContent,
-          `query: ${J(query)}`,
+          `query: ${JSON.stringify(query)}`,
         );
       }
 
@@ -536,7 +552,7 @@ export function runReplicaDriverTests(scenario: TestScenario) {
       const initialCryptoDriver = GlobalCryptoDriver;
 
       const share = "+gardening.abcde";
-      const driver = scenario.makeDriver(share);
+      const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
       const now = Date.now() * 1000;
 
@@ -611,6 +627,6 @@ export function runReplicaDriverTests(scenario: TestScenario) {
   );
 }
 
-for (const scenario of testScenarios) {
+for (const scenario of scenarios) {
   runReplicaDriverTests(scenario);
 }

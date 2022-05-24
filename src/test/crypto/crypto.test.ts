@@ -20,13 +20,13 @@ import {
   GlobalCryptoDriver,
   setGlobalCryptoDriver,
 } from "../../crypto/global-crypto-driver.ts";
-import { testCryptoScenarios } from "../test-scenarios.ts";
-import { CryptoScenario } from "../test-scenario-types.ts";
+import { cryptoScenarios } from "../scenarios/scenarios.ts";
+import { Scenario } from "../scenarios/types.ts";
 
 //================================================================================
 
-export function runCryptoTests(scenario: CryptoScenario) {
-  const { driver, name } = scenario;
+export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
+  const { item: driver, name } = scenario;
   let TEST_NAME = "crypto shared tests";
   let SUBTEST_NAME = name;
 
@@ -623,6 +623,6 @@ export function runCryptoTests(scenario: CryptoScenario) {
   );
 }
 
-for (const scenario of testCryptoScenarios) {
+for (const scenario of cryptoScenarios) {
   runCryptoTests(scenario);
 }

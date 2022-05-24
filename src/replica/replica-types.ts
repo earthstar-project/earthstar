@@ -112,6 +112,13 @@ export type CoreDoc = ExtractDocType<typeof FormatValidatorEs4>;
 
 //================================================================================
 
+// Query events
+
+/** An event representing when a QuerySource has processed all existing documents. */
+export type ProcessedAllExistingEvent = {
+  kind: "processed_all_existing";
+};
+
 /**
  * - ExpireEvent - An ephemeral document has expired
  * - IngestEvent — the result of a replica ingesting a document
@@ -120,6 +127,7 @@ export type CoreDoc = ExtractDocType<typeof FormatValidatorEs4>;
 export type QuerySourceEvent<DocType extends CoreDoc> =
   | ExpireEvent<DocType>
   | IngestEventSuccess<DocType>
+  | ProcessedAllExistingEvent
   | DocAlreadyExists<DocType>;
 
 export type QuerySourceOpts = {
@@ -128,6 +136,12 @@ export type QuerySourceOpts = {
   mode?: QuerySourceMode;
 };
 
+/**
+ * A mode representing what kind of docs are desired from a query stream.
+ * - `existing` - Only pre-existing documents.
+ * - `new` - Only documents written after the stream is initiated
+ * - `everything` - Both pre-existing and incoming documents.
+ */
 export type QuerySourceMode = "existing" | "new" | "everything";
 
 //================================================================================

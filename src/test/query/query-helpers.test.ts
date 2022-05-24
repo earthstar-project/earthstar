@@ -8,9 +8,6 @@ import { ValidationError } from "../../util/errors.ts";
 import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
 import { microsecondNow } from "../../util/misc.ts";
 
-import { TestScenario } from "../test-scenario-types.ts";
-import { testScenarios } from "../test-scenarios.ts";
-
 //================================================================================
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
@@ -30,19 +27,21 @@ import {
   queryByGlobAsync,
   queryByTemplateAsync,
 } from "../../query/query-helpers.ts";
+import { ReplicaScenario, Scenario } from "../scenarios/types.ts";
+import { replicaScenarios } from "../scenarios/scenarios.ts";
 
 let runQueryHelpersTests = async (
-  scenario: TestScenario,
+  scenario: Scenario<ReplicaScenario>,
   test: TestContext,
 ) => {
   let SUBTEST_NAME = scenario.name;
 
   function makeStorage(ws: ShareAddress): IReplica {
-    let driver = scenario.makeDriver(ws);
+    let driver = scenario.item.makeDriver(ws);
     return new Replica({ driver });
   }
 
-  let logger = new Logger("query helpers test", "yellowBright");
+  let logger = new Logger("query helpers test", "yellow");
 
   //================================================================================
   // HELPERS
@@ -862,7 +861,7 @@ let runQueryHelpersTests = async (
 };
 
 Deno.test(`Query helpers`, async (test) => {
-  for (const scenario of testScenarios) {
+  for (const scenario of replicaScenarios) {
     await runQueryHelpersTests(scenario, test);
   }
 });
