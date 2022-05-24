@@ -1,9 +1,11 @@
-// Syncer.
-
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { IPeer } from "../peer/peer-types.ts";
-import { BlockingBus, CloneStream } from "../streams/stream_utils.ts";
+import {
+  BlockingBus,
+  CloneStream,
+  StreamSplitter,
+} from "../streams/stream_utils.ts";
 import { ShareAddress } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import {
@@ -16,7 +18,7 @@ import {
 } from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
 
-/** Syncs the contents of a Peer's replicas with that of another peer.  */
+/** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer {
   private peer: IPeer;
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
@@ -24,6 +26,13 @@ export class Syncer {
   private mode: SyncerMode;
   private incomingStreamCloner = new CloneStream<SyncerEvent>();
   private statusBus = new BlockingBus<SyncerStatus>();
+  private agentStreamSplitter = new StreamSplitter<SyncerEvent>((chunk) => {
+    if (chunk.kind === "DISCLOSE") {
+      return;
+    }
+
+    return chunk.to;
+  });
 
   isDone = deferred<true>();
 
@@ -68,6 +77,11 @@ export class Syncer {
         },
       }),
     );
+
+    const incomingCloneForAgents = this.incomingStreamCloner
+      .getReadableStream();
+
+    incomingCloneForAgents.pipeTo(this.agentStreamSplitter.writable);
 
     // Send off a salted handshake event
     const salt = randomId();
@@ -152,11 +166,11 @@ export class Syncer {
       // The sync agent will finish here if in 'only_existing' mode.
     });
 
-    // Get a clone of the incoming event stream.
-    const incomingClone = this.incomingStreamCloner.getReadableStream();
+    const incomingFilteredEvents = this.agentStreamSplitter.getReadable(
+      replica.share,
+    );
 
-    // Filter it for events relevant to this agent
-    incomingClone.pipeThrough(
+    incomingFilteredEvents.pipeThrough(
       new TransformStream<SyncerEvent, SyncAgentEvent>({
         transform(event, controller) {
           switch (event.kind) {

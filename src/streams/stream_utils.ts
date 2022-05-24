@@ -53,16 +53,33 @@ export class CombineStream<T> {
   }
 }
 
+export class CloneStream<ChunkType> {
+  private transformStream = new TransformStream(
+    new PassThroughTransformer<ChunkType>(),
+  );
+  private sourceReadable = this.transformStream.readable;
+
+  writable = this.transformStream.writable;
+
+  getReadableStream() {
+    const [r1, r2] = this.sourceReadable.tee();
+
+    this.sourceReadable = r1;
+
+    return r2;
+  }
+}
+
 // Only gets chunks from the writable end AFTER the readable stream is constructed.
-export class CloneStream<T> {
+export class CloneMidStream<ChunkType> {
   private closed = false;
 
   private subscribers: {
-    transform: TransformStream<T>;
-    writer: WritableStreamDefaultWriter<T>;
+    transform: TransformStream<ChunkType>;
+    writer: WritableStreamDefaultWriter<ChunkType>;
   }[] = [];
 
-  private writables: WritableStream<T>[] = [];
+  private writables: WritableStream<ChunkType>[] = [];
 
   private checkClosed() {
     if (this.closed) {
@@ -70,7 +87,7 @@ export class CloneStream<T> {
     }
   }
 
-  writable: WritableStream<T>;
+  writable: WritableStream<ChunkType>;
 
   constructor() {
     const subscribers = this.subscribers;
@@ -93,7 +110,7 @@ export class CloneStream<T> {
   getReadableStream() {
     this.checkClosed();
 
-    const transform = new TransformStream<T, T>({
+    const transform = new TransformStream<ChunkType, ChunkType>({
       transform(chunk, controller) {
         controller.enqueue(chunk);
       },
@@ -131,7 +148,7 @@ export class MultiStream<T> {
   private closed = false;
 
   private combineStream = new CombineStream<T>();
-  private cloneStream = new CloneStream<T>();
+  private cloneStream: CloneStream<T> | CloneMidStream<T>;
 
   private checkClosed() {
     if (this.closed) {
@@ -139,7 +156,13 @@ export class MultiStream<T> {
     }
   }
 
-  constructor() {
+  constructor(joinMidStream?: boolean) {
+    if (joinMidStream) {
+      this.cloneStream = new CloneMidStream();
+    } else {
+      this.cloneStream = new CloneStream();
+    }
+
     this.combineStream.readable.pipeTo(this.cloneStream.writable);
   }
 
@@ -155,7 +178,7 @@ export class MultiStream<T> {
     this.checkClosed();
 
     this.combineStream.close();
-    this.cloneStream.close();
+    //this.cloneStream.close();
 
     this.closed = true;
   }
@@ -290,10 +313,11 @@ export class ChannelMultiStream<
   KeyType extends string,
   ItemType extends Channelled<ChannelType, KeyType>,
 > {
-  private multistream = new MultiStream<ItemType>();
+  private multistream: MultiStream<ItemType>;
   private channelKey: KeyType;
 
-  constructor(key: KeyType) {
+  constructor(key: KeyType, joinMidStream?: boolean) {
+    this.multistream = new MultiStream(joinMidStream);
     this.channelKey = key;
   }
 
@@ -329,4 +353,51 @@ export async function readStream<ChunkType>(
   await stream.pipeTo(writable);
 
   return arr;
+}
+
+export class StreamSplitter<ChunkType> {
+  private transforms = new Map<
+    string,
+    TransformStream<ChunkType, ChunkType>
+  >();
+
+  private incomingCloner = new CloneStream<ChunkType>();
+
+  writable = this.incomingCloner.writable;
+
+  private getKey: (chunk: ChunkType) => string | undefined;
+
+  constructor(getKey: (chunk: ChunkType) => string | undefined) {
+    this.getKey = getKey;
+  }
+
+  getReadable(key: string): ReadableStream<ChunkType> {
+    const { transforms, incomingCloner, getKey } = this;
+
+    const transform = transforms.get(key);
+
+    if (!transform) {
+      const incomingClone = incomingCloner.getReadableStream();
+
+      const newTransform = new TransformStream<ChunkType, ChunkType>(
+        new PassThroughTransformer(),
+      );
+
+      const filterTransform = new TransformStream<ChunkType, ChunkType>({
+        transform(chunk, controller) {
+          if (getKey(chunk) === key) {
+            controller.enqueue(chunk);
+          }
+        },
+      });
+
+      incomingClone.pipeThrough(filterTransform).pipeTo(newTransform.writable);
+
+      transforms.set(key, newTransform);
+
+      return newTransform.readable;
+    }
+
+    return transform.readable;
+  }
 }

@@ -1,9 +1,11 @@
 import {
   ChannelMultiStream,
   ChannelTransformer,
+  CloneStream,
   LockStream,
   MultiStream,
   OrCh,
+  readStream,
 } from "../../streams/stream_utils.ts";
 import { sleep } from "../../util/misc.ts";
 import { assert, assertEquals } from "../asserts.ts";
@@ -42,6 +44,30 @@ function makeCollectorWritable<T>(arr: T[]): WritableStream<T> {
     },
   });
 }
+
+Deno.test("CloneStream", async () => {
+  const stream = makeNumberStream(0);
+
+  const cloneStream = new CloneStream();
+
+  stream.pipeTo(cloneStream.writable);
+
+  const readable1 = cloneStream.getReadableStream();
+  const readable2 = cloneStream.getReadableStream();
+
+  await sleep(10);
+
+  const a = await readStream(readable1);
+  const b = await readStream(readable2);
+
+  const readable3 = cloneStream.getReadableStream();
+
+  const c = await readStream(readable3);
+
+  assertEquals(a, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assertEquals(b, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+  assertEquals(c, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
 
 Deno.test("Multistream", async () => {
   const stream0 = makeNumberStream(0);

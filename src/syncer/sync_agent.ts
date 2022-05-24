@@ -145,12 +145,9 @@ export class SyncAgent {
 
     // Wait for the partner being finished.
     isPartnerFinished.then(() => {
-      // AND wait for all requests to be fulfilled
-
+      // AND wait for all of our requests to be fulfilled
       isFulfilled().then(() => {
         if (this.getStatus().status !== "done") {
-          // We mark the other side as done so we can exit immediately and close the stream.
-          isPartnerFinished.resolve();
           outboundEventBus.send({ kind: "DONE" });
         }
       });

@@ -89,7 +89,7 @@ export class Replica implements IReplica {
     ReplicaEvent<CoreDoc>["kind"],
     "kind",
     ReplicaEvent<CoreDoc>
-  > = new ChannelMultiStream("kind");
+  > = new ChannelMultiStream("kind", true);
   private eventWriter: WritableStreamDefaultWriter<ReplicaEvent<CoreDoc>>;
   private callbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
 
