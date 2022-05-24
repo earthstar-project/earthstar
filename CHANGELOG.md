@@ -2,6 +2,8 @@
 
 ## Next
 
+- Improvement: noble-ed25519 has been updated, and is now audited and 10 - 15%
+  faster.
 - BREAKING: `Peer` no longer has a `peerId` property.
 - BREAKING: `Peer.sync`'s type has changed. It now takes a boolean as its only
   parameter, indicating whether the sync should be 'live' (connection kept open)
