@@ -5,7 +5,7 @@ import {
   ReplicaIsClosedError,
   ValidationError,
 } from "../util/errors.ts";
-import { IReplicaDriver } from "./replica-types.ts";
+import { CoreDoc, IReplicaDriver } from "./replica-types.ts";
 import {
   CREATE_CONFIG_TABLE_QUERY,
   CREATE_DOCS_TABLE_QUERY,
@@ -30,7 +30,7 @@ import * as Sqlite from "https://deno.land/x/sqlite@v3.2.0/mod.ts";
 import { Logger } from "../util/log.ts";
 import { bytesToString, stringToBytes } from "../util/bytes.ts";
 import { Query } from "../query/query-types.ts";
-import { cleanUpQuery, docIsExpired } from "../query/query.ts";
+import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
 import {
@@ -419,10 +419,26 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
 
     const now = Date.now() * 1000;
 
-    const toDelete = this._db.query(SELECT_EXPIRED_DOC_QUERY, { now });
+    const toDeleteQuery = this._db.prepareQuery<Sqlite.Row, DocObject>(
+      SELECT_EXPIRED_DOC_QUERY,
+    );
+
+    const docsToDelete = toDeleteQuery.allEntries({ now });
+
+    const docsWithStringContent = docsToDelete.map((docToDelete) => ({
+      ...docToDelete,
+      content: docToDelete.content ? bytesToString(docToDelete.content) : "",
+      _localIndex: docToDelete.localIndex,
+    }));
+
+    docsWithStringContent.forEach((doc) => delete doc.localIndex);
+    docsWithStringContent.forEach((doc) => Object.freeze(doc));
+
+    toDeleteQuery.finalize();
+
     this._db.query(DELETE_EXPIRED_DOC_QUERY, { now });
 
-    return Promise.resolve(toDelete.map(([path]) => path as string));
+    return Promise.resolve(docsWithStringContent as CoreDoc[]);
   }
 
   //--------------------------------------------------

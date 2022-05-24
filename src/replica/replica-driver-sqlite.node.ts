@@ -348,9 +348,16 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
 
     const toDelete = this._db.prepare(SELECT_EXPIRED_DOC_QUERY).all({ now });
 
+    // Transform the content from the DB (saved as BLOB) back to string
+    const docsWithStringContent = toDelete.map((doc) => ({
+      ...doc,
+      content: bytesToString(doc.content),
+      _localIndex: doc.localIndex,
+    }));
+
     this._db.prepare(DELETE_EXPIRED_DOC_QUERY).run({ now });
 
-    return Promise.resolve(toDelete.map(({ path }) => path));
+    return Promise.resolve(docsWithStringContent);
   }
 
   //--------------------------------------------------
