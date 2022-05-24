@@ -81,6 +81,7 @@ export class Syncer {
     const incomingCloneForAgents = this.incomingStreamCloner
       .getReadableStream();
 
+    // TODO: This cloner pipes all events, so if a replica is removed and re-added to a peer, it will get events intended for a previous sync agent. Which shouldn't be a problem, but it'd be better if it didn't.
     incomingCloneForAgents.pipeTo(this.agentStreamSplitter.writable);
 
     // Send off a salted handshake event
