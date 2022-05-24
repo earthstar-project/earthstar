@@ -14,8 +14,8 @@ import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
-const loggerTest = new Logger("test", "whiteBright");
-const loggerTestCb = new Logger("test cb", "white");
+const loggerTest = new Logger("test", "lightsalmon");
+const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
 //setLogLevel('test', LogLevel.Debug);
 

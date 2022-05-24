@@ -17,8 +17,8 @@ import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 
-const loggerTest = new Logger("test", "whiteBright");
-const loggerTestCb = new Logger("test cb", "white");
+const loggerTest = new Logger("test", "lightsalmon");
+const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
 
 //setDefaultLogLevel(LogLevel.None);

@@ -41,7 +41,7 @@ let runQueryHelpersTests = async (
     return new Replica({ driver });
   }
 
-  let logger = new Logger("query helpers test", "yellowBright");
+  let logger = new Logger("query helpers test", "yellow");
 
   //================================================================================
   // HELPERS
