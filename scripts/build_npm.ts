@@ -38,10 +38,6 @@ await build({
       name: "express",
       version: "4.17.2",
     },
-    "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts": {
-      name: "chalk",
-      version: "4.1.2",
-    },
     "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts": {
       name: "concurrency-friends",
       version: "5.2.0",
