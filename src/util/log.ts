@@ -24,8 +24,6 @@
  * The environment variable wins over the numbers set by setLogLevels.
  */
 
-import { chalk } from "../../deps.ts";
-
 //================================================================================
 // TYPES
 
@@ -101,43 +99,45 @@ export function getLogLevels(): LogLevels {
 //================================================================================
 // Logger class
 
-type ChalkColor =
+type LogColor =
   | "blue"
-  | "blueBright"
-  | "bold"
+  | "aqua"
+  | "darkcyan"
   | "cyan"
-  | "cyanBright"
-  | "dim"
-  | "gray"
+  | "dimgray"
+  | "slategray"
   | "green"
-  | "greenBright"
+  | "springgreen"
   | "grey"
+  | "darkMagenta"
   | "magenta"
-  | "magentaBright"
   | "red"
-  | "redBright"
-  | "white"
-  | "whiteBright"
-  | "yellow"
-  | "yellowBright";
+  | "orangeRed"
+  | "salmon"
+  | "lightsalmon"
+  | "gold"
+  | "yellow";
 
 export class Logger {
   source: LogSource;
-  color: ChalkColor | undefined = undefined;
+  color: LogColor | undefined = undefined;
 
-  constructor(source: LogSource, color?: ChalkColor) {
+  constructor(source: LogSource, color?: LogColor) {
     this.source = source;
-    this.color = color || "blueBright";
+    this.color = color || "aqua";
   }
 
   _print(level: LogLevel, showTag: boolean, indent: string, ...args: any[]) {
     if (level <= getLogLevel(this.source)) {
       if (showTag) {
-        let tag = `[${this.source}]`;
+        const tag = `[${this.source}]`;
+
         if (this.color !== undefined) {
-          tag = (chalk as any)[this.color](tag);
+          const tagArgs = [`%c ${tag}`, `color: ${this.color}`];
+          console.log(indent, ...tagArgs, ...args);
+        } else {
+          console.log(indent, tag, ...args);
         }
-        console.log(indent, tag, ...args);
       } else {
         console.log(indent, ...args);
       }

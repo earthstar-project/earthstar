@@ -17,8 +17,8 @@ import { testScenarios } from "../test-scenarios.ts";
 //================================================================================
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
-let loggerTest = new Logger("test", "whiteBright");
-let loggerTestCb = new Logger("test cb", "white");
+let loggerTest = new Logger("test", "lightsalmon");
+let loggerTestCb = new Logger("test cb", "salmon");
 let J = JSON.stringify;
 //setLogLevel('test', LogLevel.Debug);
 

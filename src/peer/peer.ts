@@ -18,7 +18,8 @@ import { randomId } from "../util/misc.ts";
 
 import { Logger } from "../util/log.ts";
 import { SyncSessionStatus } from "../syncer/syncer-types.ts";
-const logger = new Logger("peer", "blueBright");
+const logger = new Logger("peer", "orangeRed");
+
 const J = JSON.stringify;
 
 //================================================================================

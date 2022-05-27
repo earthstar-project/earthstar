@@ -14,8 +14,8 @@ import { TestScenario } from "../test-scenario-types.ts";
 
 import { Logger } from "../../util/log.ts";
 
-const loggerTest = new Logger("test", "whiteBright");
-const loggerTestCb = new Logger("test cb", "white");
+const loggerTest = new Logger("test", "lightsalmon");
+const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
 
 //setDefaultLogLevel(LogLevel.None);

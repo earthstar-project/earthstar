@@ -7,7 +7,7 @@ import { stringLengthInBytes } from "../util/bytes.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-const logger = new Logger("query", "greenBright");
+const logger = new Logger("query", "green");
 
 //================================================================================
 
