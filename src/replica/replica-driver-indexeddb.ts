@@ -8,7 +8,8 @@ import { Query } from "../query/query-types.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-const logger = new Logger("replica driver indexeddb", "yellowBright");
+
+const logger = new Logger("replica driver indexeddb", "gold");
 
 //================================================================================
 
@@ -90,7 +91,7 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
           );
 
           const localIndexes = Array.from(this.docByPathAndAuthor.values()).map(
-            (doc) => doc._localIndex as number
+            (doc) => doc._localIndex as number,
           );
           this._maxLocalIndex = Math.max(...localIndexes);
 

@@ -5,7 +5,7 @@ import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
 
-let logger = new Logger("query helpers", "yellowBright");
+let logger = new Logger("query helpers", "gold");
 
 //================================================================================
 // HELPERS
