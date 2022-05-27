@@ -25,7 +25,7 @@ import {
   setLogLevel,
 } from "../util/log.ts";
 import { sleep } from "../util/misc.ts";
-let logger = new Logger("QueryFollower", "redBright");
+let logger = new Logger("QueryFollower", "red");
 let loggerSub = new Logger("QueryFollowerSub", "red");
 let J = JSON.stringify;
 
