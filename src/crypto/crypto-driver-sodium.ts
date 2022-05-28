@@ -2,9 +2,8 @@ import { ICryptoDriver, KeypairBytes } from "./crypto-types.ts";
 import { concatBytes, stringToBytes } from "../util/bytes.ts";
 import sodium from "https://deno.land/x/sodium@0.2.0/basic.ts";
 
-const { createHash } = sha256_uint8array;
-
 await sodium.ready;
+const { createHash } = sha256_uint8array;
 
 //--------------------------------------------------
 
@@ -18,13 +17,31 @@ const logger = new Logger("crypto-driver-noble", "cyan");
  * Works in the browser.
  */
 export const CryptoDriverSodium: ICryptoDriver = class {
-  static sha256(input: string | Uint8Array): Promise<Uint8Array> {
+  static async sha256(
+    input: string | Uint8Array | ReadableStream<Uint8Array>,
+  ): Promise<Uint8Array> {
     if (typeof input === "string") {
-      return Promise.resolve(
-        createHash("sha256").update(input, "utf-8").digest(),
-      );
+      const encoded = new TextEncoder().encode(input);
+      const result = await crypto.subtle.digest("SHA-256", encoded);
+      return Promise.resolve(new Uint8Array(result));
+    } else if (input instanceof Uint8Array) {
+      const result = await crypto.subtle.digest("SHA-256", input);
+      return Promise.resolve(new Uint8Array(result));
     } else {
-      return Promise.resolve(createHash("sha256").update(input).digest());
+      const hash = createHash("sha256");
+
+      const reader = input.getReader();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (value && !done) {
+          hash.update(value);
+        }
+
+        if (done) {
+          return Promise.resolve(hash.digest());
+        }
+      }
     }
   }
   static generateKeypairBytes(): Promise<KeypairBytes> {

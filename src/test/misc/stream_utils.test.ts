@@ -2,12 +2,14 @@ import {
   ChannelMultiStream,
   ChannelTransformer,
   CloneStream,
+  getStreamSize,
   LockStream,
   MultiStream,
   OrCh,
   readStream,
 } from "../../streams/stream_utils.ts";
 import { sleep } from "../../util/misc.ts";
+import { streamFromBytes } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
 
 function makeNumberStream(startFrom: number) {
@@ -233,4 +235,14 @@ Deno.test("ChannelMultiStream", async () => {
   assert(c1000.collected.every((event) => event.channel === "fromThousand"));
 
   // TODO: Check that closing works.
+});
+
+Deno.test("getStreamSize", async () => {
+  const bytes = new Uint8Array(2048);
+
+  const stream = streamFromBytes(bytes);
+
+  const size = await getStreamSize(stream);
+
+  assertEquals(size, bytes.length, "stream size is correct");
 });

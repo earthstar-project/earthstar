@@ -15,13 +15,30 @@ const logger = new Logger("crypto-driver-noble", "cyan");
  * Works in the browser.
  */
 export const CryptoDriverNoble: ICryptoDriver = class {
-  static sha256(input: string | Uint8Array): Promise<Uint8Array> {
+  static async sha256(
+    input: string | Uint8Array | ReadableStream<Uint8Array>,
+  ): Promise<Uint8Array> {
     if (typeof input === "string") {
       return Promise.resolve(
         createHash("sha256").update(input, "utf-8").digest(),
       );
-    } else {
+    } else if (input instanceof Uint8Array) {
       return Promise.resolve(createHash("sha256").update(input).digest());
+    } else {
+      const hash = createHash("sha256");
+
+      const reader = input.getReader();
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (value && !done) {
+          hash.update(value);
+        }
+
+        if (done) {
+          return Promise.resolve(hash.digest());
+        }
+      }
     }
   }
   static async generateKeypairBytes(): Promise<KeypairBytes> {

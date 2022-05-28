@@ -39,7 +39,6 @@ export interface DocBase<FormatType extends string> {
   path: string;
   author: AuthorAddress;
   timestamp: Timestamp;
-  deleteAfter: Timestamp | null;
   signature: Signature;
   _localIndex?: number;
 }
