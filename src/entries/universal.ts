@@ -9,8 +9,8 @@ export * from "../crypto/crypto.ts";
 export * from "../crypto/global-crypto-driver.ts";
 export * from "../crypto/keypair.ts";
 
-export * from "../format-validators/format-validator-es4.ts";
-export * from "../format-validators/format-validator-types.ts";
+export * from "../formatters/formatter_es4.ts";
+export * from "../formatters/formatter_types.ts";
 
 export * from "../syncer/syncer.ts";
 

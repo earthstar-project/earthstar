@@ -1,7 +1,6 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { Query } from "../../query/query-types.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { IReplica } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ValidationError } from "../../util/errors.ts";

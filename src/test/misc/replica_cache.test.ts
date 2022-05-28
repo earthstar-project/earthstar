@@ -6,13 +6,11 @@ import {
 } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
 import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaCache } from "../../replica/replica-cache.ts";
 import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
 import { throws } from "../test-utils.ts";
-
 import { sleep } from "../../util/misc.ts";
 import { LogLevel, setLogLevel } from "../../util/log.ts";
 

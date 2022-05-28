@@ -20,9 +20,7 @@ import {
   ReplicaId,
   ReplicaOpts,
 } from "./replica-types.ts";
-import {
-  FormatValidatorEs4,
-} from "../format-validators/format-validator-es4.ts";
+import { FormatterEs4 } from "../formatters/formatter_es4.ts";
 import {
   isErr,
   ReplicaIsClosedError,
@@ -50,7 +48,7 @@ const loggerIngest = new Logger("replica ingest", "gold");
 //================================================================================
 
 const CORE_VALIDATORS = {
-  "es.4": FormatValidatorEs4,
+  "es.4": FormatterEs4,
 };
 
 function docCompareNewestFirst<

@@ -2,8 +2,6 @@ import { assert } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
 import { AuthorKeypair } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
-import { isErr } from "../util/errors.ts";
-import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
 import { ReplicaDriverMemory } from "../replica/replica-driver-memory.ts";
 import { CoreDoc } from "../replica/replica-types.ts";
 import { equal } from "../../deps.ts";

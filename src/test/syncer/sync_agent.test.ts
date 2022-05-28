@@ -1,9 +1,6 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import {
-  DocEs4,
-  FormatValidatorEs4,
-} from "../../format-validators/format-validator-es4.ts";
+import { DocEs4, FormatterEs4 } from "../../formatters/formatter_es4.ts";
 
 import { CoreDoc, IReplica } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
@@ -162,7 +159,7 @@ function generateDoc(keypair: AuthorKeypair, input: {
   path: string;
   content: string;
 }) {
-  return FormatValidatorEs4.generateDocument({
+  return FormatterEs4.generateDocument({
     keypair,
     share: SHARE_ADDR,
     input: {
@@ -224,7 +221,7 @@ for (const scenario of scenarios) {
   Deno.test(`SyncAgent (in sync + live) (${scenario.name})`, async (test) => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
-    const commonDoc = await FormatValidatorEs4.generateDocument({
+    const commonDoc = await FormatterEs4.generateDocument({
       keypair,
       share: SHARE_ADDR,
       input: {

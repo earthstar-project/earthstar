@@ -6,11 +6,8 @@ import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
 
 import { Logger } from "../util/log.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
-import {
-  DocEs4,
-  FormatValidatorEs4,
-} from "../format-validators/format-validator-es4.ts";
-import { ExtractDocType } from "../format-validators/format-validator-types.ts";
+import { DocEs4, FormatterEs4 } from "../formatters/formatter_es4.ts";
+import { ExtractDocType } from "../formatters/formatter_types.ts";
 let logger = new Logger("storage driver localStorage", "gold");
 
 //================================================================================
@@ -169,7 +166,7 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
   //--------------------------------------------------
   // SET
 
-  async upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+  async upsert<DocType extends ExtractDocType<typeof FormatterEs4>>(
     doc: DocType,
   ): Promise<DocType> {
     if (this._isClosed) throw new ReplicaIsClosedError();

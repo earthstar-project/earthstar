@@ -33,11 +33,8 @@ import { Query } from "../query/query-types.ts";
 import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
-import {
-  DocEs4,
-  FormatValidatorEs4,
-} from "../format-validators/format-validator-es4.ts";
-import { ExtractDocType } from "../format-validators/format-validator-types.ts";
+import { DocEs4, FormatterEs4 } from "../formatters/formatter_es4.ts";
+import { ExtractDocType } from "../formatters/formatter_types.ts";
 
 const logger = new Logger("storage driver sqlite node", "yellow");
 
@@ -381,7 +378,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
   //--------------------------------------------------
   // SET
 
-  upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+  upsert<DocType extends ExtractDocType<typeof FormatterEs4>>(
     doc: DocType,
   ): Promise<DocType> {
     // Insert new doc, replacing old doc if there is one

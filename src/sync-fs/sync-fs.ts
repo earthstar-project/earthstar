@@ -9,7 +9,7 @@ import {
 } from "https://deno.land/std@0.132.0/path/mod.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
-import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { FormatterEs4 } from "../formatters/formatter_es4.ts";
 import {
   bytesExtensions,
   ES4_MAX_CONTENT_LENGTH,
@@ -230,7 +230,7 @@ export async function syncReplicaAndFsDir(
 
     if (isAbsenceEntry(entry)) {
       // Keypair is allowed to write this path
-      const canWriteToPath = FormatValidatorEs4
+      const canWriteToPath = FormatterEs4
         ._checkAuthorCanWriteToPath(opts.keypair.address, entry.path);
 
       if (isErr(canWriteToPath) && !opts.overwriteFilesAtOwnedPaths) {
@@ -240,11 +240,11 @@ export async function syncReplicaAndFsDir(
 
     if (isFileInfoEntry(entry)) {
       // Keypair is allowed to write this path
-      const canWriteToPath = FormatValidatorEs4
+      const canWriteToPath = FormatterEs4
         ._checkAuthorCanWriteToPath(opts.keypair.address, entry.path);
 
       // Path is valid
-      const pathIsValid = FormatValidatorEs4._checkPathIsValid(
+      const pathIsValid = FormatterEs4._checkPathIsValid(
         entry.path,
       );
 

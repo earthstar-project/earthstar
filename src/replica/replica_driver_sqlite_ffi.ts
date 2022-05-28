@@ -33,7 +33,7 @@ import { Query } from "../query/query-types.ts";
 import { cleanUpQuery } from "../query/query.ts";
 import { sortedInPlace } from "./compare.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
-import { DocEs4 } from "../format-validators/format-validator-es4.ts";
+import { DocEs4 } from "../formatters/formatter_es4.ts";
 
 const logger = new Logger("storage driver sqlite node", "yellow");
 

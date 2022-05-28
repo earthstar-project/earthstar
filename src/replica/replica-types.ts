@@ -9,9 +9,9 @@ import { HistoryMode, Query } from "../query/query-types.ts";
 import {
   ExtractDocType,
   ExtractInputType,
-} from "../format-validators/format-validator-types.ts";
+} from "../formatters/formatter_types.ts";
 import { ValidationError } from "../util/errors.ts";
-import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { FormatterEs4 } from "../formatters/formatter_es4.ts";
 import { Channelled, OrCh } from "../streams/stream_utils.ts";
 
 //================================================================================
@@ -107,8 +107,8 @@ export type ReplicaEvent<
   | ReplicaEventWillClose
   | ReplicaEventDidClose;
 
-export type CoreDocInput = ExtractInputType<typeof FormatValidatorEs4>;
-export type CoreDoc = ExtractDocType<typeof FormatValidatorEs4>;
+export type CoreDocInput = ExtractInputType<typeof FormatterEs4>;
+export type CoreDoc = ExtractDocType<typeof FormatterEs4>;
 
 //================================================================================
 

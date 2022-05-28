@@ -19,12 +19,8 @@ import {
 
 import { Logger } from "../util/log.ts";
 import { checkShareIsValid } from "../core-validators/addresses.ts";
-import {
-  DocEs4,
-  DocInputEs4,
-  FormatValidatorEs4,
-} from "../format-validators/format-validator-es4.ts";
-import { ExtractDocType } from "../format-validators/format-validator-types.ts";
+import { DocEs4 } from "../formatters/formatter_es4.ts";
+
 let logger = new Logger("storage driver async memory", "yellow");
 
 //================================================================================

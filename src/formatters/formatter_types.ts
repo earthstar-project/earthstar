@@ -21,12 +21,12 @@ export interface ValidatorGenerateOpts<
   timestamp: Timestamp;
 }
 
-/** Validators are each responsible for one document format such as "es.4". They are used by Storage instances to check if documents are valid before accepting them and sign new documents.
+/** Formatters are each responsible for one document format such as "es.4". They are used for signing and validating documents, as well as generating new documents from a given input.
  */
 // According to the rules of Earthstar: documents are validated statelessly,
 // one document at a time, without knowing about any other documents
 // or what's in the Storage.
-export interface IFormatValidator<
+export interface IFormatter<
   FormatType extends FormatName,
   DocInputType extends DocInputBase<FormatType>,
   DocType extends DocBase<FormatType>,
@@ -106,16 +106,14 @@ export interface IFormatValidator<
 }
 
 export type ExtractInputType<ValidatorType> = ValidatorType extends
-  IFormatValidator<infer _FormatType, infer DocInputType, infer _DocType>
+  IFormatter<infer _FormatType, infer DocInputType, infer _DocType>
   ? DocInputType
   : never;
 
 export type ExtractDocType<ValidatorType> = ValidatorType extends
-  IFormatValidator<infer _FormatType, infer _DocInputType, infer DocType>
-  ? DocType
+  IFormatter<infer _FormatType, infer _DocInputType, infer DocType> ? DocType
   : never;
 
 export type ExtractFormatType<ValidatorType> = ValidatorType extends
-  IFormatValidator<infer FormatType, infer _DocType, infer _DocInputType>
-  ? FormatType
+  IFormatter<infer FormatType, infer _DocType, infer _DocInputType> ? FormatType
   : never;
