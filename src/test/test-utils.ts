@@ -2,7 +2,7 @@ import { assert } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
 import { AuthorKeypair } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
-import { ReplicaDriverMemory } from "../replica/replica-driver-memory.ts";
+import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 import { CoreDoc } from "../replica/replica-types.ts";
 import { equal } from "../../deps.ts";
 
@@ -33,7 +33,7 @@ export let doesNotThrow = async (
 
 export function makeReplica(addr: string) {
   return new Replica({
-    driver: new ReplicaDriverMemory(addr),
+    driver: { docDriver: new DocDriverMemory(addr), blobDriver: null },
   });
 }
 

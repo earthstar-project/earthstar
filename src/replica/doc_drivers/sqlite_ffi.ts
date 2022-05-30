@@ -1,56 +1,71 @@
-import { ShareAddress } from "../util/doc-types.ts";
+import { ShareAddress } from "../../util/doc-types.ts";
 import {
   EarthstarError,
   isErr,
   ReplicaIsClosedError,
   ValidationError,
-} from "../util/errors.ts";
-import { CoreDoc, IReplicaDriver } from "./replica-types.ts";
-import {
-  Database as SqliteDatabase,
-  default as sqlite,
-} from "https://esm.sh/better-sqlite3?dts";
-import * as fs from "https://deno.land/std@0.123.0/node/fs.ts";
+} from "../../util/errors.ts";
+import { CoreDoc, IReplicaDocDriver } from "../replica-types.ts";
 import {
   CREATE_CONFIG_TABLE_QUERY,
   CREATE_DOCS_TABLE_QUERY,
   CREATE_LOCAL_INDEX_INDEX_QUERY,
   DELETE_CONFIG_QUERY,
   DELETE_EXPIRED_DOC_QUERY,
+  GET_ENCODING_QUERY,
   makeDocQuerySql,
   MAX_LOCAL_INDEX_QUERY,
   ReplicaSqliteOpts,
   SELECT_CONFIG_CONTENT_QUERY,
   SELECT_EXPIRED_DOC_QUERY,
   SELECT_KEY_CONFIG_QUERY,
+  SET_ENCODING_QUERY,
   UPSERT_CONFIG_QUERY,
   UPSERT_DOC_QUERY,
-} from "./replica-driver-sqlite.shared.ts";
+} from "./sqlite.shared.ts";
+import * as Sqlite from "https://deno.land/x/sqlite3@0.4.2/mod.ts";
 
 //--------------------------------------------------
 
-import { Logger } from "../util/log.ts";
-import { bytesToString, stringToBytes } from "../util/bytes.ts";
-import { Query } from "../query/query-types.ts";
-import { cleanUpQuery } from "../query/query.ts";
-import { sortedInPlace } from "./compare.ts";
-import { checkShareIsValid } from "../core-validators/addresses.ts";
-import { ExtractDocType } from "../format-validators/format-validator-types.ts";
-import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { Logger } from "../../util/log.ts";
+import { bytesToString, stringToBytes } from "../../util/bytes.ts";
+import { Query } from "../../query/query-types.ts";
+import { cleanUpQuery } from "../../query/query.ts";
+import { sortedInPlace } from "../compare.ts";
+import { checkShareIsValid } from "../../core-validators/addresses.ts";
+import { DocEs4 } from "../../formatters/formatter_es4.ts";
+
 const logger = new Logger("storage driver sqlite node", "yellow");
 
-/** A strorage driver which persists to SQLite. Works in Node. */
-export class ReplicaDriverSqlite implements IReplicaDriver {
+type SqlDoc = {
+  format: string;
+  workspace: string;
+  path: string;
+  contentHash: string;
+  content: Uint8Array;
+  author: string;
+  timestamp: number;
+  deleteAfter: number;
+  signature: string;
+  localIndex?: number;
+  toSortWithinPath?: number;
+};
+
+/** A strorage driver which persists to SQLite using native bindings. Works in Deno.
+ *
+ * *Requires the `--unstable` flag to be passed to Deno when used.*
+ */
+export class DocDriverSqliteFfi implements IReplicaDocDriver {
   share: ShareAddress;
   _filename: string;
   _isClosed = false;
-  _db: SqliteDatabase = null as unknown as SqliteDatabase;
+  _db: Sqlite.Database = null as unknown as Sqlite.Database;
   _maxLocalIndex: number;
 
   //--------------------------------------------------
   // LIFECYCLE
 
-  close(erase: boolean): Promise<void> {
+  async close(erase: boolean): Promise<void> {
     logger.debug("close");
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
@@ -61,8 +76,23 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     // delete the sqlite file
     if (erase === true && this._filename !== ":memory:") {
       logger.log(`...close: and erase`);
-      if (fs.existsSync(this._filename)) {
-        fs.unlinkSync(this._filename);
+      try {
+        await Deno.remove(this._filename);
+      } catch (err) {
+        logger.error("Failed to delete Sqlite file.");
+        logger.error(err);
+      }
+
+      try {
+        await Deno.remove(`${this._filename}-shm`);
+      } catch {
+        // If it's not there, that's fine.
+      }
+
+      try {
+        await Deno.remove(`${this._filename}-wal`);
+      } catch {
+        // If it's not there, that's fine.
       }
     }
     this._isClosed = true;
@@ -81,15 +111,34 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
 
     // check if file exists
     if (opts.mode === "create") {
-      if (opts.filename !== ":memory:" && fs.existsSync(opts.filename)) {
-        this.close(false);
-        throw new EarthstarError(
-          `Tried to create an sqlite file but it already exists: ${opts.filename}`,
-        );
+      if (opts.filename !== ":memory:") {
+        try {
+          // If no file is found, this will throw.
+          Deno.openSync(opts.filename);
+
+          throw new EarthstarError(
+            `Tried to create an sqlite file but it already exists: ${opts.filename}`,
+          );
+        } catch (err) {
+          // Only throw if the error was an Earthstar error thrown by us.
+          // Otherwise it's the error thrown by the file not being found. Which is good.
+          if (isErr(err)) {
+            this.close(false);
+            throw err;
+          }
+        }
       }
     } else if (opts.mode === "open") {
-      // this should also fail if you try to open :memory:
-      if (!fs.existsSync(opts.filename)) {
+      if (opts.filename === ":memory:") {
+        this.close(false);
+        throw new EarthstarError(
+          `Tried to open :memory: as though it was a file`,
+        );
+      }
+
+      try {
+        Deno.openSync(opts.filename);
+      } catch {
         this.close(false);
         throw new EarthstarError(
           `Tried to open an sqlite file but it doesn't exist: ${opts.filename}`,
@@ -113,16 +162,21 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
       throw addressIsValidResult;
     }
 
-    this._db = sqlite(this._filename);
+    this._db = new Sqlite.Database(this._filename, {
+      memory: this._filename === ":memory:",
+    });
     this._ensureTables();
 
-    const maxLocalIndexFromDb =
-      this._db.prepare(MAX_LOCAL_INDEX_QUERY).get()["MAX(localIndex)"];
+    const [maxLocalIndexResult] = this._db.queryObject<{
+      "MAX(localIndex)": number | null;
+    }>(
+      MAX_LOCAL_INDEX_QUERY,
+    );
+
+    const maxLocalIndex = maxLocalIndexResult["MAX(localIndex)"];
 
     // We have to do this because the maxLocalIndexDb could be 0, which is falsy.
-    this._maxLocalIndex = maxLocalIndexFromDb !== null
-      ? maxLocalIndexFromDb
-      : -1;
+    this._maxLocalIndex = maxLocalIndex !== null ? maxLocalIndex : -1;
 
     // check share
     if (opts.mode === "create") {
@@ -184,7 +238,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     // check and set schemaVersion
     let schemaVersion = this._getConfigSync("schemaVersion");
     logger.log(`constructor    schemaVersion: ${schemaVersion}`);
-    /* istanbul ignore else */
+
     if (schemaVersion === undefined) {
       schemaVersion = "1";
       this.setConfig("schemaVersion", schemaVersion);
@@ -208,23 +262,26 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
     }
-    this._db.prepare(UPSERT_CONFIG_QUERY).run({ key: key, content: content });
+    this._db.execute(UPSERT_CONFIG_QUERY, { key: key, content: content });
 
     return Promise.resolve();
   }
 
   _getConfigSync(key: string): string | undefined {
-    const row = this._db.prepare(SELECT_CONFIG_CONTENT_QUERY).get({ key: key });
-    const result = row === undefined ? undefined : row.content;
-    logger.debug(
-      `getConfig(${JSON.stringify(key)}) = ${JSON.stringify(result)}`,
+    const [configQueryResult] = this._db.queryObject<{ content: string }>(
+      SELECT_CONFIG_CONTENT_QUERY,
+      { key },
     );
-    return result;
+
+    if (configQueryResult) {
+      return configQueryResult.content;
+    }
   }
 
   _listConfigKeysSync(): string[] {
-    const rows = this._db.prepare(SELECT_KEY_CONFIG_QUERY).all();
-    return sortedInPlace(rows.map((row) => row.key));
+    const keysQuery = this._db.queryArray<string[]>(SELECT_KEY_CONFIG_QUERY);
+
+    return sortedInPlace(keysQuery.map(([key]) => key));
   }
 
   getConfig(key: string): Promise<string | undefined> {
@@ -246,9 +303,10 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
     }
-    const result = this._db.prepare(DELETE_CONFIG_QUERY).run({ key: key });
 
-    return Promise.resolve(result.changes > 0);
+    this._db.execute(DELETE_CONFIG_QUERY, { key: key });
+
+    return Promise.resolve(this._db.changes > 0);
   }
 
   //--------------------------------------------------
@@ -262,7 +320,7 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     return this._maxLocalIndex;
   }
 
-  queryDocs(queryToClean: Query): Promise<CoreDoc[]> {
+  queryDocs(queryToClean: Query): Promise<DocEs4[]> {
     // Query the documents
 
     logger.debug("queryDocs", queryToClean);
@@ -282,34 +340,36 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     logger.debug("  sql:", sql);
     logger.debug("  params:", params);
 
-    const docs = this._db.prepare(sql).all(params);
+    const docs = this._db.queryObject<SqlDoc>(sql, params);
 
     if (query.historyMode === "latest") {
       // remove extra field we added to find the winner within each path
       docs.forEach((d) => {
-        delete (d as any).toSortWithinPath;
+        delete d.toSortWithinPath;
       });
     }
 
     // TODO: limitBytes, when this is added back to Query
 
     // Transform the content from the DB (saved as BLOB) back to string
+
     const docsWithStringContent = docs.map((doc) => ({
       ...doc,
-      content: bytesToString(doc.content),
+      content: doc.content ? bytesToString(doc.content) : "",
       _localIndex: doc.localIndex,
     }));
 
-    docsWithStringContent.forEach((doc) => delete doc["localIndex"]);
+    docsWithStringContent.forEach((doc) => delete doc.localIndex);
     docsWithStringContent.forEach((doc) => Object.freeze(doc));
     logger.debug(`  result: ${docs.length} docs`);
-    return Promise.resolve(docsWithStringContent);
+
+    return Promise.resolve(docsWithStringContent as DocEs4[]);
   }
 
   //--------------------------------------------------
   // SET
 
-  upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+  upsert<DocType extends CoreDoc>(
     doc: DocType,
   ): Promise<DocType> {
     // Insert new doc, replacing old doc if there is one
@@ -329,12 +389,13 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
 
     const contentAsBytes = stringToBytes(doc.content);
 
-    const docWithBuffer = {
+    const docWithBytes = {
       ...docWithLocalIndex,
       content: contentAsBytes,
     };
 
-    this._db.prepare(UPSERT_DOC_QUERY).run(docWithBuffer);
+    //  TODOM3: Fix this any type.
+    this._db.execute(UPSERT_DOC_QUERY, docWithBytes as any);
 
     return Promise.resolve(docWithLocalIndex);
   }
@@ -346,18 +407,23 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
 
     const now = Date.now() * 1000;
 
-    const toDelete = this._db.prepare(SELECT_EXPIRED_DOC_QUERY).all({ now });
+    const docsToDelete = this._db.queryObject<SqlDoc>(
+      SELECT_EXPIRED_DOC_QUERY,
+      { now },
+    );
 
-    // Transform the content from the DB (saved as BLOB) back to string
-    const docsWithStringContent = toDelete.map((doc) => ({
-      ...doc,
-      content: bytesToString(doc.content),
-      _localIndex: doc.localIndex,
+    const docsWithStringContent = docsToDelete.map((docToDelete) => ({
+      ...docToDelete,
+      content: docToDelete.content ? bytesToString(docToDelete.content) : "",
+      _localIndex: docToDelete.localIndex,
     }));
 
-    this._db.prepare(DELETE_EXPIRED_DOC_QUERY).run({ now });
+    docsWithStringContent.forEach((doc) => delete doc.localIndex);
+    docsWithStringContent.forEach((doc) => Object.freeze(doc));
 
-    return Promise.resolve(docsWithStringContent);
+    this._db.execute(DELETE_EXPIRED_DOC_QUERY, { now });
+
+    return Promise.resolve(docsWithStringContent as CoreDoc[]);
   }
 
   //--------------------------------------------------
@@ -373,19 +439,24 @@ export class ReplicaDriverSqlite implements IReplicaDriver {
     }
 
     // make sure sqlite is using utf-8
-    const encoding = this._db.pragma("encoding", { simple: true });
+    this._db.execute(SET_ENCODING_QUERY);
+    const [{ encoding }] = this._db.queryObject(GET_ENCODING_QUERY);
+
     if (encoding !== "UTF-8") {
       throw new Error(
         `sqlite encoding is stubbornly set to ${encoding} instead of UTF-8`,
       );
     }
 
-    this._db.prepare(CREATE_DOCS_TABLE_QUERY).run();
-    this._db.prepare(CREATE_LOCAL_INDEX_INDEX_QUERY).run();
+    this._db.execute(CREATE_DOCS_TABLE_QUERY);
+    this._db.execute("pragma journal_mode = WAL");
+    this._db.execute("pragma synchronous = normal");
+    this._db.execute("pragma temp_store = memory");
+    this._db.execute(CREATE_LOCAL_INDEX_INDEX_QUERY);
 
     // the config table is used to store these variables:
     //     share - the share this store was created for
     //     schemaVersion
-    this._db.prepare(CREATE_CONFIG_TABLE_QUERY).run();
+    this._db.execute(CREATE_CONFIG_TABLE_QUERY);
   }
 }

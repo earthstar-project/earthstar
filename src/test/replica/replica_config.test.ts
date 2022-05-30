@@ -1,7 +1,7 @@
 import { assertEquals } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IReplica, IReplicaDriver } from "../../replica/replica-types.ts";
+import { IReplica, IReplicaDocDriver } from "../../replica/replica-types.ts";
 import {
   GlobalCryptoDriver,
   setGlobalCryptoDriver,
@@ -50,9 +50,9 @@ let _runStorageConfigTests = (
 
   let makeStorageOrDriver = (
     share: ShareAddress,
-  ): IReplica | IReplicaDriver => {
+  ): IReplica | IReplicaDocDriver => {
     let driver = scenario.subscenarios.replicaDriver.makeDriver(share);
-    return mode === "storage" ? new Replica({ driver }) : driver;
+    return mode === "storage" ? new Replica({ driver }) : driver.docDriver;
   };
 
   Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {

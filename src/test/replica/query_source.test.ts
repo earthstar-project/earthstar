@@ -1,10 +1,11 @@
 import { Crypto } from "../../crypto/crypto.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { CoreDoc, QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
-import { CallbackSink, readStream } from "../../streams/stream_utils.ts";
+import { CallbackSink } from "../../streams/stream_utils.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
+import { readStream } from "../../util/streams.ts";
 import { assertEquals } from "../asserts.ts";
 
 Deno.test("QuerySource", async () => {
@@ -16,7 +17,9 @@ Deno.test("QuerySource", async () => {
   ) as AuthorKeypair;
 
   const replica = new Replica(
-    { driver: new ReplicaDriverMemory(SHARE_ADDR) },
+    {
+      driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
+    },
   );
 
   await replica.set(keypair, {

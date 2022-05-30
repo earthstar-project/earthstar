@@ -1,25 +1,25 @@
-import { Cmp } from "./util-types.ts";
-import { DocBase, LocalIndex, Path, ShareAddress } from "../util/doc-types.ts";
-import { Query } from "../query/query-types.ts";
-import { CoreDoc, IReplicaDriver } from "./replica-types.ts";
+import { Cmp } from "../util-types.ts";
+import { LocalIndex, Path, ShareAddress } from "../../util/doc-types.ts";
+import { Query } from "../../query/query-types.ts";
+import { CoreDoc, IReplicaDocDriver } from "../replica-types.ts";
 import {
   isErr,
   ReplicaIsClosedError,
   ValidationError,
-} from "../util/errors.ts";
+} from "../../util/errors.ts";
 
-import { compareArrays, compareByObjKey, sortedInPlace } from "./compare.ts";
+import { compareArrays, compareByObjKey, sortedInPlace } from "../compare.ts";
 import {
   cleanUpQuery,
   docIsExpired,
   docMatchesFilter,
-} from "../query/query.ts";
+} from "../../query/query.ts";
 
 //--------------------------------------------------
 
-import { Logger } from "../util/log.ts";
-import { checkShareIsValid } from "../core-validators/addresses.ts";
-import { DocEs4 } from "../formatters/formatter_es4.ts";
+import { Logger } from "../../util/log.ts";
+import { checkShareIsValid } from "../../core-validators/addresses.ts";
+import { DocEs4 } from "../../formatters/formatter_es4.ts";
 
 let logger = new Logger("storage driver async memory", "yellow");
 
@@ -54,7 +54,7 @@ function docComparePathDESCthenNewestFirst(a: CoreDoc, b: CoreDoc): Cmp {
 /** An in-memory replica driver. Its contents will be lost when it is closed.
  * Works everywhere.
  */
-export class ReplicaDriverMemory implements IReplicaDriver {
+export class DocDriverMemory implements IReplicaDocDriver {
   share: ShareAddress;
   _maxLocalIndex: LocalIndex = -1; // when empty, the max is -1.  when one item is present, starting with index 0, the max is 0
   _isClosed: boolean = false;

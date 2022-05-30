@@ -1,8 +1,8 @@
 import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { ReplicaDriverLocalStorage } from "../../replica/replica-driver-local-storage.ts";
-import { ReplicaDriverSqlite } from "../../replica/replica-driver-sqlite.deno.ts";
-import { ReplicaDriverSqliteFfi } from "../../replica/replica_driver_sqlite_ffi.ts";
+import { DocDriverLocalStorage } from "../../replica/doc_drivers/localstorage.ts";
+import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
+import { DocDriverSqliteFfi } from "../../replica/doc_drivers/sqlite_ffi.ts";
 import { PartnerScenario, ReplicaScenario, Scenario } from "./types.ts";
 import {
   universalCryptoDrivers,
@@ -30,8 +30,10 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
     item: {
       persistent: true,
       builtInConfigKeys: [],
-      makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverLocalStorage(addr, variant),
+      makeDriver: (addr, variant?: string) => ({
+        docDriver: new DocDriverLocalStorage(addr, variant),
+        blobDriver: null,
+      }),
     },
   },
   {
@@ -39,12 +41,14 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
     item: {
       persistent: true,
       builtInConfigKeys: ["schemaVersion", "share"],
-      makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverSqliteFfi({
+      makeDriver: (addr, variant?: string) => ({
+        docDriver: new DocDriverSqliteFfi({
           filename: `${addr}.${variant ? `${variant}.` : ""}bench.ffi.sqlite`,
           mode: "create-or-open",
           share: addr,
         }),
+        blobDriver: null,
+      }),
     },
   },
   {
@@ -52,12 +56,14 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
     item: {
       persistent: true,
       builtInConfigKeys: ["schemaVersion", "share"],
-      makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverSqlite({
+      makeDriver: (addr, variant?: string) => ({
+        docDriver: new DocDriverSqlite({
           filename: `${addr}.${variant ? `${variant}.` : ""}bench.sqlite`,
           mode: "create-or-open",
           share: addr,
         }),
+        blobDriver: null,
+      }),
     },
   },
 ];

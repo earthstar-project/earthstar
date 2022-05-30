@@ -1,12 +1,13 @@
 import { Crypto } from "../../crypto/crypto.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { CoreDoc, QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
-import { readStream } from "../../streams/stream_utils.ts";
+
 import { HaveEntryKeeper } from "../../syncer/have_entry_keeper.ts";
 import { HaveEntry } from "../../syncer/syncer_types.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
+import { readStream } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { writeRandomDocs } from "../test-utils.ts";
 
@@ -19,7 +20,9 @@ Deno.test("HaveEntryKeeper", async () => {
   ) as AuthorKeypair;
 
   const replica = new Replica(
-    { driver: new ReplicaDriverMemory(SHARE_ADDR) },
+    {
+      driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
+    },
   );
 
   await replica.set(keypair, {
@@ -157,13 +160,13 @@ Deno.test("HaveEntryKeeper hashes", async () => {
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
   const replica = new Replica({
-    driver: new ReplicaDriverMemory(SHARE_ADDR),
+    driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
   });
 
   await writeRandomDocs(keypair, replica, 1000);
 
   const otherReplica = new Replica({
-    driver: new ReplicaDriverMemory(SHARE_ADDR),
+    driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
   });
 
   const ingestWritable = new WritableStream<QuerySourceEvent<CoreDoc>>({

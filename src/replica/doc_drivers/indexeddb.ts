@@ -1,15 +1,15 @@
-// @deno-types="./indexeddb-types.deno.d.ts"
+// @deno-types="./indexeddb_types.deno.d.ts"
 
-import { ShareAddress } from "../util/doc-types.ts";
-import { ReplicaIsClosedError } from "../util/errors.ts";
-import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
-import { Query } from "../query/query-types.ts";
+import { ShareAddress } from "../../util/doc-types.ts";
+import { ReplicaIsClosedError } from "../../util/errors.ts";
+import { DocDriverMemory } from "./memory.ts";
+import { Query } from "../../query/query-types.ts";
 
 //--------------------------------------------------
 
-import { Logger } from "../util/log.ts";
-import { ExtractDocType } from "../format-validators/format-validator-types.ts";
-import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { Logger } from "../../util/log.ts";
+import { ExtractDocType } from "../../formatters/formatter_types.ts";
+import { FormatterEs4 } from "../../formatters/formatter_es4.ts";
 const logger = new Logger("replica driver indexeddb", "gold");
 
 //================================================================================
@@ -21,7 +21,7 @@ const CONFIG_STORE = "config";
 /** A replica driver which persists to IndexedDB in the browser. Maximum storage capacity varies, but is generally upwards of one gigabyte.
  * Works in browsers.
  */
-export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
+export class DocDriverIndexedDB extends DocDriverMemory {
   _db: IDBDatabase | null = null;
 
   /**
@@ -261,7 +261,7 @@ export class ReplicaDriverIndexedDB extends ReplicaDriverMemory {
   //--------------------------------------------------
   // SET
 
-  async upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+  async upsert<DocType extends ExtractDocType<typeof FormatterEs4>>(
     doc: DocType,
   ): Promise<DocType> {
     if (this._isClosed) {

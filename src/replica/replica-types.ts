@@ -12,7 +12,7 @@ import {
 } from "../formatters/formatter_types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { FormatterEs4 } from "../formatters/formatter_es4.ts";
-import { Channelled, OrCh } from "../streams/stream_utils.ts";
+import { OrCh } from "../streams/stream_utils.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -319,7 +319,7 @@ export interface IReplica extends IReplicaConfig {
 /**
  * A replica driver provides low-level access to actual replica and is used by IReplica to actually load and save data. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
  */
-export interface IReplicaDriver extends IReplicaConfig {
+export interface IReplicaDocDriver extends IReplicaConfig {
   share: ShareAddress;
   //--------------------------------------------------
   // LIFECYCLE
@@ -373,4 +373,26 @@ export interface IReplicaDriver extends IReplicaConfig {
  */
 export interface ReplicaOpts {
   driver: IReplicaDriver;
+}
+
+export interface IReplicaBlobDriver {
+  close(erase: boolean): Promise<void>;
+
+  getBytes(signature: string): Promise<Uint8Array | ValidationError | null>;
+
+  getStream(
+    signature: string,
+  ): Promise<ReadableStream<Uint8Array> | ValidationError | null>;
+
+  upsert<DocType extends CoreDoc>(
+    doc: DocType,
+    blob: ReadableStream<Uint8Array>,
+  ): Promise<void>;
+
+  erase(signature: string): Promise<void>;
+}
+
+export interface IReplicaDriver {
+  docDriver: IReplicaDocDriver;
+  blobDriver: IReplicaBlobDriver | null;
 }

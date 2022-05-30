@@ -1,13 +1,12 @@
-import { Path, ShareAddress } from "../util/doc-types.ts";
-import { ReplicaIsClosedError } from "../util/errors.ts";
-import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
+import { Path, ShareAddress } from "../../util/doc-types.ts";
+import { ReplicaIsClosedError } from "../../util/errors.ts";
+import { DocDriverMemory } from "./memory.ts";
 
 //--------------------------------------------------
 
-import { Logger } from "../util/log.ts";
-import { checkShareIsValid } from "../core-validators/addresses.ts";
-import { DocEs4, FormatterEs4 } from "../formatters/formatter_es4.ts";
-import { ExtractDocType } from "../formatters/formatter_types.ts";
+import { Logger } from "../../util/log.ts";
+import { DocEs4, FormatterEs4 } from "../../formatters/formatter_es4.ts";
+import { ExtractDocType } from "../../formatters/formatter_types.ts";
 let logger = new Logger("storage driver localStorage", "gold");
 
 //================================================================================
@@ -27,7 +26,7 @@ function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
 /** A replica driver which perists to LocalStorage, which stores a maximum of five megabytes per domain. If you're storing multiple shares, this limit will be divided among all their replicas.
  * Works in browsers and Deno.
  */
-export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
+export class DocDriverLocalStorage extends DocDriverMemory {
   _localStorageKeyConfig: string;
   _localStorageKeyDocs: string;
 

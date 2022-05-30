@@ -6,7 +6,7 @@ import {
 } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaCache } from "../../replica/replica-cache.ts";
 import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
@@ -27,7 +27,9 @@ Deno.test("ReplicaCache", async () => {
   ) as AuthorKeypair;
 
   const replica = new Replica(
-    { driver: new ReplicaDriverMemory(SHARE_ADDR) },
+    {
+      driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
+    },
   );
 
   const cache = new ReplicaCache(replica);

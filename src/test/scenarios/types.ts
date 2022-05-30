@@ -30,4 +30,4 @@ export type ReplicaScenario = {
   makeDriver: (share: ShareAddress, variant?: string) => IReplicaDriver;
   persistent: boolean;
   builtInConfigKeys: string[];
-}
+};

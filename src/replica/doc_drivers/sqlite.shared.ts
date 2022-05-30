@@ -1,6 +1,6 @@
-import { ShareAddress } from "../util/doc-types.ts";
-import { ValidationError } from "../util/errors.ts";
-import { Query } from "../query/query-types.ts";
+import { ShareAddress } from "../../util/doc-types.ts";
+import { ValidationError } from "../../util/errors.ts";
+import { Query } from "../../query/query-types.ts";
 
 // types
 

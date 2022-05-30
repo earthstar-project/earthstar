@@ -96,7 +96,7 @@ export class Replica implements IReplica {
   constructor(
     { driver }: ReplicaOpts,
   ) {
-    const addressIsValidResult = checkShareIsValid(driver.share);
+    const addressIsValidResult = checkShareIsValid(driver.docDriver.share);
 
     if (isErr(addressIsValidResult)) {
       throw addressIsValidResult;
@@ -107,7 +107,7 @@ export class Replica implements IReplica {
     );
 
     this.replicaId = "replica-" + randomId();
-    this.share = driver.share;
+    this.share = driver.docDriver.share;
     this.replicaDriver = driver;
 
     this.eventWriter = this.eventMultiStream.getWritableStream().getWriter();
@@ -151,7 +151,7 @@ export class Replica implements IReplica {
     logger.debug("    marking self as closed...");
     this._isClosed = true;
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
-    await this.replicaDriver.close(erase);
+    await this.replicaDriver.docDriver.close(erase);
     logger.debug("    sending didClose nonblockingly...");
     await this.eventWriter.write({
       kind: "didClose",
@@ -167,19 +167,19 @@ export class Replica implements IReplica {
 
   async getConfig(key: string): Promise<string | undefined> {
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.getConfig(key);
+    return await this.replicaDriver.docDriver.getConfig(key);
   }
   async setConfig(key: string, value: string): Promise<void> {
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.setConfig(key, value);
+    return await this.replicaDriver.docDriver.setConfig(key, value);
   }
   async listConfigKeys(): Promise<string[]> {
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.listConfigKeys();
+    return await this.replicaDriver.docDriver.listConfigKeys();
   }
   async deleteConfig(key: string): Promise<boolean> {
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.deleteConfig(key);
+    return await this.replicaDriver.docDriver.deleteConfig(key);
   }
 
   //--------------------------------------------------
@@ -188,7 +188,7 @@ export class Replica implements IReplica {
   /** Returns the max local index of all stored documents */
   getMaxLocalIndex(): number {
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return this.replicaDriver.getMaxLocalIndex();
+    return this.replicaDriver.docDriver.getMaxLocalIndex();
   }
 
   async getDocsAfterLocalIndex(
@@ -208,14 +208,14 @@ export class Replica implements IReplica {
       },
       limit,
     };
-    return await this.replicaDriver.queryDocs(query);
+    return await this.replicaDriver.docDriver.queryDocs(query);
   }
 
   /** Returns all documents, including historical versions of documents by other identities. */
   async getAllDocs(): Promise<CoreDoc[]> {
     logger.debug(`getAllDocs()`);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.queryDocs({
+    return await this.replicaDriver.docDriver.queryDocs({
       historyMode: "all",
       orderBy: "path ASC",
     });
@@ -224,7 +224,7 @@ export class Replica implements IReplica {
   async getLatestDocs(): Promise<CoreDoc[]> {
     logger.debug(`getLatestDocs()`);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.queryDocs({
+    return await this.replicaDriver.docDriver.queryDocs({
       historyMode: "latest",
       orderBy: "path ASC",
     });
@@ -233,7 +233,7 @@ export class Replica implements IReplica {
   async getAllDocsAtPath(path: Path): Promise<CoreDoc[]> {
     logger.debug(`getAllDocsAtPath("${path}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.queryDocs({
+    return await this.replicaDriver.docDriver.queryDocs({
       historyMode: "all",
       orderBy: "path ASC",
       filter: { path: path },
@@ -247,7 +247,7 @@ export class Replica implements IReplica {
   > {
     logger.debug(`getLatestDocsAtPath("${path}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    const docs = await this.replicaDriver.queryDocs({
+    const docs = await this.replicaDriver.docDriver.queryDocs({
       historyMode: "latest",
       orderBy: "path ASC",
       filter: { path: path },
@@ -271,7 +271,7 @@ export class Replica implements IReplica {
   async queryDocs(query: Query = {}): Promise<CoreDoc[]> {
     logger.debug(`queryDocs`, query);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.queryDocs(query);
+    return await this.replicaDriver.docDriver.queryDocs(query);
   }
 
   /** Returns an array of all unique paths of documents returned by a given query. */
@@ -452,10 +452,12 @@ export class Replica implements IReplica {
       }
       // save it
       loggerIngest.debug("  > upserting into ReplicaDriver...");
-      const docAsWritten = await this.replicaDriver.upsert(docToIngest); // TODO: pass existingDocsSamePath to save another lookup
+      const docAsWritten = await this.replicaDriver.docDriver.upsert(
+        docToIngest,
+      ); // TODO: pass existingDocsSamePath to save another lookup
       loggerIngest.debug("  > ...done upserting into ReplicaDriver");
       loggerIngest.debug("  > ...getting ReplicaDriver maxLocalIndex...");
-      const maxLocalIndex = this.replicaDriver.getMaxLocalIndex();
+      const maxLocalIndex = this.replicaDriver.docDriver.getMaxLocalIndex();
 
       loggerIngest.debug(
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
@@ -518,7 +520,7 @@ export class Replica implements IReplica {
   }
 
   private async eraseExpiredDocs() {
-    const erasedDocs = await this.replicaDriver.eraseExpiredDocs();
+    const erasedDocs = await this.replicaDriver.docDriver.eraseExpiredDocs();
 
     for (const doc of erasedDocs) {
       await this.eventWriter.write({ kind: "expire", doc });

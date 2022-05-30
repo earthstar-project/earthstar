@@ -41,18 +41,19 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         scenario.subscenarios.replicaDriver.makeDriver(invalidShare);
       });
 
-      const storage = scenario.subscenarios.replicaDriver.makeDriver(
+      const driver = scenario.subscenarios.replicaDriver.makeDriver(
         validShare,
       );
-      assert(storage);
+      assert(driver);
 
-      await storage.close(true);
+      await driver.docDriver.close(true);
     }
   });
 
   Deno.test(`${SUBTEST_NAME}: maxLocalIndex`, async () => {
     const share = "+gardening.abcde";
-    const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
+    const driver =
+      scenario.subscenarios.replicaDriver.makeDriver(share).docDriver;
 
     assertEquals(driver.getMaxLocalIndex(), -1, "Initial maxLocalIndex is -1");
 
@@ -78,7 +79,8 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
 
     await driver.close(false);
 
-    const driverTwo = scenario.subscenarios.replicaDriver.makeDriver(share);
+    const driverTwo =
+      scenario.subscenarios.replicaDriver.makeDriver(share).docDriver;
 
     if (scenario.subscenarios.replicaDriver.persistent) {
       assertEquals(
@@ -101,7 +103,8 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     const initialCryptoDriver = GlobalCryptoDriver;
 
     const share = "+gardening.abcde";
-    const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
+    const driver =
+      scenario.subscenarios.replicaDriver.makeDriver(share).docDriver;
 
     assertEquals(
       driver.getMaxLocalIndex(),
@@ -143,7 +146,8 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     const initialCryptoDriver = GlobalCryptoDriver;
 
     const share = "+gardening.abcde";
-    const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
+    const driver =
+      scenario.subscenarios.replicaDriver.makeDriver(share).docDriver;
 
     // empty...
     assertEquals(
@@ -212,7 +216,8 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       const initialCryptoDriver = GlobalCryptoDriver;
 
       const share = "+gardening.abcde";
-      const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
+      const driver =
+        scenario.subscenarios.replicaDriver.makeDriver(share).docDriver;
 
       const doc0: CoreDoc = {
         format: "es.4",
@@ -552,7 +557,8 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       const initialCryptoDriver = GlobalCryptoDriver;
 
       const share = "+gardening.abcde";
-      const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
+      const driver =
+        scenario.subscenarios.replicaDriver.makeDriver(share).docDriver;
 
       const now = Date.now() * 1000;
 

@@ -1,7 +1,7 @@
 import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { PartnerScenario, ReplicaScenario, Scenario } from "./types.ts";
@@ -17,7 +17,10 @@ export const universalReplicaDrivers: Scenario<ReplicaScenario>[] = [
     item: {
       persistent: false,
       builtInConfigKeys: [],
-      makeDriver: (addr) => new ReplicaDriverMemory(addr),
+      makeDriver: (addr) => ({
+        docDriver: new DocDriverMemory(addr),
+        blobDriver: null,
+      }),
     },
   },
 ];
