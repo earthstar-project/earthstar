@@ -1,10 +1,10 @@
 import { assert } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair } from "../util/doc-types.ts";
+import { AuthorKeypair, DocBase } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
-import { CoreDoc } from "../replica/replica-types.ts";
 import { equal } from "../../deps.ts";
+import { FormatEs5 } from "../formats/format_es5.ts";
 
 // for testing unicode
 export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -41,16 +41,22 @@ export function makeNReplicas(addr: string, number: number) {
   return Array.from({ length: number }, () => makeReplica(addr));
 }
 
-function stripLocalIndexFromDoc({ _localIndex, ...rest }: CoreDoc) {
+function stripLocalIndexFromDoc({ _localIndex, ...rest }: DocBase<string>) {
   return { ...rest };
 }
 
-export function docsAreEquivalent(docsA: CoreDoc[], docsB: CoreDoc[]) {
+export function docsAreEquivalent(
+  docsA: DocBase<string>[],
+  docsB: DocBase<string>[],
+) {
   if (docsA.length !== docsB.length) {
     return false;
   }
 
-  const sortByPathThenAuthor = (docA: CoreDoc, docB: CoreDoc) => {
+  const sortByPathThenAuthor = (
+    docA: DocBase<string>,
+    docB: DocBase<string>,
+  ) => {
     const { path: pathA, author: authorA } = docA;
     const { path: pathB, author: authorB } = docB;
 
@@ -94,10 +100,9 @@ export function writeRandomDocs(
   const setPromises = Array.from({ length: n }, () => {
     const rand = randomId();
 
-    return storage.set(keypair, {
-      content: `${rand}`,
+    return storage.set(keypair, FormatEs5, {
+      text: `${rand}`,
       path: `/${fstRand}/${rand}.txt`,
-      format: "es.4",
     });
   });
 
@@ -105,7 +110,7 @@ export function writeRandomDocs(
 }
 
 export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
-  const allDocsSets: CoreDoc[][] = [];
+  const allDocsSets: DocBase<string>[][] = [];
 
   // Create an array where each element is a collection of all the docs from a storage.
   for await (const storage of storages) {
@@ -113,20 +118,23 @@ export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
     allDocsSets.push(allDocs);
   }
 
-  return allDocsSets.reduce((isSynced: boolean, docs: CoreDoc[], i: number) => {
-    if (i === 0) {
-      return isSynced;
-    }
+  return allDocsSets.reduce(
+    (isSynced: boolean, docs: DocBase<string>[], i: number) => {
+      if (i === 0) {
+        return isSynced;
+      }
 
-    // Get the set of docs from the previous element.
-    const prevDocs = allDocsSets[i - 1];
+      // Get the set of docs from the previous element.
+      const prevDocs = allDocsSets[i - 1];
 
-    const strippedDocs = docs.map(stripLocalIndexFromDoc);
-    const strippedPrevDocs = prevDocs.map(stripLocalIndexFromDoc);
+      const strippedDocs = docs.map(stripLocalIndexFromDoc);
+      const strippedPrevDocs = prevDocs.map(stripLocalIndexFromDoc);
 
-    // See if they're equivalent with the current set.
-    return docsAreEquivalent(strippedPrevDocs, strippedDocs);
-  }, false as boolean);
+      // See if they're equivalent with the current set.
+      return docsAreEquivalent(strippedPrevDocs, strippedDocs);
+    },
+    false as boolean,
+  );
 }
 
 export async function storageHasAllStoragesDocs(

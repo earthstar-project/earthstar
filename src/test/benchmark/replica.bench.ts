@@ -7,6 +7,7 @@ import { writeRandomDocs } from "../test-utils.ts";
 import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
+import { FormatEs5 } from "../../formats/format_es5.ts";
 
 const scenarios: MultiplyScenarioOutput<{
   "replicaDriver": ScenarioItem<typeof replicaScenarios>;
@@ -37,23 +38,20 @@ for (const scenario of scenarios) {
 
   await writeRandomDocs(keypair, replica, 100);
 
-  await replica.set(keypair, {
-    format: "es.4",
-    content: "hello",
+  await replica.set(keypair, FormatEs5, {
+    text: "hello",
     path: `/stable.txt`,
   });
 
-  await replica.set(keypairB, {
-    format: "es.4",
-    content: "howdy",
+  await replica.set(keypairB, FormatEs5, {
+    text: "howdy",
     path: `/stable.txt`,
   });
 
   Deno.bench(`Replica.set (${scenario.name})`, { group: "set" }, async () => {
     setGlobalCryptoDriver(crypto);
-    await replica.set(keypair, {
-      format: "es.4",
-      content: "hi",
+    await replica.set(keypair, FormatEs5, {
+      text: "hi",
       path: `/test/${randomId()}.txt`,
     });
   });

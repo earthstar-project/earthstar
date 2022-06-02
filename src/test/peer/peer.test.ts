@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "../asserts.ts";
 
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IReplica } from "../../replica/replica-types.ts";
+
 import {
   GlobalCryptoDriver,
   setGlobalCryptoDriver,
@@ -44,7 +44,7 @@ function runPeerTests(
 
   setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
-  function makeStorage(share: ShareAddress): IReplica {
+  function makeStorage(share: ShareAddress): Replica {
     const storage = new Replica({
       driver: scenario.subscenarios.replicaDriver.makeDriver(share),
     });

@@ -41,11 +41,12 @@ export const SELECT_KEY_CONFIG_QUERY = `SELECT key FROM config`;
 
 export const DELETE_CONFIG_QUERY = `DELETE FROM config WHERE key = :key;`;
 
-export const UPSERT_DOC_QUERY = `INSERT OR REPLACE INTO docs (doc, localIndex)
-VALUES (:doc, :localIndex);`;
+export const UPSERT_DOC_QUERY =
+  `INSERT OR REPLACE INTO docs (format, workspace, path, contentHash, content, author, timestamp, deleteAfter, signature, localIndex)
+VALUES (:format, :workspace, :path, :contentHash, :content, :author, :timestamp, :deleteAfter, :signature, :_localIndex);`;
 
 export const SELECT_EXPIRED_DOC_QUERY =
-  `SELECT doc FROM docs WHERE deleteAfter <= :now`;
+  `SELECT path FROM docs WHERE deleteAfter <= :now`;
 
 export const DELETE_EXPIRED_DOC_QUERY =
   `DELETE FROM docs WHERE deleteAfter <= :now`;
@@ -55,25 +56,21 @@ export const SET_ENCODING_QUERY = `PRAGMA encoding = "UTF-8";`;
 export const GET_ENCODING_QUERY = `PRAGMA encoding;`;
 
 export const CREATE_DOCS_TABLE_QUERY = `CREATE TABLE IF NOT EXISTS docs (
-    doc TEXT NOT NULL,
-    format TEXT GENERATED ALWAYS AS (json_extract(doc, '$.format')) VIRTUAL NOT NULL,
-    path TEXT GENERATED ALWAYS AS (json_extract(doc, '$.path')) VIRTUAL NOT NULL,
-    author TEXT GENERATED ALWAYS AS (json_extract(doc, '$.author')) VIRTUAL NOT NULL,
-    timestamp NUMBER GENERATED ALWAYS AS (json_extract(doc, '$.timestamp')) VIRTUAL NOT NULL,
-    signature TEXT GENERATED ALWAYS AS (json_extract(doc, '$.signature')) VIRTUAL NOT NULL,
-    deleteAfter NUMBER GENERATED ALWAYS AS (json_extract(doc, '$.deleteAfter')) VIRTUAL,
-    localIndex NUMBER NOT NULL UNIQUE,
-		PRIMARY KEY(localIndex)
+		format TEXT NOT NULL,
+		workspace TEXT NOT NULL,
+		path TEXT NOT NULL,
+		contentHash TEXT NOT NULL,
+		content BLOB NOT NULL,
+		author TEXT NOT NULL,
+		timestamp NUMBER NOT NULL,
+		deleteAfter NUMBER,  -- can be null
+		signature TEXT NOT NULL,
+		localIndex NUMBER NOT NULL UNIQUE,
+		PRIMARY KEY(path, author)
 );`;
 
-export const CREATE_INDEXES_QUERY =
-  `CREATE INDEX IF NOT EXISTS docsFormat ON docs(format); 
-   CREATE INDEX IF NOT EXISTS docsPath ON docs(path);
-   CREATE INDEX IF NOT EXISTS docsAuthor ON docs(author);
-   CREATE INDEX IF NOT EXISTS docsTimestamp ON docs(timestamp);
-   CREATE INDEX IF NOT EXISTS docsSignature ON docs(signature);
-   CREATE INDEX IF NOT EXISTS docsDeleteAfter ON docs(deleteAfter);
-  `;
+export const CREATE_LOCAL_INDEX_INDEX_QUERY =
+  `CREATE INDEX IF NOT EXISTS idx1 ON docs(localIndex);`;
 
 export const CREATE_CONFIG_TABLE_QUERY = `CREATE TABLE IF NOT EXISTS config (
 		key TEXT NOT NULL PRIMARY KEY,
@@ -83,7 +80,7 @@ export const CREATE_CONFIG_TABLE_QUERY = `CREATE TABLE IF NOT EXISTS config (
 // utilities
 
 export function makeDocQuerySql(
-  query: Query<string[]>,
+  query: Query,
   now: number,
   mode: "documents" | "delete",
 ): { sql: string; params: Record<string, any> } {
@@ -234,6 +231,19 @@ export function makeDocQuerySql(
   if (query.filter?.author !== undefined) {
     havings.push("author = :author");
     params.author = query.filter.author;
+  }
+  // Sqlite length() counts unicode characters for TEXT and bytes for BLOB.
+  if (query.filter?.contentLength !== undefined) {
+    havings.push("length(content) = :contentLength");
+    params.contentLength = query.filter.contentLength;
+  }
+  if (query.filter?.contentLengthGt !== undefined) {
+    havings.push("length(content) > :contentLengthGt");
+    params.contentLengthGt = query.filter.contentLengthGt;
+  }
+  if (query.filter?.contentLengthLt !== undefined) {
+    havings.push("length(content) < :contentLengthLt");
+    params.contentLengthLt = query.filter.contentLengthLt;
   }
 
   if (query.startAfter !== undefined) {

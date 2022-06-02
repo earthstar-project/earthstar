@@ -1,7 +1,7 @@
 import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
 import { DocDriverLocalStorage } from "../../replica/doc_drivers/localstorage.ts";
-import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
+//import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
 import { DocDriverSqliteFfi } from "../../replica/doc_drivers/sqlite_ffi.ts";
 import { PartnerScenario, ReplicaScenario, Scenario } from "./types.ts";
 import {
@@ -52,6 +52,7 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
       }),
     },
   },
+  /*
   {
     name: "Sqlite",
     item: {
@@ -67,6 +68,7 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
       }),
     },
   },
+  */
 ];
 
 export class PartnerScenarioWeb<F> implements PartnerScenario<F> {

@@ -416,7 +416,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     return true;
   }
 
-  static checkAuthorCanWriteToPath(
+  static _checkAuthorCanWriteToPath(
     author: AuthorAddress,
     path: Path,
   ): true | ValidationError {
