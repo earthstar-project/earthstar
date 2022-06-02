@@ -41,8 +41,9 @@ export const SELECT_KEY_CONFIG_QUERY = `SELECT key FROM config`;
 
 export const DELETE_CONFIG_QUERY = `DELETE FROM config WHERE key = :key;`;
 
-export const UPSERT_DOC_QUERY = `INSERT OR REPLACE INTO docs (doc, localIndex)
-VALUES (:doc, :localIndex);`;
+export const UPSERT_DOC_QUERY =
+  `INSERT OR REPLACE INTO docs (doc, localIndex, pathAuthor)
+VALUES (:doc, :localIndex, :pathAuthor)`;
 
 export const SELECT_EXPIRED_DOC_QUERY =
   `SELECT doc FROM docs WHERE deleteAfter <= :now`;
@@ -56,14 +57,15 @@ export const GET_ENCODING_QUERY = `PRAGMA encoding;`;
 
 export const CREATE_DOCS_TABLE_QUERY = `CREATE TABLE IF NOT EXISTS docs (
     doc TEXT NOT NULL,
+    pathAuthor TEXT NOT NULL,
+    localIndex NUMBER NOT NULL UNIQUE,
     format TEXT GENERATED ALWAYS AS (json_extract(doc, '$.format')) VIRTUAL NOT NULL,
     path TEXT GENERATED ALWAYS AS (json_extract(doc, '$.path')) VIRTUAL NOT NULL,
     author TEXT GENERATED ALWAYS AS (json_extract(doc, '$.author')) VIRTUAL NOT NULL,
     timestamp NUMBER GENERATED ALWAYS AS (json_extract(doc, '$.timestamp')) VIRTUAL NOT NULL,
     signature TEXT GENERATED ALWAYS AS (json_extract(doc, '$.signature')) VIRTUAL NOT NULL,
     deleteAfter NUMBER GENERATED ALWAYS AS (json_extract(doc, '$.deleteAfter')) VIRTUAL,
-    localIndex NUMBER NOT NULL UNIQUE,
-		PRIMARY KEY(localIndex)
+		PRIMARY KEY(pathAuthor)
 );`;
 
 export const CREATE_INDEXES_QUERY =
@@ -73,6 +75,8 @@ export const CREATE_INDEXES_QUERY =
    CREATE INDEX IF NOT EXISTS docsTimestamp ON docs(timestamp);
    CREATE INDEX IF NOT EXISTS docsSignature ON docs(signature);
    CREATE INDEX IF NOT EXISTS docsDeleteAfter ON docs(deleteAfter);
+   CREATE INDEX IF NOT EXISTS docsLocalIndex ON docs(localIndex);
+   CREATE INDEX IF NOT EXISTS docsPathAuthor ON docs(pathAuthor);
   `;
 
 export const CREATE_CONFIG_TABLE_QUERY = `CREATE TABLE IF NOT EXISTS config (

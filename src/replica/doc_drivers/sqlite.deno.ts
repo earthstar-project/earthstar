@@ -3,13 +3,12 @@ import {
   EarthstarError,
   isErr,
   ReplicaIsClosedError,
-  ValidationError,
 } from "../../util/errors.ts";
 import { IReplicaDocDriver } from "../replica-types.ts";
 import {
   CREATE_CONFIG_TABLE_QUERY,
   CREATE_DOCS_TABLE_QUERY,
-  CREATE_LOCAL_INDEX_INDEX_QUERY,
+  CREATE_INDEXES_QUERY,
   DELETE_CONFIG_QUERY,
   DELETE_EXPIRED_DOC_QUERY,
   GET_ENCODING_QUERY,
@@ -28,7 +27,6 @@ import * as Sqlite from "https://deno.land/x/sqlite@v3.2.0/mod.ts";
 //--------------------------------------------------
 
 import { Logger } from "../../util/log.ts";
-import { bytesToString, stringToBytes } from "../../util/bytes.ts";
 import { Query } from "../../query/query-types.ts";
 import { cleanUpQuery } from "../../query/query.ts";
 import { sortedInPlace } from "../compare.ts";
@@ -42,17 +40,16 @@ interface ConfigObject extends Sqlite.RowObject {
 }
 
 interface DocObject extends Sqlite.RowObject {
+  doc: string;
   format: string;
-  workspace: string;
   path: string;
-  contentHash: string;
-  content: Uint8Array;
   author: string;
   timestamp: number;
-  deleteAfter: number;
   signature: string;
+  deleteAfter: number | null;
   localIndex?: number;
   toSortWithinPath?: number;
+  pathAuthor?: string;
 }
 
 /** A strorage driver which persists to SQLite. Works in Deno and browsers. */
@@ -154,7 +151,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     this._db = new Sqlite.DB(this._filename, {
       memory: this._filename === ":memory:",
     });
-    this._ensureTables();
+    this.ensureTables();
 
     const maxLocalIndexQuery = this._db.prepareQuery<[number]>(
       MAX_LOCAL_INDEX_QUERY,
@@ -224,22 +221,6 @@ export class DocDriverSqlite implements IReplicaDocDriver {
 
       this.share = opts.share;
     }
-
-    // check and set schemaVersion
-    let schemaVersion = this._getConfigSync("schemaVersion");
-    logger.log(`constructor    schemaVersion: ${schemaVersion}`);
-
-    if (schemaVersion === undefined) {
-      schemaVersion = "1";
-      this.setConfig("schemaVersion", schemaVersion);
-    } else if (schemaVersion !== "1") {
-      this.close(false);
-      throw new ValidationError(
-        `sqlite file ${this._filename} has unknown schema version ${schemaVersion}`,
-      );
-    }
-
-    // get maxlocalindex
   }
 
   //--------------------------------------------------
@@ -324,9 +305,11 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     return this._maxLocalIndex;
   }
 
-  queryDocs(
-    queryToClean: Query<string[]>,
-  ): Promise<DocBase<string>[]> {
+  queryDocs(queryToClean: Query<string[]>): Promise<DocBase<string>[]> {
+    return Promise.resolve(this.queryDocsSync(queryToClean));
+  }
+
+  private queryDocsSync(queryToClean: Query<string[]>): DocBase<string>[] {
     // Query the documents
 
     logger.debug("queryDocs", queryToClean);
@@ -338,7 +321,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     const { query, willMatch } = cleanUpQuery(queryToClean);
     logger.debug(`    cleanUpQuery.  willMatch = ${willMatch}`);
     if (willMatch === "nothing") {
-      return Promise.resolve([]);
+      return [];
     }
     const now = Date.now() * 1000;
 
@@ -348,31 +331,20 @@ export class DocDriverSqlite implements IReplicaDocDriver {
 
     const docsQuery = this._db.prepareQuery<Sqlite.Row, DocObject>(sql);
 
-    const docs = docsQuery.allEntries(params);
+    const docRows = docsQuery.allEntries(params);
 
-    if (query.historyMode === "latest") {
-      // remove extra field we added to find the winner within each path
-      docs.forEach((d) => {
-        delete d.toSortWithinPath;
-      });
-    }
-
-    // TODO: limitBytes, when this is added back to Query
-
-    // Transform the content from the DB (saved as BLOB) back to string
-
-    const docsWithStringContent = docs.map((doc) => ({
-      ...doc,
-      content: doc.content ? bytesToString(doc.content) : "",
-      _localIndex: doc.localIndex,
-    }));
-
-    docsWithStringContent.forEach((doc) => delete doc.localIndex);
-    docsWithStringContent.forEach((doc) => Object.freeze(doc));
-    logger.debug(`  result: ${docs.length} docs`);
+    logger.debug(`  result: ${docRows.length} docs`);
 
     docsQuery.finalize();
-    return Promise.resolve(docsWithStringContent);
+
+    const docs = [];
+
+    for (const row of docRows) {
+      const doc = JSON.parse(row.doc);
+      docs.push({ ...doc, _localIndex: row.localIndex });
+    }
+
+    return docs;
   }
 
   //--------------------------------------------------
@@ -381,6 +353,12 @@ export class DocDriverSqlite implements IReplicaDocDriver {
   upsert<DocType extends DocBase<string>>(
     doc: DocType,
   ): Promise<DocType> {
+    return Promise.resolve(this.upsertSync(doc));
+  }
+
+  private upsertSync<DocType extends DocBase<string>>(
+    doc: DocType,
+  ): DocType {
     // Insert new doc, replacing old doc if there is one
     logger.debug(`upsertDocument(doc.path: ${JSON.stringify(doc.path)})`);
 
@@ -389,24 +367,17 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     }
 
     Object.freeze(doc);
-    const docWithLocalIndex = {
-      ...doc,
-      _localIndex: this._maxLocalIndex + 1,
+    const row = {
+      doc: JSON.stringify(doc),
+      localIndex: this._maxLocalIndex + 1,
+      pathAuthor: `${doc.path} ${doc.author}`,
     };
 
     this._maxLocalIndex += 1;
-
-    const contentAsBytes = stringToBytes(doc.content);
-
-    const docWithBytes = {
-      ...docWithLocalIndex,
-      content: contentAsBytes,
-    };
-
     //  TODOM3: Fix this any type.
-    this._db.query(UPSERT_DOC_QUERY, docWithBytes as any);
+    this._db.query(UPSERT_DOC_QUERY, row);
 
-    return Promise.resolve(docWithLocalIndex);
+    return { ...doc, _localIndex: row.localIndex };
   }
 
   eraseExpiredDocs() {
@@ -420,32 +391,25 @@ export class DocDriverSqlite implements IReplicaDocDriver {
       SELECT_EXPIRED_DOC_QUERY,
     );
 
-    const docsToDelete = toDeleteQuery.allEntries({ now });
-
-    const docsWithStringContent = docsToDelete.map((docToDelete) => ({
-      ...docToDelete,
-      content: docToDelete.content ? bytesToString(docToDelete.content) : "",
-      _localIndex: docToDelete.localIndex,
-    }));
-
-    docsWithStringContent.forEach((doc) => delete doc.localIndex);
-    docsWithStringContent.forEach((doc) => Object.freeze(doc));
+    const docsToWipe = toDeleteQuery.allEntries({ now });
 
     toDeleteQuery.finalize();
 
     this._db.query(DELETE_EXPIRED_DOC_QUERY, { now });
 
-    return Promise.resolve(docsWithStringContent as CoreDoc[]);
+    const docs = [];
+
+    for (const row of docsToWipe) {
+      docs.push(JSON.parse(row.doc));
+    }
+
+    return Promise.resolve(docs);
   }
 
   //--------------------------------------------------
   // SQL STUFF
 
-  _ensureTables() {
-    // for each path and author we can have at most one document
-
-    // TODO: how to tell if we're loading an old sqlite file with old schema?
-
+  private ensureTables() {
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
     }
@@ -453,20 +417,32 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     // make sure sqlite is using utf-8
     this._db.query(SET_ENCODING_QUERY);
     const encoding = this._db.query(GET_ENCODING_QUERY);
+    this._db.query(CREATE_CONFIG_TABLE_QUERY);
 
-    /*
-        if (res !== "UTF-8") {
-            throw new Error(
-                `sqlite encoding is stubbornly set to ${encoding} instead of UTF-8`,
-            );
-        }*/
+    // check and set schemaVersion
+    let schemaVersion = this._getConfigSync("schemaVersion");
+    logger.log(`constructor    schemaVersion: ${schemaVersion}`);
+
+    let docsToMigrate: DocBase<string>[] = [];
+
+    if (schemaVersion === undefined) {
+      schemaVersion = "2";
+      this.setConfig("schemaVersion", schemaVersion);
+    } else if (schemaVersion !== "2") {
+      // MIGRATE.
+      docsToMigrate = this.queryDocsSync({
+        historyMode: "all",
+        orderBy: "localIndex ASC",
+      });
+
+      this._db.query(`DROP TABLE docs;`);
+    }
 
     this._db.query(CREATE_DOCS_TABLE_QUERY);
-    this._db.query(CREATE_LOCAL_INDEX_INDEX_QUERY);
+    this._db.query(CREATE_INDEXES_QUERY);
 
-    // the config table is used to store these variables:
-    //     share - the share this store was created for
-    //     schemaVersion
-    this._db.query(CREATE_CONFIG_TABLE_QUERY);
+    for (const doc of docsToMigrate) {
+      this.upsertSync(doc);
+    }
   }
 }

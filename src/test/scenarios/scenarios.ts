@@ -15,6 +15,7 @@ import { IPeer } from "../../peer/peer-types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
 import { OptionalFormats } from "../../formats/default.ts";
+import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -52,7 +53,7 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
       }),
     },
   },
-  /*
+
   {
     name: "Sqlite",
     item: {
@@ -68,7 +69,6 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
       }),
     },
   },
-  */
 ];
 
 export class PartnerScenarioWeb<F> implements PartnerScenario<F> {

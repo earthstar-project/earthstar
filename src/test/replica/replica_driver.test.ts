@@ -277,8 +277,6 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
 
       let docs = await driver.queryDocs({}) as DocEs4[];
 
-      console.log({ docs });
-
       assertEquals(docs.length, 1, "query returns 1 doc");
       assertEquals(docs[0]._localIndex, 0, "docs[0]._localIndex is 0");
       assertEquals(docs[0].content, "Hello 0", "content is from doc0");
@@ -599,7 +597,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       const normalDoc0: DocEs4 = {
         format: "es.4",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
-        content: "Hello 1",
+        content: "Hello 2",
         contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
         deleteAfter: null,
         path: "/posts/post-0002.txt",

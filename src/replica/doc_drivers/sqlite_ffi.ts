@@ -44,6 +44,7 @@ type SqlDocRow = {
   deleteAfter: number | null;
   localIndex?: number;
   toSortWithinPath?: number;
+  pathAuthor: string;
 };
 
 /** A strorage driver which persists to SQLite using native bindings. Works in Deno.
@@ -333,7 +334,8 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
     const docs = [];
 
     for (const row of docRows) {
-      docs.push(JSON.parse(row.doc));
+      const doc = JSON.parse(row.doc);
+      docs.push({ ...doc, _localIndex: row.localIndex });
     }
 
     return docs;
@@ -363,6 +365,7 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
     const row = {
       doc: JSON.stringify(doc),
       localIndex: this._maxLocalIndex + 1,
+      pathAuthor: `${doc.path} ${doc.author}`,
     };
 
     this._maxLocalIndex += 1;
