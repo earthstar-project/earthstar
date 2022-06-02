@@ -21,7 +21,8 @@ export function sleep(ms: number): Promise<void> {
 
 // TODO: better randomness here
 export function randomId(): string {
-  return "" + Math.random() + Math.random();
+  return "" + Math.floor(Math.random() * 1000) +
+    Math.floor(Math.random() * 1000);
 }
 
 // replace all occurrences of substring "from" with "to"

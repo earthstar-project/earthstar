@@ -13,7 +13,7 @@ import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
 import { throws } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 import { LogLevel, setLogLevel } from "../../util/log.ts";
-import { FormatterEs4 } from "../../formatters/formatter_es4.ts";
+import { FormatEs4 } from "../../formats/format_es4.ts";
 
 //setLogLevel("replica-cache", LogLevel.Debug);
 
@@ -30,7 +30,6 @@ Deno.test("ReplicaCache", async () => {
   const replica = new Replica(
     {
       driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
-      formats: [FormatterEs4],
     },
   );
 
@@ -65,10 +64,9 @@ Deno.test("ReplicaCache", async () => {
     "latestDocAtPath result is undefined",
   );
 
-  await cache._replica.set(keypair, {
+  await cache._replica.set(keypair, FormatEs4, {
     content: "Hello!",
     path: "/test/hello.txt",
-    format: "es.4",
   });
 
   await sleep(100);
@@ -78,10 +76,9 @@ Deno.test("ReplicaCache", async () => {
 
   assertEquals(cache.version, 5, "Cache was updated five times");
 
-  cache._replica.set(keypair, {
+  cache._replica.set(keypair, FormatEs4, {
     content: "Apples!",
     path: "/test/apples.txt",
-    format: "es.4",
   });
 
   await sleep(100);
@@ -90,10 +87,9 @@ Deno.test("ReplicaCache", async () => {
   // Once for latestDocs
   assertEquals(cache.version, 7, "Cache was updated seven times");
 
-  cache._replica.set(keypair, {
+  cache._replica.set(keypair, FormatEs4, {
     content: "Oranges!",
     path: "/test/oranges.txt",
-    format: "es.4",
   });
 
   await sleep(100);
@@ -108,10 +104,9 @@ Deno.test("ReplicaCache", async () => {
   assertStrictEquals(values.orangesDoc?.path, "/test/oranges.txt");
   assertStrictEquals(values.orangesDoc?.author, keypair.address);
 
-  cache._replica.set(keypairB, {
+  cache._replica.set(keypairB, FormatEs4, {
     content: "Suzy's Oranges!",
     path: "/test/oranges.txt",
-    format: "es.4",
   });
 
   await sleep(100);
@@ -165,9 +160,8 @@ Deno.test("ReplicaCache", async () => {
   }, ReplicaCacheIsClosedError);
 
   assertThrows(() => {
-    cache.set(keypair, {
+    cache.set(keypair, FormatEs4, {
       content: "na",
-      format: "es.4",
       path: "bloo",
     });
   }, ReplicaCacheIsClosedError);

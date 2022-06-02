@@ -1,6 +1,7 @@
 import { Crypto } from "../../crypto/crypto.ts";
+import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
-import { CoreDoc, QuerySourceEvent } from "../../replica/replica-types.ts";
+import { QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
 
 import { HaveEntryKeeper } from "../../syncer/have_entry_keeper.ts";
@@ -25,36 +26,36 @@ Deno.test("HaveEntryKeeper", async () => {
     },
   );
 
-  await replica.set(keypair, {
-    format: "es.4",
+  await replica.set(keypair, FormatEs4, {
     path: "/shared_path",
     content: "Hello",
   });
 
-  await replica.set(keypairB, {
-    format: "es.4",
+  await replica.set(keypairB, FormatEs4, {
     path: "/shared_path",
     content: "Howdy",
   });
 
-  await replica.set(keypair, {
-    format: "es.4",
+  await replica.set(keypair, FormatEs4, {
     path: "/another_path",
     content: "Greetings",
   });
 
-  await replica.set(keypairB, {
-    format: "es.4",
+  await replica.set(keypairB, FormatEs4, {
     path: "/yet_another_path",
     content: "Yo.",
   });
 
   const haveKeeper = new HaveEntryKeeper("existing");
 
-  const queryStream = replica.getQueryStream({
-    historyMode: "all",
-    orderBy: "localIndex ASC",
-  }, "existing");
+  const queryStream = replica.getQueryStream(
+    {
+      historyMode: "all",
+      orderBy: "localIndex ASC",
+    },
+    [FormatEs4],
+    "existing",
+  );
 
   await queryStream.pipeTo(haveKeeper.writable);
 
@@ -89,23 +90,25 @@ Deno.test("HaveEntryKeeper", async () => {
 
   const liveHaveKeeper = new HaveEntryKeeper("everything");
 
-  const liveQueryStream = replica.getQueryStream({
-    historyMode: "all",
-    orderBy: "localIndex ASC",
-  }, "everything");
+  const liveQueryStream = replica.getQueryStream(
+    {
+      historyMode: "all",
+      orderBy: "localIndex ASC",
+    },
+    [FormatEs4],
+    "everything",
+  );
 
   liveQueryStream.pipeTo(liveHaveKeeper.writable);
 
   const liveEntryStream = liveHaveKeeper.readable;
 
-  await replica.set(keypairB, {
-    format: "es.4",
+  await replica.set(keypairB, FormatEs4, {
     path: "/more_paths",
     content: "Hiiiii",
   });
 
-  await replica.set(keypairB, {
-    format: "es.4",
+  await replica.set(keypairB, FormatEs4, {
     path: "/another_path",
     content: "Hiiiii",
   });
@@ -169,35 +172,47 @@ Deno.test("HaveEntryKeeper hashes", async () => {
     driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
   });
 
-  const ingestWritable = new WritableStream<QuerySourceEvent<CoreDoc>>({
+  const ingestWritable = new WritableStream<QuerySourceEvent<DocEs4>>({
     async write(event) {
       if (event.kind === "success" || event.kind === "existing") {
-        await otherReplica.ingest(event.doc);
+        await otherReplica.ingest(FormatEs4, event.doc);
       }
     },
   });
 
-  await replica.getQueryStream({
-    historyMode: "all",
-    orderBy: "localIndex ASC",
-  }, "existing").pipeTo(ingestWritable);
+  await replica.getQueryStream(
+    {
+      historyMode: "all",
+      orderBy: "localIndex ASC",
+    },
+    [FormatEs4],
+    "existing",
+  ).pipeTo(ingestWritable);
 
   // Now set up their HaveEntryKeepers
 
   const haveKeeper = new HaveEntryKeeper("existing");
 
-  const queryStream = replica.getQueryStream({
-    historyMode: "all",
-  }, "existing");
+  const queryStream = replica.getQueryStream(
+    {
+      historyMode: "all",
+    },
+    [FormatEs4],
+    "existing",
+  );
 
   await queryStream.pipeTo(haveKeeper.writable);
 
   const otherHaveKeeper = new HaveEntryKeeper("existing");
 
-  const otherQueryStream = otherReplica.getQueryStream({
-    historyMode: "all",
-    orderBy: "localIndex ASC",
-  }, "existing");
+  const otherQueryStream = otherReplica.getQueryStream(
+    {
+      historyMode: "all",
+      orderBy: "localIndex ASC",
+    },
+    [FormatEs4],
+    "existing",
+  );
 
   await otherQueryStream.pipeTo(otherHaveKeeper.writable);
 

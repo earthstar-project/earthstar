@@ -137,7 +137,7 @@ const ES5_CORE_SCHEMA: CheckObjOpts = {
     path: checkString({ allowedChars: pathChars, minLen: 2, maxLen: 512 }),
     signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
     timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
-    workspace: checkString({ allowedChars: workspaceAddressChars }),
+    share: checkString({ allowedChars: workspaceAddressChars }),
     blobSize: checkInt({
       min: MIN_BLOB_SIZE,
       max: MAX_BLOB_SIZE,
@@ -223,13 +223,16 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       author: keypair.address,
       text: input.text,
       textHash: await Crypto.sha256base32(input.text),
-      deleteAfter: input.deleteAfter ?? undefined,
       path: input.path,
       timestamp,
       share,
       signature: "?", // signature will be added in just a moment
       // _localIndex will be added during upsert.  it's not needed for the signature.
     };
+
+    if (input.deleteAfter) {
+      doc["deleteAfter"] = input.deleteAfter;
+    }
 
     if (input.blob) {
       doc.blobHash = await Crypto.sha256base32(input.blob);
@@ -349,6 +352,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   ): true | ValidationError {
     if (now === undefined) now = Date.now() * 1000;
     // do this first to ensure we have all the right datatypes in the right fields
+
     const errBV = this._checkBasicDocumentValidity(doc);
     if (isErr(errBV)) return errBV;
 
@@ -528,7 +532,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     }
     if (path.indexOf(".") !== -1 && hasBlob === false) {
       return new ValidationError(
-        "when a blob is provided, path must not contain '!'",
+        "when no blob is provided, path must not contain '.'",
       );
     }
 

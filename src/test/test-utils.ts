@@ -4,6 +4,7 @@ import { AuthorKeypair, DocBase } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 import { equal } from "../../deps.ts";
+import { FormatEs4 } from "../formats/format_es4.ts";
 import { FormatEs5 } from "../formats/format_es5.ts";
 
 // for testing unicode
@@ -102,7 +103,7 @@ export function writeRandomDocs(
 
     return storage.set(keypair, FormatEs5, {
       text: `${rand}`,
-      path: `/${fstRand}/${rand}.txt`,
+      path: `/${fstRand}/${rand}`,
     });
   });
 

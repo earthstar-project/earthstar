@@ -1,8 +1,6 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { DocEs4, FormatterEs4 } from "../../formatters/formatter_es4.ts";
-
-import { CoreDoc, IReplica } from "../../replica/replica-types.ts";
+import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { Replica } from "../../replica/replica.ts";
 import { SyncAgentEvent, SyncAgentStatus } from "../../syncer/syncer_types.ts";
 import { SyncAgent } from "../../syncer/sync_agent.ts";
@@ -27,11 +25,11 @@ const scenarios: MultiplyScenarioOutput<{
 const SHARE_ADDR = "+test.a123";
 
 class SyncAgentTestHelper {
-  private targetReplica: IReplica;
-  private sourceReplica: IReplica;
+  private targetReplica: Replica;
+  private sourceReplica: Replica;
 
-  private targetSyncAgent: SyncAgent | undefined;
-  private sourceSyncAgent: SyncAgent | undefined;
+  private targetSyncAgent: SyncAgent<[typeof FormatEs4]> | undefined;
+  private sourceSyncAgent: SyncAgent<[typeof FormatEs4]> | undefined;
 
   private isReady = deferred();
 
@@ -41,10 +39,10 @@ class SyncAgentTestHelper {
   constructor(
     { mode, commonDocs, scenario, targetDocs = [], sourceDocs = [] }: {
       mode: "only_existing" | "live";
-      commonDocs: CoreDoc[];
+      commonDocs: DocEs4[];
       scenario: typeof scenarios[number];
-      targetDocs?: CoreDoc[];
-      sourceDocs?: CoreDoc[];
+      targetDocs?: DocEs4[];
+      sourceDocs?: DocEs4[];
     },
   ) {
     this.targetReplica = new Replica({
@@ -67,10 +65,12 @@ class SyncAgentTestHelper {
           this.targetSyncAgent = new SyncAgent({
             replica: this.targetReplica,
             mode,
+            formats: [FormatEs4],
           });
           this.sourceSyncAgent = new SyncAgent({
             replica: this.sourceReplica,
             mode,
+            formats: [FormatEs4],
           });
 
           const { targetEvents, sourceEvents } = this;
@@ -105,15 +105,15 @@ class SyncAgentTestHelper {
 
   async ingestDocs(
     where: "target" | "source" | "both",
-    docs: CoreDoc[],
+    docs: DocEs4[],
   ) {
     for (const doc of docs) {
       if (where === "source" || where === "both") {
-        await this.sourceReplica.ingest(doc);
+        await this.sourceReplica.ingest(FormatEs4, doc);
       }
 
       if (where === "target" || where === "both") {
-        await this.targetReplica.ingest(doc);
+        await this.targetReplica.ingest(FormatEs4, doc);
       }
     }
   }
@@ -159,7 +159,7 @@ function generateDoc(keypair: AuthorKeypair, input: {
   path: string;
   content: string;
 }) {
-  return FormatterEs4.generateDocument({
+  return FormatEs4.generateDocument({
     keypair,
     share: SHARE_ADDR,
     input: {
@@ -168,17 +168,17 @@ function generateDoc(keypair: AuthorKeypair, input: {
       content: input.content,
     },
     timestamp: Date.now() * 1000,
-  }) as Promise<DocEs4>;
+  });
 }
 
 for (const scenario of scenarios) {
   Deno.test(`SyncAgent (in sync + existing only) (${scenario.name})`, async (test) => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
-    const commonDoc = await generateDoc(keypair, {
+    const { doc: commonDoc } = await generateDoc(keypair, {
       content: "Hello",
       path: "/whatever",
-    });
+    }) as { doc: DocEs4 };
 
     const testHelper = new SyncAgentTestHelper(
       {
@@ -221,7 +221,7 @@ for (const scenario of scenarios) {
   Deno.test(`SyncAgent (in sync + live) (${scenario.name})`, async (test) => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
-    const commonDoc = await FormatterEs4.generateDocument({
+    const { doc: commonDoc } = await FormatEs4.generateDocument({
       keypair,
       share: SHARE_ADDR,
       input: {
@@ -230,7 +230,7 @@ for (const scenario of scenarios) {
         content: "hello",
       },
       timestamp: Date.now() * 1000,
-    }) as DocEs4;
+    }) as { doc: DocEs4 };
 
     const testHelper = new SyncAgentTestHelper({
       mode: "live",
@@ -262,10 +262,10 @@ for (const scenario of scenarios) {
       assertEquals(statuses.target.status, "idling");
 
       // Now the source replica gets a new doc.
-      const newDoc = await generateDoc(keypair, {
+      const { doc: newDoc } = await generateDoc(keypair, {
         path: "/whatever2",
         content: "Yo",
-      });
+      }) as { doc: DocEs4 };
 
       await testHelper.ingestDocs("source", [newDoc]);
 
@@ -315,20 +315,20 @@ for (const scenario of scenarios) {
       "suzy",
     ) as AuthorKeypair;
 
-    const commonDoc = await generateDoc(keypair, {
+    const { doc: commonDoc } = await generateDoc(keypair, {
       path: "/shared_path",
       content: "Hello",
-    });
+    }) as { doc: DocEs4 };
 
-    const onlySourceDoc = await generateDoc(keypair, {
+    const { doc: onlySourceDoc } = await generateDoc(keypair, {
       path: "/from_source",
       content: "Hi",
-    });
+    }) as { doc: DocEs4 };
 
-    const onlyTargetDoc = await generateDoc(keypairB, {
+    const { doc: onlyTargetDoc } = await generateDoc(keypairB, {
       path: "/from_target",
       content: "Howdy",
-    });
+    }) as { doc: DocEs4 };
 
     const testHelper = new SyncAgentTestHelper(
       {
@@ -411,20 +411,20 @@ for (const scenario of scenarios) {
       "suzy",
     ) as AuthorKeypair;
 
-    const commonDoc = await generateDoc(keypair, {
+    const { doc: commonDoc } = await generateDoc(keypair, {
       path: "/shared_path",
       content: "Hello",
-    });
+    }) as { doc: DocEs4 };
 
-    const onlySourceDoc = await generateDoc(keypair, {
+    const { doc: onlySourceDoc } = await generateDoc(keypair, {
       path: "/from_source",
       content: "Hi",
-    });
+    }) as { doc: DocEs4 };
 
-    const onlyTargetDoc = await generateDoc(keypairB, {
+    const { doc: onlyTargetDoc } = await generateDoc(keypairB, {
       path: "/from_target",
       content: "Howdy",
-    });
+    }) as { doc: DocEs4 };
 
     const testHelper = new SyncAgentTestHelper({
       mode: "live",
@@ -483,10 +483,10 @@ for (const scenario of scenarios) {
       // Send a new doc.
 
       // Now the source replica gets a new doc.
-      const newDoc = await generateDoc(keypair, {
+      const { doc: newDoc } = await generateDoc(keypair, {
         path: "/whatever",
         content: "Yo",
-      });
+      }) as { doc: DocEs4 };
 
       await testHelper.ingestDocs("source", [newDoc]);
 

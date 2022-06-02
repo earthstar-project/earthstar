@@ -1,7 +1,6 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { Query } from "../../query/query-types.ts";
-import { IReplica } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
@@ -28,6 +27,7 @@ import {
 } from "../../query/query-helpers.ts";
 import { ReplicaScenario, Scenario } from "../scenarios/types.ts";
 import { replicaScenarios } from "../scenarios/scenarios.ts";
+import { FormatEs4 } from "../../formats/format_es4.ts";
 
 let runQueryHelpersTests = async (
   scenario: Scenario<ReplicaScenario>,
@@ -35,7 +35,7 @@ let runQueryHelpersTests = async (
 ) => {
   let SUBTEST_NAME = scenario.name;
 
-  function makeStorage(ws: ShareAddress): IReplica {
+  function makeStorage(ws: ShareAddress): Replica {
     let driver = scenario.item.makeDriver(ws);
     return new Replica({ driver });
   }
@@ -102,7 +102,7 @@ let runQueryHelpersTests = async (
     interface Vector {
       note?: string;
       glob: string;
-      esQuery: Query;
+      esQuery: Query<string[]>;
       regex: string | null;
       matchingPaths: string[];
       nonMatchingPaths: string[];
@@ -421,8 +421,7 @@ let runQueryHelpersTests = async (
     let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 
     for (let path of docPathsForGlobTest) {
-      await storage.set(keypair1, {
-        format: "es.4",
+      await storage.set(keypair1, FormatEs4, {
         path: path,
         content: "content at " + path,
         timestamp: now,
@@ -832,8 +831,7 @@ let runQueryHelpersTests = async (
     let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 
     for (let path of docPathsForTemplateTest) {
-      await storage.set(keypair1, {
-        format: "es.4",
+      await storage.set(keypair1, FormatEs4, {
         path: path,
         content: "content at " + path,
       });

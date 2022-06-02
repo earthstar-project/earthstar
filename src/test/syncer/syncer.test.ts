@@ -17,15 +17,16 @@ import {
   ScenarioItem,
 } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
+import { FormatEs4 } from "../../formats/format_es4.ts";
 
 class SyncerTestHelper {
-  private scenario: PartnerScenario;
+  private scenario: PartnerScenario<[typeof FormatEs4]>;
   private aDuo: [Replica, Replica];
   private bDuo: [Replica, Replica];
   private cDuo: [Replica, Replica];
 
   constructor(
-    scenario: PartnerScenario,
+    scenario: PartnerScenario<[typeof FormatEs4]>,
     makeReplicaDriver: (addr: string, variant?: string) => IReplicaDriver,
   ) {
     this.scenario = scenario;
@@ -80,6 +81,8 @@ class SyncerTestHelper {
   }
 
   async commonSharesInSync() {
+    
+
     assert(await storagesAreSynced(this.aDuo));
     assert(await storagesAreSynced(this.bDuo));
     assert(await storagesAreSynced(this.cDuo) === false);
@@ -115,7 +118,7 @@ const scenarios: MultiplyScenarioOutput<{
 for (const scenario of scenarios) {
   Deno.test(`Syncer (${scenario.name})`, async () => {
     const helper = new SyncerTestHelper(
-      scenario.subscenarios.partner(),
+      scenario.subscenarios.partner([FormatEs4]),
       scenario.subscenarios.replicaDriver.makeDriver,
     );
 
