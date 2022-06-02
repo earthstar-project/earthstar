@@ -1,6 +1,13 @@
-import { CoreDoc, IReplica } from "../replica/replica-types.ts";
-import { ShareAddress, Timestamp } from "../util/doc-types.ts";
+import {
+  DocBase,
+  DocInputBase,
+  ShareAddress,
+  Timestamp,
+} from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
+import { Replica } from "../replica/replica.ts";
+import { IFormat } from "../formats/format_types.ts";
+import { OptionalFormats } from "../formats/default.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -32,7 +39,7 @@ export type SyncAgentWantEvent = {
 export type SyncAgentDocEvent = {
   kind: "DOC";
   id: string;
-  doc: CoreDoc;
+  doc: DocBase<string>;
 };
 
 /** An event sent when a SyncAgent doesn't want anything anymore, though it'll still serve HAVE requests. */
@@ -68,8 +75,9 @@ export type SyncAgentStatus = {
  * - `replica`: The replica to represent.
  * - `mode`: Whether to sync only existing docs or keep the connection open for new docs too.
  */
-export type SyncAgentOpts = {
-  replica: IReplica;
+export type SyncAgentOpts<F> = {
+  replica: Replica;
+  formats: OptionalFormats<F>;
   mode: "only_existing" | "live";
 };
 
@@ -106,10 +114,11 @@ export type SyncerMode = "once" | "live";
  * - `driver` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
  * - `mode` - Determines what kind of sync to carry out.
  */
-export interface SyncerOpts {
+export interface SyncerOpts<F> {
   peer: IPeer;
   partner: ISyncPartner;
   mode: SyncerMode;
+  formats: OptionalFormats<F>;
 }
 
 /** A map of sync statuses by the share address they're associated with. */

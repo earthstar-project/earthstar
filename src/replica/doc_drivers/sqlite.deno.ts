@@ -1,11 +1,11 @@
-import { ShareAddress } from "../../util/doc-types.ts";
+import { DocBase, ShareAddress } from "../../util/doc-types.ts";
 import {
   EarthstarError,
   isErr,
   ReplicaIsClosedError,
   ValidationError,
 } from "../../util/errors.ts";
-import { CoreDoc, IReplicaDocDriver } from "../replica-types.ts";
+import { IReplicaDocDriver } from "../replica-types.ts";
 import {
   CREATE_CONFIG_TABLE_QUERY,
   CREATE_DOCS_TABLE_QUERY,
@@ -33,8 +33,6 @@ import { Query } from "../../query/query-types.ts";
 import { cleanUpQuery } from "../../query/query.ts";
 import { sortedInPlace } from "../compare.ts";
 import { checkShareIsValid } from "../../core-validators/addresses.ts";
-import { DocEs4, FormatterEs4 } from "../../formatters/formatter_es4.ts";
-import { ExtractDocType } from "../../formatters/formatter_types.ts";
 
 const logger = new Logger("storage driver sqlite node", "yellow");
 
@@ -326,7 +324,9 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     return this._maxLocalIndex;
   }
 
-  queryDocs(queryToClean: Query): Promise<DocEs4[]> {
+  queryDocs(
+    queryToClean: Query<string[]>,
+  ): Promise<DocBase<string>[]> {
     // Query the documents
 
     logger.debug("queryDocs", queryToClean);
@@ -372,13 +372,13 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     logger.debug(`  result: ${docs.length} docs`);
 
     docsQuery.finalize();
-    return Promise.resolve(docsWithStringContent as DocEs4[]);
+    return Promise.resolve(docsWithStringContent);
   }
 
   //--------------------------------------------------
   // SET
 
-  upsert<DocType extends ExtractDocType<typeof FormatterEs4>>(
+  upsert<DocType extends DocBase<string>>(
     doc: DocType,
   ): Promise<DocType> {
     // Insert new doc, replacing old doc if there is one

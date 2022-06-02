@@ -40,6 +40,7 @@ export interface DocBase<FormatType extends string> {
   author: AuthorAddress;
   timestamp: Timestamp;
   signature: Signature;
+  deleteAfter?: number | null;
   _localIndex?: number;
 }
 

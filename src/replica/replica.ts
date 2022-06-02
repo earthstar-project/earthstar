@@ -3,16 +3,13 @@ import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
+  DocInputBase,
   FormatName,
-  LocalIndex,
   Path,
   ShareAddress,
 } from "../util/doc-types.ts";
-import { HistoryMode, Query } from "../query/query-types.ts";
+import { Query } from "../query/query-types.ts";
 import {
-  CoreDoc,
-  CoreDocInput,
-  IReplica,
   IReplicaDriver,
   QuerySourceEvent,
   QuerySourceMode,
@@ -20,7 +17,6 @@ import {
   ReplicaId,
   ReplicaOpts,
 } from "./replica-types.ts";
-import { FormatterEs4 } from "../formatters/formatter_es4.ts";
 import {
   isErr,
   ReplicaIsClosedError,
@@ -39,17 +35,22 @@ import {
   LockStream,
   OrCh,
 } from "../streams/stream_utils.ts";
-import { QuerySource } from "./query_source.ts";
+import { FormatInputType, IFormat } from "../formats/format_types.ts";
+import {
+  FallbackDoc,
+  getFormatsWithFallback,
+  OptionalFormats,
+  OptionalOriginal,
+} from "../formats/default.ts";
+
+import { docMatchesFilter } from "../query/query.ts";
+
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");
 const loggerSet = new Logger("replica set", "gold");
 const loggerIngest = new Logger("replica ingest", "gold");
 
 //================================================================================
-
-const CORE_VALIDATORS = {
-  "es.4": FormatterEs4,
-};
 
 function docCompareNewestFirst<
   FormatType extends FormatName,
@@ -74,7 +75,7 @@ function docCompareNewestFirst<
  * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
  * ```
  */
-export class Replica implements IReplica {
+export class Replica {
   replicaId: ReplicaId; // todo: save it to the driver too, and reload it when starting up
   /** The address of the share this replica belongs to. */
   share: ShareAddress;
@@ -84,18 +85,19 @@ export class Replica implements IReplica {
   private _isClosed = false;
   private ingestLockStream = new LockStream();
   private eventMultiStream: ChannelMultiStream<
-    ReplicaEvent<CoreDoc>["kind"],
+    ReplicaEvent<DocBase<string>>["kind"],
     "kind",
-    ReplicaEvent<CoreDoc>
+    ReplicaEvent<DocBase<string>>
   > = new ChannelMultiStream("kind", true);
-  private eventWriter: WritableStreamDefaultWriter<ReplicaEvent<CoreDoc>>;
-  private callbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
-
+  private eventWriter: WritableStreamDefaultWriter<
+    ReplicaEvent<DocBase<string>>
+  >;
+  private callbackSink = new CallbackSink<
+    ReplicaEvent<DocBase<string>>
+  >();
   private eraseInterval: number;
 
-  constructor(
-    { driver }: ReplicaOpts,
-  ) {
+  constructor({ driver }: ReplicaOpts) {
     const addressIsValidResult = checkShareIsValid(driver.docDriver.share);
 
     if (isErr(addressIsValidResult)) {
@@ -191,69 +193,56 @@ export class Replica implements IReplica {
     return this.replicaDriver.docDriver.getMaxLocalIndex();
   }
 
-  async getDocsAfterLocalIndex(
-    historyMode: HistoryMode,
-    startAfter: LocalIndex,
-    limit?: number,
-  ): Promise<CoreDoc[]> {
-    logger.debug(
-      `getDocsAfterLocalIndex(${historyMode}, ${startAfter}, ${limit})`,
-    );
-    if (this._isClosed) throw new ReplicaIsClosedError();
-    const query: Query = {
-      historyMode: historyMode,
-      orderBy: "localIndex ASC",
-      startAfter: {
-        localIndex: startAfter,
-      },
-      limit,
-    };
-    return await this.replicaDriver.docDriver.queryDocs(query);
-  }
-
   /** Returns all documents, including historical versions of documents by other identities. */
-  async getAllDocs(): Promise<CoreDoc[]> {
+  getAllDocs<F>(
+    formats?: OptionalFormats<F>,
+  ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getAllDocs()`);
-    if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.docDriver.queryDocs({
+
+    return this.queryDocs({
       historyMode: "all",
       orderBy: "path ASC",
-    });
+    }, formats);
   }
   /** Returns latest document from every path. */
-  async getLatestDocs(): Promise<CoreDoc[]> {
+  async getLatestDocs<F>(
+    formats?: OptionalFormats<F>,
+  ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getLatestDocs()`);
-    if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.docDriver.queryDocs({
+
+    return await this.queryDocs({
       historyMode: "latest",
       orderBy: "path ASC",
-    });
+    }, formats);
   }
   /** Returns all versions of a document by different authors from a specific path. */
-  async getAllDocsAtPath(path: Path): Promise<CoreDoc[]> {
+  async getAllDocsAtPath<F>(
+    path: Path,
+    formats?: OptionalFormats<F>,
+  ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getAllDocsAtPath("${path}")`);
-    if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.docDriver.queryDocs({
+
+    return await this.queryDocs({
       historyMode: "all",
       orderBy: "path ASC",
       filter: { path: path },
-    });
+    }, formats);
   }
   /** Returns the most recently written version of a document at a path. */
-  async getLatestDocAtPath(
+  async getLatestDocAtPath<F>(
     path: Path,
-  ): Promise<
-    CoreDoc | undefined
-  > {
+    formats?: OptionalFormats<F>,
+  ): Promise<FallbackDoc<F> | undefined> {
     logger.debug(`getLatestDocsAtPath("${path}")`);
-    if (this._isClosed) throw new ReplicaIsClosedError();
-    const docs = await this.replicaDriver.docDriver.queryDocs({
+
+    const docs = await this.queryDocs({
       historyMode: "latest",
       orderBy: "path ASC",
       filter: { path: path },
-    });
+    }, formats);
+
     if (docs.length === 0) return undefined;
-    return docs[0] as CoreDoc;
+    return docs[0];
   }
 
   /** Returns an array of docs for a given query.
@@ -268,22 +257,35 @@ export class Replica implements IReplica {
     const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
     ```
     */
-  async queryDocs(query: Query = {}): Promise<CoreDoc[]> {
+  async queryDocs<F>(
+    query: Omit<Query<[string]>, "formats"> = {},
+    formats?: OptionalFormats<F>,
+  ): Promise<FallbackDoc<F>[]> {
     logger.debug(`queryDocs`, query);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    return await this.replicaDriver.docDriver.queryDocs(query);
+    const f = getFormatsWithFallback(formats);
+    return await this.replicaDriver.docDriver.queryDocs({
+      ...query,
+      formats: f.map((f) => f.id),
+    }) as FallbackDoc<F>[];
   }
 
   /** Returns an array of all unique paths of documents returned by a given query. */
-  async queryPaths(query?: Query): Promise<Path[]> {
-    const docs = await this.queryDocs(query);
+  async queryPaths<F>(
+    query: Omit<Query<[string]>, "formats"> = {},
+    formats?: OptionalFormats<F>,
+  ): Promise<Path[]> {
+    const docs = await this.queryDocs(query, formats);
     const pathsSet = new Set(docs.map(({ path }) => path));
     return Array.from(pathsSet).sort();
   }
 
   /** Returns an array of all unique authors of documents returned by a given query. */
-  async queryAuthors(query?: Query): Promise<AuthorAddress[]> {
-    const docs = await this.queryDocs(query);
+  async queryAuthors<F>(
+    query: Omit<Query<[string]>, "formats"> = {},
+    formats?: OptionalFormats<F>,
+  ): Promise<AuthorAddress[]> {
+    const docs = await this.queryDocs(query, formats);
     const authorsSet = new Set(docs.map(({ author }) => author));
     return Array.from(authorsSet).sort();
   }
@@ -294,11 +296,18 @@ export class Replica implements IReplica {
   /**
    * Adds a new document to the replica. If a document signed by the same identity exists at the same path, it will be overwritten.
    */
+
+  // The Input type should match the formatter.
+  // The default format should be es5
   async set<
-    InputType extends CoreDocInput,
+    N extends FormatName,
+    I extends DocInputBase<N>,
+    O extends DocBase<N>,
+    FormatType extends IFormat<N, I, O>,
   >(
     keypair: AuthorKeypair,
-    docToSet: InputType,
+    format: FormatType,
+    docToSet: Omit<FormatInputType<FormatType>, "format">,
   ): Promise<
     true | ValidationError
   > {
@@ -329,27 +338,25 @@ export class Replica implements IReplica {
 
     loggerSet.debug("...signing doc");
 
-    const format = docToSet.format;
-    const validator = CORE_VALIDATORS[format];
-
-    // HERE
-    // The return type is DocBase. Shouldn't it be the abstract type of the validator?
-    const signedDoc = await validator.generateDocument({
+    const result = await format.generateDocument({
       keypair,
-      input: docToSet,
+      input: { ...docToSet, format: format.id } as unknown as I,
       share: this.share,
       timestamp,
     });
 
-    if (isErr(signedDoc)) {
-      return signedDoc;
+    if (isErr(result)) {
+      return result;
     }
 
-    loggerSet.debug("...signature =", signedDoc.signature);
+    loggerSet.debug("...signature =", result.doc.signature);
 
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
-    const ingestEvent = await this.ingest(signedDoc);
+    const ingestEvent = await this.ingest(
+      format,
+      result.doc,
+    );
     loggerSet.debug("-----------------------");
     loggerSet.debug("...done ingesting");
     loggerSet.debug("...set is done.");
@@ -360,9 +367,13 @@ export class Replica implements IReplica {
    * Ingest an existing signed document to the replica.
    */
   async ingest<
-    DocType extends CoreDoc,
+    N extends FormatName,
+    I extends DocInputBase<N>,
+    O extends DocBase<N>,
+    FormatType extends IFormat<N, I, O>,
   >(
-    docToIngest: DocType,
+    format: FormatType,
+    docToIngest: O,
   ): Promise<
     true | ValidationError
   > {
@@ -371,24 +382,21 @@ export class Replica implements IReplica {
 
     loggerIngest.debug("...removing extra fields");
 
-    const docFormat = docToIngest.format;
-    const validator = CORE_VALIDATORS[docFormat];
+    const removeResultsOrErr = format
+      .removeExtraFields(docToIngest);
 
-    const removeResultsOrErr = validator.removeExtraFields(
-      docToIngest,
-    );
     if (isErr(removeResultsOrErr)) {
       return removeResultsOrErr;
     }
-    docToIngest = removeResultsOrErr.doc as DocType; // a copy of doc without extra fields
+    docToIngest = removeResultsOrErr.doc; // a copy of doc without extra fields
 
     const extraFields = removeResultsOrErr.extras; // any extra fields starting with underscores
     if (Object.keys(extraFields).length > 0) {
       loggerIngest.debug(`...extra fields found: ${J(extraFields)}`);
     }
 
-    // now actually check doc validity against core schema
-    const docIsValid = validator.checkDocumentIsValid(docToIngest);
+    const docIsValid = format.checkDocumentIsValid(docToIngest);
+
     if (isErr(docIsValid)) {
       return docIsValid;
     }
@@ -401,6 +409,7 @@ export class Replica implements IReplica {
       );
       const existingDocsSamePath = await this.getAllDocsAtPath(
         docToIngest.path,
+        [format] as any,
       );
       loggerIngest.debug(`  > ...got ${existingDocsSamePath.length}`);
 
@@ -468,8 +477,8 @@ export class Replica implements IReplica {
         maxLocalIndex,
         doc: docAsWritten, // with updated extra properties like _localIndex
         docIsLatest: isLatest,
-        prevDocFromSameAuthor: prevSameAuthor as DocType,
-        prevLatestDoc: prevLatest as DocType,
+        prevDocFromSameAuthor: prevSameAuthor,
+        prevLatestDoc: prevLatest,
       });
     });
 
@@ -480,8 +489,9 @@ export class Replica implements IReplica {
    * Overwrite every document from this author, including history versions, with an empty doc.
     @returns The number of documents changed, or -1 if there was an error.
    */
-  async overwriteAllDocsByAuthor(
+  async overwriteAllDocsByAuthor<F>(
     keypair: AuthorKeypair,
+    formats?: OptionalFormats<F>,
   ): Promise<number | ValidationError> {
     logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -489,20 +499,35 @@ export class Replica implements IReplica {
     const docsToOverwrite = await this.queryDocs({
       filter: { author: keypair.address },
       historyMode: "all",
-    });
+    }, formats);
     logger.debug(
       `    ...found ${docsToOverwrite.length} docs to overwrite`,
     );
     let numOverwritten = 0;
     let numAlreadyEmpty = 0;
-    for (const doc of docsToOverwrite) {
-      const validator = CORE_VALIDATORS[doc.format];
 
-      const wipedDoc = await validator.wipeDocument(keypair, doc);
+    const f = getFormatsWithFallback(formats);
+
+    const formatLookup: Record<string, OptionalOriginal<OptionalFormats<F>>> =
+      {};
+
+    for (const format of f) {
+      formatLookup[format.id] = format as typeof formatLookup[string];
+    }
+
+    for (const doc of docsToOverwrite) {
+      const format = formatLookup[doc.format];
+
+      if (!format) {
+        continue;
+      }
+
+      const wipedDoc = await format.wipeDocument(keypair, doc);
 
       if (isErr(wipedDoc)) return wipedDoc;
 
       const didIngest = await this.ingest(
+        format,
         wipedDoc,
       );
 
@@ -523,7 +548,10 @@ export class Replica implements IReplica {
     const erasedDocs = await this.replicaDriver.docDriver.eraseExpiredDocs();
 
     for (const doc of erasedDocs) {
-      await this.eventWriter.write({ kind: "expire", doc });
+      await this.eventWriter.write({
+        kind: "expire",
+        doc,
+      });
     }
   }
 
@@ -532,29 +560,77 @@ export class Replica implements IReplica {
    * @param channel - An optional string representing a channel of events to be subscribed to. Defaults to return all events.
    */
   getEventStream(
-    channel: OrCh<ReplicaEvent<CoreDoc>["kind"]> = "*",
-  ): ReadableStream<ReplicaEvent<CoreDoc>> {
+    channel: OrCh<ReplicaEvent<DocBase<string>>["kind"]> = "*",
+  ): ReadableStream<ReplicaEvent<DocBase<string>>> {
     return this.eventMultiStream.getReadableStream(channel);
   }
 
-  getQueryStream(
-    query: Query,
+  getQueryStream<
+    F,
+  >(
+    query: Omit<Query<[string]>, "formats"> = {},
+    formats?: OptionalFormats<F>,
     mode?: QuerySourceMode,
-  ): ReadableStream<QuerySourceEvent<CoreDoc>> {
-    const querySource = new QuerySource({
-      replica: this,
-      query,
-      mode,
-    });
+  ): ReadableStream<QuerySourceEvent<FallbackDoc<F>>> {
+    const queryDocs = this.queryDocs.bind(this);
+    const getEventStream = this.getEventStream.bind(this);
 
-    return new ReadableStream(querySource);
+    return new ReadableStream({
+      async start(controller) {
+        if (mode === "existing" || mode === "everything") {
+          const docs = await queryDocs(query, formats);
+
+          for (const doc of docs) {
+            controller.enqueue({
+              kind: "existing",
+              doc: doc,
+            });
+          }
+        }
+
+        controller.enqueue({ kind: "processed_all_existing" });
+
+        if (mode === "existing") {
+          controller.close();
+          return;
+        }
+
+        const eventStream = getEventStream();
+
+        const reader = eventStream.getReader();
+
+        while (true) {
+          const { done, value: event } = await reader.read();
+
+          if (done) return;
+
+          if (event.kind === "expire" || event.kind === "success") {
+            if (query.filter) {
+              if (docMatchesFilter(event.doc, query.filter)) {
+                controller.enqueue(event as QuerySourceEvent<FallbackDoc<F>>);
+                continue;
+              }
+            }
+
+            controller.enqueue(event as QuerySourceEvent<FallbackDoc<F>>);
+            continue;
+          }
+        }
+      },
+    }) as ReadableStream<
+      QuerySourceEvent<FallbackDoc<F>>
+    >;
   }
 
   /**
    * Provide a callback to be triggered every time a replica event occurs.
    * @returns A callback which unsubscribes the event.
    */
-  onEvent(callback: (event: ReplicaEvent<CoreDoc>) => void | Promise<void>) {
+  onEvent(
+    callback: (
+      event: ReplicaEvent<DocBase<FormatName>>,
+    ) => void | Promise<void>,
+  ) {
     return this.callbackSink.onWrite(callback);
   }
 }

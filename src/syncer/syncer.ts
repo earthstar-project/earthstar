@@ -1,5 +1,6 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
+import { OptionalFormats } from "../formats/default.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import {
   BlockingBus,
@@ -19,10 +20,10 @@ import {
 import { SyncAgent } from "./sync_agent.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
-export class Syncer {
+export class Syncer<F> {
   private peer: IPeer;
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
-  private syncAgents = new Map<ShareAddress, SyncAgent>();
+  private syncAgents = new Map<ShareAddress, SyncAgent<F>>();
   private mode: SyncerMode;
   private incomingStreamCloner = new CloneStream<SyncerEvent>();
   private statusBus = new BlockingBus<SyncerStatus>();
@@ -33,10 +34,11 @@ export class Syncer {
 
     return chunk.to;
   });
+  private formats: OptionalFormats<F>;
 
   isDone = deferred<true>();
 
-  constructor(opts: SyncerOpts) {
+  constructor(opts: SyncerOpts<F>) {
     // Have to do this because we'll be using these values in a context where 'this' is different
     // (the streams below)
     const { outgoingEventBus } = this;
@@ -44,6 +46,7 @@ export class Syncer {
 
     this.peer = opts.peer;
     this.mode = opts.mode;
+    this.formats = opts.formats;
 
     // Create a new readable stream which is subscribed to events from this syncer.
     // Pipe it to the outgoing stream to the other peer.
@@ -140,6 +143,7 @@ export class Syncer {
     const agent = new SyncAgent({
       replica,
       mode: this.mode === "once" ? "only_existing" : "live",
+      formats: this.formats,
     });
 
     agent.onStatusUpdate(() => {

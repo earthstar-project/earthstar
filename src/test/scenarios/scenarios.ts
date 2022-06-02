@@ -14,6 +14,7 @@ import { PartnerWeb } from "../../syncer/partner_web.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
+import { OptionalFormats } from "../../formats/default.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -68,16 +69,19 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
   },
 ];
 
-export class PartnerScenarioWeb implements PartnerScenario {
+export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
   private serve: Promise<void> | undefined;
   private abortController: AbortController;
 
-  constructor() {
+  formats: OptionalFormats<F>;
+
+  constructor(formats: OptionalFormats<F>) {
+    this.formats = formats;
     this.abortController = new AbortController();
   }
 
   async setup(peerA: IPeer, peerB: IPeer) {
-    const serverSyncerPromise = deferred<Syncer>();
+    const serverSyncerPromise = deferred<Syncer<F>>();
 
     const handler = (req: Request) => {
       const { socket, response } = Deno.upgradeWebSocket(req);
@@ -89,6 +93,7 @@ export class PartnerScenarioWeb implements PartnerScenario {
           partner,
           mode: "once",
           peer: peerB,
+          formats: this.formats,
         }),
       );
 
@@ -111,11 +116,14 @@ export class PartnerScenarioWeb implements PartnerScenario {
       }),
       mode: "once",
       peer: peerA,
+      formats: this.formats,
     });
 
     const serverSyncer = await serverSyncerPromise;
 
-    return Promise.resolve([clientSyncer, serverSyncer] as [Syncer, Syncer]);
+    return Promise.resolve(
+      [clientSyncer, serverSyncer] as [Syncer<F>, Syncer<F>],
+    );
   }
 
   teardown() {
@@ -125,7 +133,9 @@ export class PartnerScenarioWeb implements PartnerScenario {
   }
 }
 
-export const partnerScenarios = [...universalPartners, {
+export const partnerScenarios: Scenario<
+  <F>(formats: OptionalFormats<F>) => PartnerScenario<F>
+>[] = [...universalPartners, {
   name: "Web",
-  item: () => new PartnerScenarioWeb(),
+  item: (formats) => new PartnerScenarioWeb(formats),
 }];

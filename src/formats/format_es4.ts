@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { IFormatter, ValidatorGenerateOpts } from "./formatter_types.ts";
+import { IFormat, ValidatorGenerateOpts } from "./format_types.ts";
 import { Crypto } from "../crypto/crypto.ts";
 
 import {
@@ -36,36 +36,30 @@ import {
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-import { getStreamSize } from "../util/streams.ts";
-let logger = new Logger("validator es.5", "red");
+let logger = new Logger("validator es.4", "red");
 
 //================================================================================
 
 /** Contains data written and signed by an identity. */
-export interface DocEs5 extends DocBase<"es.5"> {
+export interface DocEs4 extends DocBase<"es.4"> {
   /** Which document format the doc adheres to, e.g. `es.4`. */
-  format: "es.5";
+  format: "es.4";
   author: AuthorAddress;
-  text: string; // TODO: | null, when we have sparse mode
-  textHash: string;
-
+  content: string; // TODO: | null, when we have sparse mode
+  contentHash: string;
   //contentLength: number,  // TODO: add for sparse mode, and enforce in the format validator
   /** When the document should be deleted, as a UNIX timestamp in microseconds. */
-  deleteAfter?: number;
+  deleteAfter: number | null;
   path: Path;
   /** Used to verify the authorship of the document. */
   signature: Signature;
   /** When the document was written, as a UNIX timestamp in microseconds (millionths of a second, e.g. `Date.now() * 1000`).*/
   timestamp: Timestamp;
   /** The share this document is from.
+   * Shares were previously called workspaces, but we didn't want to break compatibility with previous versions by renaming this field.
    */
-  share: ShareAddress;
+  workspace: ShareAddress;
   // workspaceSignature: Signature,  // TODO: add for sparse mode
-
-  // The size of the associated blob, if any.
-  blobSize?: number;
-  // The hash of the associated blob, if any.
-  blobHash?: string;
 
   // Local Index:
   // Our docs form a linear sequence with gaps.
@@ -92,15 +86,11 @@ export interface DocEs5 extends DocBase<"es.5"> {
 }
 
 /** A partial es.4 doc that is about to get written. The rest of the properties will be computed automatically. */
-export interface DocInputEs5 extends DocInputBase<"es.5"> {
-  /** The format the document adheres to, e.g. `es.5` */
-  format: "es.5";
+export interface DocInputEs4 extends DocInputBase<"es.4"> {
+  /** The format the document adheres to, e.g. `es.4` */
+  format: "es.4";
   path: Path;
-  text: string;
-
-  /** Data as Uint8Array or ReadableStream, to be used as document's associated blob. */
-  blob?: Uint8Array | ReadableStream;
-
+  content: string;
   /** A UNIX timestamp in microseconds indicating when the document was written. Determined automatically if omitted. */
   timestamp?: number;
   /** A UNIX timestamp in microseconds indicating when the document should be deleted by.*/
@@ -115,39 +105,26 @@ const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 1000;
 const MIN_TIMESTAMP = 10000000000000; // 10^13
 const MAX_TIMESTAMP = 9007199254740990; // Number.MAX_SAFE_INTEGER - 1
 
-const MAX_TEXT_LENGTH = 8000; // 4 million bytes = 4 megabytes (measured as bytes of utf-8, not normal string length)
+const MAX_CONTENT_LENGTH = 4000000; // 4 million bytes = 4 megabytes (measured as bytes of utf-8, not normal string length)
 
 const HASH_STR_LEN = 53; // number of base32 characters including leading 'b', which is 32 raw bytes when decoded
 const SIG_STR_LEN = 104; // number of base32 characters including leading 'b', which is 64 raw bytes when decoded
 
-const MIN_BLOB_SIZE = 0;
-const MAX_BLOB_SIZE = Number.MAX_SAFE_INTEGER;
-
-const ES5_CORE_SCHEMA: CheckObjOpts = {
+const ES4_CORE_SCHEMA: CheckObjOpts = {
   objSchema: {
-    format: checkLiteral("es.5"),
+    format: checkLiteral("es.4"),
     author: checkString({ allowedChars: authorAddressChars }),
-    text: checkString({ maxLen: MAX_TEXT_LENGTH }),
-    textHash: checkString({ allowedChars: b32chars, len: HASH_STR_LEN }),
+    content: checkString({ maxLen: MAX_CONTENT_LENGTH }),
+    contentHash: checkString({ allowedChars: b32chars, len: HASH_STR_LEN }),
     deleteAfter: checkInt({
       min: MIN_TIMESTAMP,
       max: MAX_TIMESTAMP,
-      optional: true,
+      nullable: true,
     }),
     path: checkString({ allowedChars: pathChars, minLen: 2, maxLen: 512 }),
     signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
     timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
     workspace: checkString({ allowedChars: workspaceAddressChars }),
-    blobSize: checkInt({
-      min: MIN_BLOB_SIZE,
-      max: MAX_BLOB_SIZE,
-      optional: true,
-    }),
-    blobHash: checkString({
-      allowedChars: b32chars,
-      len: HASH_STR_LEN,
-      optional: true,
-    }),
   },
   allowLiteralUndefined: false,
   allowExtraKeys: false,
@@ -157,12 +134,13 @@ const ES5_CORE_SCHEMA: CheckObjOpts = {
  * Validator for the 'es.4' format. Checks if documents are spec-compliant before ingesting, and signs them according to spec.
  * @link https://earthstar-project.org/specs/data-spec
  */
-export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
-  static format: "es.5" = "es.5";
+
+export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
+  static id: "es.4" = "es.4";
 
   /** Deterministic hash of this version of the document */
   static hashDocument(
-    doc: DocEs5,
+    doc: DocEs4,
   ): Promise<Base32String | ValidationError> {
     // Deterministic hash of the document.
     // Can return a ValidationError, but only checks for very basic document validity.
@@ -193,16 +171,12 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
     // return base32encode(sha256(result).binaryDigest())
     return Crypto.sha256base32(
       `author\t${doc.author}\n` +
-        `textHash\t${doc.textHash}\n` +
-        (doc.blobSize === undefined ? "" : `blobSize\t${doc.blobSize}\n`) +
-        (doc.blobHash === undefined ? "" : `blobHash\t${doc.blobHash}\n`) +
-        (doc.deleteAfter === undefined
-          ? ""
-          : `deleteAfter\t${doc.deleteAfter}\n`) +
+        `contentHash\t${doc.contentHash}\n` +
+        (doc.deleteAfter === null ? "" : `deleteAfter\t${doc.deleteAfter}\n`) +
         `format\t${doc.format}\n` +
         `path\t${doc.path}\n` +
         `timestamp\t${doc.timestamp}\n` +
-        `share\t${doc.share}\n`, // \n at the end also, not just between
+        `workspace\t${doc.workspace}\n`, // \n at the end also, not just between
     );
   }
 
@@ -211,40 +185,30 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
    */
   static async generateDocument(
     { input, keypair, share, timestamp }: ValidatorGenerateOpts<
-      "es.5",
-      DocInputEs5
+      "es.4",
+      DocInputEs4
     >,
-  ): Promise<DocEs5 | ValidationError> {
-    const doc: DocEs5 = {
-      format: "es.5",
+  ): Promise<{ doc: DocEs4 } | ValidationError> {
+    const doc: DocEs4 = {
+      format: "es.4",
       author: keypair.address,
-      text: input.text,
-      textHash: await Crypto.sha256base32(input.text),
-      deleteAfter: input.deleteAfter ?? undefined,
+      content: input.content,
+      contentHash: await Crypto.sha256base32(input.content),
+      deleteAfter: input.deleteAfter ?? null,
       path: input.path,
       timestamp,
-      share,
+      workspace: share,
       signature: "?", // signature will be added in just a moment
       // _localIndex will be added during upsert.  it's not needed for the signature.
     };
 
-    if (input.blob) {
-      doc.blobHash = await Crypto.sha256base32(input.blob);
+    const signedDoc = await this.signDocument(keypair, doc);
+
+    if (isErr(signedDoc)) {
+      return signedDoc;
     }
 
-    if (input.blob && input.blob instanceof Uint8Array) {
-      doc.blobSize = input.blob.length;
-    }
-
-    if (input.blob && input.blob instanceof ReadableStream) {
-      doc.blobSize = await getStreamSize(input.blob);
-    }
-
-    const signed = this.signDocument(keypair, doc);
-
-    // TODO: Put the blob in the blob store using the signature.
-
-    return signed;
+    return { doc: signedDoc };
   }
 
   /**
@@ -252,8 +216,8 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
    */
   static async signDocument(
     keypair: AuthorKeypair,
-    doc: DocEs5,
-  ): Promise<DocEs5 | ValidationError> {
+    doc: DocEs4,
+  ): Promise<DocEs4 | ValidationError> {
     const hash = await this.hashDocument(doc);
     if (isErr(hash)) return hash;
 
@@ -268,9 +232,9 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
    */
   static async wipeDocument(
     keypair: AuthorKeypair,
-    doc: DocEs5,
-  ): Promise<DocEs5 | ValidationError> {
-    if (doc.text.length === 0) {
+    doc: DocEs4,
+  ): Promise<DocEs4 | ValidationError> {
+    if (doc.content.length === 0) {
       return doc;
     }
 
@@ -278,14 +242,11 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
     if (isErr(cleanedResult)) return cleanedResult;
     const cleanedDoc = cleanedResult.doc;
 
-    // TODO: Remove blob from storage
-    // TODO:
-
     // make new doc which is empty and just barely newer than the original
-    const emptyDoc: DocEs5 = {
+    const emptyDoc: DocEs4 = {
       ...cleanedDoc,
-      text: "",
-      textHash: await Crypto.sha256base32(""),
+      content: "",
+      contentHash: await Crypto.sha256base32(""),
       timestamp: doc.timestamp + 1,
       signature: "?",
     };
@@ -301,12 +262,12 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
    * more likely to be valid once the extra fields have been removed.
    */
   static removeExtraFields(
-    doc: DocEs5,
-  ): { doc: DocEs5; extras: Record<string, any> } | ValidationError {
+    doc: DocEs4,
+  ): { doc: DocEs4; extras: Record<string, any> } | ValidationError {
     if (!isPlainObject(doc)) {
       return new ValidationError("doc is not a plain javascript object");
     }
-    const validKeys = new Set(Object.keys(ES5_CORE_SCHEMA.objSchema || {}));
+    const validKeys = new Set(Object.keys(ES4_CORE_SCHEMA.objSchema || {}));
 
     const doc2: Record<string, any> = {};
     const extras: Record<string, any> = {};
@@ -323,7 +284,7 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
       }
     }
     return {
-      doc: doc2 as DocEs5,
+      doc: doc2 as DocEs4,
       extras,
     };
   }
@@ -335,7 +296,7 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
    * or you can override it for testing purposes.
    */
   static checkDocumentIsValid(
-    doc: DocEs5,
+    doc: DocEs4,
     now?: number,
   ): true | ValidationError {
     if (now === undefined) now = Date.now() * 1000;
@@ -347,7 +308,7 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
     // (because of clock skew and expired ephemeral documents)
     const errT = this._checkTimestampIsOk(
       doc.timestamp,
-      doc.deleteAfter ? doc.deleteAfter : null,
+      doc.deleteAfter,
       now,
     );
     if (isErr(errT)) return errT;
@@ -355,21 +316,13 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
     const errW = this._checkAuthorCanWriteToPath(doc.author, doc.path);
     if (isErr(errW)) return errW;
 
-    // Check that all blob fields are defined
-    const errBFC = this._checkBlobFieldsConsistent(doc);
-    if (isErr(errBFC)) return errBFC;
-
-    const errP = this._checkPathIsValid(
-      doc.path,
-      !!doc.blobSize,
-      doc.deleteAfter,
-    );
+    const errP = this._checkPathIsValid(doc.path, doc.deleteAfter);
     if (isErr(errP)) return errP;
 
     const errAA = checkAuthorIsValid(doc.author);
     if (isErr(errAA)) return errAA;
 
-    const errWA = checkShareIsValid(doc.share);
+    const errWA = checkShareIsValid(doc.workspace);
     if (isErr(errWA)) return errWA;
 
     // do this after validating that the author address is well-formed
@@ -377,7 +330,8 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
     const errS = this._checkAuthorSignatureIsValid(doc);
     if (isErr(errS)) return errS;
 
-    const errCH = this._checkContentMatchesHash(doc.text, doc.textHash);
+    // do this last since it might be slow on a large document
+    const errCH = this._checkContentMatchesHash(doc.content, doc.contentHash);
     if (isErr(errCH)) return errCH;
     return true;
   }
@@ -385,28 +339,11 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
   // These are broken out for easier unit testing.
   // They will not normally be used directly; use the main assertDocumentIsValid instead.
   // Return true on success.
-  static _checkBasicDocumentValidity(doc: DocEs5): true | ValidationError { // check for correct fields and datatypes
-    const err = checkObj(ES5_CORE_SCHEMA)(doc);
+  static _checkBasicDocumentValidity(doc: DocEs4): true | ValidationError { // check for correct fields and datatypes
+    const err = checkObj(ES4_CORE_SCHEMA)(doc);
     if (err !== null) return new ValidationError(err);
     return true; // TODO: is there more to check?
   }
-
-  static _checkBlobFieldsConsistent(doc: DocEs5): true | ValidationError {
-    if (doc.blobHash && doc.blobSize === undefined) {
-      return new ValidationError(
-        "Blob size is undefined while blob hash is defined",
-      );
-    }
-
-    if (doc.blobSize && doc.blobHash === undefined) {
-      return new ValidationError(
-        "Blob hash is undefined while blob size is defined",
-      );
-    }
-
-    return true;
-  }
-
   static _checkAuthorCanWriteToPath(
     author: AuthorAddress,
     path: Path,
@@ -457,8 +394,7 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
   }
   static _checkPathIsValid(
     path: Path,
-    hasBlob: boolean,
-    deleteAfter?: number,
+    deleteAfter?: number | null,
   ): true | ValidationError {
     // Ensure the path matches the spec for allowed path strings.
     //
@@ -511,22 +447,10 @@ export const FormatterEs5: IFormatter<"es.5", DocInputEs5, DocEs5> = class {
       }
     }
 
-    // path must contain at least one '.', if and only if the document is a blob
-    if (path.indexOf(".") === -1 && hasBlob) {
-      return new ValidationError(
-        "when a blob is provided, path must contain '.'",
-      );
-    }
-    if (path.indexOf(".") !== -1 && hasBlob === false) {
-      return new ValidationError(
-        "when a blob is provided, path must not contain '!'",
-      );
-    }
-
     return true;
   }
   static async _checkAuthorSignatureIsValid(
-    doc: DocEs5,
+    doc: DocEs4,
   ): Promise<true | ValidationError> {
     // Check if the signature is good.
     // return a ValidationError, or return true on success.

@@ -7,10 +7,13 @@ import {
   SyncAgentStatus,
 } from "./syncer_types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { DocBase, DocInputBase } from "../util/doc-types.ts";
+import { IFormat } from "../formats/format_types.ts";
+import { OptionalFormats, OptionalOriginal } from "../formats/default.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
-export class SyncAgent {
+export class SyncAgent<F> {
   /** A bus to send events to, and which our readable streams subcribe to. */
   private outboundEventBus = new BlockingBus<SyncAgentEvent>();
 
@@ -83,7 +86,7 @@ export class SyncAgent {
     return true;
   }
 
-  constructor({ replica, mode }: SyncAgentOpts) {
+  constructor({ replica, mode, formats }: SyncAgentOpts<F>) {
     // If the replica closes, we need to abort
     replica.onEvent((event) => {
       if (event.kind === "willClose") {
@@ -95,10 +98,14 @@ export class SyncAgent {
       mode === "live" ? "everything" : "existing",
     );
 
-    const queryStream = replica.getQueryStream({
-      historyMode: "all",
-      orderBy: "localIndex ASC",
-    }, mode === "live" ? "everything" : "existing");
+    const queryStream = replica.getQueryStream(
+      {
+        historyMode: "all",
+        orderBy: "localIndex ASC",
+      },
+      formats,
+      mode === "live" ? "everything" : "existing",
+    );
 
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
     const {
@@ -117,6 +124,13 @@ export class SyncAgent {
     const getStatus = this.getStatus.bind(this);
     const isFulfilled = this.isFulfilled.bind(this);
     const cancel = this.cancel.bind(this);
+
+    // A little object we can look up formats by format name. In a type-safe-ish way.
+    const formatLookup: Record<string, OptionalOriginal<OptionalFormats<F>>> =
+      {};
+    for (const format of formats) {
+      formatLookup[format.id] = format as typeof formatLookup[string];
+    }
 
     // A writable which receives HaveEntry from the keeper, and sends out `HAVE` events for them.
     const haveEntrySink = new WritableStream<HaveEntry>({
@@ -293,7 +307,9 @@ export class SyncAgent {
             const didWant = fulfilWant(event.id);
 
             if (didWant) {
-              await replica.ingest(event.doc);
+              const format = formatLookup[event.doc.format];
+
+              await replica.ingest(format, event.doc);
               break;
             } else {
               console.error("Was sent a doc we never asked for");

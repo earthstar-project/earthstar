@@ -1,7 +1,14 @@
+import { OptionalFormats } from "../../formats/default.ts";
+import { IFormat } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { IReplicaDriver } from "../../replica/replica-types.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { ShareAddress } from "../../util/doc-types.ts";
+import {
+  DocBase,
+  DocInputBase,
+  FormatName,
+  ShareAddress,
+} from "../../util/doc-types.ts";
 
 export type Scenario<T> = {
   name: string;
@@ -21,8 +28,13 @@ export type MultiplyScenarioOutput<RecordType extends Record<string, any>> = {
   subscenarios: RecordType;
 }[];
 
-export interface PartnerScenario {
-  setup(peerA: IPeer, peerB: IPeer): Promise<[Syncer, Syncer]>;
+export interface PartnerScenario<F> {
+  formats: OptionalFormats<F>;
+
+  setup(
+    peerA: IPeer,
+    peerB: IPeer,
+  ): Promise<[Syncer<F>, Syncer<F>]>;
   teardown(): Promise<void>;
 }
 
@@ -30,4 +42,14 @@ export type ReplicaScenario = {
   makeDriver: (share: ShareAddress, variant?: string) => IReplicaDriver;
   persistent: boolean;
   builtInConfigKeys: string[];
+};
+
+export type FormatScenario<
+  N extends FormatName,
+  I extends DocInputBase<N>,
+  O extends DocBase<N>,
+  F extends IFormat<N, I, O>,
+> = {
+  format: F;
+  makeInputDoc: () => I;
 };

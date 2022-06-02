@@ -9,8 +9,10 @@ export * from "../crypto/crypto.ts";
 export * from "../crypto/global-crypto-driver.ts";
 export * from "../crypto/keypair.ts";
 
-export * from "../formatters/formatter_es4.ts";
-export * from "../formatters/formatter_types.ts";
+export * from "../formats/format_es4.ts";
+export * from "../formats/format_es5.ts";
+export * from "../formats/default.ts";
+export * from "../formats/format_types.ts";
 
 export * from "../syncer/syncer.ts";
 
@@ -22,7 +24,6 @@ export * from "../query/query.ts";
 export * from "../query/query-helpers.ts";
 
 export * from "../replica/compare.ts";
-export * from "../replica/query_source.ts";
 export * from "../replica/replica.ts";
 export * from "../replica/replica-cache.ts";
 export * from "../replica/replica-types.ts";

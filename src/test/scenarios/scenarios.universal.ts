@@ -1,5 +1,6 @@
 import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import { OptionalFormats } from "../../formats/default.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
@@ -25,18 +26,25 @@ export const universalReplicaDrivers: Scenario<ReplicaScenario>[] = [
   },
 ];
 
-export class PartnerScenarioLocal implements PartnerScenario {
+export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
+  formats: OptionalFormats<F>;
+
+  constructor(formats: OptionalFormats<F>) {
+    this.formats = formats;
+  }
+
   setup(peerA: IPeer, peerB: IPeer) {
-    const partner = new PartnerLocal(peerB, "once");
+    const partner = new PartnerLocal(peerB, this.formats, "once");
 
     const syncerA = new Syncer({
       peer: peerA,
       partner,
       mode: "once",
+      formats: this.formats,
     });
 
     return Promise.resolve(
-      [syncerA, partner.partnerSyncer] as [Syncer, Syncer],
+      [syncerA, partner.partnerSyncer] as [Syncer<F>, Syncer<F>],
     );
   }
 
@@ -45,7 +53,9 @@ export class PartnerScenarioLocal implements PartnerScenario {
   }
 }
 
-export const universalPartners: Scenario<() => PartnerScenario>[] = [{
+export const universalPartners: Scenario<
+  <F>(formats: OptionalFormats<F>) => PartnerScenario<F>
+>[] = [{
   name: "Local",
-  item: () => new PartnerScenarioLocal(),
+  item: (formats) => new PartnerScenarioLocal(formats),
 }];

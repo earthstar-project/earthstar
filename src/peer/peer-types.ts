@@ -1,6 +1,7 @@
 import { ShareAddress } from "../util/doc-types.ts";
-import { IReplica } from "../replica/replica-types.ts";
 import { Syncer } from "../syncer/syncer.ts";
+import { Replica } from "../replica/replica.ts";
+import { OptionalFormats } from "../formats/default.ts";
 
 //================================================================================
 // PEER
@@ -12,23 +13,24 @@ export interface IPeer {
   // getters
   hasShare(share: ShareAddress): boolean;
   shares(): ShareAddress[];
-  replicas(): IReplica[];
+  replicas(): Replica[];
   size(): number;
   getReplica(
     share: ShareAddress,
-  ): IReplica | undefined;
+  ): Replica | undefined;
 
   // setters
-  addReplica(replica: IReplica): Promise<void>;
+  addReplica(replica: Replica): Promise<void>;
   removeReplicaByShare(share: ShareAddress): Promise<void>;
-  removeReplica(replica: IReplica): Promise<void>;
+  removeReplica(replica: Replica): Promise<void>;
 
-  sync(
+  sync<F>(
     target: IPeer | string,
+    formats: OptionalFormats<F>,
     live?: boolean,
-  ): Syncer;
+  ): Syncer<F>;
 
   onReplicasChange(
-    callback: (map: Map<ShareAddress, IReplica>) => void | Promise<void>,
+    callback: (map: Map<ShareAddress, Replica>) => void | Promise<void>,
   ): () => void;
 }

@@ -1,17 +1,18 @@
+import { OptionalFormats } from "../formats/default.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { Syncer } from "./syncer.ts";
 import { ISyncPartner, SyncerEvent, SyncerMode } from "./syncer_types.ts";
 
-export class PartnerLocal implements ISyncPartner {
+export class PartnerLocal<F> implements ISyncPartner {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 
   private incomingEventBus = new BlockingBus<SyncerEvent>();
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
-  partnerSyncer: Syncer;
+  partnerSyncer: Syncer<F>;
 
-  constructor(peer: IPeer, mode: SyncerMode) {
+  constructor(peer: IPeer, formats: OptionalFormats<F>, mode: SyncerMode) {
     const { incomingEventBus, outgoingEventBus } = this;
 
     // This is a bit confusing, but it does work.
@@ -35,8 +36,9 @@ export class PartnerLocal implements ISyncPartner {
     // Now we create another syncer within this driver
     // But this syncer needs its own driver...
     // We'll give it one that proxies to the readable / writable pair we defined above.
-    this.partnerSyncer = new Syncer({
+    this.partnerSyncer = new Syncer<F>({
       peer,
+      formats,
       partner: {
         // Events written by the partner syncer will be sent to the outgoing event bus
         // And thus to the readable stream.

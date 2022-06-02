@@ -10,6 +10,25 @@ export function bytesToStream(bytes: Uint8Array): ReadableStream<Uint8Array> {
   });
 }
 
+export async function streamToBytes(
+  stream: ReadableStream<Uint8Array>,
+): Promise<Uint8Array> {
+  let bytes = new Uint8Array();
+
+  await stream.pipeTo(
+    new WritableStream({
+      write(chunk) {
+        const nextBytes = new Uint8Array(bytes.length + chunk.length);
+        nextBytes.set(bytes);
+        nextBytes.set(nextBytes, bytes.length);
+        bytes = nextBytes;
+      },
+    }),
+  );
+
+  return bytes;
+}
+
 export async function getStreamSize(stream: ReadableStream<Uint8Array>) {
   let size = 0;
 

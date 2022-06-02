@@ -1,11 +1,7 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { doesNotThrow, throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
-import {
-  CoreDoc,
-  IReplica,
-  ReplicaEvent,
-} from "../../replica/replica-types.ts";
+import { ReplicaEvent } from "../../replica/replica-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
@@ -23,6 +19,7 @@ import { CallbackSink } from "../../streams/stream_utils.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
+import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 const loggerTest = new Logger("test", "salmon");
 const loggerTestCb = new Logger("test cb", "lightsalmon");
 //setLogLevel('test', LogLevel.Debug);
@@ -45,7 +42,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
   setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
-  function makeReplica(ws: ShareAddress): IReplica {
+  function makeReplica(ws: ShareAddress) {
     const driver = scenario.subscenarios.replicaDriver.makeDriver(ws);
     return new Replica({ driver });
   }
@@ -86,7 +83,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       // Events
 
       const eventStream = storage.getEventStream();
-      const callbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
+      const callbackSink = new CallbackSink<ReplicaEvent<DocEs4>>();
       callbackSink.onWrite((event) => {
         streamEvents.push(event.kind);
       });
@@ -96,7 +93,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       // Channelled events
 
       const channeledEventStream = storage.getEventStream("didClose");
-      const channeledCallbackSink = new CallbackSink<ReplicaEvent<CoreDoc>>();
+      const channeledCallbackSink = new CallbackSink<ReplicaEvent<DocEs4>>();
       channeledCallbackSink.onWrite((event) => {
         channelledStreamEvents.push(event.kind);
       });
@@ -112,10 +109,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         async () => storage.isClosed(),
         "isClosed does not throw",
       );
-      await doesNotThrow(
-        async () => await storage.getDocsAfterLocalIndex("all", 0, 1),
-        "does not throw because not closed",
-      );
+
       await doesNotThrow(
         async () => await storage.getAllDocs(),
         "does not throw because not closed",
@@ -175,10 +169,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         async () => storage.isClosed(),
         "isClosed does not throw",
       );
-      throws(
-        async () => await storage.getDocsAfterLocalIndex("all", 0, 1),
-        "throws after closed",
-      );
+
       await throws(
         async () => await storage.getAllDocs(),
         "throws after closed",
@@ -204,15 +195,16 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         "throws after closed",
       );
       await throws(
-        async () => await storage.set({} as any, {} as any),
+        async () => await storage.set({} as any, {} as any, {} as any),
         "throws after closed",
       );
       await throws(
-        async () => await storage.ingest({} as any),
+        async () => await storage.ingest({} as any, {} as any),
         "throws after closed",
       );
       await throws(
-        async () => await storage.overwriteAllDocsByAuthor({} as any),
+        async () =>
+          await storage.overwriteAllDocsByAuthor({} as any, {} as any),
         "throws after closed",
       );
 
@@ -267,22 +259,19 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         assert(false, "error making keypair");
       }
 
-      await replica.set(keypair1, {
+      await replica.set(keypair1, FormatEs4, {
         path: "/doc.txt",
         content: "content1",
-        format: "es.4",
       });
 
-      await replica.set(keypair2, {
+      await replica.set(keypair2, FormatEs4, {
         path: "/doc2.txt",
         content: "content2",
-        format: "es.4",
       });
 
-      await replica.set(keypair1, {
+      await replica.set(keypair1, FormatEs4, {
         path: "/doc3.txt",
         content: "content3",
-        format: "es.4",
       });
 
       await tester.step({
@@ -358,27 +347,23 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       }
 
       const now = microsecondNow();
-      await storage.set(keypair1, {
-        format: "es.4",
+      await storage.set(keypair1, FormatEs4, {
         path: "/pathA",
         content: "content1",
         timestamp: now,
       });
-      await storage.set(keypair2, {
-        format: "es.4",
+      await storage.set(keypair2, FormatEs4, {
         path: "/pathA",
         content: "content2",
         timestamp: now + 3, // latest
       });
 
-      await storage.set(keypair2, {
-        format: "es.4",
+      await storage.set(keypair2, FormatEs4, {
         path: "/pathB",
         content: "content2",
         timestamp: now,
       });
-      await storage.set(keypair1, {
-        format: "es.4",
+      await storage.set(keypair1, FormatEs4, {
         path: "/pathB",
         content: "content1",
         timestamp: now + 3, // latest
@@ -402,7 +387,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         "should have 2 latest-docs",
       );
 
-      let docsA = await storage.getAllDocsAtPath("/pathA"); // latest first
+      let docsA = await storage.getAllDocsAtPath("/pathA", [FormatEs4]); // latest first
       let docsA_actualAuthorAndContent = docsA.map(
         (doc) => [doc.author, doc.content],
       );
@@ -425,7 +410,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         "/pathA docs are as expected",
       );
 
-      let docsB = await storage.getAllDocsAtPath("/pathB"); // latest first
+      let docsB = await storage.getAllDocsAtPath("/pathB", [FormatEs4]); // latest first
       let docsB_actualAuthorAndContent = docsB.map(
         (doc) => [doc.author, doc.content],
       );
@@ -450,7 +435,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       //--------------------------------------------
       // overwrite
-      const result = await storage.overwriteAllDocsByAuthor(keypair1);
+      const result = await storage.overwriteAllDocsByAuthor(keypair1, [
+        FormatEs4,
+      ]);
       assertEquals(result, 2, "two docs were overwritten");
 
       //--------------------------------------------
@@ -467,7 +454,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         "after overwriting, should still have 2 latest-docs",
       );
 
-      docsA = await storage.getAllDocsAtPath("/pathA"); // latest first
+      docsA = await storage.getAllDocsAtPath("/pathA", [FormatEs4]); // latest first
       docsA_actualAuthorAndContent = docsA.map(
         (doc) => [doc.author, doc.content],
       );
@@ -490,7 +477,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         "/pathA docs are as expected",
       );
 
-      docsB = await storage.getAllDocsAtPath("/pathB"); // latest first
+      docsB = await storage.getAllDocsAtPath("/pathB", [FormatEs4]); // latest first
       docsB_actualAuthorAndContent = docsB.map(
         (doc) => [doc.author, doc.content],
       );

@@ -1,11 +1,9 @@
 import {
-  AuthorAddress,
   AuthorKeypair,
   Base32String,
   DocBase,
   DocInputBase,
   FormatName,
-  Path,
   ShareAddress,
   Timestamp,
 } from "../util/doc-types.ts";
@@ -26,13 +24,13 @@ export interface ValidatorGenerateOpts<
 // According to the rules of Earthstar: documents are validated statelessly,
 // one document at a time, without knowing about any other documents
 // or what's in the Storage.
-export interface IFormatter<
+export interface IFormat<
   FormatType extends FormatName,
   DocInputType extends DocInputBase<FormatType>,
   DocType extends DocBase<FormatType>,
 > {
   /** The string name of the format, like "es.4" */
-  format: FormatType;
+  id: FormatType;
 
   /** Deterministic hash of this version of the document */
   hashDocument(doc: DocType): Promise<Base32String | ValidationError>;
@@ -42,7 +40,10 @@ export interface IFormatter<
    */
   generateDocument(
     opts: ValidatorGenerateOpts<FormatType, DocInputType>,
-  ): Promise<DocType | ValidationError>;
+  ): Promise<
+    | { doc: DocType; blob?: ReadableStream<Uint8Array> | Uint8Array }
+    | ValidationError
+  >;
 
   /**
    * Sign an unsigned document.
@@ -76,44 +77,20 @@ export interface IFormatter<
    */
   checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
-  // These are broken out for easier unit testing.
-  // They will not normally be used directly; use the main assertDocumentIsValid instead.
-  // Return true on success.
-  _checkBasicDocumentValidity(doc: DocType): true | ValidationError; // check for correct fields and datatypes
-  _checkAuthorCanWriteToPath(
-    author: AuthorAddress,
-    path: Path,
-  ): true | ValidationError;
-  _checkTimestampIsOk(
-    timestamp: number,
-    deleteAfter: number | null,
-    now: number,
-  ): true | ValidationError;
-  _checkPathIsValid(
-    path: Path,
-    deleteAfter?: number | null,
-  ): true | ValidationError;
-  _checkAuthorSignatureIsValid(doc: DocType): Promise<true | ValidationError>;
-  _checkContentMatchesHash(
-    content: string,
-    contentHash: Base32String,
-  ): Promise<true | ValidationError>;
-
   // TODO: add these methods for building addresses
   // and remove them from crypto.ts and encoding.ts
   // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
   // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
 }
 
-export type ExtractInputType<ValidatorType> = ValidatorType extends
-  IFormatter<infer _FormatType, infer DocInputType, infer _DocType>
-  ? DocInputType
+export type FormatInputType<FormatterType> = FormatterType extends
+  IFormat<infer _FormatType, infer DocInputType, infer _DocType> ? DocInputType
   : never;
 
-export type ExtractDocType<ValidatorType> = ValidatorType extends
-  IFormatter<infer _FormatType, infer _DocInputType, infer DocType> ? DocType
+export type FormatDocType<FormatterType> = FormatterType extends
+  IFormat<infer _FormatType, infer _DocInputType, infer DocType> ? DocType
   : never;
 
-export type ExtractFormatType<ValidatorType> = ValidatorType extends
-  IFormatter<infer FormatType, infer _DocType, infer _DocInputType> ? FormatType
+export type FormatterFormatType<FormatterType> = FormatterType extends
+  IFormat<infer FormatType, infer _DocType, infer _DocInputType> ? FormatType
   : never;

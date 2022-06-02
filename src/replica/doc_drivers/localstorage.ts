@@ -1,18 +1,16 @@
-import { Path, ShareAddress } from "../../util/doc-types.ts";
+import { DocBase, Path, ShareAddress } from "../../util/doc-types.ts";
 import { ReplicaIsClosedError } from "../../util/errors.ts";
 import { DocDriverMemory } from "./memory.ts";
 
 //--------------------------------------------------
 
 import { Logger } from "../../util/log.ts";
-import { DocEs4, FormatterEs4 } from "../../formatters/formatter_es4.ts";
-import { ExtractDocType } from "../../formatters/formatter_types.ts";
 let logger = new Logger("storage driver localStorage", "gold");
 
 //================================================================================
 type SerializedDriverDocs = {
-  byPathAndAuthor: Record<string, DocEs4>;
-  byPathNewestFirst: Record<Path, DocEs4[]>;
+  byPathAndAuthor: Record<string, DocBase<string>>;
+  byPathNewestFirst: Record<Path, DocBase<string>[]>;
 };
 
 function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
@@ -165,7 +163,7 @@ export class DocDriverLocalStorage extends DocDriverMemory {
   //--------------------------------------------------
   // SET
 
-  async upsert<DocType extends ExtractDocType<typeof FormatterEs4>>(
+  async upsert<FormatType extends string, DocType extends DocBase<FormatType>>(
     doc: DocType,
   ): Promise<DocType> {
     if (this._isClosed) throw new ReplicaIsClosedError();

@@ -1,8 +1,12 @@
 import { ValidationError } from "../util/errors.ts";
-import { CoreDoc, IReplica } from "../replica/replica-types.ts";
 import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
+import { Replica } from "../replica/replica.ts";
+import { FormatName } from "../util/doc-types.ts";
+import { DocInputBase } from "../util/doc-types.ts";
+import { DocBase } from "../util/doc-types.ts";
+import { FallbackDoc, OptionalFormats } from "../formats/default.ts";
 
 let logger = new Logger("query helpers", "gold");
 
@@ -139,7 +143,7 @@ export let globToRegex = (
  */
 export let globToQueryAndRegex = (
   glob: string,
-): { query: Query; regex: string | null } => {
+): { query: Query<string[]>; regex: string | null } => {
   // Turn a glob into a query and an optional regex, if a regex is needed.
 
   // If no stars at all, this is just a direct path query.
@@ -155,7 +159,7 @@ export let globToQueryAndRegex = (
 
   // Put startsWith and endsWith into the filter if needed
   let filter: QueryFilter = {};
-  let query: Query = {};
+  let query: Query<string[]> = {};
 
   if (firstPart) filter.pathStartsWith = firstPart;
   if (lastPart) filter.pathEndsWith = lastPart;
@@ -196,21 +200,22 @@ export let globToQueryAndRegex = (
  * `path`, `pathStartsWith` or `pathEndsWith` in your moreQueryOptions unless you
  * intend to override the glob's query.
  */
-export let queryByGlobAsync = async (
-  replica: IReplica,
+export async function queryByGlobAsync<F>(
+  replica: Replica,
   glob: string,
-  moreQueryOptions: Query = {},
-): Promise<CoreDoc[]> => {
+  moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
+  formats?: OptionalFormats<F>,
+): Promise<FallbackDoc<F>[]> {
   let { query, regex } = globToQueryAndRegex(glob);
   query = { ...query, ...moreQueryOptions };
-  let docs = await replica.queryDocs(query);
+  let docs = await replica.queryDocs(query, formats);
 
   if (regex !== null) {
     let re = new RegExp(regex);
     docs = docs.filter((doc) => re.test(doc.path));
   }
   return docs;
-};
+}
 
 //==========================================================================================
 // TEMPLATES
@@ -480,19 +485,21 @@ export let insertVariablesIntoTemplate = (
  *          let vars = extractTemplateVariablesFromPath(template, doc.path);
  *      }
  */
-export let queryByTemplateAsync = async (
-  replica: IReplica,
+
+export async function queryByTemplateAsync<F>(
+  replica: Replica,
   template: string,
-  moreQueryOptions: Query = {},
-): Promise<CoreDoc[]> => {
+  moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
+  formats?: OptionalFormats<F>,
+): Promise<FallbackDoc<F>[]> {
   let { glob } = parseTemplate(template);
   let { query, regex } = globToQueryAndRegex(glob);
   query = { ...query, ...moreQueryOptions };
 
-  let docs = await replica.queryDocs(query);
+  let docs = await replica.queryDocs(query, formats);
   if (regex != null) {
     let re = new RegExp(regex);
     docs = docs.filter((doc) => re.test(doc.path));
   }
   return docs;
-};
+}

@@ -13,6 +13,7 @@ import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
 import { throws } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 import { LogLevel, setLogLevel } from "../../util/log.ts";
+import { FormatterEs4 } from "../../formatters/formatter_es4.ts";
 
 //setLogLevel("replica-cache", LogLevel.Debug);
 
@@ -29,6 +30,7 @@ Deno.test("ReplicaCache", async () => {
   const replica = new Replica(
     {
       driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
+      formats: [FormatterEs4],
     },
   );
 

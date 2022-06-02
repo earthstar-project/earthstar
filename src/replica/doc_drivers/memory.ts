@@ -1,7 +1,12 @@
 import { Cmp } from "../util-types.ts";
-import { LocalIndex, Path, ShareAddress } from "../../util/doc-types.ts";
+import {
+  DocBase,
+  LocalIndex,
+  Path,
+  ShareAddress,
+} from "../../util/doc-types.ts";
 import { Query } from "../../query/query-types.ts";
-import { CoreDoc, IReplicaDocDriver } from "../replica-types.ts";
+import { IReplicaDocDriver } from "../replica-types.ts";
 import {
   isErr,
   ReplicaIsClosedError,
@@ -19,19 +24,21 @@ import {
 
 import { Logger } from "../../util/log.ts";
 import { checkShareIsValid } from "../../core-validators/addresses.ts";
-import { DocEs4 } from "../../formatters/formatter_es4.ts";
 
 let logger = new Logger("storage driver async memory", "yellow");
 
 //================================================================================
 
-function combinePathAndAuthor(doc: CoreDoc) {
+function combinePathAndAuthor<DocType extends DocBase<string>>(doc: DocType) {
   // This is used as a key into the path&author index
   // It must use a separator character that's not valid in either paths or author addresses
   return `${doc.path}|${doc.author}`;
 }
 
-function docComparePathASCthenNewestFirst(a: CoreDoc, b: CoreDoc): Cmp {
+function docComparePathASCthenNewestFirst<DocType extends DocBase<string>>(
+  a: DocType,
+  b: DocType,
+): Cmp {
   // Sorts docs by path ASC.
   // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
   return compareArrays(
@@ -41,7 +48,10 @@ function docComparePathASCthenNewestFirst(a: CoreDoc, b: CoreDoc): Cmp {
   );
 }
 
-function docComparePathDESCthenNewestFirst(a: CoreDoc, b: CoreDoc): Cmp {
+function docComparePathDESCthenNewestFirst<DocType extends DocBase<string>>(
+  a: DocType,
+  b: DocType,
+): Cmp {
   // Sorts docs by path DESC.
   // Within each paths, sorts by timestamp DESC (newest fist) and breaks ties using the signature ASC.
   return compareArrays(
@@ -63,9 +73,9 @@ export class DocDriverMemory implements IReplicaDocDriver {
   // Our indexes.
   // These maps all share the same Doc objects, so memory usage is not bad.
   // The Doc objects are frozen.
-  docByPathAndAuthor: Map<string, CoreDoc> = new Map(); // path+author --> doc
-  docsByPathNewestFirst: Map<Path, CoreDoc[]> = new Map(); // path --> array of docs with that path, sorted newest first
-  latestDocsByPath: Map<string, CoreDoc> = new Map();
+  docByPathAndAuthor: Map<string, DocBase<string>> = new Map(); // path+author --> doc
+  docsByPathNewestFirst: Map<Path, DocBase<string>[]> = new Map(); // path --> array of docs with that path, sorted newest first
+  latestDocsByPath: Map<string, DocBase<string>> = new Map();
 
   /**
    * @param share - The address of the share the replica belongs to.
@@ -137,20 +147,21 @@ export class DocDriverMemory implements IReplicaDocDriver {
     return this._maxLocalIndex;
   }
 
-  async _getAllDocs(): Promise<CoreDoc[]> {
+  async _getAllDocs(): Promise<DocBase<string>[]> {
     // return in unsorted order
     if (this._isClosed) throw new ReplicaIsClosedError();
     return [...this.docByPathAndAuthor.values()];
   }
-  async _getLatestDocs(): Promise<CoreDoc[]> {
+  async _getLatestDocs(): Promise<DocBase<string>[]> {
     // return in unsorted order
     if (this._isClosed) throw new ReplicaIsClosedError();
-    let docs: DocEs4[] = [];
 
     return Array.from(this.latestDocsByPath.values());
   }
 
-  async queryDocs(queryToClean: Query): Promise<DocEs4[]> {
+  async queryDocs(
+    queryToClean: Query<string[]>,
+  ): Promise<DocBase<string>[]> {
     // Query the documents.
 
     logger.debug("queryDocs", queryToClean);
@@ -170,7 +181,9 @@ export class DocDriverMemory implements IReplicaDocDriver {
     }
 
     if (query.historyMode === "all" && query.filter?.path) {
-      const maybeDocs = this.docsByPathNewestFirst.get(query.filter.path);
+      const maybeDocs = this.docsByPathNewestFirst.get(
+        query.filter.path,
+      );
 
       return maybeDocs ? maybeDocs : [];
     }
@@ -183,7 +196,7 @@ export class DocDriverMemory implements IReplicaDocDriver {
 
     // sort
 
-    const filteredDocs: CoreDoc[] = [];
+    const filteredDocs: DocBase<string>[] = [];
     logger.debug(`    filtering docs`);
 
     for (const doc of docs) {
@@ -272,7 +285,7 @@ export class DocDriverMemory implements IReplicaDocDriver {
   //--------------------------------------------------
   // SET
 
-  upsert<DocType extends CoreDoc>(
+  upsert<DocType extends DocBase<string>>(
     doc: DocType,
   ): Promise<DocType> {
     // add a doc.  don't enforce any rules on it.

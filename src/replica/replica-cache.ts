@@ -1,38 +1,45 @@
 import { equal, fast_json_stable_stringify as stringify } from "../../deps.ts";
-
-import { AuthorKeypair, DocWithFormat, Path } from "../util/doc-types.ts";
+import {
+  AuthorKeypair,
+  DocBase,
+  DocInputBase,
+  FormatName,
+  Path,
+} from "../util/doc-types.ts";
 import {
   ReplicaCacheIsClosedError,
   ReplicaIsClosedError,
   ValidationError,
 } from "../util/errors.ts";
-
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 import { Query } from "../query/query-types.ts";
-import {
-  CoreDoc,
-  CoreDocInput,
-  IngestEvent,
-  IReplica,
-  QuerySourceEvent,
-} from "./replica-types.ts";
-
-import { Logger, setLogLevel } from "../util/log.ts";
+import { QuerySourceEvent } from "./replica-types.ts";
+import { Logger } from "../util/log.ts";
 import { CallbackSink } from "../streams/stream_utils.ts";
+import { Replica } from "./replica.ts";
+import { FormatInputType, IFormat } from "../formats/format_types.ts";
+import {
+  DefaultFormat,
+  FallbackDoc,
+  OptionalFormats,
+} from "../formats/default.ts";
 
 const logger = new Logger("replica-cache", "green");
 
 //================================================================================
 
-function justLocalIndex({ _localIndex }: CoreDoc) {
+function justLocalIndex({ _localIndex }: DocBase<string>) {
   return _localIndex;
 }
 
 // Lifted from ReplicaDriverMemory
 // Slightly different in that it does not check if doc matches the filter,
 // as this has been done beforehand by now.
-function sortAndLimit(query: Query, docs: CoreDoc[]) {
-  const filteredDocs: CoreDoc[] = [];
+function sortAndLimit<DocType extends DocBase<string>>(
+  query: Query<string[]>,
+  docs: DocType[],
+) {
+  const filteredDocs: DocType[] = [];
 
   for (const doc of docs) {
     if (query.orderBy === "path ASC") {
@@ -92,9 +99,9 @@ function sortAndLimit(query: Query, docs: CoreDoc[]) {
   return filteredDocs;
 }
 
-type CacheEntry = {
-  docs: CoreDoc[];
-  stream: ReadableStream<QuerySourceEvent<CoreDoc>>;
+type CacheEntry<DocType> = {
+  docs: DocType[];
+  stream: ReadableStream<QuerySourceEvent<DocBase<string>>>;
   expires: number;
   close: () => void;
 };
@@ -112,11 +119,11 @@ type CacheEntry = {
 export class ReplicaCache {
   version = 0;
 
-  _replica: IReplica;
+  _replica: Replica;
 
   _docCache = new Map<
     string,
-    CacheEntry
+    CacheEntry<DocBase<string>>
   >();
 
   _timeToLive: number;
@@ -133,7 +140,7 @@ export class ReplicaCache {
    * @param onCacheUpdatedWrapper - A function which wraps the firing of all callbacks. Useful for libraries with batching abstractions.
    */
   constructor(
-    replica: IReplica,
+    replica: Replica,
     timeToLive?: number,
     onCacheUpdatedWrapper?: (cb: () => void) => void,
   ) {
@@ -163,65 +170,67 @@ export class ReplicaCache {
   // SET - just pass along to the backing storage
 
   /** Add a new document directly to the backing replica. */
-  set(
+  set<
+    N extends FormatName,
+    I extends DocInputBase<N>,
+    O extends DocBase<N>,
+    FormatType extends IFormat<N, I, O>,
+  >(
     keypair: AuthorKeypair,
-    docToSet: CoreDocInput,
-  ): Promise<true | ValidationError> {
+    format: FormatType,
+    docToSet: Omit<FormatInputType<FormatType>, "format">,
+  ): Promise<
+    true | ValidationError
+  > {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
 
-    return this._replica.set(keypair, docToSet);
+    return this._replica.set(keypair, format, docToSet);
   }
 
   // GET
 
   /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getAllDocs(): CoreDoc[] {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
-      throw new ReplicaIsClosedError();
-    }
+  getAllDocs<F>(
+    formats?: OptionalFormats<F>,
+  ): FallbackDoc<F>[] {
     return this.queryDocs({
       historyMode: "all",
       orderBy: "path DESC",
-    });
+    }, formats);
   }
 
   /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getLatestDocs(): CoreDoc[] {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
-      throw new ReplicaIsClosedError();
-    }
+  getLatestDocs<F>(
+    formats?: OptionalFormats<F>,
+  ): FallbackDoc<F>[] {
     return this.queryDocs({
       historyMode: "latest",
       orderBy: "path DESC",
-    });
+    }, formats);
   }
 
   /** Fetch all versions of all docs from a certain path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getAllDocsAtPath(path: Path): CoreDoc[] {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
-      throw new ReplicaIsClosedError();
-    }
+  getAllDocsAtPath<F>(
+    path: Path,
+    formats?: OptionalFormats<F>,
+  ): FallbackDoc<F>[] {
     return this.queryDocs({
       historyMode: "all",
       orderBy: "path DESC",
       filter: { path: path },
-    });
+    }, formats);
   }
 
   /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getLatestDocAtPath(path: Path): CoreDoc | undefined {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
-      throw new ReplicaIsClosedError();
-    }
+  getLatestDocAtPath<F>(
+    path: Path,
+    formats?: OptionalFormats<F>,
+  ): FallbackDoc<F> | undefined {
     const docs = this.queryDocs({
       historyMode: "latest",
       orderBy: "path DESC",
       filter: { path: path },
-    });
+    }, formats);
     if (docs.length === 0) {
       return undefined;
     }
@@ -229,13 +238,23 @@ export class ReplicaCache {
   }
 
   /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  queryDocs(query: Query = {}): CoreDoc[] {
+  queryDocs<F>(
+    query: Omit<Query<[string]>, "formats"> = {},
+    formats?: OptionalFormats<F>,
+  ): FallbackDoc<F>[] {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
+
+    const f = formats ? formats : [DefaultFormat];
+    const queryWithFormats = {
+      ...query,
+      formats: f.map((f) => f.id),
+    };
+
     // make a deterministic string out of the query
-    const cleanUpQueryResult = cleanUpQuery(query);
+    const cleanUpQueryResult = cleanUpQuery(queryWithFormats);
 
     if (cleanUpQueryResult.willMatch === "nothing") {
       return [];
@@ -250,7 +269,7 @@ export class ReplicaCache {
     if (cachedResult) {
       // If the result has expired, query the storage again.
       if (Date.now() > cachedResult.expires) {
-        this._replica.queryDocs(query).then((docs) => {
+        this._replica.queryDocs(query, formats).then((docs) => {
           const localIndexes = docs.map(justLocalIndex).sort();
           const cacheLocalIndexes = cachedResult.docs.map(justLocalIndex)
             .sort();
@@ -264,7 +283,7 @@ export class ReplicaCache {
           this._docCache.set(queryString, {
             stream: cachedResult.stream,
             close: cachedResult.close,
-            docs,
+            docs: docs,
             expires: Date.now() + this._timeToLive,
           });
 
@@ -273,13 +292,15 @@ export class ReplicaCache {
         });
       }
 
-      return cachedResult.docs;
+      return cachedResult.docs as FallbackDoc<F>[];
     }
 
     // If there's no result, let's follow this query.
-    const stream = this._replica.getQueryStream(query, "new");
+    const stream = this._replica.getQueryStream(query, formats, "new");
 
-    const callbackSink = new CallbackSink<QuerySourceEvent<CoreDoc>>();
+    const callbackSink = new CallbackSink<
+      QuerySourceEvent<DocBase<string>>
+    >();
 
     const unsub = callbackSink.onWrite((event) => {
       if (event.kind === "existing" || event.kind === "success") {
@@ -310,11 +331,11 @@ export class ReplicaCache {
     });
 
     // Query the storage, set the eventual result in the cache.
-    this._replica.queryDocs(query).then((docs) => {
+    this._replica.queryDocs(queryWithFormats).then((docs) => {
       this._docCache.set(queryString, {
         stream,
         close,
-        docs,
+        docs: docs,
         expires: Date.now() + this._timeToLive,
       });
       logger.debug("Updated cache with a new entry.");
@@ -344,7 +365,7 @@ export class ReplicaCache {
   // CACHE
 
   // Update cache entries as best as we can until results from the backing storage arrive.
-  _updateCache(key: string, doc: CoreDoc): void {
+  _updateCache(key: string, doc: DocBase<string>): void {
     const entry = this._docCache.get(key);
 
     // This shouldn't happen really.
@@ -352,7 +373,7 @@ export class ReplicaCache {
       return;
     }
 
-    const query: Query = JSON.parse(key);
+    const query: Query<string[]> = JSON.parse(key);
 
     /*
       IF at least one document with same path is present
