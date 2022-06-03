@@ -23,22 +23,22 @@ Deno.test("QuerySource", async () => {
     },
   );
 
-  await replica.set(keypair, FormatEs5, {
+  await replica.set(keypair, {
     text: "a",
     path: "/wanted/1",
   });
 
-  await replica.set(keypair, FormatEs5, {
+  await replica.set(keypair, {
     text: "b",
     path: "/wanted/2",
   });
 
-  await replica.set(keypairB, FormatEs5, {
+  await replica.set(keypairB, {
     text: "c",
     path: "/wanted/1",
   });
 
-  await replica.set(keypair, FormatEs5, {
+  await replica.set(keypair, {
     text: "🐸",
     path: "/unwanted/1",
   });
@@ -94,7 +94,7 @@ Deno.test("QuerySource", async () => {
     "new",
   );
 
-  await replica.set(keypair, FormatEs5, {
+  await replica.set(keypair, {
     text: "d",
     path: "/wanted/3",
   });

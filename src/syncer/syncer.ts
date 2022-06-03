@@ -1,6 +1,10 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
-import { OptionalFormats } from "../formats/default.ts";
+import {
+  DefaultFormat,
+  FormatsArg,
+  getFormatIntersection,
+} from "../formats/default.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import {
   BlockingBus,
@@ -34,7 +38,7 @@ export class Syncer<F> {
 
     return chunk.to;
   });
-  private formats: OptionalFormats<F>;
+  private formats: FormatsArg<F> | undefined;
 
   isDone = deferred<true>();
 
@@ -96,6 +100,9 @@ export class Syncer<F> {
         kind: "DISCLOSE",
         salt,
         shares: saltedShares,
+        formats: this.formats
+          ? this.formats.map((f) => f.id)
+          : [DefaultFormat.id],
       });
     });
 
@@ -117,16 +124,27 @@ export class Syncer<F> {
       }
     });
 
-    this.peer.onReplicasChange((replicas) => {
-      for (const [addr] of replicas) {
-        this.addShare(addr);
-      }
-
-      // Should replicas which are removed from a Peer stop syncing immediately?
+    /*
+    this.peer.onReplicasChange(() => {
+      // send out disclose event again
+      const salt = randomId();
+      Promise.all(
+        this.peer.shares().map((ws) => saltAndHashShare(salt, ws)),
+      ).then((saltedShares) => {
+        outgoingEventBus.send({
+          kind: "DISCLOSE",
+          salt,
+          shares: saltedShares,
+          formats: this.formats
+            ? this.formats.map((f) => f.id)
+            : [DefaultFormat.id],
+        });
+      });
     });
+    */
   }
 
-  private addShare(address: string) {
+  private addShare<K>(address: string, formats: FormatsArg<K>) {
     // Bail if we already have a sync agent for this share.
     if (this.syncAgents.has(address)) {
       return;
@@ -143,7 +161,7 @@ export class Syncer<F> {
     const agent = new SyncAgent({
       replica,
       mode: this.mode === "once" ? "only_existing" : "live",
-      formats: this.formats,
+      formats,
     });
 
     agent.onStatusUpdate(() => {
@@ -199,6 +217,15 @@ export class Syncer<F> {
     // Handle an incoming salted handsake
     switch (event.kind) {
       case "DISCLOSE": {
+        const intersectingFormats = getFormatIntersection(
+          event.formats,
+          this.formats,
+        );
+
+        if (intersectingFormats.length === 0) {
+          break;
+        }
+
         const serverSaltedSet = new Set<string>(event.shares);
         const commonShareSet = new Set<ShareAddress>();
 
@@ -212,7 +239,7 @@ export class Syncer<F> {
         }
 
         for (const share of commonShareSet) {
-          this.addShare(share);
+          this.addShare(share, intersectingFormats);
         }
       }
     }

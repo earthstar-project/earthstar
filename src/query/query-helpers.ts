@@ -3,10 +3,7 @@ import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
 import { Replica } from "../replica/replica.ts";
-import { FormatName } from "../util/doc-types.ts";
-import { DocInputBase } from "../util/doc-types.ts";
-import { DocBase } from "../util/doc-types.ts";
-import { FallbackDoc, OptionalFormats } from "../formats/default.ts";
+import { FallbackDoc, FormatsArg } from "../formats/default.ts";
 
 let logger = new Logger("query helpers", "gold");
 
@@ -204,7 +201,7 @@ export async function queryByGlobAsync<F>(
   replica: Replica,
   glob: string,
   moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
-  formats?: OptionalFormats<F>,
+  formats?: FormatsArg<F>,
 ): Promise<FallbackDoc<F>[]> {
   let { query, regex } = globToQueryAndRegex(glob);
   query = { ...query, ...moreQueryOptions };
@@ -490,7 +487,7 @@ export async function queryByTemplateAsync<F>(
   replica: Replica,
   template: string,
   moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
-  formats?: OptionalFormats<F>,
+  formats?: FormatsArg<F>,
 ): Promise<FallbackDoc<F>[]> {
   let { glob } = parseTemplate(template);
   let { query, regex } = globToQueryAndRegex(glob);

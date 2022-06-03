@@ -7,7 +7,7 @@ import { Replica } from "../../replica/replica.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
-import { storagesAreSynced, writeRandomDocs } from "../test-utils.ts";
+import { storagesAreSynced, writeRandomDocsEs4 } from "../test-utils.ts";
 
 import { partnerScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
 import { IReplicaDriver } from "../../replica/replica-types.ts";
@@ -62,7 +62,7 @@ class SyncerTestHelper {
     ];
 
     await Promise.all(allStorages.map((replica) => {
-      return writeRandomDocs(keypairA, replica, 10);
+      return writeRandomDocsEs4(keypairA, replica, 10);
     }));
 
     const [a1, a2] = this.aDuo;
@@ -81,11 +81,24 @@ class SyncerTestHelper {
   }
 
   async commonSharesInSync() {
-    
+    const docCounts = [];
 
-    assert(await storagesAreSynced(this.aDuo));
-    assert(await storagesAreSynced(this.bDuo));
-    assert(await storagesAreSynced(this.cDuo) === false);
+    for (const r of [...this.aDuo, ...this.bDuo]) {
+      const docs = await r.getAllDocs();
+      docCounts.push(docs.length);
+    }
+
+    assert(
+      docCounts.every((count) => count === 20),
+      "all replicas have the right number of docs",
+    );
+
+    assert(await storagesAreSynced(this.aDuo), `+a shares are in sync`);
+    assert(await storagesAreSynced(this.bDuo), `+b shares are in sync`);
+    assert(
+      await storagesAreSynced(this.cDuo) === false,
+      `+c shares are not in sync`,
+    );
   }
 
   testAbort() {}
@@ -116,14 +129,20 @@ const scenarios: MultiplyScenarioOutput<{
 });
 
 for (const scenario of scenarios) {
-  Deno.test(`Syncer (${scenario.name})`, async () => {
+  Deno.test(`Syncer (${scenario.name})`, async (test) => {
     const helper = new SyncerTestHelper(
       scenario.subscenarios.partner([FormatEs4]),
       scenario.subscenarios.replicaDriver.makeDriver,
     );
 
     await helper.setup();
-    await helper.commonSharesInSync();
+
+    await test.step({
+      name: "is in sync",
+      fn: () => helper.commonSharesInSync(),
+      sanitizeOps: false,
+    });
+
     await helper.teardown();
 
     // Have to do this to let the web scenario finish tearing down

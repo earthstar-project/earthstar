@@ -1,4 +1,4 @@
-import { OptionalFormats } from "../formats/default.ts";
+import { FormatsArg } from "../formats/default.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { Syncer } from "./syncer.ts";
@@ -12,7 +12,7 @@ export class PartnerLocal<F> implements ISyncPartner {
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
   partnerSyncer: Syncer<F>;
 
-  constructor(peer: IPeer, formats: OptionalFormats<F>, mode: SyncerMode) {
+  constructor(peer: IPeer, mode: SyncerMode, formats?: FormatsArg<F>) {
     const { incomingEventBus, outgoingEventBus } = this;
 
     // This is a bit confusing, but it does work.

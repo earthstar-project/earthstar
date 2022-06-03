@@ -64,10 +64,10 @@ Deno.test("ReplicaCache", async () => {
     "latestDocAtPath result is undefined",
   );
 
-  await cache._replica.set(keypair, FormatEs4, {
+  await cache._replica.set(keypair, {
     content: "Hello!",
     path: "/test/hello.txt",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated five times
@@ -76,10 +76,10 @@ Deno.test("ReplicaCache", async () => {
 
   assertEquals(cache.version, 5, "Cache was updated five times");
 
-  cache._replica.set(keypair, FormatEs4, {
+  cache._replica.set(keypair, {
     content: "Apples!",
     path: "/test/apples.txt",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated seven times
@@ -87,10 +87,10 @@ Deno.test("ReplicaCache", async () => {
   // Once for latestDocs
   assertEquals(cache.version, 7, "Cache was updated seven times");
 
-  cache._replica.set(keypair, FormatEs4, {
+  cache._replica.set(keypair, {
     content: "Oranges!",
     path: "/test/oranges.txt",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated 10 times
@@ -104,10 +104,10 @@ Deno.test("ReplicaCache", async () => {
   assertStrictEquals(values.orangesDoc?.path, "/test/oranges.txt");
   assertStrictEquals(values.orangesDoc?.author, keypair.address);
 
-  cache._replica.set(keypairB, FormatEs4, {
+  cache._replica.set(keypairB, {
     content: "Suzy's Oranges!",
     path: "/test/oranges.txt",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated 13 times
@@ -160,10 +160,10 @@ Deno.test("ReplicaCache", async () => {
   }, ReplicaCacheIsClosedError);
 
   assertThrows(() => {
-    cache.set(keypair, FormatEs4, {
+    cache.set(keypair, {
       content: "na",
       path: "bloo",
-    });
+    }, FormatEs4);
   }, ReplicaCacheIsClosedError);
 
   // Test cache expiry with a quickly expiring cache

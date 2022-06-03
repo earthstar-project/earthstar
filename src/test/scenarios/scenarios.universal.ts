@@ -1,6 +1,6 @@
 import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { OptionalFormats } from "../../formats/default.ts";
+import { FormatsArg } from "../../formats/default.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
@@ -27,14 +27,14 @@ export const universalReplicaDrivers: Scenario<ReplicaScenario>[] = [
 ];
 
 export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
-  formats: OptionalFormats<F>;
+  formats: FormatsArg<F>;
 
-  constructor(formats: OptionalFormats<F>) {
+  constructor(formats: FormatsArg<F>) {
     this.formats = formats;
   }
 
   setup(peerA: IPeer, peerB: IPeer) {
-    const partner = new PartnerLocal(peerB, this.formats, "once");
+    const partner = new PartnerLocal(peerB, "once", this.formats);
 
     const syncerA = new Syncer({
       peer: peerA,
@@ -54,7 +54,7 @@ export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
 }
 
 export const universalPartners: Scenario<
-  <F>(formats: OptionalFormats<F>) => PartnerScenario<F>
+  <F>(formats: FormatsArg<F>) => PartnerScenario<F>
 >[] = [{
   name: "Local",
   item: (formats) => new PartnerScenarioLocal(formats),

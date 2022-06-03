@@ -259,20 +259,20 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         assert(false, "error making keypair");
       }
 
-      await replica.set(keypair1, FormatEs4, {
+      await replica.set(keypair1, {
         path: "/doc.txt",
         content: "content1",
-      });
+      }, FormatEs4);
 
-      await replica.set(keypair2, FormatEs4, {
+      await replica.set(keypair2, {
         path: "/doc2.txt",
         content: "content2",
-      });
+      }, FormatEs4);
 
-      await replica.set(keypair1, FormatEs4, {
+      await replica.set(keypair1, {
         path: "/doc3.txt",
         content: "content3",
-      });
+      }, FormatEs4);
 
       await tester.step({
         name: "query authors",
@@ -347,27 +347,27 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       }
 
       const now = microsecondNow();
-      await storage.set(keypair1, FormatEs4, {
+      await storage.set(keypair1, {
         path: "/pathA",
         content: "content1",
         timestamp: now,
-      });
-      await storage.set(keypair2, FormatEs4, {
+      }, FormatEs4);
+      await storage.set(keypair2, {
         path: "/pathA",
         content: "content2",
         timestamp: now + 3, // latest
-      });
+      }, FormatEs4);
 
-      await storage.set(keypair2, FormatEs4, {
+      await storage.set(keypair2, {
         path: "/pathB",
         content: "content2",
         timestamp: now,
-      });
-      await storage.set(keypair1, FormatEs4, {
+      }, FormatEs4);
+      await storage.set(keypair1, {
         path: "/pathB",
         content: "content1",
         timestamp: now + 3, // latest
-      });
+      }, FormatEs4);
 
       // history of each path, latest doc first:
       //   /pathA: keypair2, keypair1

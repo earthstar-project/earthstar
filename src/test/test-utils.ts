@@ -101,10 +101,29 @@ export function writeRandomDocs(
   const setPromises = Array.from({ length: n }, () => {
     const rand = randomId();
 
-    return storage.set(keypair, FormatEs5, {
+    return storage.set(keypair, {
       text: `${rand}`,
       path: `/${fstRand}/${rand}`,
     });
+  });
+
+  return Promise.all(setPromises);
+}
+
+export function writeRandomDocsEs4(
+  keypair: AuthorKeypair,
+  storage: Replica,
+  n: number,
+) {
+  const fstRand = randomId();
+
+  const setPromises = Array.from({ length: n }, () => {
+    const rand = randomId();
+
+    return storage.set(keypair, {
+      content: `${rand}`,
+      path: `/${fstRand}/${rand}`,
+    }, FormatEs4);
   });
 
   return Promise.all(setPromises);

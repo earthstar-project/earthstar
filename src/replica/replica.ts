@@ -35,12 +35,15 @@ import {
   LockStream,
   OrCh,
 } from "../streams/stream_utils.ts";
-import { FormatInputType, IFormat } from "../formats/format_types.ts";
+import { IFormat } from "../formats/format_types.ts";
 import {
+  DefaultFormat,
   FallbackDoc,
+  FormatArg,
+  FormatArgInput,
+  FormatArgsInit,
+  FormatsArg,
   getFormatsWithFallback,
-  OptionalFormats,
-  OptionalOriginal,
 } from "../formats/default.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
@@ -195,7 +198,7 @@ export class Replica {
 
   /** Returns all documents, including historical versions of documents by other identities. */
   getAllDocs<F>(
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getAllDocs()`);
 
@@ -206,7 +209,7 @@ export class Replica {
   }
   /** Returns latest document from every path. */
   async getLatestDocs<F>(
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getLatestDocs()`);
 
@@ -218,7 +221,7 @@ export class Replica {
   /** Returns all versions of a document by different authors from a specific path. */
   async getAllDocsAtPath<F>(
     path: Path,
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getAllDocsAtPath("${path}")`);
 
@@ -231,7 +234,7 @@ export class Replica {
   /** Returns the most recently written version of a document at a path. */
   async getLatestDocAtPath<F>(
     path: Path,
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<FallbackDoc<F> | undefined> {
     logger.debug(`getLatestDocsAtPath("${path}")`);
 
@@ -259,7 +262,7 @@ export class Replica {
     */
   async queryDocs<F>(
     query: Omit<Query<[string]>, "formats"> = {},
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<FallbackDoc<F>[]> {
     logger.debug(`queryDocs`, query);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -273,7 +276,7 @@ export class Replica {
   /** Returns an array of all unique paths of documents returned by a given query. */
   async queryPaths<F>(
     query: Omit<Query<[string]>, "formats"> = {},
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<Path[]> {
     const docs = await this.queryDocs(query, formats);
     const pathsSet = new Set(docs.map(({ path }) => path));
@@ -283,7 +286,7 @@ export class Replica {
   /** Returns an array of all unique authors of documents returned by a given query. */
   async queryAuthors<F>(
     query: Omit<Query<[string]>, "formats"> = {},
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<AuthorAddress[]> {
     const docs = await this.queryDocs(query, formats);
     const authorsSet = new Set(docs.map(({ author }) => author));
@@ -300,14 +303,11 @@ export class Replica {
   // The Input type should match the formatter.
   // The default format should be es5
   async set<
-    N extends FormatName,
-    I extends DocInputBase<N>,
-    O extends DocBase<N>,
-    FormatType extends IFormat<N, I, O>,
+    F,
   >(
     keypair: AuthorKeypair,
-    format: FormatType,
-    docToSet: Omit<FormatInputType<FormatType>, "format">,
+    docToSet: Omit<FormatArgInput<F>, "format">,
+    format?: FormatArg<F>,
   ): Promise<
     true | ValidationError
   > {
@@ -338,9 +338,11 @@ export class Replica {
 
     loggerSet.debug("...signing doc");
 
-    const result = await format.generateDocument({
+    const f = format ? format : DefaultFormat;
+
+    const result = await f.generateDocument({
       keypair,
-      input: { ...docToSet, format: format.id } as unknown as I,
+      input: { ...docToSet, format: f.id } as unknown as FormatArgInput<F>,
       share: this.share,
       timestamp,
     });
@@ -354,7 +356,7 @@ export class Replica {
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
     const ingestEvent = await this.ingest(
-      format,
+      f,
       result.doc,
     );
     loggerSet.debug("-----------------------");
@@ -491,7 +493,7 @@ export class Replica {
    */
   async overwriteAllDocsByAuthor<F>(
     keypair: AuthorKeypair,
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): Promise<number | ValidationError> {
     logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -508,8 +510,7 @@ export class Replica {
 
     const f = getFormatsWithFallback(formats);
 
-    const formatLookup: Record<string, OptionalOriginal<OptionalFormats<F>>> =
-      {};
+    const formatLookup: Record<string, FormatArgsInit<FormatsArg<F>>> = {};
 
     for (const format of f) {
       formatLookup[format.id] = format as typeof formatLookup[string];
@@ -569,7 +570,7 @@ export class Replica {
     F,
   >(
     query: Omit<Query<[string]>, "formats"> = {},
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
     mode?: QuerySourceMode,
   ): ReadableStream<QuerySourceEvent<FallbackDoc<F>>> {
     const queryDocs = this.queryDocs.bind(this);

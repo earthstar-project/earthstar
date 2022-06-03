@@ -14,7 +14,7 @@ import { PartnerWeb } from "../../syncer/partner_web.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
-import { OptionalFormats } from "../../formats/default.ts";
+import { FormatsArg } from "../../formats/default.ts";
 import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
@@ -75,9 +75,9 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
   private serve: Promise<void> | undefined;
   private abortController: AbortController;
 
-  formats: OptionalFormats<F>;
+  formats: FormatsArg<F>;
 
-  constructor(formats: OptionalFormats<F>) {
+  constructor(formats: FormatsArg<F>) {
     this.formats = formats;
     this.abortController = new AbortController();
   }
@@ -136,7 +136,7 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 }
 
 export const partnerScenarios: Scenario<
-  <F>(formats: OptionalFormats<F>) => PartnerScenario<F>
+  <F>(formats: FormatsArg<F>) => PartnerScenario<F>
 >[] = [...universalPartners, {
   name: "Web",
   item: (formats) => new PartnerScenarioWeb(formats),

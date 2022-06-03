@@ -1,7 +1,7 @@
 import { ShareAddress } from "../util/doc-types.ts";
-import { Syncer } from "../syncer/syncer.ts";
 import { Replica } from "../replica/replica.ts";
-import { OptionalFormats } from "../formats/default.ts";
+import { FormatsArg } from "../formats/default.ts";
+import { Syncer } from "../syncer/syncer.ts";
 
 //================================================================================
 // PEER
@@ -26,8 +26,8 @@ export interface IPeer {
 
   sync<F>(
     target: IPeer | string,
-    formats: OptionalFormats<F>,
     live?: boolean,
+    formats?: FormatsArg<F>,
   ): Syncer<F>;
 
   onReplicasChange(

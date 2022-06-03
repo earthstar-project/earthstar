@@ -7,9 +7,11 @@ import {
   SyncAgentStatus,
 } from "./syncer_types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-import { DocBase, DocInputBase } from "../util/doc-types.ts";
-import { IFormat } from "../formats/format_types.ts";
-import { OptionalFormats, OptionalOriginal } from "../formats/default.ts";
+import {
+  DefaultFormat,
+  FormatArgsInit,
+  FormatsArg,
+} from "../formats/default.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -126,9 +128,10 @@ export class SyncAgent<F> {
     const cancel = this.cancel.bind(this);
 
     // A little object we can look up formats by format name. In a type-safe-ish way.
-    const formatLookup: Record<string, OptionalOriginal<OptionalFormats<F>>> =
-      {};
-    for (const format of formats) {
+    const f = formats ? formats : [DefaultFormat];
+
+    const formatLookup: Record<string, FormatArgsInit<FormatsArg<F>>> = {};
+    for (const format of f) {
       formatLookup[format.id] = format as typeof formatLookup[string];
     }
 
@@ -308,6 +311,13 @@ export class SyncAgent<F> {
 
             if (didWant) {
               const format = formatLookup[event.doc.format];
+
+              if (!format) {
+                console.error(
+                  `Was sent a doc with a format we don't know about (${event.doc.format})`,
+                );
+                break;
+              }
 
               await replica.ingest(format, event.doc);
               break;

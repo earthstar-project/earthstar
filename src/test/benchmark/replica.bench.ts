@@ -39,19 +39,19 @@ for (const scenario of scenarios) {
 
   await writeRandomDocs(keypair, replica, 100);
 
-  await replica.set(keypair, FormatEs5, {
+  await replica.set(keypair, {
     text: "hello",
     path: `/stable`,
   });
 
-  const res = await replica.set(keypairB, FormatEs5, {
+  await replica.set(keypairB, {
     text: "howdy",
     path: `/stable`,
   });
 
   Deno.bench(`Replica.set (${scenario.name})`, { group: "set" }, async () => {
     setGlobalCryptoDriver(crypto);
-    await replica.set(keypair, FormatEs5, {
+    await replica.set(keypair, {
       text: "hi",
       path: `/test/${randomId()}`,
     });

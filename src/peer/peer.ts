@@ -11,7 +11,12 @@ import { Syncer } from "../syncer/syncer.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { PartnerWeb } from "../syncer/partner_web.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
-import { OptionalFormats } from "../formats/default.ts";
+import {
+  DefaultFormat,
+  FormatArgsInit,
+  FormatsArg,
+} from "../formats/default.ts";
+import { IFormat } from "../formats/format_types.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
@@ -100,8 +105,8 @@ export class Peer implements IPeer {
    */
   sync<F>(
     target: IPeer | string,
-    formats: OptionalFormats<F>,
     live?: boolean,
+    formats?: FormatsArg<F>,
   ): Syncer<F> {
     try {
       // Check if it's a URL of some kind.
@@ -122,8 +127,8 @@ export class Peer implements IPeer {
         const syncer = new Syncer({
           partner,
           mode: live ? "live" : "once",
-          formats: formats,
           peer: this,
+          ...(formats ? { formats } : {}),
         });
 
         return syncer;
@@ -135,11 +140,11 @@ export class Peer implements IPeer {
         peer: this,
         partner: new PartnerLocal(
           target as IPeer,
-          formats,
           live ? "live" : "once",
+          formats,
         ),
         mode: "live",
-        formats,
+        ...(formats ? { formats } : {}),
       });
 
       return syncer;

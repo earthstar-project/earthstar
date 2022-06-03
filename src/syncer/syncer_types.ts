@@ -1,13 +1,7 @@
-import {
-  DocBase,
-  DocInputBase,
-  ShareAddress,
-  Timestamp,
-} from "../util/doc-types.ts";
+import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { IFormat } from "../formats/format_types.ts";
-import { OptionalFormats } from "../formats/default.ts";
+import { FormatsArg } from "../formats/default.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -77,7 +71,7 @@ export type SyncAgentStatus = {
  */
 export type SyncAgentOpts<F> = {
   replica: Replica;
-  formats: OptionalFormats<F>;
+  formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
 };
 
@@ -88,6 +82,7 @@ export type SyncerDiscloseEvent = {
   kind: "DISCLOSE";
   salt: string;
   shares: string[];
+  formats: string[];
 };
 
 /** A SyncAgentEvent addressed to a specific share address. */
@@ -118,7 +113,7 @@ export interface SyncerOpts<F> {
   peer: IPeer;
   partner: ISyncPartner;
   mode: SyncerMode;
-  formats: OptionalFormats<F>;
+  formats?: FormatsArg<F>;
 }
 
 /** A map of sync statuses by the share address they're associated with. */

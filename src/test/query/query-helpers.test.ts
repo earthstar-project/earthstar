@@ -421,11 +421,11 @@ let runQueryHelpersTests = async (
     let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 
     for (let path of docPathsForGlobTest) {
-      await storage.set(keypair1, FormatEs4, {
+      await storage.set(keypair1, {
         path: path,
         content: "content at " + path,
         timestamp: now,
-      });
+      }, FormatEs4);
     }
 
     for (let vector of globQueryVectors) {
@@ -831,10 +831,10 @@ let runQueryHelpersTests = async (
     let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
 
     for (let path of docPathsForTemplateTest) {
-      await storage.set(keypair1, FormatEs4, {
+      await storage.set(keypair1, {
         path: path,
         content: "content at " + path,
-      });
+      }, FormatEs4);
     }
 
     for (let vector of templateQueryVectors) {

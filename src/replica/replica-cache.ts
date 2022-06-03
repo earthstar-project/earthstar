@@ -21,7 +21,9 @@ import { FormatInputType, IFormat } from "../formats/format_types.ts";
 import {
   DefaultFormat,
   FallbackDoc,
-  OptionalFormats,
+  FormatArg,
+  FormatArgInput,
+  FormatsArg,
 } from "../formats/default.ts";
 
 const logger = new Logger("replica-cache", "green");
@@ -171,27 +173,24 @@ export class ReplicaCache {
 
   /** Add a new document directly to the backing replica. */
   set<
-    N extends FormatName,
-    I extends DocInputBase<N>,
-    O extends DocBase<N>,
-    FormatType extends IFormat<N, I, O>,
+    F,
   >(
     keypair: AuthorKeypair,
-    format: FormatType,
-    docToSet: Omit<FormatInputType<FormatType>, "format">,
+    docToSet: Omit<FormatArgInput<F>, "format">,
+    format?: FormatArg<F>,
   ): Promise<
     true | ValidationError
   > {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
 
-    return this._replica.set(keypair, format, docToSet);
+    return this._replica.set(keypair, docToSet, format);
   }
 
   // GET
 
   /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   getAllDocs<F>(
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): FallbackDoc<F>[] {
     return this.queryDocs({
       historyMode: "all",
@@ -201,7 +200,7 @@ export class ReplicaCache {
 
   /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   getLatestDocs<F>(
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): FallbackDoc<F>[] {
     return this.queryDocs({
       historyMode: "latest",
@@ -212,7 +211,7 @@ export class ReplicaCache {
   /** Fetch all versions of all docs from a certain path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   getAllDocsAtPath<F>(
     path: Path,
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): FallbackDoc<F>[] {
     return this.queryDocs({
       historyMode: "all",
@@ -224,7 +223,7 @@ export class ReplicaCache {
   /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   getLatestDocAtPath<F>(
     path: Path,
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): FallbackDoc<F> | undefined {
     const docs = this.queryDocs({
       historyMode: "latest",
@@ -234,13 +233,13 @@ export class ReplicaCache {
     if (docs.length === 0) {
       return undefined;
     }
-    return docs[0];
+    return docs[0] as FallbackDoc<F>;
   }
 
   /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   queryDocs<F>(
     query: Omit<Query<[string]>, "formats"> = {},
-    formats?: OptionalFormats<F>,
+    formats?: FormatsArg<F>,
   ): FallbackDoc<F>[] {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {

@@ -1,4 +1,4 @@
-import { OptionalFormats } from "../../formats/default.ts";
+import { FormatsArg } from "../../formats/default.ts";
 import { IFormat } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { IReplicaDriver } from "../../replica/replica-types.ts";
@@ -29,7 +29,7 @@ export type MultiplyScenarioOutput<RecordType extends Record<string, any>> = {
 }[];
 
 export interface PartnerScenario<F> {
-  formats: OptionalFormats<F>;
+  formats: FormatsArg<F>;
 
   setup(
     peerA: IPeer,

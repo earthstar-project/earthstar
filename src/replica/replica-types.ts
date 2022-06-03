@@ -1,20 +1,8 @@
-import {
-  DocBase,
-  DocInputBase,
-  FormatName,
-  ShareAddress,
-} from "../util/doc-types.ts";
+import { DocBase, FormatName, ShareAddress } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
-import {
-  FormatDocType,
-  FormatInputType,
-  FormatterFormatType,
-  IFormat,
-} from "../formats/format_types.ts";
 import { ValidationError } from "../util/errors.ts";
-
 import { Replica } from "./replica.ts";
-import { OptionalFormats } from "../formats/default.ts";
+import { FormatsArg } from "../formats/default.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -131,7 +119,7 @@ export type QuerySourceEvent<DocType extends DocBase<string>> =
 
 export type QuerySourceOpts<F> = {
   replica: Replica;
-  formats?: OptionalFormats<F>;
+  formats?: FormatsArg<F>;
   query: Omit<Query<string[]>, "formats">;
   mode?: QuerySourceMode;
 };
