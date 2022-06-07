@@ -3,7 +3,9 @@ import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
+  DocBlob,
   DocInputBase,
+  DocWithBlob,
   FormatName,
   Path,
   ShareAddress,
@@ -40,6 +42,7 @@ import {
   DefaultFormat,
   FallbackDoc,
   FormatArg,
+  FormatArgDoc,
   FormatArgInput,
   FormatArgsInit,
   FormatsArg,
@@ -157,6 +160,11 @@ export class Replica {
     this._isClosed = true;
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
     await this.replicaDriver.docDriver.close(erase);
+
+    if (erase) {
+      await this.replicaDriver.blobDriver.wipe();
+    }
+
     logger.debug("    sending didClose nonblockingly...");
     await this.eventWriter.write({
       kind: "didClose",
@@ -208,24 +216,24 @@ export class Replica {
     }, formats);
   }
   /** Returns latest document from every path. */
-  async getLatestDocs<F>(
+  getLatestDocs<F>(
     formats?: FormatsArg<F>,
   ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getLatestDocs()`);
 
-    return await this.queryDocs({
+    return this.queryDocs({
       historyMode: "latest",
       orderBy: "path ASC",
     }, formats);
   }
   /** Returns all versions of a document by different authors from a specific path. */
-  async getAllDocsAtPath<F>(
+  getAllDocsAtPath<F>(
     path: Path,
     formats?: FormatsArg<F>,
   ): Promise<FallbackDoc<F>[]> {
     logger.debug(`getAllDocsAtPath("${path}")`);
 
-    return await this.queryDocs({
+    return this.queryDocs({
       historyMode: "all",
       orderBy: "path ASC",
       filter: { path: path },
@@ -359,9 +367,22 @@ export class Replica {
       f,
       result.doc,
     );
-    loggerSet.debug("-----------------------");
+
     loggerSet.debug("...done ingesting");
+
+    if (result.blob) {
+      loggerSet.debug("...ingesting blob");
+      loggerSet.debug("-----------------------");
+      const wasIngested = await this.ingestBlob(f, result.doc, result.blob);
+
+      if (isErr(wasIngested)) {
+        return wasIngested;
+      }
+
+      loggerSet.debug("...done ingesting blob");
+    }
     loggerSet.debug("...set is done.");
+
     return ingestEvent;
   }
 
@@ -633,5 +654,96 @@ export class Replica {
     ) => void | Promise<void>,
   ) {
     return this.callbackSink.onWrite(callback);
+  }
+
+  //--------------------------------------------------
+  // BLOBS
+
+  async ingestBlob<
+    N extends FormatName,
+    I extends DocInputBase<N>,
+    O extends DocBase<N>,
+    FormatType extends IFormat<N, I, O>,
+  >(
+    format: FormatType,
+    doc: O,
+    blob: Uint8Array | ReadableStream<Uint8Array>,
+  ): Promise<
+    true | ValidationError
+  > {
+    if (this._isClosed) throw new ReplicaIsClosedError();
+
+    // check doc is valid
+    const docIsValid = format.checkDocumentIsValid(doc);
+
+    if (isErr(docIsValid)) {
+      return docIsValid;
+    }
+
+    const blobIsValid = await format.checkBlobMatchesDoc(blob, doc);
+
+    if (isErr(blobIsValid)) {
+      return blobIsValid;
+    }
+
+    return this.replicaDriver.blobDriver.upsert(doc.signature, blob);
+  }
+
+  getBlob<F>(
+    doc: FormatArgDoc<F>,
+    format?: FormatArg<F>,
+  ): Promise<DocBlob | undefined | ValidationError> {
+    const f = format || DefaultFormat;
+
+    if (f.docCanHaveBlob(doc)) {
+      return this.replicaDriver.blobDriver.getBlob(doc.signature);
+    } else {
+      // This doc cannot possibly have a blob associated with it.
+      return Promise.resolve(
+        new ValidationError("This doc can't have a blob associated with it."),
+      );
+    }
+  }
+
+  attachBlobs<F>(
+    docs: FallbackDoc<F>[],
+    formats?: FormatsArg<F>,
+  ): Promise<
+    Awaited<
+      DocWithBlob<FallbackDoc<F>>
+    >[]
+  > {
+    const f = getFormatsWithFallback(formats);
+
+    const formatLookup: Record<string, FormatArgsInit<FormatsArg<F>>> = {};
+
+    for (const format of f) {
+      formatLookup[format.id] = format as typeof formatLookup[string];
+    }
+
+    const promises = docs.map((doc) => {
+      return new Promise<
+        FallbackDoc<F> & { blob: ValidationError | DocBlob | undefined }
+      >((resolve) => {
+        const format = formatLookup[doc.format];
+
+        if (format.docCanHaveBlob(doc)) {
+          this.replicaDriver.blobDriver.getBlob(doc.signature).then(
+            (blob) => {
+              resolve({ ...doc, blob });
+            },
+          );
+        } else {
+          return resolve({
+            ...doc,
+            blob: new ValidationError(
+              "This doc can't have a blob associated with it.",
+            ),
+          });
+        }
+      });
+    });
+
+    return Promise.all(promises);
   }
 }

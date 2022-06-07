@@ -1,4 +1,9 @@
-import { DocBase, FormatName, ShareAddress } from "../util/doc-types.ts";
+import {
+  DocBase,
+  DocBlob,
+  FormatName,
+  ShareAddress,
+} from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Replica } from "./replica.ts";
@@ -209,16 +214,12 @@ export interface ReplicaOpts {
 }
 
 export interface IReplicaBlobDriver {
-  getBytes(signature: string): Promise<Uint8Array | undefined>;
+  getBlob(signature: string): Promise<DocBlob | undefined>;
 
-  getStream(
+  upsert(
     signature: string,
-  ): Promise<ReadableStream<Uint8Array> | undefined>;
-
-  upsert<DocType extends DocBase<string>>(
-    doc: DocType,
-    blob: ReadableStream<Uint8Array>,
-  ): Promise<void>;
+    blob: Uint8Array | ReadableStream<Uint8Array>,
+  ): Promise<true | ValidationError>;
 
   erase(signature: string): Promise<true | ValidationError>;
 
@@ -227,5 +228,5 @@ export interface IReplicaBlobDriver {
 
 export interface IReplicaDriver {
   docDriver: IReplicaDocDriver;
-  blobDriver: IReplicaBlobDriver | null;
+  blobDriver: IReplicaBlobDriver;
 }

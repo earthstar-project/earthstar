@@ -1,5 +1,5 @@
 import { DocEs5, FormatEs5 } from "./format_es5.ts";
-import { FormatInputType, IFormat } from "./format_types.ts";
+import { FormatDocType, FormatInputType, IFormat } from "./format_types.ts";
 
 export const DefaultFormat = FormatEs5;
 export type DefaultDoc = DocEs5;
@@ -14,6 +14,10 @@ export type FormatArg<Init> = Init extends IFormat<infer _N, infer _I, infer _O>
 export type FormatArgInput<F> = F extends FormatArg<infer Format>
   ? FormatInputType<Format>
   : FormatInputType<typeof DefaultFormat>;
+
+export type FormatArgDoc<F> = F extends FormatArg<infer Format>
+  ? FormatDocType<Format>
+  : FormatDocType<typeof DefaultFormat>;
 
 export type FallbackDoc<
   FormatType,

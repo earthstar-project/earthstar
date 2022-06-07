@@ -20,7 +20,7 @@ export async function streamToBytes(
       write(chunk) {
         const nextBytes = new Uint8Array(bytes.length + chunk.length);
         nextBytes.set(bytes);
-        nextBytes.set(nextBytes, bytes.length);
+        nextBytes.set(chunk, bytes.length);
         bytes = nextBytes;
       },
     }),

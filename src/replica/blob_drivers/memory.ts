@@ -1,35 +1,66 @@
-import { DocBase } from "../../util/doc-types.ts";
+import { DocBlob } from "../../util/doc-types.ts";
 import { ValidationError } from "../../util/errors.ts";
-import { bytesToStream, streamToBytes } from "../../util/streams.ts";
+import { streamToBytes } from "../../util/streams.ts";
 import { IReplicaBlobDriver } from "../replica-types.ts";
 
-export class ReplicaBlobDriverMemory implements IReplicaBlobDriver {
-  private bytesMap = new Map<string, Uint8Array>();
+export class BlobDriverMemory implements IReplicaBlobDriver {
+  private blobMap = new Map<string, Blob>();
 
-  getBytes(signature: string) {
-    return Promise.resolve(this.bytesMap.get(signature));
-  }
+  async getBytes(signature: string) {
+    const blob = this.blobMap.get(signature);
 
-  async getStream(signature: string) {
-    const bytes = await this.getBytes(signature);
-
-    if (bytes) {
-      return bytesToStream(bytes);
+    if (blob) {
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      return bytes;
     }
   }
 
-  async upsert<DocType extends DocBase<string>>(
-    doc: DocType,
-    blob: ReadableStream<Uint8Array>,
-  ) {
-    const bytes = await streamToBytes(blob);
+  getStream(signature: string) {
+    const blob = this.blobMap.get(signature);
 
-    this.bytesMap.set(doc.signature, bytes);
+    if (blob) {
+      return Promise.resolve(blob.stream());
+    }
+
+    return Promise.resolve(undefined);
+  }
+
+  getBlob(signature: string): Promise<DocBlob | undefined> {
+    const blob = this.blobMap.get(signature);
+
+    if (!blob) {
+      return Promise.resolve(undefined);
+    }
+
+    return Promise.resolve({
+      bytes: async () => new Uint8Array(await blob.arrayBuffer()),
+      stream: blob.stream(),
+    });
+  }
+
+  async upsert(
+    signature: string,
+    blob: ReadableStream<Uint8Array> | Uint8Array,
+  ) {
+    if (blob instanceof Uint8Array) {
+      const newBlob = new Blob([blob]);
+
+      this.blobMap.set(signature, newBlob);
+    } else {
+      const bytes = await streamToBytes(blob);
+
+      const newBlob = new Blob([bytes]);
+      this.blobMap.set(signature, newBlob);
+
+      this.blobMap.set(signature, newBlob);
+    }
+
+    return Promise.resolve(true as const);
   }
 
   erase(signature: string) {
-    if (this.bytesMap.has(signature)) {
-      this.bytesMap.delete(signature);
+    if (this.blobMap.has(signature)) {
+      this.blobMap.delete(signature);
       return Promise.resolve(true as true);
     }
 
@@ -39,7 +70,7 @@ export class ReplicaBlobDriverMemory implements IReplicaBlobDriver {
   }
 
   wipe() {
-    this.bytesMap.clear();
+    this.blobMap.clear();
     return Promise.resolve();
   }
 }

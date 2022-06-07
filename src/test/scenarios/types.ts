@@ -1,7 +1,10 @@
 import { FormatsArg } from "../../formats/default.ts";
 import { IFormat } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
-import { IReplicaDriver } from "../../replica/replica-types.ts";
+import {
+  IReplicaDocDriver,
+  IReplicaDriver,
+} from "../../replica/replica-types.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import {
   DocBase,
@@ -38,8 +41,8 @@ export interface PartnerScenario<F> {
   teardown(): Promise<void>;
 }
 
-export type ReplicaScenario = {
-  makeDriver: (share: ShareAddress, variant?: string) => IReplicaDriver;
+export type DocDriverScenario = {
+  makeDriver: (share: ShareAddress, variant?: string) => IReplicaDocDriver;
   persistent: boolean;
   builtInConfigKeys: string[];
 };

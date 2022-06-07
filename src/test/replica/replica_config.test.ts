@@ -7,24 +7,25 @@ import {
   setGlobalCryptoDriver,
 } from "../../crypto/global-crypto-driver.ts";
 import { Replica } from "../../replica/replica.ts";
-import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 
 //================================================================================
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
+import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 const loggerTest = new Logger("test", "lightsalmon");
 const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
 //setLogLevel('test', LogLevel.Debug);
 
 const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "replicaDriver": ScenarioItem<typeof docDriverScenarios>;
   "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriver",
-  scenarios: replicaScenarios,
+  scenarios: docDriverScenarios,
 }, {
   description: "cryptoDriver",
   scenarios: cryptoScenarios,
@@ -52,7 +53,14 @@ let _runStorageConfigTests = (
     share: ShareAddress,
   ): Replica | IReplicaDocDriver => {
     let driver = scenario.subscenarios.replicaDriver.makeDriver(share);
-    return mode === "storage" ? new Replica({ driver }) : driver.docDriver;
+    return mode === "storage"
+      ? new Replica({
+        driver: {
+          docDriver: driver,
+          blobDriver: new BlobDriverMemory(),
+        },
+      })
+      : driver;
   };
 
   Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {

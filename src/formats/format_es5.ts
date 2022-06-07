@@ -46,7 +46,7 @@ export interface DocEs5 extends DocBase<"es.5"> {
   /** Which document format the doc adheres to, e.g. `es.4`. */
   format: "es.5";
   author: AuthorAddress;
-  text: string; // TODO: | null, when we have sparse mode
+  text: string;
   textHash: string;
 
   //contentLength: number,  // TODO: add for sparse mode, and enforce in the format validator
@@ -401,6 +401,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   static _checkBasicDocumentValidity(doc: DocEs5): true | ValidationError { // check for correct fields and datatypes
     const err = checkObj(ES5_CORE_SCHEMA)(doc);
     if (err !== null) return new ValidationError(err);
+
     return true; // TODO: is there more to check?
   }
 
@@ -568,6 +569,49 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     if (await Crypto.sha256base32(content) !== contentHash) {
       return new ValidationError("content does not match contentHash");
     }
+    return true;
+  }
+
+  static docCanHaveBlob(doc: DocEs5) {
+    if (doc.blobSize && doc.blobHash) {
+      return true;
+    }
+
+    return false;
+  }
+
+  static async checkBlobMatchesDoc(
+    blob: Uint8Array | ReadableStream<Uint8Array>,
+    doc: DocEs5,
+  ): Promise<true | ValidationError> {
+    if (doc.blobSize === undefined || doc.blobHash === undefined) {
+      return new ValidationError(
+        "The doc does not have any of the fields needed to have an attached blob.",
+      );
+    }
+
+    const hash = await Crypto.sha256base32(blob);
+
+    if (doc.blobHash !== hash) {
+      return new ValidationError(
+        "The blob's hash does not match the one on the document.",
+      );
+    }
+
+    if (blob instanceof Uint8Array) {
+      if (blob.byteLength !== doc.blobSize) {
+        return new ValidationError(
+          "The blob's size does not match the one on the document.",
+        );
+      }
+    } else {
+      if (await getStreamSize(blob) !== doc.blobSize) {
+        return new ValidationError(
+          "The blob's size does not match the one on the document.",
+        );
+      }
+    }
+
     return true;
   }
 };

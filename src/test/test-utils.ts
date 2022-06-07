@@ -6,6 +6,7 @@ import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 import { equal } from "../../deps.ts";
 import { FormatEs4 } from "../formats/format_es4.ts";
 import { FormatEs5 } from "../formats/format_es5.ts";
+import { BlobDriverMemory } from "../replica/blob_drivers/memory.ts";
 
 // for testing unicode
 export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -34,7 +35,10 @@ export let doesNotThrow = async (
 
 export function makeReplica(addr: string) {
   return new Replica({
-    driver: { docDriver: new DocDriverMemory(addr), blobDriver: null },
+    driver: {
+      docDriver: new DocDriverMemory(addr),
+      blobDriver: new BlobDriverMemory(),
+    },
   });
 }
 

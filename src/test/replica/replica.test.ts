@@ -17,9 +17,10 @@ import { Replica } from "../../replica/replica.ts";
 import { Logger } from "../../util/log.ts";
 import { CallbackSink } from "../../streams/stream_utils.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
-import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
+import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 const loggerTest = new Logger("test", "salmon");
 const loggerTestCb = new Logger("test cb", "lightsalmon");
 //setLogLevel('test', LogLevel.Debug);
@@ -27,11 +28,11 @@ const loggerTestCb = new Logger("test cb", "lightsalmon");
 //================================================================================
 
 const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "docDriver": ScenarioItem<typeof docDriverScenarios>;
   "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
 }> = multiplyScenarios({
-  description: "replicaDriver",
-  scenarios: replicaScenarios,
+  description: "docDriver",
+  scenarios: docDriverScenarios,
 }, {
   description: "cryptoDriver",
   scenarios: cryptoScenarios,
@@ -43,8 +44,10 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
   setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
   function makeReplica(ws: ShareAddress) {
-    const driver = scenario.subscenarios.replicaDriver.makeDriver(ws);
-    return new Replica({ driver });
+    const driver = scenario.subscenarios.docDriver.makeDriver(ws);
+    return new Replica({
+      driver: { docDriver: driver, blobDriver: new BlobDriverMemory() },
+    });
   }
 
   Deno.test(
@@ -455,6 +458,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       );
 
       docsA = await storage.getAllDocsAtPath("/pathA", [FormatEs4]); // latest first
+
       docsA_actualAuthorAndContent = docsA.map(
         (doc) => [doc.author, doc.content],
       );

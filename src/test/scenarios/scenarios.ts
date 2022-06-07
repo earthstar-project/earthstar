@@ -1,13 +1,13 @@
 import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
 import { DocDriverLocalStorage } from "../../replica/doc_drivers/localstorage.ts";
-//import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
 import { DocDriverSqliteFfi } from "../../replica/doc_drivers/sqlite_ffi.ts";
-import { PartnerScenario, ReplicaScenario, Scenario } from "./types.ts";
+import { DocDriverScenario, PartnerScenario, Scenario } from "./types.ts";
 import {
   universalCryptoDrivers,
   universalPartners,
-  universalReplicaDrivers,
+  universalReplicaBlobDrivers,
+  universalReplicaDocDrivers,
 } from "./scenarios.universal.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { PartnerWeb } from "../../syncer/partner_web.ts";
@@ -16,6 +16,8 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
 import { FormatsArg } from "../../formats/default.ts";
 import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
+import { IReplicaBlobDriver } from "../../replica/replica-types.ts";
+import { BlobDriverFilesystem } from "../../replica/blob_drivers/filesystem.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -25,17 +27,15 @@ export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   },
 ];
 
-export const replicaScenarios: Scenario<ReplicaScenario>[] = [
-  ...universalReplicaDrivers,
+export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
+  ...universalReplicaDocDrivers,
   {
     name: "LocalStorage",
     item: {
       persistent: true,
       builtInConfigKeys: [],
-      makeDriver: (addr, variant?: string) => ({
-        docDriver: new DocDriverLocalStorage(addr, variant),
-        blobDriver: null,
-      }),
+      makeDriver: (addr, variant?: string) =>
+        new DocDriverLocalStorage(addr, variant),
     },
   },
   {
@@ -43,31 +43,34 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
     item: {
       persistent: true,
       builtInConfigKeys: ["schemaVersion", "share"],
-      makeDriver: (addr, variant?: string) => ({
-        docDriver: new DocDriverSqliteFfi({
-          filename: `${addr}.${variant ? `${variant}.` : ""}bench.ffi.sqlite`,
+      makeDriver: (addr, variant?: string) =>
+        new DocDriverSqliteFfi({
+          filename: `${addr}.${variant ? `${variant}.` : ""}ffi.sqlite`,
           mode: "create-or-open",
           share: addr,
         }),
-        blobDriver: null,
-      }),
     },
   },
-
   {
     name: "Sqlite",
     item: {
       persistent: true,
       builtInConfigKeys: ["schemaVersion", "share"],
-      makeDriver: (addr, variant?: string) => ({
-        docDriver: new DocDriverSqlite({
-          filename: `${addr}.${variant ? `${variant}.` : ""}bench.sqlite`,
+      makeDriver: (addr, variant?: string) =>
+        new DocDriverSqlite({
+          filename: `${addr}.${variant ? `${variant}.` : ""}sqlite`,
           mode: "create-or-open",
           share: addr,
         }),
-        blobDriver: null,
-      }),
     },
+  },
+];
+
+export const blobDriverScenarios: Scenario<() => IReplicaBlobDriver>[] = [
+  ...universalReplicaBlobDrivers,
+  {
+    name: "Filesystem",
+    item: () => new BlobDriverFilesystem("./src/test/tmp"),
   },
 ];
 

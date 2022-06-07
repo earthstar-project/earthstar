@@ -1,6 +1,8 @@
 //================================================================================
 // PRIMITIVE DATA TYPES SPECIFIC TO OUR CODE
 
+import { ValidationError } from "./errors.ts";
+
 /** An identity's public address. */
 export type AuthorAddress = string;
 /** The human-identifiable portion of an identity's public address, e.g. `suzy`. */
@@ -59,3 +61,12 @@ export type DocInputWithFormat<
   FormatType extends string,
   DocInputType extends DocInputBase<string>,
 > = Extract<DocInputType, { "format": FormatType }>;
+
+export type DocBlob = {
+  stream: ReadableStream<Uint8Array>;
+  bytes: () => Promise<Uint8Array>;
+};
+
+export type DocWithBlob<D extends DocBase<string>> = D & {
+  blob: DocBlob | undefined | ValidationError;
+};

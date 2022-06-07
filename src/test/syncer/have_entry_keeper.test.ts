@@ -1,6 +1,7 @@
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
+import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 import { QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
 
@@ -22,7 +23,10 @@ Deno.test("HaveEntryKeeper", async () => {
 
   const replica = new Replica(
     {
-      driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
+      driver: {
+        docDriver: new DocDriverMemory(SHARE_ADDR),
+        blobDriver: new BlobDriverMemory(),
+      },
     },
   );
 
@@ -165,13 +169,19 @@ Deno.test({
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
     const replica = new Replica({
-      driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
+      driver: {
+        docDriver: new DocDriverMemory(SHARE_ADDR),
+        blobDriver: new BlobDriverMemory(),
+      },
     });
 
     await writeRandomDocsEs4(keypair, replica, 1000);
 
     const otherReplica = new Replica({
-      driver: { docDriver: new DocDriverMemory(SHARE_ADDR), blobDriver: null },
+      driver: {
+        docDriver: new DocDriverMemory(SHARE_ADDR),
+        blobDriver: new BlobDriverMemory(),
+      },
     });
 
     const ingestWritable = new WritableStream<QuerySourceEvent<DocEs4>>({

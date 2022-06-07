@@ -9,8 +9,14 @@ import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
 import { storagesAreSynced, writeRandomDocsEs4 } from "../test-utils.ts";
 
-import { partnerScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
-import { IReplicaDriver } from "../../replica/replica-types.ts";
+import {
+  docDriverScenarios,
+  partnerScenarios,
+} from "../scenarios/scenarios.ts";
+import {
+  IReplicaDocDriver,
+  IReplicaDriver,
+} from "../../replica/replica-types.ts";
 import {
   MultiplyScenarioOutput,
   PartnerScenario,
@@ -18,6 +24,7 @@ import {
 } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
+import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 
 class SyncerTestHelper {
   private scenario: PartnerScenario<[typeof FormatEs4]>;
@@ -27,7 +34,7 @@ class SyncerTestHelper {
 
   constructor(
     scenario: PartnerScenario<[typeof FormatEs4]>,
-    makeReplicaDriver: (addr: string, variant?: string) => IReplicaDriver,
+    makeDocDriver: (addr: string, variant?: string) => IReplicaDocDriver,
   ) {
     this.scenario = scenario;
 
@@ -37,8 +44,18 @@ class SyncerTestHelper {
 
     const makeReplicaDuo = (addr: string) => {
       return [
-        new Replica({ driver: makeReplicaDriver(addr, "sync-a") }),
-        new Replica({ driver: makeReplicaDriver(addr, "sync-b") }),
+        new Replica({
+          driver: {
+            docDriver: makeDocDriver(addr, "sync-a"),
+            blobDriver: new BlobDriverMemory(),
+          },
+        }),
+        new Replica({
+          driver: {
+            docDriver: makeDocDriver(addr, "sync-b"),
+            blobDriver: new BlobDriverMemory(),
+          },
+        }),
       ] as [Replica, Replica];
     };
 
@@ -118,11 +135,11 @@ class SyncerTestHelper {
 // Check that replicas are synced at the end.
 
 const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "replicaDriver": ScenarioItem<typeof docDriverScenarios>;
   "partner": ScenarioItem<typeof partnerScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriver",
-  scenarios: replicaScenarios,
+  scenarios: docDriverScenarios,
 }, {
   description: "partner",
   scenarios: partnerScenarios,

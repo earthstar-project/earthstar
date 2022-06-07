@@ -77,6 +77,15 @@ export interface IFormat<
    */
   checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
+  /**
+   * Returns a boolean indicating if its *possible* for the given document to have a blob associated with it. This does not indicate if that blob is actually present locally.
+   */
+  docCanHaveBlob(doc: DocType): boolean;
+
+  checkBlobMatchesDoc(
+    blob: Uint8Array | ReadableStream<Uint8Array>,
+    doc: DocType,
+  ): Promise<true | ValidationError>;
   // TODO: add these methods for building addresses
   // and remove them from crypto.ts and encoding.ts
   // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress

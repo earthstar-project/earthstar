@@ -25,19 +25,22 @@ import {
   queryByGlobAsync,
   queryByTemplateAsync,
 } from "../../query/query-helpers.ts";
-import { ReplicaScenario, Scenario } from "../scenarios/types.ts";
-import { replicaScenarios } from "../scenarios/scenarios.ts";
+import { DocDriverScenario, Scenario } from "../scenarios/types.ts";
+import { docDriverScenarios } from "../scenarios/scenarios.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
+import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 
 let runQueryHelpersTests = async (
-  scenario: Scenario<ReplicaScenario>,
+  scenario: Scenario<DocDriverScenario>,
   test: TestContext,
 ) => {
   let SUBTEST_NAME = scenario.name;
 
   function makeStorage(ws: ShareAddress): Replica {
     let driver = scenario.item.makeDriver(ws);
-    return new Replica({ driver });
+    return new Replica({
+      driver: { docDriver: driver, blobDriver: new BlobDriverMemory() },
+    });
   }
 
   let logger = new Logger("query helpers test", "yellow");
@@ -858,7 +861,7 @@ let runQueryHelpersTests = async (
 };
 
 Deno.test(`Query helpers`, async (test) => {
-  for (const scenario of replicaScenarios) {
+  for (const scenario of docDriverScenarios) {
     await runQueryHelpersTests(scenario, test);
   }
 });
