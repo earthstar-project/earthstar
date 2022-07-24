@@ -78,7 +78,7 @@ export interface IFormat<
   checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
   /**
-   * Returns a boolean indicating if its *possible* for the given document to have a blob associated with it. This does not indicate if that blob is actually present locally.
+   * Returns a boolean indicating if it is *possible* for the given document to have a blob associated with it. This does not indicate if that blob is actually present locally.
    */
   docCanHaveBlob(doc: DocType): boolean;
 

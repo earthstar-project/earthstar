@@ -219,7 +219,7 @@ export class SyncAgent<F> {
             if (!haveEntryKeeper.hasEntryWithId(event.id)) {
               outboundEventBus.send({ kind: "WANT", id: event.id });
 
-              // Register a WANT for each version, even though we sent out a single one for the root ID.
+              // Internally register a WANT for each version, even though we sent out a single one for the root ID.
               // The other side will send back the DOC with the version ID, NOT the root ID.
               for (const versionId in event.versions) {
                 registerWant(versionId);
@@ -320,6 +320,7 @@ export class SyncAgent<F> {
               }
 
               await replica.ingest(format, event.doc);
+
               break;
             } else {
               console.error("Was sent a doc we never asked for");

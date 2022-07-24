@@ -1,6 +1,7 @@
 import { FormatsArg } from "../formats/default.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
+import { ShareAddress } from "../util/doc-types.ts";
 import { Syncer } from "./syncer.ts";
 import { ISyncPartner, SyncerEvent, SyncerMode } from "./syncer_types.ts";
 
@@ -12,7 +13,12 @@ export class PartnerLocal<F> implements ISyncPartner {
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
   partnerSyncer: Syncer<F>;
 
-  constructor(peer: IPeer, mode: SyncerMode, formats?: FormatsArg<F>) {
+  constructor(
+    peer: IPeer,
+    peerSelf: IPeer,
+    mode: SyncerMode,
+    formats?: FormatsArg<F>,
+  ) {
     const { incomingEventBus, outgoingEventBus } = this;
 
     // This is a bit confusing, but it does work.
@@ -55,8 +61,44 @@ export class PartnerLocal<F> implements ISyncPartner {
             });
           },
         }),
+        async getBlobStream(share: ShareAddress, signature: string) {
+          const replica = peerSelf.getReplica(share);
+
+          if (!replica) {
+            return undefined;
+          }
+
+          const blob = await replica.replicaDriver.blobDriver.getBlob(
+            signature,
+          );
+
+          if (!blob) {
+            return undefined;
+          }
+
+          return blob.stream;
+        },
       },
       mode,
     });
+  }
+
+  async getBlobStream(
+    share: ShareAddress,
+    signature: string,
+  ): Promise<ReadableStream<Uint8Array> | undefined> {
+    const replica = this.partnerSyncer.peer.getReplica(share);
+
+    if (!replica) {
+      return undefined;
+    }
+
+    const blob = await replica.replicaDriver.blobDriver.getBlob(signature);
+
+    if (!blob) {
+      return undefined;
+    }
+
+    return blob.stream;
   }
 }

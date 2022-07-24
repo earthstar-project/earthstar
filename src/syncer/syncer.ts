@@ -2,18 +2,22 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import {
   DefaultFormat,
+  FallbackDoc,
   FormatsArg,
   getFormatIntersection,
 } from "../formats/default.ts";
 import { IPeer } from "../peer/peer-types.ts";
+import { QuerySourceEvent } from "../replica/replica-types.ts";
 import {
   BlockingBus,
   CloneStream,
   StreamSplitter,
 } from "../streams/stream_utils.ts";
 import { ShareAddress } from "../util/doc-types.ts";
+import { isErr } from "../util/errors.ts";
 import { randomId } from "../util/misc.ts";
 import {
+  ISyncPartner,
   SyncAgentEvent,
   SyncAgentStatus,
   SyncerEvent,
@@ -25,9 +29,17 @@ import { SyncAgent } from "./sync_agent.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer<F> {
-  private peer: IPeer;
+  peer: IPeer;
+  private partner: ISyncPartner;
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
   private syncAgents = new Map<ShareAddress, SyncAgent<F>>();
+  private docStreams = new Map<
+    ShareAddress,
+    {
+      existing: ReadableStream<QuerySourceEvent<FallbackDoc<F>>>;
+      live: ReadableStream<QuerySourceEvent<FallbackDoc<F>>>;
+    }
+  >();
   private mode: SyncerMode;
   private incomingStreamCloner = new CloneStream<SyncerEvent>();
   private statusBus = new BlockingBus<SyncerStatus>();
@@ -51,6 +63,7 @@ export class Syncer<F> {
     this.peer = opts.peer;
     this.mode = opts.mode;
     this.formats = opts.formats;
+    this.partner = opts.partner;
 
     // Create a new readable stream which is subscribed to events from this syncer.
     // Pipe it to the outgoing stream to the other peer.
@@ -210,6 +223,47 @@ export class Syncer<F> {
         },
       }),
     ).pipeTo(agent.writable);
+
+    const { partner } = this;
+
+    const blobRequestSink = new WritableStream<
+      QuerySourceEvent<FallbackDoc<F>>
+    >({
+      async write(event) {
+        if (event.kind === "existing" || event.kind === "success") {
+          const res = await replica.getBlob(event.doc);
+
+          if (isErr(res)) {
+            // This doc can't have a blob attached. Do nothing.
+            return;
+          } else if (res === undefined) {
+            // This doc can have a blob attached, but we don't have it.
+            // Ask our partner to fulfil it.
+            partner.requestBlob(address, event.doc.signature);
+          }
+        }
+      },
+    });
+
+    const existingDocsStream = replica.getQueryStream(
+      { orderBy: "localIndex ASC" },
+      this.formats,
+      "existing",
+    );
+
+    const liveDocsStream = replica.getQueryStream(
+      { orderBy: "localIndex ASC" },
+      this.formats,
+      "new",
+    );
+
+    existingDocsStream.pipeTo(blobRequestSink);
+    liveDocsStream.pipeTo(blobRequestSink);
+
+    this.docStreams.set(address, {
+      existing: existingDocsStream,
+      live: liveDocsStream,
+    });
   }
 
   /** Handle inbound events from the other peer. */
@@ -241,6 +295,7 @@ export class Syncer<F> {
         for (const share of commonShareSet) {
           this.addShare(share, intersectingFormats);
         }
+        break;
       }
     }
   }
@@ -266,6 +321,8 @@ export class Syncer<F> {
     for (const [_addr, agent] of this.syncAgents) {
       agent.cancel();
     }
+
+    // TODO: cancel all the doc streams used for blobs
   }
 }
 

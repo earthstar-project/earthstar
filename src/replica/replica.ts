@@ -680,6 +680,8 @@ export class Replica {
       return docIsValid;
     }
 
+    // TODO: We will probably need to tee the blob if it's a stream here.
+
     const blobIsValid = await format.checkBlobMatchesDoc(blob, doc);
 
     if (isErr(blobIsValid)) {
@@ -690,12 +692,13 @@ export class Replica {
   }
 
   getBlob<F>(
-    doc: FormatArgDoc<F>,
+    doc: FallbackDoc<F>,
     format?: FormatArg<F>,
   ): Promise<DocBlob | undefined | ValidationError> {
-    const f = format || DefaultFormat;
+    const f = format ? format : DefaultFormat;
 
-    if (f.docCanHaveBlob(doc)) {
+    // Really cannot be arsed to deal with TS not understanding this right now.
+    if (f.docCanHaveBlob(doc as any)) {
       return this.replicaDriver.blobDriver.getBlob(doc.signature);
     } else {
       // This doc cannot possibly have a blob associated with it.

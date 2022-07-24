@@ -1,7 +1,16 @@
-import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
+import {
+  DocBase,
+  DocInputBase,
+  FormatName,
+  Path,
+  ShareAddress,
+  Timestamp,
+} from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { FormatsArg } from "../formats/default.ts";
+import { IFormat } from "../formats/format_types.ts";
+import { BlobTransfer } from "./blob_transfer.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -63,6 +72,7 @@ export type SyncAgentStatus = {
   requested: number;
   received: number;
   status: "preparing" | "syncing" | "idling" | "done" | "aborted";
+  // TODO: Add if partner is done yet.
 };
 
 /** Options used for initialisng a `SyncAgent`.
@@ -96,6 +106,12 @@ export type SyncerEvent = SyncerSyncAgentEvent | SyncerDiscloseEvent;
 export interface ISyncPartner {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
+  getReceiveTransfer<
+    N extends FormatName,
+    I extends DocInputBase<N>,
+    O extends DocBase<N>,
+    F extends IFormat<N, I, O>,
+  >(opts: BlobTransferOpts<N, I, O, F>): BlobTransfer<N, I, O, F> | undefined;
 }
 
 /** A mode which determines when the syncer will stop syncing.
@@ -118,3 +134,38 @@ export interface SyncerOpts<F> {
 
 /** A map of sync statuses by the share address they're associated with. */
 export type SyncerStatus = Record<ShareAddress, SyncAgentStatus>;
+
+// =============== BLOB SYNCING
+
+export type BlobTransferStatus =
+  | "ready"
+  | "in_progress"
+  | "complete"
+  | "failed";
+
+// TODO: This shoulde probably take a format and document rather than a path.
+export type BlobTransferOpts<
+  N extends FormatName,
+  I extends DocInputBase<N>,
+  DocType extends DocBase<N>,
+  FormatType extends IFormat<N, I, DocType>,
+> = {
+  driver: IBlobTransferDriver;
+  replica: Replica;
+  doc: DocType;
+  format: FormatType;
+};
+
+export interface IBlobTransferSendDriver {
+  kind: "send";
+  getWritable: () => Promise<WritableStream<Uint8Array>>;
+}
+
+export interface IBlobTransferReceiveDriver {
+  kind: "receive";
+  getReadable: () => Promise<ReadableStream<Uint8Array>>;
+}
+
+export type IBlobTransferDriver =
+  | IBlobTransferSendDriver
+  | IBlobTransferReceiveDriver;
