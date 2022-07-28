@@ -580,6 +580,19 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     return false;
   }
 
+  static getAttachmentInfo(
+    doc: DocEs5,
+  ): { size: number; hash: string } | ValidationError {
+    if (!doc.blobHash || !doc.blobSize) {
+      return new ValidationError("This document has no attachment");
+    }
+
+    return {
+      size: doc.blobSize,
+      hash: doc.blobHash,
+    };
+  }
+
   static async checkBlobMatchesDoc(
     blob: Uint8Array | ReadableStream<Uint8Array>,
     doc: DocEs5,

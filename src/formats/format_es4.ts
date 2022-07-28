@@ -482,14 +482,16 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
     return true;
   }
 
-  static docCanHaveBlob(_doc: DocEs4): false {
-    return false as const;
+  static getAttachmentInfo(_doc: DocEs4): ValidationError {
+    return new ValidationError("es.4 does not support attachments");
   }
 
   static checkBlobMatchesDoc(
     _blob: Uint8Array | ReadableStream<Uint8Array>,
     _doc: DocEs4,
   ) {
-    return Promise.resolve(new ValidationError("es.4 does not support blobs"));
+    return Promise.resolve(
+      new ValidationError("es.4 does not support attachments"),
+    );
   }
 };

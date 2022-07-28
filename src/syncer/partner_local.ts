@@ -1,24 +1,38 @@
 import { FormatsArg } from "../formats/default.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { ShareAddress } from "../util/doc-types.ts";
+import { isErr } from "../util/errors.ts";
+import { ValidationError } from "../util/errors.ts";
 import { Syncer } from "./syncer.ts";
-import { ISyncPartner, SyncerEvent, SyncerMode } from "./syncer_types.ts";
+import {
+  GetTransferOpts,
+  ISyncPartner,
+  SyncerEvent,
+  SyncerMode,
+} from "./syncer_types.ts";
 
-export class PartnerLocal<F> implements ISyncPartner {
+export class PartnerLocal<
+  FormatsType,
+  IncomingTransferSourceType extends undefined,
+> implements ISyncPartner<undefined> {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 
   private incomingEventBus = new BlockingBus<SyncerEvent>();
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
-  partnerSyncer: Syncer<F>;
+  private partnerPeer: IPeer;
+
+  // Need this for testing.
+  partnerSyncer: Syncer<IncomingTransferSourceType, FormatsType>;
 
   constructor(
     peer: IPeer,
     peerSelf: IPeer,
     mode: SyncerMode,
-    formats?: FormatsArg<F>,
+    formats?: FormatsArg<FormatsType>,
   ) {
+    this.partnerPeer = peer;
+
     const { incomingEventBus, outgoingEventBus } = this;
 
     // This is a bit confusing, but it does work.
@@ -39,10 +53,13 @@ export class PartnerLocal<F> implements ISyncPartner {
       },
     });
 
+    // This will be the partner of our partner, which is us.
+
     // Now we create another syncer within this driver
     // But this syncer needs its own driver...
     // We'll give it one that proxies to the readable / writable pair we defined above.
-    this.partnerSyncer = new Syncer<F>({
+
+    this.partnerSyncer = new Syncer<IncomingTransferSourceType, FormatsType>({
       peer,
       formats,
       partner: {
@@ -61,44 +78,99 @@ export class PartnerLocal<F> implements ISyncPartner {
             });
           },
         }),
-        async getBlobStream(share: ShareAddress, signature: string) {
-          const replica = peerSelf.getReplica(share);
+        async getDownload(
+          opts: GetTransferOpts,
+        ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
+          const partnerReplica = peerSelf.getReplica(opts.shareAddress);
 
-          if (!replica) {
-            return undefined;
+          if (!partnerReplica) {
+            return new ValidationError(
+              "Tried to get a receiving transfer for an unknown share.",
+            );
           }
 
-          const blob = await replica.replicaDriver.blobDriver.getBlob(
-            signature,
+          const blob = await partnerReplica.replicaDriver.blobDriver.getBlob(
+            opts.doc.format,
+            opts.attachmentHash,
           );
 
           if (!blob) {
             return undefined;
           }
 
+          if (isErr(blob)) {
+            return;
+          }
+
           return blob.stream;
+        },
+        handleUploadRequest(
+          _opts: GetTransferOpts,
+        ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
+          // Just return undefined here because we know how to directly get a transfer from this partner.
+          return Promise.resolve(undefined);
+        },
+        handleTransferRequest(
+          _source: IncomingTransferSourceType,
+          _kind: "upload" | "download",
+        ): Promise<
+          | ReadableStream<Uint8Array>
+          | WritableStream<Uint8Array>
+          | ValidationError
+          | undefined
+        > {
+          // Don't need to implement this either.
+          return Promise.resolve(undefined);
         },
       },
       mode,
     });
   }
 
-  async getBlobStream(
-    share: ShareAddress,
-    signature: string,
-  ): Promise<ReadableStream<Uint8Array> | undefined> {
-    const replica = this.partnerSyncer.peer.getReplica(share);
+  async getDownload(
+    opts: GetTransferOpts,
+  ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
+    const partnerReplica = this.partnerPeer.getReplica(opts.shareAddress);
 
-    if (!replica) {
-      return undefined;
+    if (!partnerReplica) {
+      return new ValidationError(
+        "Tried to get a receiving transfer for an unknown share.",
+      );
     }
 
-    const blob = await replica.replicaDriver.blobDriver.getBlob(signature);
+    const blob = await partnerReplica.replicaDriver.blobDriver.getBlob(
+      opts.doc.format,
+      opts.attachmentHash,
+    );
 
     if (!blob) {
       return undefined;
     }
 
+    if (isErr(blob)) {
+      return;
+    }
+
     return blob.stream;
+  }
+
+  handleUploadRequest(
+    _opts: GetTransferOpts,
+  ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
+    // Just return undefined here because we know how to directly get a transfer from this partner.
+    return Promise.resolve(undefined);
+  }
+
+  handleTransferRequest(
+    _source: IncomingTransferSourceType,
+    _kind: "upload" | "download",
+  ): Promise<
+    | ReadableStream<Uint8Array>
+    | WritableStream<Uint8Array>
+    | ValidationError
+    | undefined
+  > {
+    // Don't need to implement this either.
+    return Promise.resolve(undefined);
   }
 }

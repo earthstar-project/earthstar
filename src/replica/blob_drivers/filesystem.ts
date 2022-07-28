@@ -11,7 +11,8 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
   }
 
   async upsert(
-    signature: string,
+    formatName: string,
+    attachmentHash: string,
     blob: ReadableStream<Uint8Array> | Uint8Array,
   ) {
     // Create the path
@@ -21,13 +22,13 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       await Deno.mkdir(this.path);
     }
 
-    const path = join(this.path, signature);
+    const filePath = join(this.path, formatName, attachmentHash);
 
     if (blob instanceof Uint8Array) {
-      await Deno.writeFile(path, blob, { create: true });
+      await Deno.writeFile(filePath, blob, { create: true });
     } else {
       try {
-        await Deno.truncate(path);
+        await Deno.truncate(filePath);
       } catch {
         // It's fine.
       }
@@ -35,7 +36,10 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       await blob.pipeTo(
         new WritableStream({
           async write(chunk) {
-            await Deno.writeFile(path, chunk, { create: true, append: true });
+            await Deno.writeFile(filePath, chunk, {
+              create: true,
+              append: true,
+            });
           },
         }),
       );
@@ -44,14 +48,16 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     return true as const;
   }
 
-  async erase(signature: string) {
-    const path = join(this.path, signature);
+  async erase(formatName: string, attachmentHash: string) {
+    const filePath = join(this.path, formatName, attachmentHash);
 
     try {
-      await Deno.remove(path);
+      await Deno.remove(filePath);
       return true;
     } catch {
-      return new ValidationError(`Blob for ${signature} did not exist.`);
+      return new ValidationError(
+        `Attachment not found`,
+      );
     }
   }
 
@@ -64,19 +70,22 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     }
   }
 
-  async getBlob(signature: string): Promise<DocBlob | undefined> {
-    const path = join(this.path, signature);
+  async getBlob(
+    formatName: string,
+    attachmentHash: string,
+  ): Promise<DocBlob | undefined> {
+    const filePath = join(this.path, formatName, attachmentHash);
 
     try {
-      await Deno.lstat(path);
+      await Deno.lstat(filePath);
     } catch {
       return undefined;
     }
 
-    const file = await Deno.open(path, { read: true });
+    const file = await Deno.open(filePath, { read: true });
 
     return {
-      bytes: () => Deno.readFile(path),
+      bytes: () => Deno.readFile(filePath),
       stream: file.readable,
     };
   }

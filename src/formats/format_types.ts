@@ -54,7 +54,7 @@ export interface IFormat<
   ): Promise<DocType | ValidationError>;
 
   /**
-   * Overwrite the user-written contents of a document, wipes any associated data, and signs the document.
+   * Overwrite the user-written contents of a document, wipes any associated attachments, and signs the document.
    */
   wipeDocument(
     keypair: AuthorKeypair,
@@ -78,14 +78,18 @@ export interface IFormat<
   checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
   /**
-   * Returns a boolean indicating if it is *possible* for the given document to have a blob associated with it. This does not indicate if that blob is actually present locally.
+   * Returns information about a doc's attachment, if it has one. If it doesn't, a `ValidationError` will be returned. This does not indicate if that blob is actually present locally.
    */
-  docCanHaveBlob(doc: DocType): boolean;
+  getAttachmentInfo(doc: DocType): {
+    size: number;
+    hash: string;
+  } | ValidationError;
 
   checkBlobMatchesDoc(
     blob: Uint8Array | ReadableStream<Uint8Array>,
     doc: DocType,
   ): Promise<true | ValidationError>;
+
   // TODO: add these methods for building addresses
   // and remove them from crypto.ts and encoding.ts
   // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
@@ -98,8 +102,10 @@ export type FormatInputType<FormatterType> = FormatterType extends
 
 export type FormatDocType<FormatterType> = FormatterType extends
   IFormat<infer _FormatType, infer _DocInputType, infer DocType> ? DocType
+  : FormatterType extends
+    IFormat<infer _FormatType, infer _DocInputType, infer DocType>[] ? DocType
   : never;
 
-export type FormatterFormatType<FormatterType> = FormatterType extends
+export type FormatNameType<FormatterType> = FormatterType extends
   IFormat<infer FormatType, infer _DocType, infer _DocInputType> ? FormatType
   : never;

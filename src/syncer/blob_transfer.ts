@@ -1,71 +1,130 @@
-import { Replica } from "../replica/replica.ts";
-import { DocBase, DocInputBase, FormatName, Path } from "../util/doc-types.ts";
-import { isErr, NotFoundError } from "../util/errors.ts";
+import { BlockingBus } from "../streams/stream_utils.ts";
+import { DocBase } from "../util/doc-types.ts";
+import { isErr, NotFoundError, ValidationError } from "../util/errors.ts";
 import {
   BlobTransferOpts,
+  BlobTransferProgressEvent,
   BlobTransferStatus,
-  IBlobTransferDriver,
 } from "./syncer_types.ts";
-import { IFormat } from "../formats/format_types.ts";
-import { FallbackDoc, FormatArg } from "../formats/default.ts";
 
-export class BlobTransfer<
-  N extends FormatName,
-  I extends DocInputBase<N>,
-  DocType extends DocBase<N>,
-  FormatType extends IFormat<N, I, DocType>,
-> {
-  private driver: IBlobTransferDriver;
-  private status: BlobTransferStatus = "ready";
-  private replica: Replica;
-  private doc: DocType;
-  private format: FormatType;
+export class BlobTransfer<F> {
+  kind: "download" | "upload";
+  status: BlobTransferStatus = "ready";
 
-  constructor(opts: BlobTransferOpts<N, I, DocType, FormatType>) {
-    this.driver = opts.driver;
-    this.replica = opts.replica;
-    this.doc = opts.doc;
-    this.format = opts.format;
-  }
+  loaded = 0;
+  expectedSize: number;
 
-  async start() {
-    if (this.status !== "ready") {
-      // throw.
+  private sourceDoc: DocBase<string>;
+  private statusBus = new BlockingBus<BlobTransferProgressEvent>();
+
+  hash: string;
+
+  constructor(
+    { stream, blobDriver, doc, format }: BlobTransferOpts<F>,
+  ) {
+    this.sourceDoc = doc;
+
+    const attachmentInfo = format.getAttachmentInfo(doc);
+
+    if (isErr(attachmentInfo)) {
+      throw new ValidationError(
+        "BlobTransfer was given a doc which has no attachment!",
+      );
     }
 
-    if (this.driver.kind === "send") {
-      // TODO: One day we will have the tools to make the doc / format types make sense.
-      // Until then, we must resort to ferreting away `any` deep underground
-      const blobRes = await this.replica.getBlob(
-        this.doc as any,
-        this.format as FormatArg<FormatType>,
+    this.hash = attachmentInfo.hash;
+    this.expectedSize = attachmentInfo.size;
+
+    const updateLoaded = this.updateLoaded.bind(this);
+
+    if (stream instanceof ReadableStream) {
+      // Incoming
+      // pipe through our bytes counter
+      this.kind = "download";
+
+      const counterStream = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const reader = stream.getReader();
+
+          while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+              break;
+            }
+
+            updateLoaded(value.byteLength);
+
+            controller.enqueue(value);
+          }
+
+          controller.close();
+        },
+      });
+
+      blobDriver.upsert(doc.format, attachmentInfo.hash, counterStream).then(
+        () => {
+          this.changeStatus("complete");
+        },
       );
 
-      if (!blobRes) {
-        return new NotFoundError();
-      }
+      this.changeStatus("in_progress");
+    } else {
+      this.kind = "upload";
 
-      if (isErr(blobRes)) {
-        return blobRes;
-      }
+      blobDriver.getBlob(doc.format, attachmentInfo.hash).then((blobRes) => {
+        if (!blobRes) {
+          return new NotFoundError();
+        }
 
-      const writable = await this.driver.getWritable();
+        if (isErr(blobRes)) {
+          return blobRes;
+        }
 
-      // TODO: Pipethrough a byte counter.
+        const counterTransform = new TransformStream<Uint8Array, Uint8Array>({
+          transform(chunk, controller) {
+            updateLoaded(chunk.byteLength);
 
-      blobRes.stream.pipeTo(writable);
-    }
+            controller.enqueue(chunk);
+          },
+        });
 
-    if (this.driver.kind === "receive") {
-      // get the stream from the transfer driver
-      const readable = await this.driver.getReadable();
+        blobRes.stream.pipeThrough(counterTransform).pipeTo(stream).then(() => {
+          this.changeStatus("complete");
+        });
 
-      // pipe through our bytes counter
-      this.replica.ingestBlob(this.format, this.doc, readable);
+        this.changeStatus("in_progress");
+      });
     }
   }
 
-  // onProgress
-  // getStatus
-  // abort
+  private updateLoaded(toAdd: number) {
+    this.loaded += toAdd;
+    this.statusBus.send({
+      status: this.status,
+      bytesLoaded: this.loaded,
+      totalBytes: this.expectedSize,
+    });
+  }
+
+  private changeStatus(status: BlobTransferStatus) {
+    this.status = status;
+
+    this.statusBus.send({
+      status: status,
+      bytesLoaded: this.loaded,
+      totalBytes: this.expectedSize,
+    });
+  }
+
+  get doc(): DocBase<string> {
+    return this.sourceDoc;
+  }
+
+  onProgress(callback: (event: BlobTransferProgressEvent) => void): () => void {
+    const unsub = this.statusBus.on(callback);
+    return unsub;
+  }
+
+  // TODO: abort
 }

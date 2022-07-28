@@ -7,11 +7,8 @@ import {
   SyncAgentStatus,
 } from "./syncer_types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-import {
-  DefaultFormat,
-  FormatArgsInit,
-  FormatsArg,
-} from "../formats/default.ts";
+import { getFormatLookup } from "../formats/default.ts";
+import { FormatDocType } from "../formats/format_types.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -128,12 +125,7 @@ export class SyncAgent<F> {
     const cancel = this.cancel.bind(this);
 
     // A little object we can look up formats by format name. In a type-safe-ish way.
-    const f = formats ? formats : [DefaultFormat];
-
-    const formatLookup: Record<string, FormatArgsInit<FormatsArg<F>>> = {};
-    for (const format of f) {
-      formatLookup[format.id] = format as typeof formatLookup[string];
-    }
+    const formatLookup = getFormatLookup(formats);
 
     // A writable which receives HaveEntry from the keeper, and sends out `HAVE` events for them.
     const haveEntrySink = new WritableStream<HaveEntry>({
@@ -319,7 +311,7 @@ export class SyncAgent<F> {
                 break;
               }
 
-              await replica.ingest(format, event.doc);
+              await replica.ingest(format, event.doc as FormatDocType<F>);
 
               break;
             } else {

@@ -17,14 +17,9 @@ import { QuerySourceEvent } from "./replica-types.ts";
 import { Logger } from "../util/log.ts";
 import { CallbackSink } from "../streams/stream_utils.ts";
 import { Replica } from "./replica.ts";
-import { FormatInputType, IFormat } from "../formats/format_types.ts";
-import {
-  DefaultFormat,
-  FallbackDoc,
-  FormatArg,
-  FormatArgInput,
-  FormatsArg,
-} from "../formats/default.ts";
+
+import { DEFAULT_FORMATS, FormatArg, FormatsArg } from "../formats/default.ts";
+import { FormatDocType, FormatInputType } from "../formats/format_types.ts";
 
 const logger = new Logger("replica-cache", "green");
 
@@ -176,7 +171,7 @@ export class ReplicaCache {
     F,
   >(
     keypair: AuthorKeypair,
-    docToSet: Omit<FormatArgInput<F>, "format">,
+    docToSet: Omit<FormatInputType<F>, "format">,
     format?: FormatArg<F>,
   ): Promise<
     true | ValidationError
@@ -191,7 +186,7 @@ export class ReplicaCache {
   /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   getAllDocs<F>(
     formats?: FormatsArg<F>,
-  ): FallbackDoc<F>[] {
+  ): FormatDocType<F>[] {
     return this.queryDocs({
       historyMode: "all",
       orderBy: "path DESC",
@@ -201,7 +196,7 @@ export class ReplicaCache {
   /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   getLatestDocs<F>(
     formats?: FormatsArg<F>,
-  ): FallbackDoc<F>[] {
+  ): FormatDocType<F>[] {
     return this.queryDocs({
       historyMode: "latest",
       orderBy: "path DESC",
@@ -212,7 +207,7 @@ export class ReplicaCache {
   getAllDocsAtPath<F>(
     path: Path,
     formats?: FormatsArg<F>,
-  ): FallbackDoc<F>[] {
+  ): FormatDocType<F>[] {
     return this.queryDocs({
       historyMode: "all",
       orderBy: "path DESC",
@@ -224,7 +219,7 @@ export class ReplicaCache {
   getLatestDocAtPath<F>(
     path: Path,
     formats?: FormatsArg<F>,
-  ): FallbackDoc<F> | undefined {
+  ): FormatDocType<F> | undefined {
     const docs = this.queryDocs({
       historyMode: "latest",
       orderBy: "path DESC",
@@ -233,20 +228,20 @@ export class ReplicaCache {
     if (docs.length === 0) {
       return undefined;
     }
-    return docs[0] as FallbackDoc<F>;
+    return docs[0] as FormatDocType<F>;
   }
 
   /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
   queryDocs<F>(
     query: Omit<Query<[string]>, "formats"> = {},
     formats?: FormatsArg<F>,
-  ): FallbackDoc<F>[] {
+  ): FormatDocType<F>[] {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
 
-    const f = formats ? formats : [DefaultFormat];
+    const f = formats ? formats : DEFAULT_FORMATS;
     const queryWithFormats = {
       ...query,
       formats: f.map((f) => f.id),
@@ -291,7 +286,7 @@ export class ReplicaCache {
         });
       }
 
-      return cachedResult.docs as FallbackDoc<F>[];
+      return cachedResult.docs as FormatDocType<F>[];
     }
 
     // If there's no result, let's follow this query.

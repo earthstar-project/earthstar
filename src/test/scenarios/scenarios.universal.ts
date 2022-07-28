@@ -41,7 +41,7 @@ export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
   }
 
   setup(peerA: IPeer, peerB: IPeer) {
-    const partner = new PartnerLocal(peerB, "once", this.formats);
+    const partner = new PartnerLocal(peerB, peerA, "once", this.formats);
 
     const syncerA = new Syncer({
       peer: peerA,
@@ -51,7 +51,7 @@ export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
     });
 
     return Promise.resolve(
-      [syncerA, partner.partnerSyncer] as [Syncer<F>, Syncer<F>],
+      [syncerA, partner.partnerSyncer] as [Syncer<any, F>, Syncer<any, F>],
     );
   }
 
