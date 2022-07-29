@@ -154,8 +154,6 @@ export function writeRandomDocs(
 ) {
   const fstRand = randomId();
 
-  const encoder = new TextEncoder();
-
   const setPromises = Array.from({ length: n }, () => {
     const rand = randomId();
 
@@ -245,8 +243,7 @@ export async function storagesBlobsAreSynced(
     const prevDocs = allDocsSets[i - 1];
 
     // See if they're equivalent with the current set.
-    const allSynced = docsAreEquivalent(docs, prevDocs) &&
-      await docBlobsAreEquivalent(docs, prevDocs);
+    const allSynced = await docBlobsAreEquivalent(docs, prevDocs);
 
     if (allSynced === false) {
       return false;

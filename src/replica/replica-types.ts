@@ -221,9 +221,10 @@ export interface IReplicaBlobDriver {
     attachmentHash: string,
   ): Promise<DocBlob | undefined>;
 
+  /** Upserts the blob to a staging area, and returns an object used to assess whether it is what we're expecting */
   upsert(
     formatName: string,
-    attachmentHash: string,
+    expectedHash: string,
     blob: Uint8Array | ReadableStream<Uint8Array>,
   ): Promise<true | ValidationError>;
 

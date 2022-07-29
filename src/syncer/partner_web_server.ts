@@ -1,5 +1,6 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { ValidationError } from "../util/errors.ts";
+import { sleep } from "../util/misc.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebServerOpts = {
@@ -82,6 +83,8 @@ export class PartnerWebServer<
     // Return a stream which writes to the socket. nice.
     const socketIsOpen = deferred();
 
+    socket.binaryType = "arraybuffer";
+
     socket.onopen = () => {
       socketIsOpen.resolve();
     };
@@ -92,7 +95,10 @@ export class PartnerWebServer<
         async write(chunk) {
           await socketIsOpen;
 
-          socket.send(chunk);
+          socket.send(chunk.buffer);
+        },
+        close() {
+          socket.close();
         },
       });
 

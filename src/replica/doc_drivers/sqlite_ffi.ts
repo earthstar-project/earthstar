@@ -22,7 +22,7 @@ import {
   UPSERT_CONFIG_QUERY,
   UPSERT_DOC_QUERY,
 } from "./sqlite.shared.ts";
-import * as Sqlite from "https://deno.land/x/sqlite3@0.4.2/mod.ts";
+import * as Sqlite from "https://deno.land/x/sqlite3@0.4.3/mod.ts";
 
 //--------------------------------------------------
 

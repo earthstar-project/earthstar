@@ -1,5 +1,6 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { ValidationError } from "../util/errors.ts";
+import { sleep } from "../util/misc.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebClientOpts = {
@@ -77,11 +78,13 @@ export class PartnerWebClient<
     // create a new url with the share, path, and syncer ID embedded
 
     const hostAndPath =
-      `${this.url.host}/download/${opts.syncerId}/${opts.shareAddress}/${opts.signature}`;
+      `${this.url.host}/${opts.syncerId}/download/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
 
     const socket = new WebSocket(
       this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`,
     );
+
+    socket.binaryType = "arraybuffer";
 
     const readable = new ReadableStream<Uint8Array>({
       start(controller) {
@@ -110,11 +113,13 @@ export class PartnerWebClient<
     opts: GetTransferOpts,
   ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
     const hostAndPath =
-      `${this.url.host}/upload/${opts.syncerId}/${opts.shareAddress}/${opts.signature}`;
+      `${this.url.host}/${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
 
     const socket = new WebSocket(
       this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`,
     );
+
+    socket.binaryType = "arraybuffer";
 
     // Return a stream which writes to the socket. nice.
     const socketIsOpen = deferred();
@@ -127,7 +132,11 @@ export class PartnerWebClient<
       async write(chunk) {
         await socketIsOpen;
 
-        socket.send(chunk);
+        socket.send(chunk.buffer);
+      },
+
+      close() {
+        socket.close();
       },
     });
 

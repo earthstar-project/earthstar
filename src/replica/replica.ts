@@ -651,7 +651,7 @@ export class Replica {
   //--------------------------------------------------
   // BLOBS
 
-  async ingestBlob<F = DefaultFormatType>(
+  ingestBlob<F = DefaultFormatType>(
     format: FormatArg<F>,
     doc: FormatDocType<F>,
     blob: Uint8Array | ReadableStream<Uint8Array>,
@@ -660,33 +660,34 @@ export class Replica {
   > {
     if (this._isClosed) throw new ReplicaIsClosedError();
 
+    const removeResultsOrErr = format
+      .removeExtraFields(doc);
+
+    if (isErr(removeResultsOrErr)) {
+      return Promise.resolve(removeResultsOrErr);
+    }
+    doc = removeResultsOrErr.doc as FormatDocType<F>; // a copy of doc without extra fields
+
     // check doc is valid
     const docIsValid = format.checkDocumentIsValid(doc);
 
     if (isErr(docIsValid)) {
-      return docIsValid;
-    }
-
-    // TODO: We will probably need to tee the blob if it's a stream here
-
-    const blobIsValid = await format.checkBlobMatchesDoc(blob, doc);
-
-    if (isErr(blobIsValid)) {
-      return blobIsValid;
+      return Promise.resolve(docIsValid);
     }
 
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (isErr(attachmentInfo)) {
       // This really shouldn't happen, but...
-      return attachmentInfo;
+      return Promise.resolve(attachmentInfo);
     }
 
-    return this.replicaDriver.blobDriver.upsert(
-      doc.format,
-      attachmentInfo.hash,
-      blob,
-    );
+    return this.replicaDriver.blobDriver
+      .upsert(
+        doc.format,
+        attachmentInfo.hash,
+        blob,
+      );
   }
 
   getBlob<F = DefaultFormatType>(

@@ -44,6 +44,7 @@ export const CryptoDriverSodium: ICryptoDriver = class {
       }
     }
   }
+
   static generateKeypairBytes(): Promise<KeypairBytes> {
     logger.debug("generateKeypairBytes");
 

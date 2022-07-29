@@ -166,8 +166,6 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           this.isDone.resolve(true);
         }
       }
-
-      console.groupEnd();
     });
 
     /*
@@ -326,7 +324,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
               // We got a transfer! Add it to our syncer's transfers.
 
               const transfer = new BlobTransfer({
-                blobDriver: replica.replicaDriver.blobDriver,
+                replica,
                 doc: event.doc,
                 format,
                 stream: result,
@@ -421,7 +419,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         const transfer = new BlobTransfer({
           doc: event.doc as FormatDocType<FormatsType>,
           format,
-          blobDriver: replica.replicaDriver.blobDriver,
+          replica,
           stream: result,
         });
 
@@ -541,7 +539,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     const transfer = new BlobTransfer({
       doc: doc as FormatDocType<typeof format>,
       format,
-      blobDriver: replica.replicaDriver.blobDriver,
+      replica,
       stream: result,
     });
 

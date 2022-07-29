@@ -89,8 +89,34 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
   async setup(peerA: IPeer, peerB: IPeer) {
     const serverSyncerPromise = deferred<Syncer<WebSocket, F>>();
 
-    const handler = (req: Request) => {
+    const handler = async (req: Request) => {
       // check what the url is... if it's for upload / download urls, parse the url, call the freaking syncer...
+
+      const transferPattern = new URLPattern({
+        pathname: "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
+      });
+
+      const transferMatch = transferPattern.exec(req.url);
+
+      if (transferMatch) {
+        const { socket, response } = Deno.upgradeWebSocket(req);
+
+        const syncer = await serverSyncerPromise;
+
+        const { shareAddress, formatName, path, author, kind } =
+          transferMatch.pathname.groups;
+
+        syncer.handleTransferRequest({
+          shareAddress,
+          formatName,
+          path: `/${path}`,
+          author,
+          kind: kind as "download" | "upload",
+          source: socket,
+        });
+
+        return response;
+      }
 
       const { socket, response } = Deno.upgradeWebSocket(req);
 

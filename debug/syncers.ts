@@ -54,10 +54,6 @@ peer2.addReplica(c2);
 
 const syncer = peer1.sync(peer2, false);
 
-syncer.onStatusChange((status) => {
-  //console.log(status);
-});
-
 // set up a syncer with a local partner.
 
 // attach all blobs.
@@ -82,9 +78,9 @@ for (const [x, y] of pairs) {
   const res = await docBlobsAreEquivalent(fstWithBlobs, sndWithBlobs);
 
   if (res) {
-    console.log(`${x.share}: Attachments synced!`);
+    console.log(`Attachments synced!`);
   } else {
-    console.log(`${x.share}: Attachments did not sync...`);
+    console.log(`Attachments did not sync...`);
   }
   console.groupEnd();
 }

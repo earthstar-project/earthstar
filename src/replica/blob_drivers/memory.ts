@@ -1,3 +1,4 @@
+import { FormatArg } from "../../formats/default.ts";
 import { DocBlob } from "../../util/doc-types.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { streamToBytes } from "../../util/streams.ts";
@@ -29,10 +30,10 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
 
   async upsert(
     formatName: string,
-    attachmentHash: string,
+    expectedHash: string,
     blob: ReadableStream<Uint8Array> | Uint8Array,
   ) {
-    const key = this.getKey(formatName, attachmentHash);
+    const key = this.getKey(formatName, expectedHash);
 
     if (blob instanceof Uint8Array) {
       const newBlob = new Blob([blob]);
@@ -42,7 +43,6 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
       const bytes = await streamToBytes(blob);
 
       const newBlob = new Blob([bytes]);
-      this.blobMap.set(key, newBlob);
 
       this.blobMap.set(key, newBlob);
     }

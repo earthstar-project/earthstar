@@ -4,7 +4,6 @@ import { Replica } from "../replica/replica.ts";
 import { FormatArg, FormatsArg } from "../formats/default.ts";
 import { FormatDocType } from "../formats/format_types.ts";
 import { ValidationError } from "../util/errors.ts";
-import { IReplicaBlobDriver } from "../replica/replica-types.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -186,7 +185,7 @@ export type BlobTransferStatus =
 
 export type BlobTransferOpts<F> = {
   stream: ReadableStream<Uint8Array> | WritableStream<Uint8Array>;
-  blobDriver: IReplicaBlobDriver;
+  replica: Replica;
   doc: FormatDocType<F>;
   format: FormatArg<F>;
 };

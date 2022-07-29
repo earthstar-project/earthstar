@@ -20,7 +20,7 @@ export class BlobTransfer<F> {
   hash: string;
 
   constructor(
-    { stream, blobDriver, doc, format }: BlobTransferOpts<F>,
+    { stream, replica, doc, format }: BlobTransferOpts<F>,
   ) {
     this.sourceDoc = doc;
 
@@ -62,8 +62,13 @@ export class BlobTransfer<F> {
         },
       });
 
-      blobDriver.upsert(doc.format, attachmentInfo.hash, counterStream).then(
-        () => {
+      replica.ingestBlob(format, doc, counterStream).then(
+        (result) => {
+          if (isErr(result)) {
+            console.log(result);
+            this.changeStatus("failed");
+          }
+
           this.changeStatus("complete");
         },
       );
@@ -72,7 +77,7 @@ export class BlobTransfer<F> {
     } else {
       this.kind = "upload";
 
-      blobDriver.getBlob(doc.format, attachmentInfo.hash).then((blobRes) => {
+      replica.getBlob(doc, format).then((blobRes) => {
         if (!blobRes) {
           return new NotFoundError();
         }
