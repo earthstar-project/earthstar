@@ -17,17 +17,14 @@ import {
   docDriverScenarios,
   partnerScenarios,
 } from "../scenarios/scenarios.ts";
-import {
-  IReplicaDocDriver,
-  IReplicaDriver,
-} from "../../replica/replica-types.ts";
+import { IReplicaDocDriver } from "../../replica/replica-types.ts";
 import {
   MultiplyScenarioOutput,
   PartnerScenario,
   ScenarioItem,
 } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
-import { FormatEs4 } from "../../formats/format_es4.ts";
+
 import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 import { FormatEs5 } from "../../formats/format_es5.ts";
 

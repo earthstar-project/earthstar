@@ -95,7 +95,7 @@ export interface DocInputEs5 extends DocInputBase<"es.5"> {
   /** The format the document adheres to, e.g. `es.5` */
   format: "es.5";
   path: Path;
-  text: string;
+  text?: string;
 
   /** Data as Uint8Array or ReadableStream, to be used as document's associated blob. */
   blob?: Uint8Array | ReadableStream;
@@ -209,19 +209,29 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
    * Generate a signed document from the input format the validator expects.
    */
   static async generateDocument(
-    { input, keypair, share, timestamp }: FormatterGenerateOpts<
+    { input, keypair, share, timestamp, prevLatestDoc }: FormatterGenerateOpts<
       "es.5",
-      DocInputEs5
+      DocInputEs5,
+      DocEs5
     >,
   ): Promise<
     | { doc: DocEs5; blob?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
   > {
+    if (input.text === undefined && prevLatestDoc?.text === undefined) {
+      return new ValidationError(
+        "Couldn't determine document text from given input or previous version's text.",
+      );
+    }
+
+    const nextText = prevLatestDoc?.text || input.text as string;
+
     const doc: DocEs5 = {
+      ...prevLatestDoc,
       format: "es.5",
       author: keypair.address,
-      text: input.text,
-      textHash: await Crypto.sha256base32(input.text),
+      text: nextText,
+      textHash: await Crypto.sha256base32(nextText),
       path: input.path,
       timestamp,
       share,
@@ -231,11 +241,6 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
 
     if (input.deleteAfter) {
       doc["deleteAfter"] = input.deleteAfter;
-    }
-
-    if (input.blob && input.blob instanceof Uint8Array) {
-      doc.blobSize = input.blob.length;
-      doc.blobHash = await Crypto.sha256base32(input.blob);
     }
 
     const signed = await this.signDocument(keypair, doc);
@@ -282,15 +287,24 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     if (isErr(cleanedResult)) return cleanedResult;
     const cleanedDoc = cleanedResult.doc;
 
-    // TODO: Remove blob from storage
-    // TODO:
+    if (cleanedDoc.blobHash) {
+      const emptyDoc: DocEs5 = {
+        ...cleanedDoc,
+        text: "",
+        textHash: await Crypto.sha256base32(""),
+        signature: "?",
+        blobHash: await Crypto.sha256base32(""),
+        blobSize: 0,
+      };
+
+      return this.signDocument(keypair, emptyDoc);
+    }
 
     // make new doc which is empty and just barely newer than the original
     const emptyDoc: DocEs5 = {
       ...cleanedDoc,
       text: "",
       textHash: await Crypto.sha256base32(""),
-      timestamp: doc.timestamp + 1,
       signature: "?",
     };
 
@@ -398,6 +412,16 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   }
 
   static _checkBlobFieldsConsistent(doc: DocEs5): true | ValidationError {
+    if (doc.text.length === 0 && doc.blobSize && doc.blobSize > 0) {
+      return new ValidationError(
+        "Documents with attachments must have text.",
+      );
+    }
+
+    if (doc.text.length > 0 && doc.blobSize && doc.blobSize === 0) {
+      "Documents with deleted attachments must have no text.";
+    }
+
     if (doc.blobHash && doc.blobSize === undefined) {
       return new ValidationError(
         "Blob size is undefined while blob hash is defined",
@@ -562,14 +586,6 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       return new ValidationError("content does not match contentHash");
     }
     return true;
-  }
-
-  static docCanHaveBlob(doc: DocEs5) {
-    if (doc.blobSize && doc.blobHash) {
-      return true;
-    }
-
-    return false;
   }
 
   static getAttachmentInfo(

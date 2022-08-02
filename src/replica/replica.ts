@@ -39,10 +39,12 @@ import {
 import { FormatDocType, FormatInputType } from "../formats/format_types.ts";
 import {
   DEFAULT_FORMAT,
+  DEFAULT_FORMATS,
   DefaultFormats,
   DefaultFormatType,
   FormatArg,
   FormatsArg,
+  getFormatLookup,
   getFormatsWithFallback,
 } from "../formats/default.ts";
 
@@ -339,13 +341,14 @@ export class Replica {
       }
     }
 
-    loggerSet.debug("...signing doc");
+    loggerSet.debug("...generating doc");
 
     const result = await format.generateDocument({
       keypair,
       input: { ...docToSet, format: format.id },
       share: this.share,
       timestamp,
+      prevLatestDoc: latestDocSamePath,
     });
 
     if (isErr(result)) {
@@ -354,8 +357,26 @@ export class Replica {
 
     loggerSet.debug("...signature =", result.doc.signature);
 
+    // The result has provided a new attachment for us to ingest.
+    // The lack of this does not indicate that no attachment is associated with this doc
+    // (it may refer to the attachment from the previous doc)
     if (result.blob) {
-      // stage
+      // First, if there was a previous doc at the same path,
+      // and that doc had the same author,
+      // Check if it had an attachment..
+      // If it did, delete it, as the new attchement is meant to replace it.
+      if (latestDocSamePath && latestDocSamePath.author === result.doc.author) {
+        const attachmentInfo = format.getAttachmentInfo(latestDocSamePath);
+
+        if (!isErr(attachmentInfo)) {
+          await this.replicaDriver.blobDriver.erase(
+            format.id,
+            attachmentInfo.hash,
+          );
+        }
+      }
+
+      // Stage the new attachment with the attachment driver.
       const stageResult = await this.replicaDriver.blobDriver.stage(
         format.id,
         result.blob,
@@ -365,7 +386,7 @@ export class Replica {
         return stageResult;
       }
 
-      // update doc
+      // Update the document's attachment fields using the results derived from staging.
       const updatedDocRes = format.updateAttachmentFields(
         result.doc,
         stageResult.size,
@@ -377,7 +398,7 @@ export class Replica {
         return updatedDocRes;
       }
 
-      // commit.
+      // If everything checks out, commit the staged attachment to storage.
       loggerSet.debug("...ingesting blob");
       loggerSet.debug("-----------------------");
       await stageResult.commit();
@@ -386,9 +407,11 @@ export class Replica {
 
       loggerSet.debug("...ingesting");
       loggerSet.debug("-----------------------");
+
+      // And ingest the document.
       const ingestEvent = await this.ingest(
         format,
-        result.doc as FormatDocType<F>,
+        updatedDocRes as FormatDocType<F>,
       );
       loggerSet.debug("...done ingesting");
 
@@ -397,6 +420,7 @@ export class Replica {
       return ingestEvent;
     }
 
+    // We don't need to do anything with attachments, so just ingest the document.
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
     const ingestEvent = await this.ingest(
@@ -531,7 +555,7 @@ export class Replica {
    * Overwrite every document from this author, including history versions, with an empty doc.
     @returns The number of documents changed, or -1 if there was an error.
    */
-  async overwriteAllDocsByAuthor<F = DefaultFormatType>(
+  async overwriteAllDocsByAuthor<F = DefaultFormats>(
     keypair: AuthorKeypair,
     formats?: FormatsArg<F>,
   ): Promise<number | ValidationError> {
@@ -563,17 +587,10 @@ export class Replica {
         continue;
       }
 
-      const wipedDoc = await format.wipeDocument(keypair, doc);
+      const didWipe = await this.wipeDocument(keypair, doc, format);
 
-      if (isErr(wipedDoc)) return wipedDoc;
-
-      const didIngest = await this.ingest(
-        format,
-        wipedDoc as FormatDocType<F>,
-      );
-
-      if (isErr(didIngest)) {
-        return didIngest;
+      if (isErr(didWipe)) {
+        return didWipe;
       } else {
         // success
         numOverwritten += 1;
@@ -585,10 +602,82 @@ export class Replica {
     return numOverwritten;
   }
 
-  private async eraseExpiredDocs() {
+  async wipeDocAtPath<F = DefaultFormatType>(
+    keypair: AuthorKeypair,
+    path: string,
+    format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
+  ): Promise<true | ValidationError> {
+    const latestDocAtPath = await this.getLatestDocAtPath(path, [format]);
+
+    if (!latestDocAtPath) {
+      return new ValidationError("No document exists at that path");
+    }
+
+    return this.wipeDocument(
+      keypair,
+      latestDocAtPath as FormatDocType<F>,
+      format,
+    );
+  }
+
+  private async wipeDocument<F>(
+    keypair: AuthorKeypair,
+    doc: FormatDocType<F>,
+    format: FormatArg<F>,
+  ) {
+    // Check if this document has an attachment by tring to get attachment info.
+    const attachmentInfo = format.getAttachmentInfo(doc);
+
+    if (!isErr(attachmentInfo)) {
+      // Wipe the attachment.
+      // Ignore error indicating no attachment was found.
+      await this.replicaDriver.blobDriver.erase(
+        format.id,
+        attachmentInfo.hash,
+      );
+    }
+
+    const docToWipe: FormatDocType<F> = {
+      ...doc,
+      timestamp: doc.timestamp + 1,
+      author: keypair.address,
+    };
+
+    const wipedDoc = await format.wipeDocument(keypair, docToWipe);
+
+    if (isErr(wipedDoc)) return wipedDoc;
+
+    const didIngest = await this.ingest(
+      format,
+      wipedDoc as FormatDocType<F>,
+    );
+
+    return didIngest;
+  }
+
+  private async eraseExpiredDocs<F>(
+    // Because es5 is the only format with attachments, that's all we'll handle for now.
+    formats: FormatsArg<F> = DEFAULT_FORMATS as unknown as FormatsArg<F>,
+  ) {
     const erasedDocs = await this.replicaDriver.docDriver.eraseExpiredDocs();
 
+    const formatLookup = getFormatLookup(formats);
+
     for (const doc of erasedDocs) {
+      const format = formatLookup[doc.format];
+
+      if (format) {
+        // Look up whether this document had an associated attachment, and erase it.
+        const attachmentInfo = format.getAttachmentInfo(doc);
+
+        if (!isErr(attachmentInfo)) {
+          await this.replicaDriver.blobDriver.erase(
+            format.id,
+            attachmentInfo.hash,
+          );
+        }
+      }
+
       await this.eventWriter.write({
         kind: "expire",
         doc,
@@ -700,6 +789,30 @@ export class Replica {
 
     if (isErr(docIsValid)) {
       return Promise.resolve(docIsValid);
+    }
+
+    // Check for a previous version by the same author at this path.
+    // If present, and it has an attachment,
+    // Erase that attachment, as it is being replaced.
+    const versions = await this.getAllDocsAtPath(doc.path, [format]);
+
+    if (versions.length > 0) {
+      const versionBySameAuthor = versions.find((version) =>
+        doc.author === version.author
+      );
+
+      if (versionBySameAuthor) {
+        const versionAttachmentInfo = format.getAttachmentInfo(
+          versionBySameAuthor,
+        );
+
+        if (!isErr(versionAttachmentInfo)) {
+          this.replicaDriver.blobDriver.erase(
+            format.id,
+            versionAttachmentInfo.hash,
+          );
+        }
+      }
     }
 
     const attachmentInfo = format.getAttachmentInfo(doc);

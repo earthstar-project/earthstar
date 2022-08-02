@@ -279,6 +279,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
               const attachmentInfo = format.getAttachmentInfo(event.doc);
 
               if (isErr(attachmentInfo)) {
+                console.log("want it");
                 // shouldn't happen, but...
                 return;
               }
@@ -294,6 +295,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
               // This doc can have a blob attached, but we don't have it.
               // Ask our partner to fulfil it.
+
               const result = await partner.getDownload({
                 doc: event.doc,
                 shareAddress: replica.share,

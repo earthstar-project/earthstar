@@ -186,7 +186,8 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
   static async generateDocument(
     { input, keypair, share, timestamp }: FormatterGenerateOpts<
       "es.4",
-      DocInputEs4
+      DocInputEs4,
+      DocEs4
     >,
   ): Promise<{ doc: DocEs4 } | ValidationError> {
     const doc: DocEs4 = {
@@ -247,7 +248,6 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
       ...cleanedDoc,
       content: "",
       contentHash: await Crypto.sha256base32(""),
-      timestamp: doc.timestamp + 1,
       signature: "?",
     };
 

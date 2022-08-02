@@ -12,11 +12,13 @@ import { ValidationError } from "../util/errors.ts";
 export interface FormatterGenerateOpts<
   FormatType extends string,
   DocInput extends DocInputBase<FormatType>,
+  DocType extends DocBase<FormatType>,
 > {
   keypair: AuthorKeypair;
   input: DocInput;
   share: ShareAddress;
   timestamp: Timestamp;
+  prevLatestDoc?: DocType;
 }
 
 /** Formatters are each responsible for one document format such as "es.4". They are used for signing and validating documents, as well as generating new documents from a given input.
@@ -39,7 +41,7 @@ export interface IFormat<
    * Generate a signed document from the input format the validator expects.
    */
   generateDocument(
-    opts: FormatterGenerateOpts<FormatType, DocInputType>,
+    opts: FormatterGenerateOpts<FormatType, DocInputType, DocType>,
   ): Promise<
     | { doc: DocType; blob?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
