@@ -35,6 +35,10 @@ export const Crypto: ICrypto = class {
     return base32BytesToString(b32);
   }
 
+  static updatableSha256() {
+    return GlobalCryptoDriver.updatableSha256();
+  }
+
   /**
    * Generate a new author identity -- a keypair of public and private keys as strings encoded in base32.
    *

@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { IFormat, ValidatorGenerateOpts } from "./format_types.ts";
+import { FormatterGenerateOpts, IFormat } from "./format_types.ts";
 import { Crypto } from "../crypto/crypto.ts";
 
 import {
@@ -36,7 +36,6 @@ import {
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-import { getStreamSize } from "../util/streams.ts";
 let logger = new Logger("validator es.5", "red");
 
 //================================================================================
@@ -210,7 +209,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
    * Generate a signed document from the input format the validator expects.
    */
   static async generateDocument(
-    { input, keypair, share, timestamp }: ValidatorGenerateOpts<
+    { input, keypair, share, timestamp }: FormatterGenerateOpts<
       "es.5",
       DocInputEs5
     >,
@@ -234,16 +233,9 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       doc["deleteAfter"] = input.deleteAfter;
     }
 
-    if (input.blob) {
-      doc.blobHash = await Crypto.sha256base32(input.blob);
-    }
-
     if (input.blob && input.blob instanceof Uint8Array) {
       doc.blobSize = input.blob.length;
-    }
-
-    if (input.blob && input.blob instanceof ReadableStream) {
-      doc.blobSize = await getStreamSize(input.blob);
+      doc.blobHash = await Crypto.sha256base32(input.blob);
     }
 
     const signed = await this.signDocument(keypair, doc);
@@ -580,38 +572,28 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     return false;
   }
 
-  static async checkBlobMatchesDoc(
-    blob: Uint8Array | ReadableStream<Uint8Array>,
+  static getAttachmentInfo(
     doc: DocEs5,
-  ): Promise<true | ValidationError> {
-    if (doc.blobSize === undefined || doc.blobHash === undefined) {
-      return new ValidationError(
-        "The doc does not have any of the fields needed to have an attached blob.",
-      );
+  ): { size: number; hash: string } | ValidationError {
+    if (!doc.blobHash || !doc.blobSize) {
+      return new ValidationError("This document has no attachment");
     }
 
-    const hash = await Crypto.sha256base32(blob);
+    return {
+      size: doc.blobSize,
+      hash: doc.blobHash,
+    };
+  }
 
-    if (doc.blobHash !== hash) {
-      return new ValidationError(
-        "The blob's hash does not match the one on the document.",
-      );
-    }
-
-    if (blob instanceof Uint8Array) {
-      if (blob.byteLength !== doc.blobSize) {
-        return new ValidationError(
-          "The blob's size does not match the one on the document.",
-        );
-      }
-    } else {
-      if (await getStreamSize(blob) !== doc.blobSize) {
-        return new ValidationError(
-          "The blob's size does not match the one on the document.",
-        );
-      }
-    }
-
-    return true;
+  static updateAttachmentFields(
+    doc: DocEs5,
+    size: number,
+    hash: string,
+  ): DocEs5 {
+    return {
+      ...doc,
+      blobHash: hash,
+      blobSize: size,
+    };
   }
 };

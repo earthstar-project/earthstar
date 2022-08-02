@@ -10,7 +10,6 @@ import {
   universalReplicaDocDrivers,
 } from "./scenarios.universal.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { PartnerWeb } from "../../syncer/partner_web.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
@@ -18,6 +17,8 @@ import { FormatsArg } from "../../formats/default.ts";
 import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
 import { IReplicaBlobDriver } from "../../replica/replica-types.ts";
 import { BlobDriverFilesystem } from "../../replica/blob_drivers/filesystem.ts";
+import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
+import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -86,12 +87,40 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
   }
 
   async setup(peerA: IPeer, peerB: IPeer) {
-    const serverSyncerPromise = deferred<Syncer<F>>();
+    const serverSyncerPromise = deferred<Syncer<WebSocket, F>>();
 
-    const handler = (req: Request) => {
+    const handler = async (req: Request) => {
+      // check what the url is... if it's for upload / download urls, parse the url, call the freaking syncer...
+
+      const transferPattern = new URLPattern({
+        pathname: "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
+      });
+
+      const transferMatch = transferPattern.exec(req.url);
+
+      if (transferMatch) {
+        const { socket, response } = Deno.upgradeWebSocket(req);
+
+        const syncer = await serverSyncerPromise;
+
+        const { shareAddress, formatName, path, author, kind } =
+          transferMatch.pathname.groups;
+
+        syncer.handleTransferRequest({
+          shareAddress,
+          formatName,
+          path: `/${path}`,
+          author,
+          kind: kind as "download" | "upload",
+          source: socket,
+        });
+
+        return response;
+      }
+
       const { socket, response } = Deno.upgradeWebSocket(req);
 
-      const partner = new PartnerWeb({ socket });
+      const partner = new PartnerWebServer({ socket });
 
       serverSyncerPromise.resolve(
         new Syncer({
@@ -113,11 +142,9 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
       signal: this.abortController.signal,
     });
 
-    const clientSocket = new WebSocket("ws://localhost:8083");
-
     const clientSyncer = new Syncer({
-      partner: new PartnerWeb({
-        socket: clientSocket,
+      partner: new PartnerWebClient({
+        url: "ws://localhost:8083",
       }),
       mode: "once",
       peer: peerA,
@@ -127,7 +154,10 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
     const serverSyncer = await serverSyncerPromise;
 
     return Promise.resolve(
-      [clientSyncer, serverSyncer] as [Syncer<F>, Syncer<F>],
+      [clientSyncer, serverSyncer] as [
+        Syncer<undefined, F>,
+        Syncer<WebSocket, F>,
+      ],
     );
   }
 
@@ -139,7 +169,9 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 }
 
 export const partnerScenarios: Scenario<
-  <F>(formats: FormatsArg<F>) => PartnerScenario<F>
+  <F>(
+    formats: FormatsArg<F>,
+  ) => PartnerScenario<F>
 >[] = [...universalPartners, {
   name: "Web",
   item: (formats) => new PartnerScenarioWeb(formats),

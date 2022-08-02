@@ -1,7 +1,9 @@
 import {
+  AuthorAddress,
   DocBase,
   DocBlob,
   FormatName,
+  Path,
   ShareAddress,
 } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
@@ -214,16 +216,32 @@ export interface ReplicaOpts {
 }
 
 export interface IReplicaBlobDriver {
-  getBlob(signature: string): Promise<DocBlob | undefined>;
+  getBlob(
+    formatName: string,
+    attachmentHash: string,
+  ): Promise<DocBlob | undefined>;
 
-  upsert(
-    signature: string,
+  /** Upserts the blob to a staging area, and returns an object used to assess whether it is what we're expecting */
+  stage(
+    formatName: string,
     blob: Uint8Array | ReadableStream<Uint8Array>,
+  ): Promise<
+    {
+      hash: string;
+      size: number;
+      commit: () => Promise<void>;
+      reject: () => Promise<void>;
+    } | ValidationError
+  >;
+
+  erase(
+    formatName: string,
+    attachmentHash: string,
   ): Promise<true | ValidationError>;
 
-  erase(signature: string): Promise<true | ValidationError>;
-
   wipe(): Promise<void>;
+
+  clearStaging(): Promise<void>;
 }
 
 export interface IReplicaDriver {

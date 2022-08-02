@@ -1,7 +1,9 @@
 import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { FormatsArg } from "../formats/default.ts";
+import { FormatArg, FormatsArg } from "../formats/default.ts";
+import { FormatDocType } from "../formats/format_types.ts";
+import { ValidationError } from "../util/errors.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -63,6 +65,7 @@ export type SyncAgentStatus = {
   requested: number;
   received: number;
   status: "preparing" | "syncing" | "idling" | "done" | "aborted";
+  // TODO: Add if partner is done yet.
 };
 
 /** Options used for initialisng a `SyncAgent`.
@@ -85,18 +88,57 @@ export type SyncerDiscloseEvent = {
   formats: string[];
 };
 
+export type SyncerRequestBlobTransferEvent = {
+  kind: "BLOB_REQ";
+  /** An ID to be used for an external request to find its way back to this syncer. */
+  syncerId: string;
+  doc: DocBase<string>;
+  shareAddress: string;
+  attachmentHash: string;
+};
+
 /** A SyncAgentEvent addressed to a specific share address. */
 export type SyncerSyncAgentEvent = SyncAgentEvent & {
   to: string;
 };
 
 /** An event a Syncer can send or receive. */
-export type SyncerEvent = SyncerSyncAgentEvent | SyncerDiscloseEvent;
+export type SyncerEvent =
+  | SyncerSyncAgentEvent
+  | SyncerDiscloseEvent
+  | SyncerRequestBlobTransferEvent;
 
-export interface ISyncPartner {
+export interface ISyncPartner<IncomingBlobSourceType> {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
+  // request transfer (ie. a download)
+  getDownload(
+    opts: GetTransferOpts,
+  ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined>;
+  // handle (internal) request to initiate transfer (ie. an upload)
+  handleUploadRequest(
+    opts: GetTransferOpts,
+  ): Promise<WritableStream<Uint8Array> | ValidationError | undefined>;
+  // handle (external) request to initiate transfer.
+  handleTransferRequest(
+    source: IncomingBlobSourceType,
+    kind: "upload" | "download",
+  ): Promise<
+    | ReadableStream<Uint8Array>
+    | WritableStream<Uint8Array>
+    | ValidationError
+    | undefined
+  >;
 }
+
+// ===================
+
+export type GetTransferOpts = {
+  syncerId: string;
+  doc: DocBase<string>;
+  shareAddress: string;
+  attachmentHash: string;
+};
 
 /** A mode which determines when the syncer will stop syncing.
  * - `once` - The syncer will only attempt to sync existing docs and then stop.
@@ -109,12 +151,47 @@ export type SyncerMode = "once" | "live";
  * - `driver` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
  * - `mode` - Determines what kind of sync to carry out.
  */
-export interface SyncerOpts<F> {
+export interface SyncerOpts<F, I> {
   peer: IPeer;
-  partner: ISyncPartner;
+  partner: ISyncPartner<I>;
   mode: SyncerMode;
   formats?: FormatsArg<F>;
 }
 
 /** A map of sync statuses by the share address they're associated with. */
-export type SyncerStatus = Record<ShareAddress, SyncAgentStatus>;
+export type SyncerStatus = Record<
+  ShareAddress,
+  {
+    docs: SyncAgentStatus;
+    attachments: {
+      author: string;
+      path: string;
+      format: string;
+      hash: string;
+      status: BlobTransferStatus;
+      bytesLoaded: number;
+      totalBytes: number;
+    }[];
+  }
+>;
+
+// =============== BLOB SYNCING
+
+export type BlobTransferStatus =
+  | "ready"
+  | "in_progress"
+  | "complete"
+  | "failed";
+
+export type BlobTransferOpts<F> = {
+  stream: ReadableStream<Uint8Array> | WritableStream<Uint8Array>;
+  replica: Replica;
+  doc: FormatDocType<F>;
+  format: FormatArg<F>;
+};
+
+export type BlobTransferProgressEvent = {
+  status: BlobTransferStatus;
+  bytesLoaded: number;
+  totalBytes: number;
+};

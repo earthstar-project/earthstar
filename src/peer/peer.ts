@@ -9,14 +9,9 @@ import { Replica } from "../replica/replica.ts";
 import { Syncer } from "../syncer/syncer.ts";
 
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { PartnerWeb } from "../syncer/partner_web.ts";
+import { PartnerWebClient } from "../syncer/partner_web_client.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
-import {
-  DefaultFormat,
-  FormatArgsInit,
-  FormatsArg,
-} from "../formats/default.ts";
-import { IFormat } from "../formats/format_types.ts";
+import { FormatsArg } from "../formats/default.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
@@ -105,52 +100,35 @@ export class Peer implements IPeer {
    */
   sync<F>(
     target: IPeer | string,
-    live?: boolean,
+    live = true,
     formats?: FormatsArg<F>,
-  ): Syncer<F> {
+  ): Syncer<undefined, F> {
     try {
-      // Check if it's a URL of some kind.
-      const url = new URL(target as string);
+      const partner = new PartnerWebClient({ url: target as string });
 
-      // Check if it's a web syncer
-      const withoutProtocol = `${url.host}${url.pathname}`;
+      const syncer = new Syncer({
+        partner,
+        mode: live ? "live" : "once",
+        peer: this,
+        formats,
+      });
 
-      const isSecure = url.protocol === "https" || url.protocol === "wss";
-
-      try {
-        const socket = new WebSocket(
-          isSecure ? `wss://${withoutProtocol}` : `ws://${withoutProtocol}`,
-        );
-
-        const partner = new PartnerWeb({ socket });
-
-        const syncer = new Syncer({
-          partner,
-          mode: live ? "live" : "once",
-          peer: this,
-          ...(formats ? { formats } : {}),
-        });
-
-        return syncer;
-      } catch {
-        // return some kind of error?
-      }
+      return syncer;
     } catch {
       const syncer = new Syncer({
         peer: this,
         partner: new PartnerLocal(
           target as IPeer,
+          this,
           live ? "live" : "once",
           formats,
         ),
-        mode: "live",
-        ...(formats ? { formats } : {}),
+        mode: live ? "live" : "once",
+        formats,
       });
 
       return syncer;
     }
-
-    return undefined as never;
   }
 
   //----------------------------------------------

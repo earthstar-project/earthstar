@@ -4,7 +4,6 @@ import {
   AuthorKeypair,
   DocBase,
   DocBlob,
-  DocInputBase,
   DocWithBlob,
   FormatName,
   Path,
@@ -37,14 +36,12 @@ import {
   LockStream,
   OrCh,
 } from "../streams/stream_utils.ts";
-import { IFormat } from "../formats/format_types.ts";
+import { FormatDocType, FormatInputType } from "../formats/format_types.ts";
 import {
-  DefaultFormat,
-  FallbackDoc,
+  DEFAULT_FORMAT,
+  DefaultFormats,
+  DefaultFormatType,
   FormatArg,
-  FormatArgDoc,
-  FormatArgInput,
-  FormatArgsInit,
   FormatsArg,
   getFormatsWithFallback,
 } from "../formats/default.ts";
@@ -205,9 +202,9 @@ export class Replica {
   }
 
   /** Returns all documents, including historical versions of documents by other identities. */
-  getAllDocs<F>(
+  getAllDocs<F = DefaultFormats>(
     formats?: FormatsArg<F>,
-  ): Promise<FallbackDoc<F>[]> {
+  ): Promise<FormatDocType<F>[]> {
     logger.debug(`getAllDocs()`);
 
     return this.queryDocs({
@@ -216,9 +213,9 @@ export class Replica {
     }, formats);
   }
   /** Returns latest document from every path. */
-  getLatestDocs<F>(
+  getLatestDocs<F = DefaultFormats>(
     formats?: FormatsArg<F>,
-  ): Promise<FallbackDoc<F>[]> {
+  ): Promise<FormatDocType<F>[]> {
     logger.debug(`getLatestDocs()`);
 
     return this.queryDocs({
@@ -227,10 +224,10 @@ export class Replica {
     }, formats);
   }
   /** Returns all versions of a document by different authors from a specific path. */
-  getAllDocsAtPath<F>(
+  getAllDocsAtPath<F = DefaultFormats>(
     path: Path,
     formats?: FormatsArg<F>,
-  ): Promise<FallbackDoc<F>[]> {
+  ): Promise<FormatDocType<F>[]> {
     logger.debug(`getAllDocsAtPath("${path}")`);
 
     return this.queryDocs({
@@ -240,10 +237,10 @@ export class Replica {
     }, formats);
   }
   /** Returns the most recently written version of a document at a path. */
-  async getLatestDocAtPath<F>(
+  async getLatestDocAtPath<F = DefaultFormats>(
     path: Path,
     formats?: FormatsArg<F>,
-  ): Promise<FallbackDoc<F> | undefined> {
+  ): Promise<FormatDocType<F> | undefined> {
     logger.debug(`getLatestDocsAtPath("${path}")`);
 
     const docs = await this.queryDocs({
@@ -268,21 +265,21 @@ export class Replica {
     const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
     ```
     */
-  async queryDocs<F>(
+  async queryDocs<F = DefaultFormats>(
     query: Omit<Query<[string]>, "formats"> = {},
     formats?: FormatsArg<F>,
-  ): Promise<FallbackDoc<F>[]> {
+  ): Promise<FormatDocType<F>[]> {
     logger.debug(`queryDocs`, query);
     if (this._isClosed) throw new ReplicaIsClosedError();
     const f = getFormatsWithFallback(formats);
     return await this.replicaDriver.docDriver.queryDocs({
       ...query,
       formats: f.map((f) => f.id),
-    }) as FallbackDoc<F>[];
+    }) as FormatDocType<F>[];
   }
 
   /** Returns an array of all unique paths of documents returned by a given query. */
-  async queryPaths<F>(
+  async queryPaths<F = DefaultFormats>(
     query: Omit<Query<[string]>, "formats"> = {},
     formats?: FormatsArg<F>,
   ): Promise<Path[]> {
@@ -292,7 +289,7 @@ export class Replica {
   }
 
   /** Returns an array of all unique authors of documents returned by a given query. */
-  async queryAuthors<F>(
+  async queryAuthors<F = DefaultFormats>(
     query: Omit<Query<[string]>, "formats"> = {},
     formats?: FormatsArg<F>,
   ): Promise<AuthorAddress[]> {
@@ -310,12 +307,10 @@ export class Replica {
 
   // The Input type should match the formatter.
   // The default format should be es5
-  async set<
-    F,
-  >(
+  async set<F = DefaultFormatType>(
     keypair: AuthorKeypair,
-    docToSet: Omit<FormatArgInput<F>, "format">,
-    format?: FormatArg<F>,
+    docToSet: Omit<FormatInputType<F>, "format">,
+    format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<
     true | ValidationError
   > {
@@ -346,11 +341,9 @@ export class Replica {
 
     loggerSet.debug("...signing doc");
 
-    const f = format ? format : DefaultFormat;
-
-    const result = await f.generateDocument({
+    const result = await format.generateDocument({
       keypair,
-      input: { ...docToSet, format: f.id } as unknown as FormatArgInput<F>,
+      input: { ...docToSet, format: format.id },
       share: this.share,
       timestamp,
     });
@@ -361,26 +354,57 @@ export class Replica {
 
     loggerSet.debug("...signature =", result.doc.signature);
 
+    if (result.blob) {
+      // stage
+      const stageResult = await this.replicaDriver.blobDriver.stage(
+        format.id,
+        result.blob,
+      );
+
+      if (isErr(stageResult)) {
+        return stageResult;
+      }
+
+      // update doc
+      const updatedDocRes = format.updateAttachmentFields(
+        result.doc,
+        stageResult.size,
+        stageResult.hash,
+      );
+
+      if (isErr(updatedDocRes)) {
+        await stageResult.reject();
+        return updatedDocRes;
+      }
+
+      // commit.
+      loggerSet.debug("...ingesting blob");
+      loggerSet.debug("-----------------------");
+      await stageResult.commit();
+
+      loggerSet.debug("...done ingesting blob");
+
+      loggerSet.debug("...ingesting");
+      loggerSet.debug("-----------------------");
+      const ingestEvent = await this.ingest(
+        format,
+        result.doc as FormatDocType<F>,
+      );
+      loggerSet.debug("...done ingesting");
+
+      loggerSet.debug("...set is done.");
+
+      return ingestEvent;
+    }
+
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
     const ingestEvent = await this.ingest(
-      f,
-      result.doc,
+      format,
+      result.doc as FormatDocType<F>,
     );
-
     loggerSet.debug("...done ingesting");
 
-    if (result.blob) {
-      loggerSet.debug("...ingesting blob");
-      loggerSet.debug("-----------------------");
-      const wasIngested = await this.ingestBlob(f, result.doc, result.blob);
-
-      if (isErr(wasIngested)) {
-        return wasIngested;
-      }
-
-      loggerSet.debug("...done ingesting blob");
-    }
     loggerSet.debug("...set is done.");
 
     return ingestEvent;
@@ -389,14 +413,9 @@ export class Replica {
   /**
    * Ingest an existing signed document to the replica.
    */
-  async ingest<
-    N extends FormatName,
-    I extends DocInputBase<N>,
-    O extends DocBase<N>,
-    FormatType extends IFormat<N, I, O>,
-  >(
-    format: FormatType,
-    docToIngest: O,
+  async ingest<F = DefaultFormatType>(
+    format: FormatArg<F>,
+    docToIngest: FormatDocType<F>,
   ): Promise<
     true | ValidationError
   > {
@@ -411,7 +430,7 @@ export class Replica {
     if (isErr(removeResultsOrErr)) {
       return removeResultsOrErr;
     }
-    docToIngest = removeResultsOrErr.doc; // a copy of doc without extra fields
+    docToIngest = removeResultsOrErr.doc as FormatDocType<F>; // a copy of doc without extra fields
 
     const extraFields = removeResultsOrErr.extras; // any extra fields starting with underscores
     if (Object.keys(extraFields).length > 0) {
@@ -432,7 +451,7 @@ export class Replica {
       );
       const existingDocsSamePath = await this.getAllDocsAtPath(
         docToIngest.path,
-        [format] as any,
+        [format],
       );
       loggerIngest.debug(`  > ...got ${existingDocsSamePath.length}`);
 
@@ -512,7 +531,7 @@ export class Replica {
    * Overwrite every document from this author, including history versions, with an empty doc.
     @returns The number of documents changed, or -1 if there was an error.
    */
-  async overwriteAllDocsByAuthor<F>(
+  async overwriteAllDocsByAuthor<F = DefaultFormatType>(
     keypair: AuthorKeypair,
     formats?: FormatsArg<F>,
   ): Promise<number | ValidationError> {
@@ -531,7 +550,7 @@ export class Replica {
 
     const f = getFormatsWithFallback(formats);
 
-    const formatLookup: Record<string, FormatArgsInit<FormatsArg<F>>> = {};
+    const formatLookup: Record<string, FormatArg<F>> = {};
 
     for (const format of f) {
       formatLookup[format.id] = format as typeof formatLookup[string];
@@ -550,7 +569,7 @@ export class Replica {
 
       const didIngest = await this.ingest(
         format,
-        wipedDoc,
+        wipedDoc as FormatDocType<F>,
       );
 
       if (isErr(didIngest)) {
@@ -587,13 +606,11 @@ export class Replica {
     return this.eventMultiStream.getReadableStream(channel);
   }
 
-  getQueryStream<
-    F,
-  >(
+  getQueryStream<F = DefaultFormats>(
     query: Omit<Query<[string]>, "formats"> = {},
     formats?: FormatsArg<F>,
     mode?: QuerySourceMode,
-  ): ReadableStream<QuerySourceEvent<FallbackDoc<F>>> {
+  ): ReadableStream<QuerySourceEvent<FormatDocType<F>>> {
     const queryDocs = this.queryDocs.bind(this);
     const getEventStream = this.getEventStream.bind(this);
 
@@ -629,18 +646,20 @@ export class Replica {
           if (event.kind === "expire" || event.kind === "success") {
             if (query.filter) {
               if (docMatchesFilter(event.doc, query.filter)) {
-                controller.enqueue(event as QuerySourceEvent<FallbackDoc<F>>);
+                controller.enqueue(
+                  event as QuerySourceEvent<FormatDocType<F>>,
+                );
                 continue;
               }
             }
 
-            controller.enqueue(event as QuerySourceEvent<FallbackDoc<F>>);
+            controller.enqueue(event as QuerySourceEvent<FormatDocType<F>>);
             continue;
           }
         }
       },
     }) as ReadableStream<
-      QuerySourceEvent<FallbackDoc<F>>
+      QuerySourceEvent<FormatDocType<F>>
     >;
   }
 
@@ -659,63 +678,94 @@ export class Replica {
   //--------------------------------------------------
   // BLOBS
 
-  async ingestBlob<
-    N extends FormatName,
-    I extends DocInputBase<N>,
-    O extends DocBase<N>,
-    FormatType extends IFormat<N, I, O>,
-  >(
-    format: FormatType,
-    doc: O,
+  async ingestBlob<F = DefaultFormatType>(
+    format: FormatArg<F>,
+    doc: FormatDocType<F>,
     blob: Uint8Array | ReadableStream<Uint8Array>,
   ): Promise<
     true | ValidationError
   > {
     if (this._isClosed) throw new ReplicaIsClosedError();
 
+    const removeResultsOrErr = format
+      .removeExtraFields(doc);
+
+    if (isErr(removeResultsOrErr)) {
+      return Promise.resolve(removeResultsOrErr);
+    }
+    doc = removeResultsOrErr.doc as FormatDocType<F>; // a copy of doc without extra fields
+
     // check doc is valid
     const docIsValid = format.checkDocumentIsValid(doc);
 
     if (isErr(docIsValid)) {
-      return docIsValid;
+      return Promise.resolve(docIsValid);
     }
 
-    const blobIsValid = await format.checkBlobMatchesDoc(blob, doc);
+    const attachmentInfo = format.getAttachmentInfo(doc);
 
-    if (isErr(blobIsValid)) {
-      return blobIsValid;
+    if (isErr(attachmentInfo)) {
+      // This really shouldn't happen, but...
+      return Promise.resolve(attachmentInfo);
     }
 
-    return this.replicaDriver.blobDriver.upsert(doc.signature, blob);
-  }
+    const stageRes = await this.replicaDriver.blobDriver
+      .stage(
+        doc.format,
+        blob,
+      );
 
-  getBlob<F>(
-    doc: FormatArgDoc<F>,
-    format?: FormatArg<F>,
-  ): Promise<DocBlob | undefined | ValidationError> {
-    const f = format || DefaultFormat;
+    if (isErr(stageRes)) {
+      return stageRes;
+    }
 
-    if (f.docCanHaveBlob(doc)) {
-      return this.replicaDriver.blobDriver.getBlob(doc.signature);
-    } else {
-      // This doc cannot possibly have a blob associated with it.
-      return Promise.resolve(
-        new ValidationError("This doc can't have a blob associated with it."),
+    if (stageRes.hash !== attachmentInfo.hash) {
+      await stageRes.reject();
+      return new ValidationError(
+        "Attachment's hash did not match the document's",
       );
     }
+
+    if (stageRes.size !== attachmentInfo.size) {
+      await stageRes.reject();
+      return new ValidationError(
+        "Attachment's size did not match the document's",
+      );
+    }
+
+    await stageRes.commit();
+
+    return true;
   }
 
-  attachBlobs<F>(
-    docs: FallbackDoc<F>[],
+  getBlob<F = DefaultFormatType>(
+    doc: FormatDocType<F>,
+    format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
+  ): Promise<DocBlob | undefined | ValidationError> {
+    // Really cannot be arsed to deal with TS not understanding this right now.
+    const attachmentInfo = format.getAttachmentInfo(doc);
+
+    if (!isErr(attachmentInfo)) {
+      return this.replicaDriver.blobDriver.getBlob(
+        doc.format,
+        attachmentInfo.hash,
+      );
+    } else {
+      return Promise.resolve(attachmentInfo);
+    }
+  }
+
+  attachBlobs<F = DefaultFormats>(
+    docs: FormatDocType<F>[],
     formats?: FormatsArg<F>,
   ): Promise<
     Awaited<
-      DocWithBlob<FallbackDoc<F>>
+      DocWithBlob<FormatDocType<F>>
     >[]
   > {
     const f = getFormatsWithFallback(formats);
 
-    const formatLookup: Record<string, FormatArgsInit<FormatsArg<F>>> = {};
+    const formatLookup: Record<string, FormatArg<F>> = {};
 
     for (const format of f) {
       formatLookup[format.id] = format as typeof formatLookup[string];
@@ -723,22 +773,23 @@ export class Replica {
 
     const promises = docs.map((doc) => {
       return new Promise<
-        FallbackDoc<F> & { blob: ValidationError | DocBlob | undefined }
+        FormatDocType<F> & { blob: ValidationError | DocBlob | undefined }
       >((resolve) => {
         const format = formatLookup[doc.format];
 
-        if (format.docCanHaveBlob(doc)) {
-          this.replicaDriver.blobDriver.getBlob(doc.signature).then(
-            (blob) => {
-              resolve({ ...doc, blob });
-            },
-          );
+        const attachmentInfo = format.getAttachmentInfo(doc);
+
+        if (!isErr(attachmentInfo)) {
+          this.replicaDriver.blobDriver.getBlob(doc.format, attachmentInfo.hash)
+            .then(
+              (blob) => {
+                resolve({ ...doc, blob });
+              },
+            );
         } else {
           return resolve({
             ...doc,
-            blob: new ValidationError(
-              "This doc can't have a blob associated with it.",
-            ),
+            blob: attachmentInfo,
           });
         }
       });

@@ -7,7 +7,11 @@ import { Replica } from "../../replica/replica.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
-import { storagesAreSynced, writeRandomDocsEs4 } from "../test-utils.ts";
+import {
+  storagesAreSynced,
+  storagesBlobsAreSynced,
+  writeRandomDocs,
+} from "../test-utils.ts";
 
 import {
   docDriverScenarios,
@@ -25,15 +29,16 @@ import {
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
 import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { FormatEs5 } from "../../formats/format_es5.ts";
 
 class SyncerTestHelper {
-  private scenario: PartnerScenario<[typeof FormatEs4]>;
+  private scenario: PartnerScenario<[typeof FormatEs5]>;
   private aDuo: [Replica, Replica];
   private bDuo: [Replica, Replica];
   private cDuo: [Replica, Replica];
 
   constructor(
-    scenario: PartnerScenario<[typeof FormatEs4]>,
+    scenario: PartnerScenario<[typeof FormatEs5]>,
     makeDocDriver: (addr: string, variant?: string) => IReplicaDocDriver,
   ) {
     this.scenario = scenario;
@@ -79,7 +84,7 @@ class SyncerTestHelper {
     ];
 
     await Promise.all(allStorages.map((replica) => {
-      return writeRandomDocsEs4(keypairA, replica, 10);
+      return writeRandomDocs(keypairA, replica, 10);
     }));
 
     const [a1, a2] = this.aDuo;
@@ -116,6 +121,19 @@ class SyncerTestHelper {
       await storagesAreSynced(this.cDuo) === false,
       `+c shares are not in sync`,
     );
+
+    assert(
+      await storagesBlobsAreSynced(this.aDuo),
+      `+a attachments are in sync`,
+    );
+    assert(
+      await storagesBlobsAreSynced(this.bDuo),
+      `+b attachments are in sync`,
+    );
+    assert(
+      await storagesBlobsAreSynced(this.cDuo) === false,
+      `+c attachments are not in sync`,
+    );
   }
 
   testAbort() {}
@@ -148,7 +166,7 @@ const scenarios: MultiplyScenarioOutput<{
 for (const scenario of scenarios) {
   Deno.test(`Syncer (${scenario.name})`, async (test) => {
     const helper = new SyncerTestHelper(
-      scenario.subscenarios.partner([FormatEs4]),
+      scenario.subscenarios.partner([FormatEs5]),
       scenario.subscenarios.replicaDriver.makeDriver,
     );
 
@@ -158,6 +176,7 @@ for (const scenario of scenarios) {
       name: "is in sync",
       fn: () => helper.commonSharesInSync(),
       sanitizeOps: false,
+      sanitizeResources: false,
     });
 
     await helper.teardown();

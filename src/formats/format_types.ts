@@ -9,7 +9,7 @@ import {
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
 
-export interface ValidatorGenerateOpts<
+export interface FormatterGenerateOpts<
   FormatType extends string,
   DocInput extends DocInputBase<FormatType>,
 > {
@@ -39,7 +39,7 @@ export interface IFormat<
    * Generate a signed document from the input format the validator expects.
    */
   generateDocument(
-    opts: ValidatorGenerateOpts<FormatType, DocInputType>,
+    opts: FormatterGenerateOpts<FormatType, DocInputType>,
   ): Promise<
     | { doc: DocType; blob?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
@@ -54,7 +54,7 @@ export interface IFormat<
   ): Promise<DocType | ValidationError>;
 
   /**
-   * Overwrite the user-written contents of a document, wipes any associated data, and signs the document.
+   * Overwrite the user-written contents of a document, wipes any associated attachments, and signs the document.
    */
   wipeDocument(
     keypair: AuthorKeypair,
@@ -78,14 +78,22 @@ export interface IFormat<
   checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
   /**
-   * Returns a boolean indicating if its *possible* for the given document to have a blob associated with it. This does not indicate if that blob is actually present locally.
+   * Returns information about a doc's attachment, if it has one. If it doesn't, a `ValidationError` will be returned. This does not indicate if that blob is actually present locally.
    */
-  docCanHaveBlob(doc: DocType): boolean;
+  getAttachmentInfo(doc: DocType): {
+    size: number;
+    hash: string;
+  } | ValidationError;
 
-  checkBlobMatchesDoc(
-    blob: Uint8Array | ReadableStream<Uint8Array>,
+  /**
+   * Some information can only be known once an attachment (especially if it comes in the form of a stream) has been consumed. For this reason, a Formatter's `generateDocument` method may not be able to generate a valid document for a blob, even if it already knows it has one.
+   */
+  updateAttachmentFields(
     doc: DocType,
-  ): Promise<true | ValidationError>;
+    size: number,
+    hash: string,
+  ): DocType | ValidationError;
+
   // TODO: add these methods for building addresses
   // and remove them from crypto.ts and encoding.ts
   // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
@@ -98,8 +106,10 @@ export type FormatInputType<FormatterType> = FormatterType extends
 
 export type FormatDocType<FormatterType> = FormatterType extends
   IFormat<infer _FormatType, infer _DocInputType, infer DocType> ? DocType
+  : FormatterType extends
+    IFormat<infer _FormatType, infer _DocInputType, infer DocType>[] ? DocType
   : never;
 
-export type FormatterFormatType<FormatterType> = FormatterType extends
+export type FormatNameType<FormatterType> = FormatterType extends
   IFormat<infer FormatType, infer _DocType, infer _DocInputType> ? FormatType
   : never;

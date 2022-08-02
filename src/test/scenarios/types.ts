@@ -37,7 +37,7 @@ export interface PartnerScenario<F> {
   setup(
     peerA: IPeer,
     peerB: IPeer,
-  ): Promise<[Syncer<F>, Syncer<F>]>;
+  ): Promise<[Syncer<any, F>, Syncer<any, F>]>;
   teardown(): Promise<void>;
 }
 

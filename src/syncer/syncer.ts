@@ -1,21 +1,28 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import {
-  DefaultFormat,
+  DEFAULT_FORMAT,
+  DefaultFormats,
   FormatsArg,
   getFormatIntersection,
+  getFormatLookup,
+  getFormatsWithFallback,
 } from "../formats/default.ts";
+import { FormatDocType } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
+import { QuerySourceEvent } from "../replica/replica-types.ts";
 import {
   BlockingBus,
   CloneStream,
   StreamSplitter,
 } from "../streams/stream_utils.ts";
-import { ShareAddress } from "../util/doc-types.ts";
+import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
+import { isErr } from "../util/errors.ts";
 import { randomId } from "../util/misc.ts";
+import { BlobTransfer } from "./blob_transfer.ts";
 import {
+  ISyncPartner,
   SyncAgentEvent,
-  SyncAgentStatus,
   SyncerEvent,
   SyncerMode,
   SyncerOpts,
@@ -24,33 +31,49 @@ import {
 import { SyncAgent } from "./sync_agent.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
-export class Syncer<F> {
-  private peer: IPeer;
+export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
+  peer: IPeer;
+  id = randomId();
+  private partner: ISyncPartner<IncomingTransferSourceType>;
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
-  private syncAgents = new Map<ShareAddress, SyncAgent<F>>();
+  private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
+  private docStreams = new Map<
+    ShareAddress,
+    {
+      existing: ReadableStream<QuerySourceEvent<FormatDocType<FormatsType>>>;
+      live: ReadableStream<QuerySourceEvent<FormatDocType<FormatsType>>>;
+    }
+  >();
   private mode: SyncerMode;
   private incomingStreamCloner = new CloneStream<SyncerEvent>();
   private statusBus = new BlockingBus<SyncerStatus>();
   private agentStreamSplitter = new StreamSplitter<SyncerEvent>((chunk) => {
-    if (chunk.kind === "DISCLOSE") {
+    if (chunk.kind === "DISCLOSE" || chunk.kind === "BLOB_REQ") {
       return;
     }
 
     return chunk.to;
   });
-  private formats: FormatsArg<F> | undefined;
+  private formats: FormatsArg<FormatsType>;
+  private transfers = new Map<
+    ShareAddress,
+    Map<string, BlobTransfer<FormatsType>>
+  >();
 
+  private docSyncIsDone = deferred<true>();
   isDone = deferred<true>();
 
-  constructor(opts: SyncerOpts<F>) {
+  constructor(opts: SyncerOpts<FormatsType, IncomingTransferSourceType>) {
     // Have to do this because we'll be using these values in a context where 'this' is different
     // (the streams below)
     const { outgoingEventBus } = this;
     const handleIncomingEvent = this.handleIncomingEvent.bind(this);
 
     this.peer = opts.peer;
+
     this.mode = opts.mode;
-    this.formats = opts.formats;
+    this.formats = getFormatsWithFallback(opts.formats);
+    this.partner = opts.partner;
 
     // Create a new readable stream which is subscribed to events from this syncer.
     // Pipe it to the outgoing stream to the other peer.
@@ -102,7 +125,7 @@ export class Syncer<F> {
         shares: saltedShares,
         formats: this.formats
           ? this.formats.map((f) => f.id)
-          : [DefaultFormat.id],
+          : [DEFAULT_FORMAT.id],
       });
     });
 
@@ -112,15 +135,36 @@ export class Syncer<F> {
         return;
       }
 
-      const statuses: string[] = [];
+      const statuses = [] as SyncerStatus[string][];
 
       for (const addr in status) {
-        statuses.push(status[addr].status);
+        statuses.push(status[addr]);
       }
 
-      if (statuses.every((status) => status === "done")) {
-        this.isDone.resolve(true);
+      if (
+        this.docSyncIsDone.state !== "fulfilled" &&
+        statuses.every((status) => status.docs.status === "done")
+      ) {
+        this.docSyncIsDone.resolve(true);
         abortController.abort();
+      }
+
+      if (
+        this.docSyncIsDone.state === "fulfilled" &&
+        this.isDone.state !== "fulfilled"
+      ) {
+        // check all transfers are complete
+        // if so, say we're done.
+
+        if (
+          statuses.every((status) => {
+            return status.attachments.every((transfer) =>
+              transfer.status === "complete"
+            );
+          })
+        ) {
+          this.isDone.resolve(true);
+        }
       }
     });
 
@@ -144,7 +188,7 @@ export class Syncer<F> {
     */
   }
 
-  private addShare<K>(address: string, formats: FormatsArg<K>) {
+  private addShare(address: string, formats: FormatsArg<FormatsType>) {
     // Bail if we already have a sync agent for this share.
     if (this.syncAgents.has(address)) {
       return;
@@ -172,7 +216,7 @@ export class Syncer<F> {
 
     // Have to do this because we'll be using these values in a context where 'this' is different
     // (the streams below)
-    const { outgoingEventBus } = this;
+    const { outgoingEventBus, transfers } = this;
 
     // Pipe the agent's outgoing events into our event bus so they'll be sent out.
     agent.readable.pipeTo(
@@ -198,6 +242,7 @@ export class Syncer<F> {
         transform(event, controller) {
           switch (event.kind) {
             case "DISCLOSE":
+            case "BLOB_REQ":
               break;
             default: {
               if (event.to === replica.share) {
@@ -210,6 +255,106 @@ export class Syncer<F> {
         },
       }),
     ).pipeTo(agent.writable);
+
+    const { partner, id } = this;
+    const addTransfer = this.addTransfer.bind(this);
+
+    const lookup = getFormatLookup(formats);
+
+    const makeBlobRequestSink = () =>
+      new WritableStream<
+        QuerySourceEvent<FormatDocType<FormatsType>>
+      >({
+        async write(event) {
+          if (event.kind === "existing" || event.kind === "success") {
+            // Get the right format here...
+            const format = lookup[event.doc.format];
+
+            const res = await replica.getBlob(event.doc, format);
+
+            if (isErr(res)) {
+              // This doc can't have a blob attached. Do nothing.
+              return;
+            } else if (res === undefined) {
+              const attachmentInfo = format.getAttachmentInfo(event.doc);
+
+              if (isErr(attachmentInfo)) {
+                // shouldn't happen, but...
+                return;
+              }
+
+              // Check if there's already a transfer for this blob in progress...
+              const existingTransfer = transfers.get(replica.share)?.get(
+                attachmentInfo.hash,
+              );
+
+              if (existingTransfer) {
+                return;
+              }
+
+              // This doc can have a blob attached, but we don't have it.
+              // Ask our partner to fulfil it.
+              const result = await partner.getDownload({
+                doc: event.doc,
+                shareAddress: replica.share,
+                syncerId: id,
+                attachmentHash: attachmentInfo.hash,
+              });
+
+              // the result is:
+              // The partner has no way to get a receiving transfer. We must ask for one...
+              // ... and hope that the transfer comes from without..
+
+              if (!result) {
+                outgoingEventBus.send({
+                  kind: "BLOB_REQ",
+                  shareAddress: replica.share,
+                  syncerId: id,
+                  doc: event.doc,
+                  attachmentHash: attachmentInfo.hash,
+                });
+                return;
+              }
+
+              // We got an error - e.g. some kind of unexpected failure. shit happens.
+              if (isErr(result)) {
+                return;
+              }
+
+              // We got a transfer! Add it to our syncer's transfers.
+
+              const transfer = new BlobTransfer({
+                replica,
+                doc: event.doc,
+                format,
+                stream: result,
+              });
+
+              addTransfer(replica.share, transfer);
+            }
+          }
+        },
+      });
+
+    const existingDocsStream = replica.getQueryStream(
+      { orderBy: "localIndex ASC" },
+      this.formats,
+      "existing",
+    );
+
+    const liveDocsStream = replica.getQueryStream(
+      { orderBy: "localIndex ASC" },
+      this.formats,
+      "new",
+    );
+
+    existingDocsStream.pipeTo(makeBlobRequestSink());
+    liveDocsStream.pipeTo(makeBlobRequestSink());
+
+    this.docStreams.set(address, {
+      existing: existingDocsStream,
+      live: liveDocsStream,
+    });
   }
 
   /** Handle inbound events from the other peer. */
@@ -241,16 +386,94 @@ export class Syncer<F> {
         for (const share of commonShareSet) {
           this.addShare(share, intersectingFormats);
         }
+        break;
+      }
+      case "BLOB_REQ": {
+        // ask the partner for a send transfer, add it to our send transfers.
+        const result = await this.partner.handleUploadRequest({
+          shareAddress: event.shareAddress,
+          syncerId: event.syncerId,
+          doc: event.doc,
+          attachmentHash: event.attachmentHash,
+        });
+
+        // got some kind of failure, oops.
+        if (isErr(result)) {
+          return;
+        }
+
+        // or can't get it, oh well.
+        if (result === undefined) {
+          return;
+        }
+
+        const replica = this.peer.getReplica(event.shareAddress);
+
+        if (!replica) {
+          return;
+        }
+
+        const format = getFormatLookup(this.formats)[event.doc.format];
+
+        // got a writable stream! add it to the syncer's transfers.
+        const transfer = new BlobTransfer({
+          doc: event.doc as FormatDocType<FormatsType>,
+          format,
+          replica,
+          stream: result,
+        });
+
+        this.addTransfer(event.shareAddress, transfer);
       }
     }
   }
 
+  private addTransfer(
+    shareAddress: string,
+    transfer: BlobTransfer<FormatsType>,
+  ) {
+    const existingMap = this.transfers.get(shareAddress);
+
+    if (existingMap) {
+      existingMap.set(transfer.hash, transfer);
+    } else {
+      const map = new Map();
+      map.set(transfer.hash, transfer);
+      this.transfers.set(shareAddress, map);
+    }
+
+    transfer.onProgress(() => {
+      this.statusBus.send(this.getStatus());
+    });
+
+    this.statusBus.send(this.getStatus());
+  }
+
   /** Get the status of all shares' syncing progress. */
-  getStatus() {
-    const status: Record<ShareAddress, SyncAgentStatus> = {};
+  getStatus(): SyncerStatus {
+    const status: SyncerStatus = {};
 
     for (const [shareAddr, agent] of this.syncAgents) {
-      status[shareAddr] = agent.getStatus();
+      const transfers = this.transfers.get(shareAddr);
+
+      const transferStatuses = [];
+
+      for (const [, transfer] of transfers || []) {
+        transferStatuses.push({
+          author: transfer.doc.author,
+          path: transfer.doc.path,
+          format: transfer.doc.format,
+          hash: transfer.hash,
+          status: transfer.status,
+          bytesLoaded: transfer.loaded,
+          totalBytes: transfer.expectedSize,
+        });
+      }
+
+      status[shareAddr] = {
+        docs: agent.getStatus(),
+        attachments: transferStatuses,
+      };
     }
 
     return status;
@@ -266,6 +489,61 @@ export class Syncer<F> {
     for (const [_addr, agent] of this.syncAgents) {
       agent.cancel();
     }
+
+    // TODO: cancel all the doc streams used for blobs
+  }
+
+  // externally callable... to get a readable...
+  async handleTransferRequest(
+    { shareAddress, path, author, source, kind, formatName }: {
+      shareAddress: string;
+      formatName: string;
+      path: Path;
+      author: AuthorAddress;
+      source: IncomingTransferSourceType;
+      kind: "upload" | "download";
+    },
+  ) {
+    const result = await this.partner.handleTransferRequest(source, kind);
+
+    if (isErr(result)) {
+      // pity.
+      return;
+    }
+
+    // or can't get it, oh well.
+    if (result === undefined) {
+      return;
+    }
+
+    const replica = this.peer.getReplica(shareAddress);
+
+    if (!replica) {
+      return;
+    }
+
+    const format = getFormatLookup(this.formats)[formatName];
+
+    if (!format) {
+      return;
+    }
+
+    const docs = await replica.getAllDocsAtPath(path, [format]);
+    const doc = docs.find((doc) => doc.author === author);
+
+    if (!doc) {
+      return;
+    }
+
+    // got a writable stream! add it to the syncer's transfers.
+    const transfer = new BlobTransfer({
+      doc: doc as FormatDocType<typeof format>,
+      format,
+      replica,
+      stream: result,
+    });
+
+    this.addTransfer(shareAddress, transfer);
   }
 }
 

@@ -69,6 +69,21 @@ export const CryptoDriverNode = class {
       crypto.createHash("sha256").update(input).digest(),
     );
   }
+  static updatableSha256() {
+    return new UpdatableHash({
+      hash: crypto.createHash("sha256"),
+      update: (hash, data) => hash.update(data),
+      digest: (hash) => {
+        const digest = hash.digest();
+
+        if (typeof digest === "string") {
+          return stringToBytes(digest);
+        }
+
+        return bufferToBytes(digest);
+      },
+    });
+  }
   static async generateKeypairBytes() {
     logger.debug("generateKeypairBytes");
     return _shortenDer(_generateKeypairDerBytes());

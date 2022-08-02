@@ -2,6 +2,10 @@ import { DocBlob } from "../../util/doc-types.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { IReplicaBlobDriver } from "../replica-types.ts";
 import { join } from "https://deno.land/std@0.132.0/path/mod.ts";
+import { move } from "https://deno.land/std@0.149.0/fs/mod.ts";
+import { randomId } from "../../util/misc.ts";
+import { Crypto } from "../../crypto/crypto.ts";
+import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
 
 export class BlobDriverFilesystem implements IReplicaBlobDriver {
   private path: string;
@@ -10,8 +14,8 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     this.path = path;
   }
 
-  async upsert(
-    signature: string,
+  async stage(
+    formatName: string,
     blob: ReadableStream<Uint8Array> | Uint8Array,
   ) {
     // Create the path
@@ -21,37 +25,70 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       await Deno.mkdir(this.path);
     }
 
-    const path = join(this.path, signature);
+    const tempKey = randomId();
+
+    const stagingPath = join(this.path, "staging", formatName, tempKey);
 
     if (blob instanceof Uint8Array) {
-      await Deno.writeFile(path, blob, { create: true });
-    } else {
-      try {
-        await Deno.truncate(path);
-      } catch {
-        // It's fine.
-      }
+      await Deno.writeFile(stagingPath, blob, { create: true });
+      const hash = await Crypto.sha256base32(blob);
 
-      await blob.pipeTo(
-        new WritableStream({
-          async write(chunk) {
-            await Deno.writeFile(path, chunk, { create: true, append: true });
-          },
-        }),
-      );
+      return {
+        hash,
+        size: blob.byteLength,
+        commit: () => {
+          return move(stagingPath, join(this.path, formatName, hash));
+        },
+        reject: () => {
+          return Deno.remove(stagingPath);
+        },
+      };
     }
 
-    return true as const;
-  }
-
-  async erase(signature: string) {
-    const path = join(this.path, signature);
+    const attachmentStreamInfo = new AttachmentStreamInfo();
 
     try {
-      await Deno.remove(path);
+      await Deno.truncate(stagingPath);
+    } catch {
+      // It's fine.
+    }
+
+    await blob.pipeThrough(attachmentStreamInfo).pipeTo(
+      new WritableStream({
+        async write(chunk) {
+          await Deno.writeFile(stagingPath, chunk, {
+            create: true,
+            append: true,
+          });
+        },
+      }),
+    );
+
+    const hash = await attachmentStreamInfo.hash;
+    const size = await attachmentStreamInfo.size;
+
+    return {
+      hash,
+      size,
+      commit: () => {
+        return move(stagingPath, join(this.path, formatName, hash));
+      },
+      reject: () => {
+        return Deno.remove(stagingPath);
+      },
+    };
+  }
+
+  async erase(formatName: string, attachmentHash: string) {
+    const filePath = join(this.path, formatName, attachmentHash);
+
+    try {
+      await Deno.remove(filePath);
       return true;
     } catch {
-      return new ValidationError(`Blob for ${signature} did not exist.`);
+      return new ValidationError(
+        `Attachment not found`,
+      );
     }
   }
 
@@ -64,20 +101,27 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     }
   }
 
-  async getBlob(signature: string): Promise<DocBlob | undefined> {
-    const path = join(this.path, signature);
+  async getBlob(
+    formatName: string,
+    attachmentHash: string,
+  ): Promise<DocBlob | undefined> {
+    const filePath = join(this.path, formatName, attachmentHash);
 
     try {
-      await Deno.lstat(path);
+      await Deno.lstat(filePath);
     } catch {
       return undefined;
     }
 
-    const file = await Deno.open(path, { read: true });
+    const file = await Deno.open(filePath, { read: true });
 
     return {
-      bytes: () => Deno.readFile(path),
+      bytes: () => Deno.readFile(filePath),
       stream: file.readable,
     };
+  }
+
+  clearStaging() {
+    return Deno.remove(join(this.path, "staging"), { recursive: true });
   }
 }

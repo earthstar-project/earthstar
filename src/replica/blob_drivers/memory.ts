@@ -1,32 +1,23 @@
+import { Crypto } from "../../crypto/crypto.ts";
 import { DocBlob } from "../../util/doc-types.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { streamToBytes } from "../../util/streams.ts";
 import { IReplicaBlobDriver } from "../replica-types.ts";
 
 export class BlobDriverMemory implements IReplicaBlobDriver {
+  private stagingMap = new Map<string, Blob>();
   private blobMap = new Map<string, Blob>();
 
-  async getBytes(signature: string) {
-    const blob = this.blobMap.get(signature);
-
-    if (blob) {
-      const bytes = new Uint8Array(await blob.arrayBuffer());
-      return bytes;
-    }
+  private getKey(formatName: string, attachmentHash: string) {
+    return `${formatName}___${attachmentHash}`;
   }
 
-  getStream(signature: string) {
-    const blob = this.blobMap.get(signature);
-
-    if (blob) {
-      return Promise.resolve(blob.stream());
-    }
-
-    return Promise.resolve(undefined);
-  }
-
-  getBlob(signature: string): Promise<DocBlob | undefined> {
-    const blob = this.blobMap.get(signature);
+  getBlob(
+    formatName: string,
+    attachmentHash: string,
+  ): Promise<DocBlob | undefined> {
+    const key = this.getKey(formatName, attachmentHash);
+    const blob = this.blobMap.get(key);
 
     if (!blob) {
       return Promise.resolve(undefined);
@@ -38,29 +29,41 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
     });
   }
 
-  async upsert(
-    signature: string,
+  async stage(
+    formatName: string,
     blob: ReadableStream<Uint8Array> | Uint8Array,
   ) {
-    if (blob instanceof Uint8Array) {
-      const newBlob = new Blob([blob]);
+    const bytes = blob instanceof Uint8Array ? blob : await streamToBytes(blob);
 
-      this.blobMap.set(signature, newBlob);
-    } else {
-      const bytes = await streamToBytes(blob);
+    const hash = await Crypto.sha256base32(bytes);
 
-      const newBlob = new Blob([bytes]);
-      this.blobMap.set(signature, newBlob);
+    const newBlob = new Blob([bytes]);
 
-      this.blobMap.set(signature, newBlob);
-    }
+    const key = this.getKey(formatName, hash);
 
-    return Promise.resolve(true as const);
+    this.stagingMap.set(key, newBlob);
+
+    return Promise.resolve({
+      hash,
+      size: bytes.byteLength,
+      commit: () => {
+        this.blobMap.set(key, newBlob);
+        this.stagingMap.delete(key);
+
+        return Promise.resolve();
+      },
+      reject: () => {
+        this.stagingMap.delete(key);
+
+        return Promise.resolve();
+      },
+    });
   }
 
-  erase(signature: string) {
-    if (this.blobMap.has(signature)) {
-      this.blobMap.delete(signature);
+  erase(formatName: string, attachmentHash: string) {
+    const key = this.getKey(formatName, attachmentHash);
+    if (this.blobMap.has(key)) {
+      this.blobMap.delete(key);
       return Promise.resolve(true as true);
     }
 
@@ -71,6 +74,11 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
 
   wipe() {
     this.blobMap.clear();
+    return Promise.resolve();
+  }
+
+  clearStaging() {
+    this.stagingMap.clear();
     return Promise.resolve();
   }
 }
