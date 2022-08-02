@@ -7,6 +7,7 @@ const { createHash } = sha256_uint8array;
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { UpdatableHash } from "./updatable_hash.ts";
 const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
@@ -15,32 +16,26 @@ const logger = new Logger("crypto-driver-noble", "cyan");
  * Works in the browser.
  */
 export const CryptoDriverNoble: ICryptoDriver = class {
-  static async sha256(
-    input: string | Uint8Array | ReadableStream<Uint8Array>,
+  static sha256(
+    input: string | Uint8Array,
   ): Promise<Uint8Array> {
     if (typeof input === "string") {
       return Promise.resolve(
         createHash("sha256").update(input, "utf-8").digest(),
       );
-    } else if (input instanceof Uint8Array) {
-      return Promise.resolve(createHash("sha256").update(input).digest());
     } else {
-      const hash = createHash("sha256");
-
-      const reader = input.getReader();
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (value && !done) {
-          hash.update(value);
-        }
-
-        if (done) {
-          return Promise.resolve(hash.digest());
-        }
-      }
+      return Promise.resolve(createHash("sha256").update(input).digest());
     }
   }
+
+  static updatableSha256() {
+    return new UpdatableHash({
+      hash: createHash("sha256"),
+      update: (hash, data) => hash.update(data),
+      digest: (hash) => hash.digest(),
+    });
+  }
+
   static async generateKeypairBytes(): Promise<KeypairBytes> {
     logger.debug("generateKeypairBytes");
     const secret = ed.utils.randomPrivateKey();

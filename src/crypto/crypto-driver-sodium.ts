@@ -9,6 +9,7 @@ const { createHash } = sha256_uint8array;
 
 import { Logger } from "../util/log.ts";
 import { sha256_uint8array } from "../../deps.ts";
+import { UpdatableHash } from "./updatable_hash.ts";
 const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
@@ -18,31 +19,24 @@ const logger = new Logger("crypto-driver-noble", "cyan");
  */
 export const CryptoDriverSodium: ICryptoDriver = class {
   static async sha256(
-    input: string | Uint8Array | ReadableStream<Uint8Array>,
+    input: string | Uint8Array,
   ): Promise<Uint8Array> {
     if (typeof input === "string") {
       const encoded = new TextEncoder().encode(input);
       const result = await crypto.subtle.digest("SHA-256", encoded);
       return Promise.resolve(new Uint8Array(result));
-    } else if (input instanceof Uint8Array) {
+    } else {
       const result = await crypto.subtle.digest("SHA-256", input);
       return Promise.resolve(new Uint8Array(result));
-    } else {
-      const hash = createHash("sha256");
-
-      const reader = input.getReader();
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (value && !done) {
-          hash.update(value);
-        }
-
-        if (done) {
-          return Promise.resolve(hash.digest());
-        }
-      }
     }
+  }
+
+  static updatableSha256() {
+    return new UpdatableHash({
+      hash: createHash("sha256"),
+      update: (hash, data) => hash.update(data),
+      digest: (hash) => hash.digest(),
+    });
   }
 
   static generateKeypairBytes(): Promise<KeypairBytes> {

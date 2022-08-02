@@ -4,6 +4,7 @@ import {
   Base32String,
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
+import { UpdatableHash } from "./updatable_hash.ts";
 
 export interface KeypairBytes {
   pubkey: Uint8Array;
@@ -14,8 +15,9 @@ export interface KeypairBytes {
 // These all handle base32-encoded strings.
 export interface ICrypto {
   sha256base32(
-    input: string | Uint8Array | ReadableStream<Uint8Array>,
+    input: string | Uint8Array,
   ): Promise<Base32String>;
+  updatableSha256(): UpdatableHash<any>;
   generateAuthorKeypair(
     name: string,
   ): Promise<AuthorKeypair | ValidationError>;
@@ -37,8 +39,9 @@ export interface ICrypto {
 // These all handle Uint8Arrays (bytes)
 export interface ICryptoDriver {
   sha256(
-    input: string | Uint8Array | ReadableStream<Uint8Array>,
+    input: string | Uint8Array,
   ): Promise<Uint8Array>;
+  updatableSha256(): UpdatableHash<any>;
   generateKeypairBytes(): Promise<KeypairBytes>;
   sign(
     keypairBytes: KeypairBytes,
