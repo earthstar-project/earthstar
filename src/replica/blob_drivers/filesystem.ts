@@ -2,6 +2,10 @@ import { DocBlob } from "../../util/doc-types.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { IReplicaBlobDriver } from "../replica-types.ts";
 import { join } from "https://deno.land/std@0.132.0/path/mod.ts";
+import { move } from "https://deno.land/std@0.149.0/fs/mod.ts";
+import { randomId } from "../../util/misc.ts";
+import { Crypto } from "../../crypto/crypto.ts";
+import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
 
 export class BlobDriverFilesystem implements IReplicaBlobDriver {
   private path: string;
@@ -10,9 +14,8 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     this.path = path;
   }
 
-  async upsert(
+  async stage(
     formatName: string,
-    attachmentHash: string,
     blob: ReadableStream<Uint8Array> | Uint8Array,
   ) {
     // Create the path
@@ -22,30 +25,58 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       await Deno.mkdir(this.path);
     }
 
-    const filePath = join(this.path, formatName, attachmentHash);
+    const tempKey = randomId();
+
+    const stagingPath = join(this.path, "staging", formatName, tempKey);
 
     if (blob instanceof Uint8Array) {
-      await Deno.writeFile(filePath, blob, { create: true });
-    } else {
-      try {
-        await Deno.truncate(filePath);
-      } catch {
-        // It's fine.
-      }
+      await Deno.writeFile(stagingPath, blob, { create: true });
+      const hash = await Crypto.sha256base32(blob);
 
-      await blob.pipeTo(
-        new WritableStream({
-          async write(chunk) {
-            await Deno.writeFile(filePath, chunk, {
-              create: true,
-              append: true,
-            });
-          },
-        }),
-      );
+      return {
+        hash,
+        size: blob.byteLength,
+        commit: () => {
+          return move(stagingPath, join(this.path, formatName, hash));
+        },
+        reject: () => {
+          return Deno.remove(stagingPath);
+        },
+      };
     }
 
-    return true as const;
+    const attachmentStreamInfo = new AttachmentStreamInfo();
+
+    try {
+      await Deno.truncate(stagingPath);
+    } catch {
+      // It's fine.
+    }
+
+    await blob.pipeThrough(attachmentStreamInfo).pipeTo(
+      new WritableStream({
+        async write(chunk) {
+          await Deno.writeFile(stagingPath, chunk, {
+            create: true,
+            append: true,
+          });
+        },
+      }),
+    );
+
+    const hash = await attachmentStreamInfo.hash;
+    const size = await attachmentStreamInfo.size;
+
+    return {
+      hash,
+      size,
+      commit: () => {
+        return move(stagingPath, join(this.path, formatName, hash));
+      },
+      reject: () => {
+        return Deno.remove(stagingPath);
+      },
+    };
   }
 
   async erase(formatName: string, attachmentHash: string) {
@@ -88,5 +119,9 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       bytes: () => Deno.readFile(filePath),
       stream: file.readable,
     };
+  }
+
+  clearStaging() {
+    return Deno.remove(join(this.path, "staging"), { recursive: true });
   }
 }

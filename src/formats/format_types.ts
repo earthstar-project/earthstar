@@ -9,7 +9,7 @@ import {
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
 
-export interface ValidatorGenerateOpts<
+export interface FormatterGenerateOpts<
   FormatType extends string,
   DocInput extends DocInputBase<FormatType>,
 > {
@@ -39,7 +39,7 @@ export interface IFormat<
    * Generate a signed document from the input format the validator expects.
    */
   generateDocument(
-    opts: ValidatorGenerateOpts<FormatType, DocInputType>,
+    opts: FormatterGenerateOpts<FormatType, DocInputType>,
   ): Promise<
     | { doc: DocType; blob?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
@@ -85,10 +85,14 @@ export interface IFormat<
     hash: string;
   } | ValidationError;
 
-  checkBlobMatchesDoc(
-    blob: Uint8Array | ReadableStream<Uint8Array>,
+  /**
+   * Some information can only be known once an attachment (especially if it comes in the form of a stream) has been consumed. For this reason, a Formatter's `generateDocument` method may not be able to generate a valid document for a blob, even if it already knows it has one.
+   */
+  updateAttachmentFields(
     doc: DocType,
-  ): Promise<true | ValidationError>;
+    size: number,
+    hash: string,
+  ): DocType | ValidationError;
 
   // TODO: add these methods for building addresses
   // and remove them from crypto.ts and encoding.ts

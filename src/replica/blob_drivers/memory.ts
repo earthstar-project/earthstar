@@ -1,10 +1,11 @@
-import { FormatArg } from "../../formats/default.ts";
+import { Crypto } from "../../crypto/crypto.ts";
 import { DocBlob } from "../../util/doc-types.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { streamToBytes } from "../../util/streams.ts";
 import { IReplicaBlobDriver } from "../replica-types.ts";
 
 export class BlobDriverMemory implements IReplicaBlobDriver {
+  private stagingMap = new Map<string, Blob>();
   private blobMap = new Map<string, Blob>();
 
   private getKey(formatName: string, attachmentHash: string) {
@@ -28,26 +29,35 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
     });
   }
 
-  async upsert(
+  async stage(
     formatName: string,
-    expectedHash: string,
     blob: ReadableStream<Uint8Array> | Uint8Array,
   ) {
-    const key = this.getKey(formatName, expectedHash);
+    const bytes = blob instanceof Uint8Array ? blob : await streamToBytes(blob);
 
-    if (blob instanceof Uint8Array) {
-      const newBlob = new Blob([blob]);
+    const hash = await Crypto.sha256base32(bytes);
 
-      this.blobMap.set(key, newBlob);
-    } else {
-      const bytes = await streamToBytes(blob);
+    const newBlob = new Blob([bytes]);
 
-      const newBlob = new Blob([bytes]);
+    const key = this.getKey(formatName, hash);
 
-      this.blobMap.set(key, newBlob);
-    }
+    this.stagingMap.set(key, newBlob);
 
-    return Promise.resolve(true as const);
+    return Promise.resolve({
+      hash,
+      size: bytes.byteLength,
+      commit: () => {
+        this.blobMap.set(key, newBlob);
+        this.stagingMap.delete(key);
+
+        return Promise.resolve();
+      },
+      reject: () => {
+        this.stagingMap.delete(key);
+
+        return Promise.resolve();
+      },
+    });
   }
 
   erase(formatName: string, attachmentHash: string) {
@@ -64,6 +74,11 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
 
   wipe() {
     this.blobMap.clear();
+    return Promise.resolve();
+  }
+
+  clearStaging() {
+    this.stagingMap.clear();
     return Promise.resolve();
   }
 }

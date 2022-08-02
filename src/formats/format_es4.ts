@@ -11,7 +11,7 @@ import {
   Timestamp,
 } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { IFormat, ValidatorGenerateOpts } from "./format_types.ts";
+import { FormatterGenerateOpts, IFormat } from "./format_types.ts";
 import { Crypto } from "../crypto/crypto.ts";
 
 import {
@@ -184,7 +184,7 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
    * Generate a signed document from the input format the validator expects.
    */
   static async generateDocument(
-    { input, keypair, share, timestamp }: ValidatorGenerateOpts<
+    { input, keypair, share, timestamp }: FormatterGenerateOpts<
       "es.4",
       DocInputEs4
     >,
@@ -486,12 +486,11 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
     return new ValidationError("es.4 does not support attachments");
   }
 
-  static checkBlobMatchesDoc(
-    _blob: Uint8Array | ReadableStream<Uint8Array>,
+  static updateAttachmentFields(
     _doc: DocEs4,
-  ) {
-    return Promise.resolve(
-      new ValidationError("es.4 does not support attachments"),
-    );
+    _size: number,
+    _hash: string,
+  ): ValidationError {
+    return new ValidationError("es.4 does not support attachments");
   }
 };

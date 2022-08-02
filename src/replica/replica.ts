@@ -354,30 +354,57 @@ export class Replica {
 
     loggerSet.debug("...signature =", result.doc.signature);
 
+    if (result.blob) {
+      // stage
+      const stageResult = await this.replicaDriver.blobDriver.stage(
+        format.id,
+        result.blob,
+      );
+
+      if (isErr(stageResult)) {
+        return stageResult;
+      }
+
+      // update doc
+      const updatedDocRes = format.updateAttachmentFields(
+        result.doc,
+        stageResult.size,
+        stageResult.hash,
+      );
+
+      if (isErr(updatedDocRes)) {
+        await stageResult.reject();
+        return updatedDocRes;
+      }
+
+      // commit.
+      loggerSet.debug("...ingesting blob");
+      loggerSet.debug("-----------------------");
+      await stageResult.commit();
+
+      loggerSet.debug("...done ingesting blob");
+
+      loggerSet.debug("...ingesting");
+      loggerSet.debug("-----------------------");
+      const ingestEvent = await this.ingest(
+        format,
+        result.doc as FormatDocType<F>,
+      );
+      loggerSet.debug("...done ingesting");
+
+      loggerSet.debug("...set is done.");
+
+      return ingestEvent;
+    }
+
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
     const ingestEvent = await this.ingest(
       format,
       result.doc as FormatDocType<F>,
     );
-
     loggerSet.debug("...done ingesting");
 
-    if (result.blob) {
-      loggerSet.debug("...ingesting blob");
-      loggerSet.debug("-----------------------");
-      const wasIngested = await this.ingestBlob(
-        format,
-        result.doc as FormatDocType<F>,
-        result.blob,
-      );
-
-      if (isErr(wasIngested)) {
-        return wasIngested;
-      }
-
-      loggerSet.debug("...done ingesting blob");
-    }
     loggerSet.debug("...set is done.");
 
     return ingestEvent;
@@ -651,7 +678,7 @@ export class Replica {
   //--------------------------------------------------
   // BLOBS
 
-  ingestBlob<F = DefaultFormatType>(
+  async ingestBlob<F = DefaultFormatType>(
     format: FormatArg<F>,
     doc: FormatDocType<F>,
     blob: Uint8Array | ReadableStream<Uint8Array>,
@@ -682,12 +709,33 @@ export class Replica {
       return Promise.resolve(attachmentInfo);
     }
 
-    return this.replicaDriver.blobDriver
-      .upsert(
+    const stageRes = await this.replicaDriver.blobDriver
+      .stage(
         doc.format,
-        attachmentInfo.hash,
         blob,
       );
+
+    if (isErr(stageRes)) {
+      return stageRes;
+    }
+
+    if (stageRes.hash !== attachmentInfo.hash) {
+      await stageRes.reject();
+      return new ValidationError(
+        "Attachment's hash did not match the document's",
+      );
+    }
+
+    if (stageRes.size !== attachmentInfo.size) {
+      await stageRes.reject();
+      return new ValidationError(
+        "Attachment's size did not match the document's",
+      );
+    }
+
+    await stageRes.commit();
+
+    return true;
   }
 
   getBlob<F = DefaultFormatType>(

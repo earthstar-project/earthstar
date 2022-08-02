@@ -222,11 +222,17 @@ export interface IReplicaBlobDriver {
   ): Promise<DocBlob | undefined>;
 
   /** Upserts the blob to a staging area, and returns an object used to assess whether it is what we're expecting */
-  upsert(
+  stage(
     formatName: string,
-    expectedHash: string,
     blob: Uint8Array | ReadableStream<Uint8Array>,
-  ): Promise<true | ValidationError>;
+  ): Promise<
+    {
+      hash: string;
+      size: number;
+      commit: () => Promise<void>;
+      reject: () => Promise<void>;
+    } | ValidationError
+  >;
 
   erase(
     formatName: string,
@@ -234,6 +240,8 @@ export interface IReplicaBlobDriver {
   ): Promise<true | ValidationError>;
 
   wipe(): Promise<void>;
+
+  clearStaging(): Promise<void>;
 }
 
 export interface IReplicaDriver {
