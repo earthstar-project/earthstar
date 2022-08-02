@@ -13,7 +13,7 @@ function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
     const driver = scenario.item();
     const fakeFormat = "es.fake";
 
-    await test.step(".upsert (bytes)", async () => {
+    await test.step(".stage + commit (bytes)", async () => {
       const bytes = new TextEncoder().encode("Hello!");
       const expectedHash = await Crypto.sha256base32(bytes);
 
@@ -43,7 +43,26 @@ function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
 
     await driver.wipe();
 
-    await test.step(".upsert (stream)", async () => {
+    await test.step(".stage + .reject (bytes)", async () => {
+      const bytes = new TextEncoder().encode("Hello!");
+      const expectedHash = await Crypto.sha256base32(bytes);
+
+      const res = await driver.stage(fakeFormat, bytes);
+
+      assert(!isErr(res));
+
+      assertEquals(res.hash, expectedHash);
+
+      await res.reject();
+
+      const hopefullyUndefined = await driver.getBlob(fakeFormat, res.hash);
+
+      assertEquals(hopefullyUndefined, undefined);
+    });
+
+    await driver.wipe();
+
+    await test.step(".stage + .commit (stream)", async () => {
       const bytes = new TextEncoder().encode("Hello!");
       const expectedHash = await Crypto.sha256base32(bytes);
       const stream = bytesToStream(bytes);
@@ -70,6 +89,28 @@ function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
         "Hello!",
         new TextDecoder().decode(await streamToBytes(hopefullyBlob.stream)),
       );
+    });
+
+    await driver.wipe();
+
+    await test.step(".stage + .reject (stream)", async () => {
+      const bytes = new TextEncoder().encode("Hello!");
+      const expectedHash = await Crypto.sha256base32(bytes);
+      const stream = bytesToStream(bytes);
+
+      await driver.stage(fakeFormat, stream);
+
+      const res = await driver.stage(fakeFormat, bytes);
+
+      assert(!isErr(res));
+
+      assertEquals(res.hash, expectedHash);
+
+      await res.reject();
+
+      const hopefullyUndefined = await driver.getBlob(fakeFormat, res.hash);
+
+      assertEquals(hopefullyUndefined, undefined);
     });
 
     await driver.wipe();
