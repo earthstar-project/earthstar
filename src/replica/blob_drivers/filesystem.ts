@@ -20,9 +20,11 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
   ) {
     // Create the path
     try {
-      await Deno.lstat(this.path);
+      await Deno.lstat(join(this.path, "staging", formatName));
     } catch {
-      await Deno.mkdir(this.path);
+      await Deno.mkdir(join(this.path, "staging", formatName), {
+        recursive: true,
+      });
     }
 
     const tempKey = randomId();
@@ -36,8 +38,16 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       return {
         hash,
         size: blob.byteLength,
-        commit: () => {
-          return move(stagingPath, join(this.path, formatName, hash));
+        commit: async () => {
+          try {
+            await Deno.lstat(join(this.path, formatName));
+          } catch {
+            await Deno.mkdir(join(this.path, formatName));
+          }
+
+          return move(stagingPath, join(this.path, formatName, hash), {
+            overwrite: true,
+          });
         },
         reject: () => {
           return Deno.remove(stagingPath);
@@ -94,10 +104,8 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
 
   async wipe() {
     for await (const entry of Deno.readDir(this.path)) {
-      if (entry.isFile) {
-        const path = join(this.path, entry.name);
-        await Deno.remove(path);
-      }
+      const path = join(this.path, entry.name);
+      await Deno.remove(path, { recursive: true });
     }
   }
 

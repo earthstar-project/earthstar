@@ -27,6 +27,7 @@ import { multiplyScenarios } from "../scenarios/utils.ts";
 
 import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 import { FormatEs5 } from "../../formats/format_es5.ts";
+import { isErr } from "../../util/errors.ts";
 
 class SyncerTestHelper {
   private scenario: PartnerScenario<[typeof FormatEs5]>;
@@ -80,9 +81,16 @@ class SyncerTestHelper {
       ...this.cDuo,
     ];
 
-    await Promise.all(allStorages.map((replica) => {
+    const writes = await Promise.all(allStorages.map((replica) => {
       return writeRandomDocs(keypairA, replica, 10);
     }));
+
+    assert(
+      writes.every((replicaWrites) => {
+        return replicaWrites.every((write) => isErr(write) === false);
+      }),
+      "Test docs were written successfully to replicas",
+    );
 
     const [a1, a2] = this.aDuo;
     const [b1, b2] = this.bDuo;

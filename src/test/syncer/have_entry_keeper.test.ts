@@ -1,5 +1,4 @@
 import { Crypto } from "../../crypto/crypto.ts";
-import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
 import { QuerySourceEvent } from "../../replica/replica-types.ts";
@@ -11,7 +10,8 @@ import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { readStream } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
-import { writeRandomDocsEs4 } from "../test-utils.ts";
+import { writeRandomDocs } from "../test-utils.ts";
+import { DocEs5, FormatEs5 } from "../../formats/format_es5.ts";
 
 Deno.test("HaveEntryKeeper", async () => {
   const SHARE_ADDR = "+test.a123";
@@ -32,23 +32,23 @@ Deno.test("HaveEntryKeeper", async () => {
 
   await replica.set(keypair, {
     path: "/shared_path",
-    content: "Hello",
-  }, FormatEs4);
+    text: "Hello",
+  });
 
   await replica.set(keypairB, {
     path: "/shared_path",
-    content: "Howdy",
-  }, FormatEs4);
+    text: "Howdy",
+  });
 
   await replica.set(keypair, {
     path: "/another_path",
-    content: "Greetings",
-  }, FormatEs4);
+    text: "Greetings",
+  });
 
   await replica.set(keypairB, {
     path: "/yet_another_path",
-    content: "Yo.",
-  }, FormatEs4);
+    text: "Yo.",
+  });
 
   const haveKeeper = new HaveEntryKeeper("existing");
 
@@ -57,7 +57,7 @@ Deno.test("HaveEntryKeeper", async () => {
       historyMode: "all",
       orderBy: "localIndex ASC",
     },
-    [FormatEs4],
+    [FormatEs5],
     "existing",
   );
 
@@ -99,7 +99,7 @@ Deno.test("HaveEntryKeeper", async () => {
       historyMode: "all",
       orderBy: "localIndex ASC",
     },
-    [FormatEs4],
+    [FormatEs5],
     "everything",
   );
 
@@ -109,13 +109,13 @@ Deno.test("HaveEntryKeeper", async () => {
 
   await replica.set(keypairB, {
     path: "/more_paths",
-    content: "Hiiiii",
-  }, FormatEs4);
+    text: "Hiiiii",
+  });
 
   await replica.set(keypairB, {
     path: "/another_path",
-    content: "Hiiiii",
-  }, FormatEs4);
+    text: "Hiiiii",
+  });
 
   const liveCollected: HaveEntry[] = [];
 
@@ -175,7 +175,7 @@ Deno.test({
       },
     });
 
-    await writeRandomDocsEs4(keypair, replica, 1000);
+    await writeRandomDocs(keypair, replica, 1000);
 
     const otherReplica = new Replica({
       driver: {
@@ -184,10 +184,10 @@ Deno.test({
       },
     });
 
-    const ingestWritable = new WritableStream<QuerySourceEvent<DocEs4>>({
+    const ingestWritable = new WritableStream<QuerySourceEvent<DocEs5>>({
       async write(event) {
         if (event.kind === "success" || event.kind === "existing") {
-          await otherReplica.ingest(FormatEs4, event.doc);
+          await otherReplica.ingest(FormatEs5, event.doc);
         }
       },
     });
@@ -197,7 +197,7 @@ Deno.test({
         historyMode: "all",
         orderBy: "localIndex ASC",
       },
-      [FormatEs4],
+      [FormatEs5],
       "existing",
     ).pipeTo(ingestWritable);
 
@@ -209,7 +209,7 @@ Deno.test({
       {
         historyMode: "all",
       },
-      [FormatEs4],
+      [FormatEs5],
       "existing",
     );
 
@@ -222,7 +222,7 @@ Deno.test({
         historyMode: "all",
         orderBy: "localIndex ASC",
       },
-      [FormatEs4],
+      [FormatEs5],
       "existing",
     );
 

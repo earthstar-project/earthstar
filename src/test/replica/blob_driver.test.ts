@@ -1,6 +1,8 @@
 // test that wipe wipes
 
+import { Crypto } from "../../crypto/crypto.ts";
 import { IReplicaBlobDriver } from "../../replica/replica-types.ts";
+import { isErr } from "../../util/errors.ts";
 import { bytesToStream, streamToBytes } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { blobDriverScenarios } from "../scenarios/scenarios.ts";
@@ -9,14 +11,21 @@ import { Scenario } from "../scenarios/types.ts";
 function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
   Deno.test(`Blob driver (${scenario.name})`, async (test) => {
     const driver = scenario.item();
+    const fakeFormat = "es.fake";
 
     await test.step(".upsert (bytes)", async () => {
-      const fakeSig = "aaaaabbbbbccccc";
       const bytes = new TextEncoder().encode("Hello!");
+      const expectedHash = await Crypto.sha256base32(bytes);
 
-      await driver.upsert(fakeSig, bytes);
+      const res = await driver.stage(fakeFormat, bytes);
 
-      const hopefullyBlob = await driver.getBlob(fakeSig);
+      assert(!isErr(res));
+
+      assertEquals(res.hash, expectedHash);
+
+      await res.commit();
+
+      const hopefullyBlob = await driver.getBlob(fakeFormat, res.hash);
 
       assert(hopefullyBlob);
 
@@ -35,13 +44,21 @@ function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
     await driver.wipe();
 
     await test.step(".upsert (stream)", async () => {
-      const fakeSig = "aaaaabbbbbccccc";
       const bytes = new TextEncoder().encode("Hello!");
+      const expectedHash = await Crypto.sha256base32(bytes);
       const stream = bytesToStream(bytes);
 
-      await driver.upsert(fakeSig, stream);
+      await driver.stage(fakeFormat, stream);
 
-      const hopefullyBlob = await driver.getBlob(fakeSig);
+      const res = await driver.stage(fakeFormat, bytes);
+
+      assert(!isErr(res));
+
+      assertEquals(res.hash, expectedHash);
+
+      await res.commit();
+
+      const hopefullyBlob = await driver.getBlob(fakeFormat, res.hash);
 
       assert(hopefullyBlob);
 
@@ -58,14 +75,17 @@ function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
     await driver.wipe();
 
     await test.step(".erase", async () => {
-      const fakeSig = "aaaaabbbbbccccc";
       const bytes = new TextEncoder().encode("Hello!");
 
-      await driver.upsert(fakeSig, bytes);
+      const res = await driver.stage(fakeFormat, bytes);
 
-      await driver.erase(fakeSig);
+      assert(!isErr(res));
 
-      const hopefullyUndefined = await driver.getBlob(fakeSig);
+      await res.commit();
+
+      await driver.erase(fakeFormat, res.hash);
+
+      const hopefullyUndefined = await driver.getBlob(fakeFormat, res.hash);
 
       assertEquals(
         hopefullyUndefined,
@@ -77,26 +97,36 @@ function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
     await driver.wipe();
 
     await test.step(".wipe", async () => {
-      const fakeSig = "aaaaabbbbbccccc";
-      const fakeSig2 = "111122223333";
-      const fakeSig3 = "etauhsoetnheaosntuh";
+      const bytes0 = new TextEncoder().encode("Hello!");
+      const bytes1 = new TextEncoder().encode("Hey!");
+      const bytes2 = new TextEncoder().encode("Yo!");
 
-      const bytes = new TextEncoder().encode("Hello!");
+      const hashes: string[] = [];
 
-      await driver.upsert(fakeSig, bytes);
-      await driver.upsert(fakeSig2, bytes);
-      await driver.upsert(fakeSig3, bytes);
+      for (const bytes of [bytes0, bytes1, bytes2]) {
+        const res = await driver.stage(fakeFormat, bytes);
+
+        assert(!isErr(res));
+
+        hashes.push(res.hash);
+
+        await res.commit();
+      }
 
       await driver.wipe();
 
-      const hopefullyUndefined = await driver.getBlob(fakeSig);
-      const hopefullyUndefined2 = await driver.getBlob(fakeSig2);
-      const hopefullyUndefined3 = await driver.getBlob(fakeSig3);
+      const hopefullyUndefineds = [];
+
+      for (const hash of hashes) {
+        const hopefullyUndefined = await driver.getBlob(fakeFormat, hash);
+
+        hopefullyUndefineds.push(hopefullyUndefined);
+      }
 
       assertEquals(
-        [hopefullyUndefined, hopefullyUndefined2, hopefullyUndefined3],
+        hopefullyUndefineds,
         [undefined, undefined, undefined],
-        "Getting erased blob returns undefined",
+        "Getting erased blobs returns undefined",
       );
     });
 

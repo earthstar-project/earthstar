@@ -1,9 +1,7 @@
 import {
-  AuthorAddress,
   DocBase,
   DocBlob,
   FormatName,
-  Path,
   ShareAddress,
 } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";

@@ -20,7 +20,7 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
   Deno.test(
     SUBTEST_NAME + ": sha256(Uint8Array | string | ReadableStream) --> bytes",
     async () => {
-      let vectors: [Uint8Array | string | ReadableStream, Uint8Array][] = [
+      let vectors: [Uint8Array | string, Uint8Array][] = [
         // input, output
         [
           "",
@@ -34,12 +34,7 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
             "b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq",
           ),
         ],
-        [
-          bytesToStream(stringToBytes("")),
-          base32StringToBytes(
-            "b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq",
-          ),
-        ],
+
         [
           "abc",
           base32StringToBytes(
@@ -52,12 +47,7 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
             "bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq",
           ),
         ],
-        [
-          bytesToStream(stringToBytes("abc")),
-          base32StringToBytes(
-            "bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq",
-          ),
-        ],
+
         [
           snowmanString,
           base32StringToBytes(
@@ -66,12 +56,6 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
         ],
         [
           snowmanBytes,
-          base32StringToBytes(
-            "bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga",
-          ),
-        ],
-        [
-          bytesToStream(snowmanBytes),
           base32StringToBytes(
             "bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga",
           ),

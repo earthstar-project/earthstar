@@ -3,7 +3,7 @@ import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
 import { Replica } from "../replica/replica.ts";
-import { FormatsArg } from "../formats/default.ts";
+import { DefaultFormats, FormatsArg } from "../formats/default.ts";
 import { FormatDocType } from "../formats/format_types.ts";
 
 let logger = new Logger("query helpers", "gold");
@@ -198,7 +198,7 @@ export let globToQueryAndRegex = (
  * `path`, `pathStartsWith` or `pathEndsWith` in your moreQueryOptions unless you
  * intend to override the glob's query.
  */
-export async function queryByGlobAsync<F>(
+export async function queryByGlobAsync<F = DefaultFormats>(
   replica: Replica,
   glob: string,
   moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
@@ -484,7 +484,7 @@ export let insertVariablesIntoTemplate = (
  *      }
  */
 
-export async function queryByTemplateAsync<F>(
+export async function queryByTemplateAsync<F = DefaultFormats>(
   replica: Replica,
   template: string,
   moreQueryOptions: Omit<Query<[string]>, "formats"> = {},

@@ -239,9 +239,9 @@ export class Replica {
     }, formats);
   }
   /** Returns the most recently written version of a document at a path. */
-  async getLatestDocAtPath<F = DefaultFormats>(
+  async getLatestDocAtPath<F = DefaultFormatType>(
     path: Path,
-    formats?: FormatsArg<F>,
+    format?: FormatArg<F>,
   ): Promise<FormatDocType<F> | undefined> {
     logger.debug(`getLatestDocsAtPath("${path}")`);
 
@@ -249,10 +249,10 @@ export class Replica {
       historyMode: "latest",
       orderBy: "path ASC",
       filter: { path: path },
-    }, formats);
+    }, format ? [format] : undefined);
 
     if (docs.length === 0) return undefined;
-    return docs[0];
+    return docs[0] as FormatDocType<F>;
   }
 
   /** Returns an array of docs for a given query.
@@ -343,12 +343,22 @@ export class Replica {
 
     loggerSet.debug("...generating doc");
 
+    let cleanedDoc;
+
+    if (latestDocSamePath) {
+      const res = format.removeExtraFields(latestDocSamePath);
+
+      if (!isErr(res)) {
+        cleanedDoc = res.doc;
+      }
+    }
+
     const result = await format.generateDocument({
       keypair,
       input: { ...docToSet, format: format.id },
       share: this.share,
       timestamp,
-      prevLatestDoc: latestDocSamePath,
+      prevLatestDoc: cleanedDoc,
     });
 
     if (isErr(result)) {
@@ -607,7 +617,7 @@ export class Replica {
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<true | ValidationError> {
-    const latestDocAtPath = await this.getLatestDocAtPath(path, [format]);
+    const latestDocAtPath = await this.getLatestDocAtPath(path, format);
 
     if (!latestDocAtPath) {
       return new ValidationError("No document exists at that path");

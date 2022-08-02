@@ -1,5 +1,6 @@
 import { equal, fast_json_stable_stringify as stringify } from "../../deps.ts";
 import {
+  AuthorAddress,
   AuthorKeypair,
   DocBase,
   DocInputBase,
@@ -18,7 +19,13 @@ import { Logger } from "../util/log.ts";
 import { CallbackSink } from "../streams/stream_utils.ts";
 import { Replica } from "./replica.ts";
 
-import { DEFAULT_FORMATS, FormatArg, FormatsArg } from "../formats/default.ts";
+import {
+  DEFAULT_FORMATS,
+  DefaultFormats,
+  DefaultFormatType,
+  FormatArg,
+  FormatsArg,
+} from "../formats/default.ts";
 import { FormatDocType, FormatInputType } from "../formats/format_types.ts";
 
 const logger = new Logger("replica-cache", "green");
@@ -167,9 +174,7 @@ export class ReplicaCache {
   // SET - just pass along to the backing storage
 
   /** Add a new document directly to the backing replica. */
-  set<
-    F,
-  >(
+  set<F = DefaultFormatType>(
     keypair: AuthorKeypair,
     docToSet: Omit<FormatInputType<F>, "format">,
     format?: FormatArg<F>,
@@ -184,7 +189,7 @@ export class ReplicaCache {
   // GET
 
   /** Fetch all versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getAllDocs<F>(
+  getAllDocs<F = DefaultFormats>(
     formats?: FormatsArg<F>,
   ): FormatDocType<F>[] {
     return this.queryDocs({
@@ -194,7 +199,7 @@ export class ReplicaCache {
   }
 
   /** Fetch latest versions of all docs from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getLatestDocs<F>(
+  getLatestDocs<F = DefaultFormats>(
     formats?: FormatsArg<F>,
   ): FormatDocType<F>[] {
     return this.queryDocs({
@@ -204,7 +209,7 @@ export class ReplicaCache {
   }
 
   /** Fetch all versions of all docs from a certain path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getAllDocsAtPath<F>(
+  getAllDocsAtPath<F = DefaultFormats>(
     path: Path,
     formats?: FormatsArg<F>,
   ): FormatDocType<F>[] {
@@ -216,15 +221,15 @@ export class ReplicaCache {
   }
 
   /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getLatestDocAtPath<F>(
+  getLatestDocAtPath<F = DefaultFormatType>(
     path: Path,
-    formats?: FormatsArg<F>,
+    format?: FormatArg<F>,
   ): FormatDocType<F> | undefined {
     const docs = this.queryDocs({
       historyMode: "latest",
       orderBy: "path DESC",
       filter: { path: path },
-    }, formats);
+    }, format ? [format] : undefined);
     if (docs.length === 0) {
       return undefined;
     }
@@ -232,7 +237,7 @@ export class ReplicaCache {
   }
 
   /** Fetch docs matching a query from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  queryDocs<F>(
+  queryDocs<F = DefaultFormats>(
     query: Omit<Query<[string]>, "formats"> = {},
     formats?: FormatsArg<F>,
   ): FormatDocType<F>[] {
@@ -340,6 +345,26 @@ export class ReplicaCache {
     return [];
   }
 
+  /** Returns an array of all unique paths of documents returned by a given query. */
+  queryPaths<F = DefaultFormats>(
+    query: Omit<Query<[string]>, "formats"> = {},
+    formats?: FormatsArg<F>,
+  ): Path[] {
+    const docs = this.queryDocs(query, formats);
+    const pathsSet = new Set(docs.map(({ path }) => path));
+    return Array.from(pathsSet).sort();
+  }
+
+  /** Returns an array of all unique authors of documents returned by a given query. */
+  queryAuthors<F = DefaultFormats>(
+    query: Omit<Query<[string]>, "formats"> = {},
+    formats?: FormatsArg<F>,
+  ): AuthorAddress[] {
+    const docs = this.queryDocs(query, formats);
+    const authorsSet = new Set(docs.map(({ author }) => author));
+    return Array.from(authorsSet).sort();
+  }
+
   // OVERWRITE
 
   // We just call the backing storage's implementation
@@ -348,12 +373,15 @@ export class ReplicaCache {
   // so we don't do a quick and dirty version in the cache here.
 
   /** Call this method on the backing replica. */
-  overwriteAllDocsByAuthor(keypair: AuthorKeypair) {
+  overwriteAllDocsByAuthor<F = DefaultFormats>(
+    keypair: AuthorKeypair,
+    formats?: FormatsArg<F>,
+  ) {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
     if (this._replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
-    return this._replica.overwriteAllDocsByAuthor(keypair);
+    return this._replica.overwriteAllDocsByAuthor(keypair, formats);
   }
 
   // CACHE

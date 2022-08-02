@@ -224,7 +224,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       );
     }
 
-    const nextText = prevLatestDoc?.text || input.text as string;
+    const nextText = input.text || prevLatestDoc?.text as string;
 
     const doc: DocEs5 = {
       ...prevLatestDoc,
