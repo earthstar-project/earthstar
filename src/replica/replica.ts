@@ -49,6 +49,7 @@ import {
 } from "../formats/default.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
+import { streamToBytes } from "../util/streams.ts";
 
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");
@@ -805,7 +806,7 @@ export class Replica {
     doc: FormatDocType<F>,
     blob: Uint8Array | ReadableStream<Uint8Array>,
   ): Promise<
-    true | ValidationError
+    true | false | ValidationError
   > {
     if (this._isClosed) throw new ReplicaIsClosedError();
 
@@ -822,6 +823,14 @@ export class Replica {
 
     if (isErr(docIsValid)) {
       return Promise.resolve(docIsValid);
+    }
+
+    // Check we don't already have this blob
+    const existingAttachment = await this.getBlob(doc, format);
+
+    if (existingAttachment && !isErr(existingAttachment)) {
+      await streamToBytes(existingAttachment.stream);
+      return false;
     }
 
     const attachmentInfo = format.getAttachmentInfo(doc);

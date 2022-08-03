@@ -380,7 +380,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
 
     const errP = this._checkPathIsValid(
       doc.path,
-      !!doc.blobSize,
+      !!doc.blobHash,
       doc.deleteAfter,
     );
     if (isErr(errP)) return errP;

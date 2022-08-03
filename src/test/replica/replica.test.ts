@@ -25,6 +25,7 @@ import {
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { streamToBytes } from "../../util/streams.ts";
+import { FormatEs5 } from "../../formats/format_es5.ts";
 
 const loggerTest = new Logger("test", "salmon");
 const loggerTestCb = new Logger("test cb", "lightsalmon");
@@ -52,12 +53,15 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
   setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
-  function makeReplica(ws: ShareAddress) {
-    const driver = scenario.subscenarios.docDriver.makeDriver(ws);
+  function makeReplica(ws: ShareAddress, variant?: string) {
+    const driver = scenario.subscenarios.docDriver.makeDriver(ws, variant);
     return new Replica({
       driver: {
         docDriver: driver,
-        blobDriver: scenario.subscenarios.attachmentDriver.makeDriver(),
+        blobDriver: scenario.subscenarios.attachmentDriver.makeDriver(
+          ws,
+          variant,
+        ),
       },
     });
   }
@@ -548,12 +552,103 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
     SUBTEST_NAME + ": ingestBlob",
     async () => {
       // Test that a blob is really ingested and can be fetched again.
+      const share = "+gardening.abcde";
+      const replica = makeReplica(share, "a");
+      const replica2 = makeReplica(share, "b");
 
-      // Is it a problem that we can theoretically provide a document not in the replica?
+      const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
+
+      if (isErr(keypair1)) {
+        assert(false, "error making keypair");
+      }
+
+      const bytes1 = new TextEncoder().encode("Hi!");
+
+      await replica.set(keypair1, {
+        text: "Hello",
+        path: "/blob.txt",
+        blob: bytes1,
+      });
+
+      const doc = await replica.getLatestDocAtPath("/blob.txt");
+
+      assert(doc);
+
+      await replica2.ingest(FormatEs5, doc);
 
       // Test that mismatching doc + blob are rejected
 
+      const mismatchedBytes = new TextEncoder().encode("uhuehuheuh");
+
+      const mismatchedRes = await replica2.ingestBlob(
+        FormatEs5,
+        doc,
+        mismatchedBytes,
+      );
+
+      assert(isErr(mismatchedRes));
+
+      // Test that attachment can really be ingested and fetched back again
+
+      const ingestRes = await replica2.ingestBlob(FormatEs5, doc, bytes1);
+
+      assert(!isErr(ingestRes));
+
+      const attachment = await replica2.getBlob(doc);
+
+      assert(!isErr(attachment));
+      assert(attachment);
+
+      await streamToBytes(attachment.stream);
+
+      // Is it a problem that we can theoretically provide a document not in the replica?
+
       // Test that identical bytes are only stored once with ingestBlob.
+
+      const repeatIngestRes = await replica2.ingestBlob(FormatEs5, doc, bytes1);
+
+      assertEquals(repeatIngestRes, false);
+
+      await replica.close(true);
+      await replica2.close(true);
+    },
+  );
+
+  Deno.test(
+    SUBTEST_NAME + ": wipeDocument",
+    async () => {
+      const share = "+gardening.abcde";
+      const replica = makeReplica(share);
+
+      const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
+
+      if (isErr(keypair1)) {
+        assert(false, "error making keypair");
+      }
+
+      const bytes1 = new TextEncoder().encode("Hi!");
+
+      await replica.set(keypair1, {
+        text: "Hello",
+        path: "/to_wipe.txt",
+        blob: bytes1,
+      });
+
+      const wipeRes = await replica.wipeDocAtPath(keypair1, "/to_wipe.txt");
+
+      assert(!isErr(wipeRes));
+
+      const doc = await replica.getLatestDocAtPath("/to_wipe.txt");
+
+      assert(doc);
+
+      assertEquals(doc.text, "");
+
+      const blob = await replica.getBlob(doc);
+
+      assert(isErr(blob));
+
+      await replica.close(true);
     },
   );
 

@@ -77,7 +77,10 @@ export const blobDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   {
     name: "Filesystem",
     item: {
-      makeDriver: () => new BlobDriverFilesystem("./src/test/tmp"),
+      makeDriver: (shareAddr: string, variant?: string) =>
+        new BlobDriverFilesystem(
+          `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`,
+        ),
       persistent: true,
     },
   },

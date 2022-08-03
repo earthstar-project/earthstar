@@ -49,7 +49,7 @@ export type DocDriverScenario = {
 };
 
 export type AttachmentDriverScenario = {
-  makeDriver: () => IReplicaBlobDriver;
+  makeDriver: (shareAddr: string, variant?: string) => IReplicaBlobDriver;
   persistent: boolean;
 };
 
