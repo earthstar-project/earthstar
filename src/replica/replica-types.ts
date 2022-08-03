@@ -75,6 +75,18 @@ export interface ExpireEvent<
   doc: DocType;
 }
 
+export interface AttachmentIngestEvent {
+  kind: "attachment_ingest";
+  hash: string;
+  size: number;
+}
+
+export interface AttachmentEraseEvent {
+  kind: "attachment_erase";
+  hash: string;
+  format: string;
+}
+
 /**
  * - IngestEventSuccess — a new doc was written
  * - IngestEventFailure — refused an invalid doc
@@ -99,6 +111,7 @@ export type ReplicaEvent<
 > =
   | IngestEvent<DocType>
   | ExpireEvent<DocType>
+  | AttachmentEraseEvent
   | ReplicaEventWillClose
   | ReplicaEventDidClose;
 
@@ -232,13 +245,23 @@ export interface IReplicaBlobDriver {
     } | ValidationError
   >;
 
+  /** Erases an attachment for a given format and hash.*/
   erase(
     formatName: string,
     attachmentHash: string,
   ): Promise<true | ValidationError>;
 
+  /** Erase all stored attachments */
   wipe(): Promise<void>;
 
+  /** Delete all stored attachments not included in the provided list of hashes and their formats.
+   * @returns An array of all erased hashes and their formats.
+   */
+  filter(
+    attachments: Record<string, Set<string>>,
+  ): Promise<{ format: string; hash: string }[]>;
+
+  /** Reject all attachments waiting in staging. */
   clearStaging(): Promise<void>;
 }
 

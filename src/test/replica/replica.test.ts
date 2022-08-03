@@ -17,10 +17,15 @@ import { Replica } from "../../replica/replica.ts";
 import { Logger } from "../../util/log.ts";
 import { CallbackSink } from "../../streams/stream_utils.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
-import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
+import {
+  blobDriverScenarios,
+  cryptoScenarios,
+  docDriverScenarios,
+} from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { streamToBytes } from "../../util/streams.ts";
+
 const loggerTest = new Logger("test", "salmon");
 const loggerTestCb = new Logger("test cb", "lightsalmon");
 //setLogLevel('test', LogLevel.Debug);
@@ -30,12 +35,16 @@ const loggerTestCb = new Logger("test cb", "lightsalmon");
 const scenarios: MultiplyScenarioOutput<{
   "docDriver": ScenarioItem<typeof docDriverScenarios>;
   "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
+  "attachmentDriver": ScenarioItem<typeof blobDriverScenarios>;
 }> = multiplyScenarios({
   description: "docDriver",
   scenarios: docDriverScenarios,
 }, {
   description: "cryptoDriver",
   scenarios: cryptoScenarios,
+}, {
+  description: "attachmentDriver",
+  scenarios: blobDriverScenarios,
 });
 
 export function runRelpicaTests(scenario: typeof scenarios[number]) {
@@ -46,7 +55,10 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
   function makeReplica(ws: ShareAddress) {
     const driver = scenario.subscenarios.docDriver.makeDriver(ws);
     return new Replica({
-      driver: { docDriver: driver, blobDriver: new BlobDriverMemory() },
+      driver: {
+        docDriver: driver,
+        blobDriver: scenario.subscenarios.attachmentDriver.makeDriver(),
+      },
     });
   }
 
@@ -531,6 +543,119 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       await storage.close(true);
     },
   );
+
+  Deno.test(
+    SUBTEST_NAME + ": ingestBlob",
+    async () => {
+      // Test that a blob is really ingested and can be fetched again.
+
+      // Is it a problem that we can theoretically provide a document not in the replica?
+
+      // Test that mismatching doc + blob are rejected
+
+      // Test that identical bytes are only stored once with ingestBlob.
+    },
+  );
+
+  if (
+    scenario.subscenarios.docDriver.persistent &&
+    scenario.subscenarios.attachmentDriver.persistent
+  ) {
+    Deno.test(
+      {
+        name: SUBTEST_NAME + ": pruning expired docs and attachments",
+        fn: async (test) => {
+          const share = "+gardening.abcde";
+          const replica = makeReplica(share);
+
+          const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
+
+          if (isErr(keypair1)) {
+            assert(false, "error making keypair");
+          }
+
+          const now = microsecondNow();
+
+          // Create an expired document
+          await replica.set(keypair1, {
+            text: "byeee",
+            path: "/expire!",
+            deleteAfter: now + 500,
+          });
+
+          // Create a doc with an attachment
+          // Replace that doc with new attachment
+          const bytes1 = new TextEncoder().encode("Hi!");
+          const bytes2 = new TextEncoder().encode("Yo!");
+
+          await replica.set(keypair1, {
+            text: "A greeting",
+            path: "/greeting.txt",
+            blob: bytes1,
+          });
+
+          const blobDoc1 = await replica.getLatestDocAtPath("/greeting.txt");
+
+          assert(blobDoc1);
+
+          await replica.set(keypair1, {
+            path: "/greeting.txt",
+            blob: bytes2,
+          });
+
+          const blobDoc2 = await replica.getLatestDocAtPath("/greeting.txt");
+
+          assert(blobDoc2);
+
+          // close the replica,
+          await replica.close(false);
+
+          const replica2 = makeReplica(share);
+
+          await test.step({
+            name: "check expired doc is erased",
+            fn: async () => {
+              // start it again
+              // check expired document is gone
+
+              const expiredRes = await replica2.getLatestDocAtPath("/expire!");
+
+              assertEquals(expiredRes, undefined);
+            },
+            sanitizeOps: false,
+          });
+
+          await test.step({
+            name: "check attachments have been erased",
+            fn: async () => {
+              const attachment1Res = await replica2.getBlob(blobDoc1);
+
+              assert(!isErr(attachment1Res));
+
+              assertEquals(
+                attachment1Res,
+                undefined,
+                "first attachment was erased",
+              );
+
+              const attachment2Res = await replica2.getBlob(blobDoc2);
+
+              assert(!isErr(attachment2Res));
+
+              assert(attachment2Res, "second attachment was kept");
+
+              await streamToBytes(attachment2Res.stream);
+            },
+            sanitizeOps: false,
+          });
+
+          await replica2.close(true);
+        },
+      },
+    );
+  }
+
+  //
 }
 
 for (const scenario of scenarios) {

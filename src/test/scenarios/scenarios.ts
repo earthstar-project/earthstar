@@ -2,7 +2,12 @@ import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
 import { DocDriverLocalStorage } from "../../replica/doc_drivers/localstorage.ts";
 import { DocDriverSqliteFfi } from "../../replica/doc_drivers/sqlite_ffi.ts";
-import { DocDriverScenario, PartnerScenario, Scenario } from "./types.ts";
+import {
+  AttachmentDriverScenario,
+  DocDriverScenario,
+  PartnerScenario,
+  Scenario,
+} from "./types.ts";
 import {
   universalCryptoDrivers,
   universalPartners,
@@ -67,11 +72,14 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
   },
 ];
 
-export const blobDriverScenarios: Scenario<() => IReplicaBlobDriver>[] = [
+export const blobDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   ...universalReplicaBlobDrivers,
   {
     name: "Filesystem",
-    item: () => new BlobDriverFilesystem("./src/test/tmp"),
+    item: {
+      makeDriver: () => new BlobDriverFilesystem("./src/test/tmp"),
+      persistent: true,
+    },
   },
 ];
 

@@ -1,16 +1,13 @@
-// test that wipe wipes
-
 import { Crypto } from "../../crypto/crypto.ts";
-import { IReplicaBlobDriver } from "../../replica/replica-types.ts";
 import { isErr } from "../../util/errors.ts";
 import { bytesToStream, streamToBytes } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { blobDriverScenarios } from "../scenarios/scenarios.ts";
-import { Scenario } from "../scenarios/types.ts";
+import { AttachmentDriverScenario, Scenario } from "../scenarios/types.ts";
 
-function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
+function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
   Deno.test(`Blob driver (${scenario.name})`, async (test) => {
-    const driver = scenario.item();
+    const driver = scenario.item.makeDriver();
     const fakeFormat = "es.fake";
 
     await test.step(".stage + commit (bytes)", async () => {
@@ -169,6 +166,51 @@ function runBlobDriverTests(scenario: Scenario<() => IReplicaBlobDriver>) {
         [undefined, undefined, undefined],
         "Getting erased blobs returns undefined",
       );
+    });
+
+    await driver.wipe();
+
+    await test.step(".filter", async () => {
+      const bytes0 = new TextEncoder().encode("Hello!");
+      const bytes1 = new TextEncoder().encode("Hey!");
+      const bytes2 = new TextEncoder().encode("Yo!");
+
+      const hashes: string[] = [];
+
+      for (const bytes of [bytes0, bytes1, bytes2]) {
+        const res = await driver.stage(fakeFormat, bytes);
+
+        assert(!isErr(res));
+
+        hashes.push(res.hash);
+
+        await res.commit();
+      }
+
+      const [hashToKeep] = hashes;
+
+      const filtered = await driver.filter({
+        "es.fake": new Set([hashToKeep]),
+      });
+
+      const results = [];
+
+      for (const hash of hashes) {
+        const hopefullyUndefined = await driver.getBlob(fakeFormat, hash);
+
+        results.push(hopefullyUndefined);
+      }
+
+      assert(results[0]);
+      assertEquals(results[1], undefined);
+      assertEquals(results[2], undefined);
+
+      assertEquals(filtered.length, 2);
+      assert(filtered.find((erased) => erased.hash === hashes[1]));
+      assert(filtered.find((erased) => erased.hash === hashes[2]));
+
+      // Consume the stream we got to close the file.
+      await streamToBytes(results[0].stream);
     });
 
     await driver.wipe();

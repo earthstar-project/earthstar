@@ -1,11 +1,17 @@
 import { DocBlob } from "../../util/doc-types.ts";
-import { ValidationError } from "../../util/errors.ts";
+import { isErr, ValidationError } from "../../util/errors.ts";
 import { IReplicaBlobDriver } from "../replica-types.ts";
-import { join } from "https://deno.land/std@0.132.0/path/mod.ts";
+import {
+  basename,
+  dirname,
+  join,
+  relative,
+} from "https://deno.land/std@0.132.0/path/mod.ts";
 import { move } from "https://deno.land/std@0.149.0/fs/mod.ts";
 import { randomId } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
+import { walk } from "https://deno.land/std@0.132.0/fs/mod.ts";
 
 export class BlobDriverFilesystem implements IReplicaBlobDriver {
   private path: string;
@@ -14,18 +20,22 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     this.path = path;
   }
 
+  private async ensurePath(...args: string[]) {
+    try {
+      await Deno.lstat(join(this.path, ...args));
+    } catch {
+      await Deno.mkdir(join(this.path, ...args), {
+        recursive: true,
+      });
+    }
+  }
+
   async stage(
     formatName: string,
     blob: ReadableStream<Uint8Array> | Uint8Array,
   ) {
     // Create the path
-    try {
-      await Deno.lstat(join(this.path, "staging", formatName));
-    } catch {
-      await Deno.mkdir(join(this.path, "staging", formatName), {
-        recursive: true,
-      });
-    }
+    await this.ensurePath("staging", formatName);
 
     const tempKey = randomId();
 
@@ -81,7 +91,9 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       hash,
       size,
       commit: () => {
-        return move(stagingPath, join(this.path, formatName, hash));
+        return move(stagingPath, join(this.path, formatName, hash), {
+          overwrite: true,
+        });
       },
       reject: () => {
         return Deno.remove(stagingPath);
@@ -103,9 +115,18 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
   }
 
   async wipe() {
-    for await (const entry of Deno.readDir(this.path)) {
-      const path = join(this.path, entry.name);
-      await Deno.remove(path, { recursive: true });
+    await this.clearStaging();
+
+    try {
+      for await (const entry of Deno.readDir(this.path)) {
+        const path = join(this.path, entry.name);
+
+        await Deno.remove(path, { recursive: true });
+      }
+    } catch {
+      // Do nothing...
+
+      return Promise.resolve();
     }
   }
 
@@ -129,7 +150,44 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     };
   }
 
-  clearStaging() {
-    return Deno.remove(join(this.path, "staging"), { recursive: true });
+  async clearStaging() {
+    try {
+      await Deno.remove(join(this.path, "staging"), { recursive: true });
+    } catch {
+      return Promise.resolve();
+    }
+  }
+
+  async filter(
+    attachments: Record<string, Set<string>>,
+  ): Promise<{ format: string; hash: string }[]> {
+    try {
+      await Deno.lstat(this.path);
+    } catch {
+      return [];
+    }
+
+    const erased = [];
+
+    for await (const entry of walk(this.path)) {
+      if (entry.isFile) {
+        const format = dirname(relative(this.path, entry.path));
+        const hash = basename(entry.path);
+
+        if (format !== "staging") {
+          const allowedHashes = attachments[format];
+
+          if (allowedHashes && !allowedHashes.has(hash)) {
+            const res = await this.erase(format, hash);
+
+            if (!isErr(res)) {
+              erased.push({ format, hash });
+            }
+          }
+        }
+      }
+    }
+
+    return erased;
   }
 }

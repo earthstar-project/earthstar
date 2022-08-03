@@ -7,7 +7,12 @@ import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { IReplicaBlobDriver } from "../../replica/replica-types.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { DocDriverScenario, PartnerScenario, Scenario } from "./types.ts";
+import {
+  AttachmentDriverScenario,
+  DocDriverScenario,
+  PartnerScenario,
+  Scenario,
+} from "./types.ts";
 
 export const universalCryptoDrivers: Scenario<ICryptoDriver>[] = [{
   name: "Noble",
@@ -25,11 +30,11 @@ export const universalReplicaDocDrivers: Scenario<DocDriverScenario>[] = [
   },
 ];
 
-export const universalReplicaBlobDrivers: Scenario<() => IReplicaBlobDriver>[] =
+export const universalReplicaBlobDrivers: Scenario<AttachmentDriverScenario>[] =
   [
     {
       name: "Memory",
-      item: () => new BlobDriverMemory(),
+      item: { makeDriver: () => new BlobDriverMemory(), persistent: false },
     },
   ];
 

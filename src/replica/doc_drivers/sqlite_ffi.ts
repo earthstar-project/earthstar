@@ -110,7 +110,7 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
       if (opts.filename !== ":memory:") {
         try {
           // If no file is found, this will throw.
-          Deno.openSync(opts.filename);
+          Deno.lstatSync(opts.filename);
 
           throw new EarthstarError(
             `Tried to create an sqlite file but it already exists: ${opts.filename}`,
@@ -133,7 +133,7 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
       }
 
       try {
-        Deno.openSync(opts.filename);
+        Deno.lstatSync(opts.filename);
       } catch {
         this.close(false);
         throw new EarthstarError(

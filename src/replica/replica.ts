@@ -123,11 +123,9 @@ export class Replica {
       new WritableStream(this.callbackSink),
     );
 
-    this.eraseExpiredDocs();
-
     this.eraseInterval = setInterval(() => {
       if (!this.isClosed()) {
-        this.eraseExpiredDocs();
+        this.pruneExpiredDocsAndAttachments();
       } else {
         clearInterval(this.eraseInterval);
       }
@@ -156,8 +154,13 @@ export class Replica {
       kind: "willClose",
     });
     logger.debug("    marking self as closed...");
+    if (erase === false) {
+      await this.pruneExpiredDocsAndAttachments();
+    }
+
     this._isClosed = true;
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
+
     await this.replicaDriver.docDriver.close(erase);
 
     if (erase) {
@@ -371,21 +374,6 @@ export class Replica {
     // The lack of this does not indicate that no attachment is associated with this doc
     // (it may refer to the attachment from the previous doc)
     if (result.blob) {
-      // First, if there was a previous doc at the same path,
-      // and that doc had the same author,
-      // Check if it had an attachment..
-      // If it did, delete it, as the new attchement is meant to replace it.
-      if (latestDocSamePath && latestDocSamePath.author === result.doc.author) {
-        const attachmentInfo = format.getAttachmentInfo(latestDocSamePath);
-
-        if (!isErr(attachmentInfo)) {
-          await this.replicaDriver.blobDriver.erase(
-            format.id,
-            attachmentInfo.hash,
-          );
-        }
-      }
-
       // Stage the new attachment with the attachment driver.
       const stageResult = await this.replicaDriver.blobDriver.stage(
         format.id,
@@ -665,32 +653,64 @@ export class Replica {
     return didIngest;
   }
 
-  private async eraseExpiredDocs<F>(
+  /** Erases expired docs and dangling attachments */
+  private async pruneExpiredDocsAndAttachments<F>(
     // Because es5 is the only format with attachments, that's all we'll handle for now.
     formats: FormatsArg<F> = DEFAULT_FORMATS as unknown as FormatsArg<F>,
   ) {
+    // Erase expired docs
     const erasedDocs = await this.replicaDriver.docDriver.eraseExpiredDocs();
 
-    const formatLookup = getFormatLookup(formats);
-
     for (const doc of erasedDocs) {
-      const format = formatLookup[doc.format];
-
-      if (format) {
-        // Look up whether this document had an associated attachment, and erase it.
-        const attachmentInfo = format.getAttachmentInfo(doc);
-
-        if (!isErr(attachmentInfo)) {
-          await this.replicaDriver.blobDriver.erase(
-            format.id,
-            attachmentInfo.hash,
-          );
-        }
-      }
-
       await this.eventWriter.write({
         kind: "expire",
         doc,
+      });
+    }
+
+    // Erase dangling docs
+    const formatLookup = getFormatLookup(formats);
+
+    const allowedHashes: Record<string, Set<string>> = {};
+
+    await this.getQueryStream(
+      {
+        historyMode: "all",
+        orderBy: "localIndex ASC",
+      },
+      formats,
+      "existing",
+    ).pipeTo(
+      new WritableStream({
+        write(event) {
+          if (event.kind === "existing") {
+            const format = formatLookup[event.doc.format];
+
+            const attachmentInfo = format.getAttachmentInfo(event.doc);
+
+            if (!isErr(attachmentInfo)) {
+              const maybeExistingSet = allowedHashes[format.id];
+
+              if (maybeExistingSet) {
+                maybeExistingSet.add(attachmentInfo.hash);
+              } else {
+                allowedHashes[format.id] = new Set([attachmentInfo.hash]);
+              }
+            }
+          }
+        },
+      }),
+    );
+
+    const erasedAttachments = await this.replicaDriver.blobDriver.filter(
+      allowedHashes,
+    );
+
+    for (const attachment of erasedAttachments) {
+      await this.eventWriter.write({
+        kind: "attachment_erase",
+        format: attachment.format,
+        hash: attachment.hash,
       });
     }
   }
@@ -777,6 +797,9 @@ export class Replica {
   //--------------------------------------------------
   // BLOBS
 
+  /**
+   * @returns `true` (indicating it was upsert), `false` (indicating this attachment is already in storage), or a `ValidationError` (indicating something went wrong.)
+   */
   async ingestBlob<F = DefaultFormatType>(
     format: FormatArg<F>,
     doc: FormatDocType<F>,
@@ -801,30 +824,6 @@ export class Replica {
       return Promise.resolve(docIsValid);
     }
 
-    // Check for a previous version by the same author at this path.
-    // If present, and it has an attachment,
-    // Erase that attachment, as it is being replaced.
-    const versions = await this.getAllDocsAtPath(doc.path, [format]);
-
-    if (versions.length > 0) {
-      const versionBySameAuthor = versions.find((version) =>
-        doc.author === version.author
-      );
-
-      if (versionBySameAuthor) {
-        const versionAttachmentInfo = format.getAttachmentInfo(
-          versionBySameAuthor,
-        );
-
-        if (!isErr(versionAttachmentInfo)) {
-          this.replicaDriver.blobDriver.erase(
-            format.id,
-            versionAttachmentInfo.hash,
-          );
-        }
-      }
-    }
-
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (isErr(attachmentInfo)) {
@@ -842,6 +841,7 @@ export class Replica {
       return stageRes;
     }
 
+    // Compare the staged attachment's hash and size to what the doc claims it should be.
     if (stageRes.hash !== attachmentInfo.hash) {
       await stageRes.reject();
       return new ValidationError(
@@ -856,6 +856,7 @@ export class Replica {
       );
     }
 
+    // If it all checks out, commit.
     await stageRes.commit();
 
     return true;
@@ -865,7 +866,6 @@ export class Replica {
     doc: FormatDocType<F>,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<DocBlob | undefined | ValidationError> {
-    // Really cannot be arsed to deal with TS not understanding this right now.
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (!isErr(attachmentInfo)) {

@@ -77,6 +77,28 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
     return Promise.resolve();
   }
 
+  async filter(
+    hashes: Record<string, Set<string>>,
+  ): Promise<{ format: string; hash: string }[]> {
+    const erasedAttachments = [];
+
+    for (const key of this.blobMap.keys()) {
+      const [format, hash] = key.split("___");
+
+      const hashesToKeep = hashes[format];
+
+      if (hashesToKeep && !hashesToKeep.has(hash)) {
+        const result = await this.erase(format, hash);
+
+        if (result) {
+          erasedAttachments.push({ format, hash });
+        }
+      }
+    }
+
+    return erasedAttachments;
+  }
+
   clearStaging() {
     this.stagingMap.clear();
     return Promise.resolve();
