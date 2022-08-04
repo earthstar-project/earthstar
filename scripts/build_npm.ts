@@ -1,4 +1,4 @@
-import { build } from "https://deno.land/x/dnt@0.23.0/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.29.1/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
@@ -10,29 +10,49 @@ await build({
   ],
   testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
   outDir: "./npm",
+  compilerOptions: {
+    //lib: ["dom", "es2021"],
+  },
   shims: {
-    deno: {
-      test: "dev",
-    },
+    deno: true,
     undici: true,
     webSocket: true,
     timers: true,
     weakRef: true,
+    crypto: true,
     custom: [
       {
         module: "node:stream/web",
-        globalNames: ["WritableStream", "TransformStream", "ReadableStream"],
+        globalNames: [
+          "WritableStream",
+          "TransformStream",
+          "ReadableStream",
+          { name: "Transformer", typeOnly: true },
+          "TransformStreamDefaultController",
+          { name: "UnderlyingSink", typeOnly: true },
+          "WritableStreamDefaultWriter",
+        ],
+      },
+      {
+        package: {
+          name: "@sgwilym/urlpattern-polyfill",
+          version: "1.0.0-rc8",
+        },
+        globalNames: [{
+          name: "URLPattern",
+          exportName: "URLPattern",
+        }],
+      },
+      {
+        globalNames: ["TextEncoder", "TextDecoder"],
+        module: "util",
       },
     ],
   },
 
-  // typeCheck: false,
   mappings: {
-    // "./src/entries/deno.ts": "./src/entries/node.ts",
-    "https://deno.land/x/crayon_chalk_aliases@1.1.0/index.ts": {
-      name: "chalk",
-      version: "4.1.2",
-    },
+    "./src/test/scenarios/scenarios.ts":
+      "./src/test/scenarios/scenarios.node.ts",
 
     "./src/node/chloride.ts": {
       name: "chloride",
@@ -42,15 +62,17 @@ await build({
       name: "better-sqlite3",
       version: "7.5.0",
     },
-    "https://raw.githubusercontent.com/sgwilym/noble-ed25519/7af9329476ff2f2a0e524a9f78e36d09704efc63/mod.ts":
+    "https://raw.githubusercontent.com/sgwilym/noble-ed25519/153f9e7e9952ad22885f5abb3f6abf777bef4a4c/mod.ts":
       {
         name: "@noble/ed25519",
-        version: "1.4.0",
+        version: "1.6.0",
       },
+    /* TODO: Bring back with IndexedDB
     "./src/replica/indexeddb-types.deno.d.ts":
       "./src/replica/indexeddb-types.node.d.ts",
     "./src/test/scenarios/scenarios.ts":
       "./src/test/scenarios/scenarios.node.ts",
+      */
   },
   package: {
     // package.json properties

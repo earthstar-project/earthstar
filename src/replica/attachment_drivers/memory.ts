@@ -28,7 +28,11 @@ export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
 
     return Promise.resolve({
       bytes: async () => new Uint8Array(await attachment.arrayBuffer()),
-      stream: () => Promise.resolve(attachment.stream()),
+      stream: () =>
+        Promise.resolve(
+          // Need to do this for Node's sake.
+          attachment.stream() as unknown as ReadableStream<Uint8Array>,
+        ),
     });
   }
 

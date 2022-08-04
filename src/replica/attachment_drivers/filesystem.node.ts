@@ -7,11 +7,10 @@ import {
   join,
   relative,
 } from "https://deno.land/std@0.132.0/path/mod.ts";
-import { move } from "https://deno.land/std@0.149.0/fs/mod.ts";
 import { randomId } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
-import { walk } from "https://deno.land/std@0.132.0/fs/walk.ts";
+import { lstat } from "https://deno.land/std@0.150.0/node/fs/promises.ts";
 
 /** An attachment driver which persists attachments using the local filesystem.
  * Works with Deno and Node.
@@ -25,6 +24,8 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   }
 
   private async ensurePath(...args: string[]) {
+    const res = await lstat(join(this.path, ...args));
+
     try {
       await Deno.lstat(join(this.path, ...args));
     } catch {
