@@ -3,7 +3,7 @@
 ## Next
 
 - BREAKING: IReplicaDriver is now used for a class with both `docDriver` and
-  `blobDriver` properties
+  `attachmentDriver` properties
 - BREAKING: IReplicaDriver is now IReplicaDocDriver, classes have changed names
   so ReplicaDriverMemory is now DocDriverMemory
 - Improvement: noble-ed25519 has been updated, and is now audited and 10 - 15%

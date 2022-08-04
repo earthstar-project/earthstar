@@ -28,7 +28,7 @@ import {
 import { DocDriverScenario, Scenario } from "../scenarios/types.ts";
 import { docDriverScenarios } from "../scenarios/scenarios.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 let runQueryHelpersTests = async (
   scenario: Scenario<DocDriverScenario>,
@@ -39,7 +39,7 @@ let runQueryHelpersTests = async (
   function makeStorage(ws: ShareAddress): Replica {
     let driver = scenario.item.makeDriver(ws);
     return new Replica({
-      driver: { docDriver: driver, blobDriver: new BlobDriverMemory() },
+      driver: { docDriver: driver, attachmentDriver: new AttachmentDriverMemory() },
     });
   }
 

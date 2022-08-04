@@ -2,25 +2,25 @@ import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase } from "../util/doc-types.ts";
 import { isErr, NotFoundError, ValidationError } from "../util/errors.ts";
 import {
-  BlobTransferOpts,
-  BlobTransferProgressEvent,
-  BlobTransferStatus,
+  AttachmentTransferOpts,
+  AttachmentTransferProgressEvent,
+  AttachmentTransferStatus,
 } from "./syncer_types.ts";
 
-export class BlobTransfer<F> {
+export class AttachmentTransfer<F> {
   kind: "download" | "upload";
-  status: BlobTransferStatus = "ready";
+  status: AttachmentTransferStatus = "ready";
 
   loaded = 0;
   expectedSize: number;
 
   private sourceDoc: DocBase<string>;
-  private statusBus = new BlockingBus<BlobTransferProgressEvent>();
+  private statusBus = new BlockingBus<AttachmentTransferProgressEvent>();
 
   hash: string;
 
   constructor(
-    { stream, replica, doc, format }: BlobTransferOpts<F>,
+    { stream, replica, doc, format }: AttachmentTransferOpts<F>,
   ) {
     this.sourceDoc = doc;
 
@@ -28,7 +28,7 @@ export class BlobTransfer<F> {
 
     if (isErr(attachmentInfo)) {
       throw new ValidationError(
-        "BlobTransfer was given a doc which has no attachment!",
+        "AttachmentTransfer was given a doc which has no attachment!",
       );
     }
 
@@ -62,7 +62,7 @@ export class BlobTransfer<F> {
         },
       });
 
-      replica.ingestBlob(format, doc, counterStream).then(
+      replica.ingestAttachment(format, doc, counterStream).then(
         (result) => {
           if (isErr(result)) {
             console.log(result);
@@ -77,13 +77,13 @@ export class BlobTransfer<F> {
     } else {
       this.kind = "upload";
 
-      replica.getBlob(doc, format).then((blobRes) => {
-        if (!blobRes) {
+      replica.getAttachment(doc, format).then((attachmentRes) => {
+        if (!attachmentRes) {
           return new NotFoundError();
         }
 
-        if (isErr(blobRes)) {
-          return blobRes;
+        if (isErr(attachmentRes)) {
+          return attachmentRes;
         }
 
         const counterTransform = new TransformStream<Uint8Array, Uint8Array>({
@@ -94,7 +94,7 @@ export class BlobTransfer<F> {
           },
         });
 
-        blobRes.stream().then((readable) => {
+        attachmentRes.stream().then((readable) => {
           this.changeStatus("in_progress");
           readable.pipeThrough(counterTransform).pipeTo(stream).then(() => {
             this.changeStatus("complete");
@@ -113,7 +113,7 @@ export class BlobTransfer<F> {
     });
   }
 
-  private changeStatus(status: BlobTransferStatus) {
+  private changeStatus(status: AttachmentTransferStatus) {
     this.status = status;
 
     this.statusBus.send({
@@ -127,7 +127,7 @@ export class BlobTransfer<F> {
     return this.sourceDoc;
   }
 
-  onProgress(callback: (event: BlobTransferProgressEvent) => void): () => void {
+  onProgress(callback: (event: AttachmentTransferProgressEvent) => void): () => void {
     const unsub = this.statusBus.on(callback);
     return unsub;
   }

@@ -16,7 +16,7 @@ import { Logger } from "../../util/log.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 const loggerTest = new Logger("test", "lightsalmon");
 const loggerTestCb = new Logger("test cb", "salmon");
@@ -49,7 +49,7 @@ function runPeerTests(
     const storage = new Replica({
       driver: {
         docDriver: scenario.subscenarios.replicaDriver.makeDriver(share),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     });
     return storage;

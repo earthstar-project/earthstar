@@ -11,7 +11,7 @@ import {
 import {
   universalCryptoDrivers,
   universalPartners,
-  universalReplicaBlobDrivers,
+  universalReplicaAttachmentDrivers,
   universalReplicaDocDrivers,
 } from "./scenarios.universal.ts";
 import { Syncer } from "../../syncer/syncer.ts";
@@ -20,8 +20,8 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
 import { FormatsArg } from "../../formats/default.ts";
 import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
-import { IReplicaBlobDriver } from "../../replica/replica-types.ts";
-import { BlobDriverFilesystem } from "../../replica/blob_drivers/filesystem.ts";
+import { IReplicaAttachmentDriver } from "../../replica/replica-types.ts";
+import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.ts";
 import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
 
@@ -72,13 +72,13 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
   },
 ];
 
-export const blobDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
-  ...universalReplicaBlobDrivers,
+export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
+  ...universalReplicaAttachmentDrivers,
   {
     name: "Filesystem",
     item: {
       makeDriver: (shareAddr: string, variant?: string) =>
-        new BlobDriverFilesystem(
+        new AttachmentDriverFilesystem(
           `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`,
         ),
       persistent: true,

@@ -1,6 +1,6 @@
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
 
@@ -25,7 +25,7 @@ Deno.test("HaveEntryKeeper", async () => {
     {
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     },
   );
@@ -171,7 +171,7 @@ Deno.test({
     const replica = new Replica({
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     });
 
@@ -180,7 +180,7 @@ Deno.test({
     const otherReplica = new Replica({
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     });
 

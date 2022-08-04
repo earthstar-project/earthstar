@@ -1,6 +1,6 @@
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocEs5, FormatEs5 } from "../../formats/format_es5.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
@@ -22,7 +22,7 @@ Deno.test("QuerySource", async () => {
     {
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     },
   );

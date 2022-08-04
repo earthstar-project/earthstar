@@ -1,53 +1,55 @@
 import { Crypto } from "../../crypto/crypto.ts";
-import { DocBlob } from "../../util/doc-types.ts";
+import { DocAttachment } from "../../util/doc-types.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { streamToBytes } from "../../util/streams.ts";
-import { IReplicaBlobDriver } from "../replica-types.ts";
+import { IReplicaAttachmentDriver } from "../replica-types.ts";
 
-export class BlobDriverMemory implements IReplicaBlobDriver {
+export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
   private stagingMap = new Map<string, Blob>();
-  private blobMap = new Map<string, Blob>();
+  private attachmentMap = new Map<string, Blob>();
 
   private getKey(formatName: string, attachmentHash: string) {
     return `${formatName}___${attachmentHash}`;
   }
 
-  getBlob(
+  getAttachment(
     formatName: string,
     attachmentHash: string,
-  ): Promise<DocBlob | undefined> {
+  ): Promise<DocAttachment | undefined> {
     const key = this.getKey(formatName, attachmentHash);
-    const blob = this.blobMap.get(key);
+    const attachment = this.attachmentMap.get(key);
 
-    if (!blob) {
+    if (!attachment) {
       return Promise.resolve(undefined);
     }
 
     return Promise.resolve({
-      bytes: async () => new Uint8Array(await blob.arrayBuffer()),
-      stream: () => Promise.resolve(blob.stream()),
+      bytes: async () => new Uint8Array(await attachment.arrayBuffer()),
+      stream: () => Promise.resolve(attachment.stream()),
     });
   }
 
   async stage(
     formatName: string,
-    blob: ReadableStream<Uint8Array> | Uint8Array,
+    attachment: ReadableStream<Uint8Array> | Uint8Array,
   ) {
-    const bytes = blob instanceof Uint8Array ? blob : await streamToBytes(blob);
+    const bytes = attachment instanceof Uint8Array
+      ? attachment
+      : await streamToBytes(attachment);
 
     const hash = await Crypto.sha256base32(bytes);
 
-    const newBlob = new Blob([bytes]);
+    const newAttachment = new Blob([bytes]);
 
     const key = this.getKey(formatName, hash);
 
-    this.stagingMap.set(key, newBlob);
+    this.stagingMap.set(key, newAttachment);
 
     return Promise.resolve({
       hash,
       size: bytes.byteLength,
       commit: () => {
-        this.blobMap.set(key, newBlob);
+        this.attachmentMap.set(key, newAttachment);
         this.stagingMap.delete(key);
 
         return Promise.resolve();
@@ -62,18 +64,18 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
 
   erase(formatName: string, attachmentHash: string) {
     const key = this.getKey(formatName, attachmentHash);
-    if (this.blobMap.has(key)) {
-      this.blobMap.delete(key);
+    if (this.attachmentMap.has(key)) {
+      this.attachmentMap.delete(key);
       return Promise.resolve(true as true);
     }
 
     return Promise.resolve(
-      new ValidationError("No blob with that signature found."),
+      new ValidationError("No attachment with that signature found."),
     );
   }
 
   wipe() {
-    this.blobMap.clear();
+    this.attachmentMap.clear();
     return Promise.resolve();
   }
 
@@ -82,7 +84,7 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
   ): Promise<{ format: string; hash: string }[]> {
     const erasedAttachments = [];
 
-    for (const key of this.blobMap.keys()) {
+    for (const key of this.attachmentMap.keys()) {
       const [format, hash] = key.split("___");
 
       const hashesToKeep = hashes[format];

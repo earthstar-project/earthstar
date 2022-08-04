@@ -88,7 +88,7 @@ export type SyncerDiscloseEvent = {
   formats: string[];
 };
 
-export type SyncerRequestBlobTransferEvent = {
+export type SyncerRequestAttachmentTransferEvent = {
   kind: "BLOB_REQ";
   /** An ID to be used for an external request to find its way back to this syncer. */
   syncerId: string;
@@ -106,9 +106,9 @@ export type SyncerSyncAgentEvent = SyncAgentEvent & {
 export type SyncerEvent =
   | SyncerSyncAgentEvent
   | SyncerDiscloseEvent
-  | SyncerRequestBlobTransferEvent;
+  | SyncerRequestAttachmentTransferEvent;
 
-export interface ISyncPartner<IncomingBlobSourceType> {
+export interface ISyncPartner<IncomingAttachmentSourceType> {
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
   // request transfer (ie. a download)
@@ -121,7 +121,7 @@ export interface ISyncPartner<IncomingBlobSourceType> {
   ): Promise<WritableStream<Uint8Array> | ValidationError | undefined>;
   // handle (external) request to initiate transfer.
   handleTransferRequest(
-    source: IncomingBlobSourceType,
+    source: IncomingAttachmentSourceType,
     kind: "upload" | "download",
   ): Promise<
     | ReadableStream<Uint8Array>
@@ -168,7 +168,7 @@ export type SyncerStatus = Record<
       path: string;
       format: string;
       hash: string;
-      status: BlobTransferStatus;
+      status: AttachmentTransferStatus;
       bytesLoaded: number;
       totalBytes: number;
     }[];
@@ -177,21 +177,21 @@ export type SyncerStatus = Record<
 
 // =============== BLOB SYNCING
 
-export type BlobTransferStatus =
+export type AttachmentTransferStatus =
   | "ready"
   | "in_progress"
   | "complete"
   | "failed";
 
-export type BlobTransferOpts<F> = {
+export type AttachmentTransferOpts<F> = {
   stream: ReadableStream<Uint8Array> | WritableStream<Uint8Array>;
   replica: Replica;
   doc: FormatDocType<F>;
   format: FormatArg<F>;
 };
 
-export type BlobTransferProgressEvent = {
-  status: BlobTransferStatus;
+export type AttachmentTransferProgressEvent = {
+  status: AttachmentTransferStatus;
   bytesLoaded: number;
   totalBytes: number;
 };

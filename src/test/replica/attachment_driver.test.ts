@@ -2,12 +2,14 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { isErr } from "../../util/errors.ts";
 import { bytesToStream, streamToBytes } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
-import { blobDriverScenarios } from "../scenarios/scenarios.ts";
+import { attachmentDriverScenarios } from "../scenarios/scenarios.ts";
 import { AttachmentDriverScenario, Scenario } from "../scenarios/types.ts";
 
-function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
-  Deno.test(`Blob driver (${scenario.name})`, async (test) => {
-    const driver = scenario.item.makeDriver();
+function runAttachmentDriverTests(
+  scenario: Scenario<AttachmentDriverScenario>,
+) {
+  Deno.test(`Attachment driver (${scenario.name})`, async (test) => {
+    const driver = scenario.item.makeDriver("+fake.a123");
     const fakeFormat = "es.fake";
 
     await test.step(".stage + commit (bytes)", async () => {
@@ -22,19 +24,24 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
 
       await res.commit();
 
-      const hopefullyBlob = await driver.getBlob(fakeFormat, res.hash);
+      const hopefullyAttachment = await driver.getAttachment(
+        fakeFormat,
+        res.hash,
+      );
 
-      assert(hopefullyBlob);
+      assert(hopefullyAttachment);
 
       assertEquals(
         "Hello!",
-        new TextDecoder().decode(await hopefullyBlob.bytes()),
-        "blob bytes match",
+        new TextDecoder().decode(await hopefullyAttachment.bytes()),
+        "attachment bytes match",
       );
       assertEquals(
         "Hello!",
-        new TextDecoder().decode(await streamToBytes(hopefullyBlob.stream)),
-        "blob stream matches",
+        new TextDecoder().decode(
+          await streamToBytes(await hopefullyAttachment.stream()),
+        ),
+        "attachment stream matches",
       );
     });
 
@@ -52,7 +59,10 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
 
       await res.reject();
 
-      const hopefullyUndefined = await driver.getBlob(fakeFormat, res.hash);
+      const hopefullyUndefined = await driver.getAttachment(
+        fakeFormat,
+        res.hash,
+      );
 
       assertEquals(hopefullyUndefined, undefined);
     });
@@ -74,17 +84,22 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
 
       await res.commit();
 
-      const hopefullyBlob = await driver.getBlob(fakeFormat, res.hash);
+      const hopefullyAttachment = await driver.getAttachment(
+        fakeFormat,
+        res.hash,
+      );
 
-      assert(hopefullyBlob);
+      assert(hopefullyAttachment);
 
       assertEquals(
         "Hello!",
-        new TextDecoder().decode(await hopefullyBlob.bytes()),
+        new TextDecoder().decode(await hopefullyAttachment.bytes()),
       );
       assertEquals(
         "Hello!",
-        new TextDecoder().decode(await streamToBytes(hopefullyBlob.stream)),
+        new TextDecoder().decode(
+          await streamToBytes(await hopefullyAttachment.stream()),
+        ),
       );
     });
 
@@ -105,7 +120,10 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
 
       await res.reject();
 
-      const hopefullyUndefined = await driver.getBlob(fakeFormat, res.hash);
+      const hopefullyUndefined = await driver.getAttachment(
+        fakeFormat,
+        res.hash,
+      );
 
       assertEquals(hopefullyUndefined, undefined);
     });
@@ -123,12 +141,15 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
 
       await driver.erase(fakeFormat, res.hash);
 
-      const hopefullyUndefined = await driver.getBlob(fakeFormat, res.hash);
+      const hopefullyUndefined = await driver.getAttachment(
+        fakeFormat,
+        res.hash,
+      );
 
       assertEquals(
         hopefullyUndefined,
         undefined,
-        "Getting erased blob returns undefined",
+        "Getting erased attachment returns undefined",
       );
     });
 
@@ -156,7 +177,7 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
       const hopefullyUndefineds = [];
 
       for (const hash of hashes) {
-        const hopefullyUndefined = await driver.getBlob(fakeFormat, hash);
+        const hopefullyUndefined = await driver.getAttachment(fakeFormat, hash);
 
         hopefullyUndefineds.push(hopefullyUndefined);
       }
@@ -164,7 +185,7 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
       assertEquals(
         hopefullyUndefineds,
         [undefined, undefined, undefined],
-        "Getting erased blobs returns undefined",
+        "Getting erased attachments returns undefined",
       );
     });
 
@@ -196,7 +217,7 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
       const results = [];
 
       for (const hash of hashes) {
-        const hopefullyUndefined = await driver.getBlob(fakeFormat, hash);
+        const hopefullyUndefined = await driver.getAttachment(fakeFormat, hash);
 
         results.push(hopefullyUndefined);
       }
@@ -210,13 +231,13 @@ function runBlobDriverTests(scenario: Scenario<AttachmentDriverScenario>) {
       assert(filtered.find((erased) => erased.hash === hashes[2]));
 
       // Consume the stream we got to close the file.
-      await streamToBytes(results[0].stream);
+      await streamToBytes(await results[0].stream());
     });
 
     await driver.wipe();
   });
 }
 
-for (const scenario of blobDriverScenarios) {
-  runBlobDriverTests(scenario);
+for (const scenario of attachmentDriverScenarios) {
+  runAttachmentDriverTests(scenario);
 }

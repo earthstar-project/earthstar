@@ -26,7 +26,7 @@ const TEST_SHARE = "+test.a123";
 
 function makeReplica(address: string) {
   const driver = new DocDriverMemory(address);
-  return new Replica({ driver: { docDriver: driver, blobDriver: null } });
+  return new Replica({ driver: { docDriver: driver, attachmentDriver: null } });
 }
 
 Deno.test("syncShareAndDir", async (test) => {

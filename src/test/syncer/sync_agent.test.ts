@@ -1,7 +1,7 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { SyncAgentEvent, SyncAgentStatus } from "../../syncer/syncer_types.ts";
 import { SyncAgent } from "../../syncer/sync_agent.ts";
@@ -52,7 +52,7 @@ class SyncAgentTestHelper {
           SHARE_ADDR,
           "sync_a",
         ),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     });
 
@@ -62,7 +62,7 @@ class SyncAgentTestHelper {
           SHARE_ADDR,
           "sync_b",
         ),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     });
 

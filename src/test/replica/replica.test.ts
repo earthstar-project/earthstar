@@ -18,7 +18,7 @@ import { Logger } from "../../util/log.ts";
 import { CallbackSink } from "../../streams/stream_utils.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import {
-  blobDriverScenarios,
+  attachmentDriverScenarios,
   cryptoScenarios,
   docDriverScenarios,
 } from "../scenarios/scenarios.ts";
@@ -36,7 +36,7 @@ const loggerTestCb = new Logger("test cb", "lightsalmon");
 const scenarios: MultiplyScenarioOutput<{
   "docDriver": ScenarioItem<typeof docDriverScenarios>;
   "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
-  "attachmentDriver": ScenarioItem<typeof blobDriverScenarios>;
+  "attachmentDriver": ScenarioItem<typeof attachmentDriverScenarios>;
 }> = multiplyScenarios({
   description: "docDriver",
   scenarios: docDriverScenarios,
@@ -45,7 +45,7 @@ const scenarios: MultiplyScenarioOutput<{
   scenarios: cryptoScenarios,
 }, {
   description: "attachmentDriver",
-  scenarios: blobDriverScenarios,
+  scenarios: attachmentDriverScenarios,
 });
 
 export function runRelpicaTests(scenario: typeof scenarios[number]) {
@@ -58,7 +58,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
     return new Replica({
       driver: {
         docDriver: driver,
-        blobDriver: scenario.subscenarios.attachmentDriver.makeDriver(
+        attachmentDriver: scenario.subscenarios.attachmentDriver.makeDriver(
           ws,
           variant,
         ),
@@ -280,8 +280,8 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         const res = await replica.set(keypair, {
           path: "/bytes_test.txt",
           text: "A text file",
-          blob: new TextEncoder().encode(
-            "This is some text we're writing as a blob!",
+          attachment: new TextEncoder().encode(
+            "This is some text we're writing as a attachment!",
           ),
         });
 
@@ -292,7 +292,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         assert(doc);
         assertEquals(doc.path, "/bytes_test.txt");
 
-        const attachment = await replica.getBlob(doc);
+        const attachment = await replica.getAttachment(doc);
 
         assert(!isErr(res));
 
@@ -302,7 +302,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       // setting a doc with attachment ingests doc and attachment (stream)
       await test.step("sets doc with stream attachment", async () => {
         const bytes = new TextEncoder().encode(
-          "This is some text we're writing as a blob!",
+          "This is some text we're writing as a attachment!",
         );
 
         const stream = bytesToStream(bytes);
@@ -310,7 +310,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         const res = await replica.set(keypair, {
           path: "/stream_test.txt",
           text: "A text file",
-          blob: stream,
+          attachment: stream,
         });
 
         assert(!isErr(res));
@@ -320,14 +320,14 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         assert(doc);
         assertEquals(doc.path, "/stream_test.txt");
 
-        const attachment = await replica.getBlob(doc);
+        const attachment = await replica.getAttachment(doc);
 
         assert(!isErr(res));
 
         assert(attachment);
       });
 
-      // setting a previously existing doc which we know doesn't generate a new blob KEEPs the old attachment
+      // setting a previously existing doc which we know doesn't generate a new attachment KEEPs the old attachment
       await test.step("setting doc without attachment where there is one already retains the attachment", async () => {
         const res = await replica.set(keypair, {
           path: "/stream_test.txt",
@@ -341,7 +341,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         assert(doc);
         assertEquals(doc.path, "/stream_test.txt");
 
-        const attachment = await replica.getBlob(doc);
+        const attachment = await replica.getAttachment(doc);
 
         assert(!isErr(res));
 
@@ -635,9 +635,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
   );
 
   Deno.test(
-    SUBTEST_NAME + ": ingestBlob",
+    SUBTEST_NAME + ": ingestAttachment",
     async () => {
-      // Test that a blob is really ingested and can be fetched again.
+      // Test that a attachment is really ingested and can be fetched again.
       const share = "+gardening.abcde";
       const replica = makeReplica(share, "a");
       const replica2 = makeReplica(share, "b");
@@ -652,21 +652,21 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       await replica.set(keypair1, {
         text: "Hello",
-        path: "/blob.txt",
-        blob: bytes1,
+        path: "/attachment.txt",
+        attachment: bytes1,
       });
 
-      const doc = await replica.getLatestDocAtPath("/blob.txt");
+      const doc = await replica.getLatestDocAtPath("/attachment.txt");
 
       assert(doc);
 
       await replica2.ingest(FormatEs5, doc);
 
-      // Test that mismatching doc + blob are rejected
+      // Test that mismatching doc + attachment are rejected
 
       const mismatchedBytes = new TextEncoder().encode("uhuehuheuh");
 
-      const mismatchedRes = await replica2.ingestBlob(
+      const mismatchedRes = await replica2.ingestAttachment(
         FormatEs5,
         doc,
         mismatchedBytes,
@@ -676,20 +676,20 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       // Test that attachment can really be ingested and fetched back again
 
-      const ingestRes = await replica2.ingestBlob(FormatEs5, doc, bytes1);
+      const ingestRes = await replica2.ingestAttachment(FormatEs5, doc, bytes1);
 
       assert(!isErr(ingestRes));
 
-      const attachment = await replica2.getBlob(doc);
+      const attachment = await replica2.getAttachment(doc);
 
       assert(!isErr(attachment));
       assert(attachment);
 
       // Is it a problem that we can theoretically provide a document not in the replica?
 
-      // Test that identical bytes are only stored once with ingestBlob.
+      // Test that identical bytes are only stored once with ingestAttachment.
 
-      const repeatIngestRes = await replica2.ingestBlob(FormatEs5, doc, bytes1);
+      const repeatIngestRes = await replica2.ingestAttachment(FormatEs5, doc, bytes1);
 
       assertEquals(repeatIngestRes, false);
 
@@ -715,7 +715,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       await replica.set(keypair1, {
         text: "Hello",
         path: "/to_wipe.txt",
-        blob: bytes1,
+        attachment: bytes1,
       });
 
       const wipeRes = await replica.wipeDocAtPath(keypair1, "/to_wipe.txt");
@@ -728,9 +728,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       assertEquals(doc.text, "");
 
-      const blob = await replica.getBlob(doc);
+      const attachment = await replica.getAttachment(doc);
 
-      assert(isErr(blob));
+      assert(isErr(attachment));
 
       await replica.close(true);
     },
@@ -770,21 +770,21 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           await replica.set(keypair1, {
             text: "A greeting",
             path: "/greeting.txt",
-            blob: bytes1,
+            attachment: bytes1,
           });
 
-          const blobDoc1 = await replica.getLatestDocAtPath("/greeting.txt");
+          const attachmentDoc1 = await replica.getLatestDocAtPath("/greeting.txt");
 
-          assert(blobDoc1);
+          assert(attachmentDoc1);
 
           await replica.set(keypair1, {
             path: "/greeting.txt",
-            blob: bytes2,
+            attachment: bytes2,
           });
 
-          const blobDoc2 = await replica.getLatestDocAtPath("/greeting.txt");
+          const attachmentDoc2 = await replica.getLatestDocAtPath("/greeting.txt");
 
-          assert(blobDoc2);
+          assert(attachmentDoc2);
 
           // close the replica,
           await replica.close(false);
@@ -807,7 +807,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           await test.step({
             name: "check attachments have been erased",
             fn: async () => {
-              const attachment1Res = await replica2.getBlob(blobDoc1);
+              const attachment1Res = await replica2.getAttachment(attachmentDoc1);
 
               assert(!isErr(attachment1Res));
 
@@ -817,7 +817,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
                 "first attachment was erased",
               );
 
-              const attachment2Res = await replica2.getBlob(blobDoc2);
+              const attachment2Res = await replica2.getAttachment(attachmentDoc2);
 
               assert(!isErr(attachment2Res));
 

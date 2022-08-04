@@ -62,11 +62,11 @@ export type DocInputWithFormat<
   DocInputType extends DocInputBase<string>,
 > = Extract<DocInputType, { "format": FormatType }>;
 
-export type DocBlob = {
+export type DocAttachment = {
   stream: () => Promise<ReadableStream<Uint8Array>>;
   bytes: () => Promise<Uint8Array>;
 };
 
-export type DocWithBlob<D extends DocBase<string>> = D & {
-  blob: DocBlob | undefined | ValidationError;
+export type DocWithAttachment<D extends DocBase<string>> = D & {
+  attachment: DocAttachment | undefined | ValidationError;
 };

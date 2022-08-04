@@ -19,7 +19,7 @@ import {
 import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
 import { isErr } from "../util/errors.ts";
 import { randomId } from "../util/misc.ts";
-import { BlobTransfer } from "./blob_transfer.ts";
+import { AttachmentTransfer } from "./attachment_transfer.ts";
 import {
   ISyncPartner,
   SyncAgentEvent,
@@ -57,7 +57,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private formats: FormatsArg<FormatsType>;
   private transfers = new Map<
     ShareAddress,
-    Map<string, BlobTransfer<FormatsType>>
+    Map<string, AttachmentTransfer<FormatsType>>
   >();
 
   private docSyncIsDone = deferred<true>();
@@ -261,7 +261,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     const lookup = getFormatLookup(formats);
 
-    const makeBlobRequestSink = () =>
+    const makeAttachmentRequestSink = () =>
       new WritableStream<
         QuerySourceEvent<FormatDocType<FormatsType>>
       >({
@@ -270,10 +270,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
             // Get the right format here...
             const format = lookup[event.doc.format];
 
-            const res = await replica.getBlob(event.doc, format);
+            const res = await replica.getAttachment(event.doc, format);
 
             if (isErr(res)) {
-              // This doc can't have a blob attached. Do nothing.
+              // This doc can't have a attachment attached. Do nothing.
               return;
             } else if (res === undefined) {
               const attachmentInfo = format.getAttachmentInfo(event.doc);
@@ -284,7 +284,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
                 return;
               }
 
-              // Check if there's already a transfer for this blob in progress...
+              // Check if there's already a transfer for this attachment in progress...
               const existingTransfer = transfers.get(replica.share)?.get(
                 attachmentInfo.hash,
               );
@@ -293,7 +293,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
                 return;
               }
 
-              // This doc can have a blob attached, but we don't have it.
+              // This doc can have a attachment attached, but we don't have it.
               // Ask our partner to fulfil it.
 
               const result = await partner.getDownload({
@@ -325,7 +325,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
               // We got a transfer! Add it to our syncer's transfers.
 
-              const transfer = new BlobTransfer({
+              const transfer = new AttachmentTransfer({
                 replica,
                 doc: event.doc,
                 format,
@@ -350,8 +350,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       "new",
     );
 
-    existingDocsStream.pipeTo(makeBlobRequestSink());
-    liveDocsStream.pipeTo(makeBlobRequestSink());
+    existingDocsStream.pipeTo(makeAttachmentRequestSink());
+    liveDocsStream.pipeTo(makeAttachmentRequestSink());
 
     this.docStreams.set(address, {
       existing: existingDocsStream,
@@ -418,7 +418,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         const format = getFormatLookup(this.formats)[event.doc.format];
 
         // got a writable stream! add it to the syncer's transfers.
-        const transfer = new BlobTransfer({
+        const transfer = new AttachmentTransfer({
           doc: event.doc as FormatDocType<FormatsType>,
           format,
           replica,
@@ -432,7 +432,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
   private addTransfer(
     shareAddress: string,
-    transfer: BlobTransfer<FormatsType>,
+    transfer: AttachmentTransfer<FormatsType>,
   ) {
     const existingMap = this.transfers.get(shareAddress);
 
@@ -492,7 +492,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       agent.cancel();
     }
 
-    // TODO: cancel all the doc streams used for blobs
+    // TODO: cancel all the doc streams used for attachments
   }
 
   // externally callable... to get a readable...
@@ -538,7 +538,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     }
 
     // got a writable stream! add it to the syncer's transfers.
-    const transfer = new BlobTransfer({
+    const transfer = new AttachmentTransfer({
       doc: doc as FormatDocType<typeof format>,
       format,
       replica,

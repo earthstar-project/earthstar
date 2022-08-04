@@ -1,6 +1,6 @@
 import {
   DocBase,
-  DocBlob,
+  DocAttachment,
   FormatName,
   ShareAddress,
 } from "../util/doc-types.ts";
@@ -228,16 +228,16 @@ export interface ReplicaOpts {
   driver: IReplicaDriver;
 }
 
-export interface IReplicaBlobDriver {
-  getBlob(
+export interface IReplicaAttachmentDriver {
+  getAttachment(
     formatName: string,
     attachmentHash: string,
-  ): Promise<DocBlob | undefined>;
+  ): Promise<DocAttachment | undefined>;
 
-  /** Upserts the blob to a staging area, and returns an object used to assess whether it is what we're expecting */
+  /** Upserts the attachment to a staging area, and returns an object used to assess whether it is what we're expecting */
   stage(
     formatName: string,
-    blob: Uint8Array | ReadableStream<Uint8Array>,
+    attachment: Uint8Array | ReadableStream<Uint8Array>,
   ): Promise<
     {
       hash: string;
@@ -269,5 +269,5 @@ export interface IReplicaBlobDriver {
 
 export interface IReplicaDriver {
   docDriver: IReplicaDocDriver;
-  blobDriver: IReplicaBlobDriver;
+  attachmentDriver: IReplicaAttachmentDriver;
 }

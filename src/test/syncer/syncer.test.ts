@@ -9,7 +9,7 @@ import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
 import {
   storagesAreSynced,
-  storagesBlobsAreSynced,
+  storagesAttachmentsAreSynced,
   writeRandomDocs,
 } from "../test-utils.ts";
 
@@ -25,7 +25,7 @@ import {
 } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { FormatEs5 } from "../../formats/format_es5.ts";
 import { isErr } from "../../util/errors.ts";
 
@@ -50,13 +50,13 @@ class SyncerTestHelper {
         new Replica({
           driver: {
             docDriver: makeDocDriver(addr, "sync-a"),
-            blobDriver: new BlobDriverMemory(),
+            attachmentDriver: new AttachmentDriverMemory(),
           },
         }),
         new Replica({
           driver: {
             docDriver: makeDocDriver(addr, "sync-b"),
-            blobDriver: new BlobDriverMemory(),
+            attachmentDriver: new AttachmentDriverMemory(),
           },
         }),
       ] as [Replica, Replica];
@@ -128,15 +128,15 @@ class SyncerTestHelper {
     );
 
     assert(
-      await storagesBlobsAreSynced(this.aDuo),
+      await storagesAttachmentsAreSynced(this.aDuo),
       `+a attachments are in sync`,
     );
     assert(
-      await storagesBlobsAreSynced(this.bDuo),
+      await storagesAttachmentsAreSynced(this.bDuo),
       `+b attachments are in sync`,
     );
     assert(
-      await storagesBlobsAreSynced(this.cDuo) === false,
+      await storagesAttachmentsAreSynced(this.cDuo) === false,
       `+c attachments are not in sync`,
     );
   }

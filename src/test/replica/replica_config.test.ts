@@ -14,7 +14,7 @@ import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 const loggerTest = new Logger("test", "lightsalmon");
 const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
@@ -57,7 +57,7 @@ let _runStorageConfigTests = (
       ? new Replica({
         driver: {
           docDriver: driver,
-          blobDriver: new BlobDriverMemory(),
+          attachmentDriver: new AttachmentDriverMemory(),
         },
       })
       : driver;

@@ -14,7 +14,7 @@ import { throws } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 import { LogLevel, setLogLevel } from "../../util/log.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 //setLogLevel("replica-cache", LogLevel.Debug);
 
@@ -32,7 +32,7 @@ Deno.test("ReplicaCache", async () => {
     {
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     },
   );

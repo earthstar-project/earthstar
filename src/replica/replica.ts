@@ -3,8 +3,8 @@ import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
-  DocBlob,
-  DocWithBlob,
+  DocAttachment,
+  DocWithAttachment,
   FormatName,
   Path,
   ShareAddress,
@@ -165,7 +165,7 @@ export class Replica {
     await this.replicaDriver.docDriver.close(erase);
 
     if (erase) {
-      await this.replicaDriver.blobDriver.wipe();
+      await this.replicaDriver.attachmentDriver.wipe();
     }
 
     logger.debug("    sending didClose nonblockingly...");
@@ -374,11 +374,11 @@ export class Replica {
     // The result has provided a new attachment for us to ingest.
     // The lack of this does not indicate that no attachment is associated with this doc
     // (it may refer to the attachment from the previous doc)
-    if (result.blob) {
+    if (result.attachment) {
       // Stage the new attachment with the attachment driver.
-      const stageResult = await this.replicaDriver.blobDriver.stage(
+      const stageResult = await this.replicaDriver.attachmentDriver.stage(
         format.id,
-        result.blob,
+        result.attachment,
       );
 
       if (isErr(stageResult)) {
@@ -398,11 +398,11 @@ export class Replica {
       }
 
       // If everything checks out, commit the staged attachment to storage.
-      loggerSet.debug("...ingesting blob");
+      loggerSet.debug("...ingesting attachment");
       loggerSet.debug("-----------------------");
       await stageResult.commit();
 
-      loggerSet.debug("...done ingesting blob");
+      loggerSet.debug("...done ingesting attachment");
 
       loggerSet.debug("...ingesting");
       loggerSet.debug("-----------------------");
@@ -630,7 +630,7 @@ export class Replica {
     if (!isErr(attachmentInfo)) {
       // Wipe the attachment.
       // Ignore error indicating no attachment was found.
-      const eraseRes = await this.replicaDriver.blobDriver.erase(
+      const eraseRes = await this.replicaDriver.attachmentDriver.erase(
         format.id,
         attachmentInfo.hash,
       );
@@ -711,7 +711,7 @@ export class Replica {
       }),
     );
 
-    const erasedAttachments = await this.replicaDriver.blobDriver.filter(
+    const erasedAttachments = await this.replicaDriver.attachmentDriver.filter(
       allowedHashes,
     );
 
@@ -809,10 +809,10 @@ export class Replica {
   /**
    * @returns `true` (indicating it was upsert), `false` (indicating this attachment is already in storage), or a `ValidationError` (indicating something went wrong.)
    */
-  async ingestBlob<F = DefaultFormatType>(
+  async ingestAttachment<F = DefaultFormatType>(
     format: FormatArg<F>,
     doc: FormatDocType<F>,
-    blob: Uint8Array | ReadableStream<Uint8Array>,
+    attachment: Uint8Array | ReadableStream<Uint8Array>,
   ): Promise<
     true | false | ValidationError
   > {
@@ -833,8 +833,8 @@ export class Replica {
       return Promise.resolve(docIsValid);
     }
 
-    // Check we don't already have this blob
-    const existingAttachment = await this.getBlob(doc, format);
+    // Check we don't already have this attachment
+    const existingAttachment = await this.getAttachment(doc, format);
 
     if (existingAttachment && !isErr(existingAttachment)) {
       return false;
@@ -847,10 +847,10 @@ export class Replica {
       return Promise.resolve(attachmentInfo);
     }
 
-    const stageRes = await this.replicaDriver.blobDriver
+    const stageRes = await this.replicaDriver.attachmentDriver
       .stage(
         doc.format,
-        blob,
+        attachment,
       );
 
     if (isErr(stageRes)) {
@@ -885,14 +885,14 @@ export class Replica {
     return true;
   }
 
-  getBlob<F = DefaultFormatType>(
+  getAttachment<F = DefaultFormatType>(
     doc: FormatDocType<F>,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
-  ): Promise<DocBlob | undefined | ValidationError> {
+  ): Promise<DocAttachment | undefined | ValidationError> {
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (!isErr(attachmentInfo)) {
-      return this.replicaDriver.blobDriver.getBlob(
+      return this.replicaDriver.attachmentDriver.getAttachment(
         doc.format,
         attachmentInfo.hash,
       );
@@ -901,12 +901,12 @@ export class Replica {
     }
   }
 
-  attachBlobs<F = DefaultFormats>(
+  attachAttachments<F = DefaultFormats>(
     docs: FormatDocType<F>[],
     formats?: FormatsArg<F>,
   ): Promise<
     Awaited<
-      DocWithBlob<FormatDocType<F>>
+      DocWithAttachment<FormatDocType<F>>
     >[]
   > {
     const f = getFormatsWithFallback(formats);
@@ -919,23 +919,23 @@ export class Replica {
 
     const promises = docs.map((doc) => {
       return new Promise<
-        FormatDocType<F> & { blob: ValidationError | DocBlob | undefined }
+        FormatDocType<F> & { attachment: ValidationError | DocAttachment | undefined }
       >((resolve) => {
         const format = formatLookup[doc.format];
 
         const attachmentInfo = format.getAttachmentInfo(doc);
 
         if (!isErr(attachmentInfo)) {
-          this.replicaDriver.blobDriver.getBlob(doc.format, attachmentInfo.hash)
+          this.replicaDriver.attachmentDriver.getAttachment(doc.format, attachmentInfo.hash)
             .then(
-              (blob) => {
-                resolve({ ...doc, blob });
+              (attachment) => {
+                resolve({ ...doc, attachment });
               },
             );
         } else {
           return resolve({
             ...doc,
-            blob: attachmentInfo,
+            attachment: attachmentInfo,
           });
         }
       });

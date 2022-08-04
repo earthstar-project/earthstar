@@ -61,10 +61,10 @@ export interface DocEs5 extends DocBase<"es.5"> {
   share: ShareAddress;
   // workspaceSignature: Signature,  // TODO: add for sparse mode
 
-  // The size of the associated blob, if any.
-  blobSize?: number;
-  // The hash of the associated blob, if any.
-  blobHash?: string;
+  // The size of the associated attachment, if any.
+  attachmentSize?: number;
+  // The hash of the associated attachment, if any.
+  attachmentHash?: string;
 
   // Local Index:
   // Our docs form a linear sequence with gaps.
@@ -97,8 +97,8 @@ export interface DocInputEs5 extends DocInputBase<"es.5"> {
   path: Path;
   text?: string;
 
-  /** Data as Uint8Array or ReadableStream, to be used as document's associated blob. */
-  blob?: Uint8Array | ReadableStream;
+  /** Data as Uint8Array or ReadableStream, to be used as document's associated attachment. */
+  attachment?: Uint8Array | ReadableStream;
 
   /** A UNIX timestamp in microseconds indicating when the document was written. Determined automatically if omitted. */
   timestamp?: number;
@@ -137,12 +137,12 @@ const ES5_CORE_SCHEMA: CheckObjOpts = {
     signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
     timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
     share: checkString({ allowedChars: workspaceAddressChars }),
-    blobSize: checkInt({
+    attachmentSize: checkInt({
       min: MIN_BLOB_SIZE,
       max: MAX_BLOB_SIZE,
       optional: true,
     }),
-    blobHash: checkString({
+    attachmentHash: checkString({
       allowedChars: b32chars,
       len: HASH_STR_LEN,
       optional: true,
@@ -193,8 +193,8 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     return Crypto.sha256base32(
       `author\t${doc.author}\n` +
         `textHash\t${doc.textHash}\n` +
-        (doc.blobSize === undefined ? "" : `blobSize\t${doc.blobSize}\n`) +
-        (doc.blobHash === undefined ? "" : `blobHash\t${doc.blobHash}\n`) +
+        (doc.attachmentSize === undefined ? "" : `attachmentSize\t${doc.attachmentSize}\n`) +
+        (doc.attachmentHash === undefined ? "" : `attachmentHash\t${doc.attachmentHash}\n`) +
         (doc.deleteAfter === undefined
           ? ""
           : `deleteAfter\t${doc.deleteAfter}\n`) +
@@ -215,7 +215,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       DocEs5
     >,
   ): Promise<
-    | { doc: DocEs5; blob?: ReadableStream<Uint8Array> | Uint8Array }
+    | { doc: DocEs5; attachment?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
   > {
     if (input.text === undefined && prevLatestDoc?.text === undefined) {
@@ -249,8 +249,8 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       return signed;
     }
 
-    if (input.blob) {
-      return { doc: signed, blob: input.blob };
+    if (input.attachment) {
+      return { doc: signed, attachment: input.attachment };
     }
 
     return { doc: signed };
@@ -287,14 +287,14 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     if (isErr(cleanedResult)) return cleanedResult;
     const cleanedDoc = cleanedResult.doc;
 
-    if (cleanedDoc.blobHash) {
+    if (cleanedDoc.attachmentHash) {
       const emptyDoc: DocEs5 = {
         ...cleanedDoc,
         text: "",
         textHash: await Crypto.sha256base32(""),
         signature: "?",
-        blobHash: await Crypto.sha256base32(""),
-        blobSize: 0,
+        attachmentHash: await Crypto.sha256base32(""),
+        attachmentSize: 0,
       };
 
       return this.signDocument(keypair, emptyDoc);
@@ -374,13 +374,13 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     const errW = this._checkAuthorCanWriteToPath(doc.author, doc.path);
     if (isErr(errW)) return errW;
 
-    // Check that all blob fields are defined
-    const errBFC = this._checkBlobFieldsConsistent(doc);
+    // Check that all attachment fields are defined
+    const errBFC = this._checkAttachmentFieldsConsistent(doc);
     if (isErr(errBFC)) return errBFC;
 
     const errP = this._checkPathIsValid(
       doc.path,
-      !!doc.blobHash,
+      !!doc.attachmentHash,
       doc.deleteAfter,
     );
     if (isErr(errP)) return errP;
@@ -411,26 +411,26 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     return true; // TODO: is there more to check?
   }
 
-  static _checkBlobFieldsConsistent(doc: DocEs5): true | ValidationError {
-    if (doc.text.length === 0 && doc.blobSize && doc.blobSize > 0) {
+  static _checkAttachmentFieldsConsistent(doc: DocEs5): true | ValidationError {
+    if (doc.text.length === 0 && doc.attachmentSize && doc.attachmentSize > 0) {
       return new ValidationError(
         "Documents with attachments must have text.",
       );
     }
 
-    if (doc.text.length > 0 && doc.blobSize && doc.blobSize === 0) {
+    if (doc.text.length > 0 && doc.attachmentSize && doc.attachmentSize === 0) {
       "Documents with deleted attachments must have no text.";
     }
 
-    if (doc.blobHash && doc.blobSize === undefined) {
+    if (doc.attachmentHash && doc.attachmentSize === undefined) {
       return new ValidationError(
-        "Blob size is undefined while blob hash is defined",
+        "Attachment size is undefined while attachment hash is defined",
       );
     }
 
-    if (doc.blobSize && doc.blobHash === undefined) {
+    if (doc.attachmentSize && doc.attachmentHash === undefined) {
       return new ValidationError(
-        "Blob hash is undefined while blob size is defined",
+        "Attachment hash is undefined while attachment size is defined",
       );
     }
 
@@ -487,7 +487,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   }
   static _checkPathIsValid(
     path: Path,
-    hasBlob: boolean,
+    hasAttachment: boolean,
     deleteAfter?: number,
   ): true | ValidationError {
     // Ensure the path matches the spec for allowed path strings.
@@ -541,15 +541,15 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       }
     }
 
-    // path must contain at least one '.', if and only if the document is a blob
-    if (path.indexOf(".") === -1 && hasBlob) {
+    // path must contain at least one '.', if and only if the document is a attachment
+    if (path.indexOf(".") === -1 && hasAttachment) {
       return new ValidationError(
-        "when a blob is provided, path must contain '.'",
+        "when a attachment is provided, path must contain '.'",
       );
     }
-    if (path.indexOf(".") !== -1 && hasBlob === false) {
+    if (path.indexOf(".") !== -1 && hasAttachment === false) {
       return new ValidationError(
-        "when no blob is provided, path must not contain '.'",
+        "when no attachment is provided, path must not contain '.'",
       );
     }
 
@@ -591,13 +591,13 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   static getAttachmentInfo(
     doc: DocEs5,
   ): { size: number; hash: string } | ValidationError {
-    if (!doc.blobHash || !doc.blobSize) {
+    if (!doc.attachmentHash || !doc.attachmentSize) {
       return new ValidationError("This document has no attachment");
     }
 
     return {
-      size: doc.blobSize,
-      hash: doc.blobHash,
+      size: doc.attachmentSize,
+      hash: doc.attachmentHash,
     };
   }
 
@@ -608,8 +608,8 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   ): DocEs5 {
     return {
       ...doc,
-      blobHash: hash,
-      blobSize: size,
+      attachmentHash: hash,
+      attachmentSize: size,
     };
   }
 };

@@ -89,20 +89,20 @@ export class PartnerLocal<
             );
           }
 
-          const blob = await partnerReplica.replicaDriver.blobDriver.getBlob(
+          const attachment = await partnerReplica.replicaDriver.attachmentDriver.getAttachment(
             opts.doc.format,
             opts.attachmentHash,
           );
 
-          if (!blob) {
+          if (!attachment) {
             return undefined;
           }
 
-          if (isErr(blob)) {
+          if (isErr(attachment)) {
             return;
           }
 
-          return await blob.stream();
+          return await attachment.stream();
         },
         handleUploadRequest(
           _opts: GetTransferOpts,
@@ -138,20 +138,20 @@ export class PartnerLocal<
       );
     }
 
-    const blob = await partnerReplica.replicaDriver.blobDriver.getBlob(
+    const attachment = await partnerReplica.replicaDriver.attachmentDriver.getAttachment(
       opts.doc.format,
       opts.attachmentHash,
     );
 
-    if (!blob) {
+    if (!attachment) {
       return undefined;
     }
 
-    if (isErr(blob)) {
+    if (isErr(attachment)) {
       return;
     }
 
-    return await blob.stream();
+    return await attachment.stream();
   }
 
   handleUploadRequest(

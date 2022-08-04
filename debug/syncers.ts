@@ -1,8 +1,8 @@
 import { AuthorKeypair, Crypto, Peer, Replica } from "../mod.ts";
-import { BlobDriverMemory } from "../src/replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../src/replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../src/replica/doc_drivers/memory.ts";
 import {
-  docBlobsAreEquivalent,
+  docAttachmentsAreEquivalent,
   writeRandomDocs,
 } from "../src/test/test-utils.ts";
 
@@ -18,13 +18,13 @@ const makeReplicaDuo = (addr: string) => {
     new Replica({
       driver: {
         docDriver: new DocDriverMemory(addr),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     }),
     new Replica({
       driver: {
         docDriver: new DocDriverMemory(addr),
-        blobDriver: new BlobDriverMemory(),
+        attachmentDriver: new AttachmentDriverMemory(),
       },
     }),
   ] as [Replica, Replica];
@@ -56,7 +56,7 @@ const syncer = peer1.sync(peer2, false);
 
 // set up a syncer with a local partner.
 
-// attach all blobs.
+// attach all attachments.
 console.log("syncing...");
 
 await syncer.isDone;
@@ -70,12 +70,12 @@ for (const [x, y] of pairs) {
   const fstDocs = await x.getAllDocs();
   const sndDocs = await y.getAllDocs();
 
-  const fstWithBlobs = await a1.attachBlobs(fstDocs);
-  const sndWithBlobs = await a2.attachBlobs(sndDocs);
+  const fstWithAttachments = await a1.attachAttachments(fstDocs);
+  const sndWithAttachments = await a2.attachAttachments(sndDocs);
 
   console.group(x.share);
 
-  const res = await docBlobsAreEquivalent(fstWithBlobs, sndWithBlobs);
+  const res = await docAttachmentsAreEquivalent(fstWithAttachments, sndWithAttachments);
 
   if (res) {
     console.log(`Attachments synced!`);

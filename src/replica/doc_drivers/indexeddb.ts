@@ -270,7 +270,7 @@ export class DocDriverIndexedDB extends DocDriverMemory {
     const upsertedDoc = await super.upsert(doc);
 
     // After every upsert, for now, we save everything
-    // to IndexedDB as a single giant blob.
+    // to IndexedDB as a single giant attachment.
     // TODO: debounce this, only do it every 1 second or something
 
     const docs = {

@@ -1,6 +1,6 @@
-import { DocBlob } from "../../util/doc-types.ts";
+import { DocAttachment } from "../../util/doc-types.ts";
 import { isErr, ValidationError } from "../../util/errors.ts";
-import { IReplicaBlobDriver } from "../replica-types.ts";
+import { IReplicaAttachmentDriver } from "../replica-types.ts";
 import {
   basename,
   dirname,
@@ -13,7 +13,7 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
 import { walk } from "https://deno.land/std@0.132.0/fs/mod.ts";
 
-export class BlobDriverFilesystem implements IReplicaBlobDriver {
+export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   private path: string;
 
   constructor(path: string) {
@@ -32,7 +32,7 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
 
   async stage(
     formatName: string,
-    blob: ReadableStream<Uint8Array> | Uint8Array,
+    attachment: ReadableStream<Uint8Array> | Uint8Array,
   ) {
     // Create the path
     await this.ensurePath("staging", formatName);
@@ -41,13 +41,13 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
 
     const stagingPath = join(this.path, "staging", formatName, tempKey);
 
-    if (blob instanceof Uint8Array) {
-      await Deno.writeFile(stagingPath, blob, { create: true });
-      const hash = await Crypto.sha256base32(blob);
+    if (attachment instanceof Uint8Array) {
+      await Deno.writeFile(stagingPath, attachment, { create: true });
+      const hash = await Crypto.sha256base32(attachment);
 
       return {
         hash,
-        size: blob.byteLength,
+        size: attachment.byteLength,
         commit: async () => {
           try {
             await Deno.lstat(join(this.path, formatName));
@@ -73,7 +73,7 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       // It's fine.
     }
 
-    await blob.pipeThrough(attachmentStreamInfo).pipeTo(
+    await attachment.pipeThrough(attachmentStreamInfo).pipeTo(
       new WritableStream({
         async write(chunk) {
           await Deno.writeFile(stagingPath, chunk, {
@@ -130,10 +130,10 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
     }
   }
 
-  async getBlob(
+  async getAttachment(
     formatName: string,
     attachmentHash: string,
-  ): Promise<DocBlob | undefined> {
+  ): Promise<DocAttachment | undefined> {
     const filePath = join(this.path, formatName, attachmentHash);
 
     try {

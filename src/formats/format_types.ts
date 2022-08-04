@@ -43,7 +43,7 @@ export interface IFormat<
   generateDocument(
     opts: FormatterGenerateOpts<FormatType, DocInputType, DocType>,
   ): Promise<
-    | { doc: DocType; blob?: ReadableStream<Uint8Array> | Uint8Array }
+    | { doc: DocType; attachment?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
   >;
 
@@ -80,7 +80,7 @@ export interface IFormat<
   checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
   /**
-   * Returns information about a doc's attachment, if it has one. If it doesn't, a `ValidationError` will be returned. This does not indicate if that blob is actually present locally.
+   * Returns information about a doc's attachment, if it has one. If it doesn't, a `ValidationError` will be returned. This does not indicate if that attachment is actually present locally.
    */
   getAttachmentInfo(doc: DocType): {
     size: number;
@@ -88,7 +88,7 @@ export interface IFormat<
   } | ValidationError;
 
   /**
-   * Some information can only be known once an attachment (especially if it comes in the form of a stream) has been consumed. For this reason, a Formatter's `generateDocument` method may not be able to generate a valid document for a blob, even if it already knows it has one.
+   * Some information can only be known once an attachment (especially if it comes in the form of a stream) has been consumed. For this reason, a Formatter's `generateDocument` method may not be able to generate a valid document for a attachment, even if it already knows it has one.
    */
   updateAttachmentFields(
     doc: DocType,
