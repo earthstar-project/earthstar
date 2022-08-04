@@ -24,7 +24,7 @@ import {
 } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
-import { streamToBytes } from "../../util/streams.ts";
+import { bytesToStream, streamToBytes } from "../../util/streams.ts";
 import { FormatEs5 } from "../../formats/format_es5.ts";
 
 const loggerTest = new Logger("test", "salmon");
@@ -265,10 +265,96 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
   // TODO: test querying
 
   Deno.test(
+    SUBTEST_NAME + ": set",
+    async (test) => {
+      const share = "+gardening.abcde";
+      const replica = makeReplica(share);
+
+      const keypair = await Crypto.generateAuthorKeypair("aaaa");
+
+      assert(!isErr(keypair));
+
+      // setting a doc with attachment ingests doc and attachment (bytes)
+
+      await test.step("sets doc with bytes attachment", async () => {
+        const res = await replica.set(keypair, {
+          path: "/bytes_test.txt",
+          text: "A text file",
+          blob: new TextEncoder().encode(
+            "This is some text we're writing as a blob!",
+          ),
+        });
+
+        assert(!isErr(res));
+
+        const doc = await replica.getLatestDocAtPath("/bytes_test.txt");
+
+        assert(doc);
+        assertEquals(doc.path, "/bytes_test.txt");
+
+        const attachment = await replica.getBlob(doc);
+
+        assert(!isErr(res));
+
+        assert(attachment);
+      });
+
+      // setting a doc with attachment ingests doc and attachment (stream)
+      await test.step("sets doc with stream attachment", async () => {
+        const bytes = new TextEncoder().encode(
+          "This is some text we're writing as a blob!",
+        );
+
+        const stream = bytesToStream(bytes);
+
+        const res = await replica.set(keypair, {
+          path: "/stream_test.txt",
+          text: "A text file",
+          blob: stream,
+        });
+
+        assert(!isErr(res));
+
+        const doc = await replica.getLatestDocAtPath("/stream_test.txt");
+
+        assert(doc);
+        assertEquals(doc.path, "/stream_test.txt");
+
+        const attachment = await replica.getBlob(doc);
+
+        assert(!isErr(res));
+
+        assert(attachment);
+      });
+
+      // setting a previously existing doc which we know doesn't generate a new blob KEEPs the old attachment
+      await test.step("setting doc without attachment where there is one already retains the attachment", async () => {
+        const res = await replica.set(keypair, {
+          path: "/stream_test.txt",
+          text: "A text file. With updated text.",
+        });
+
+        assert(!isErr(res));
+
+        const doc = await replica.getLatestDocAtPath("/stream_test.txt");
+
+        assert(doc);
+        assertEquals(doc.path, "/stream_test.txt");
+
+        const attachment = await replica.getBlob(doc);
+
+        assert(!isErr(res));
+
+        assert(attachment);
+      });
+
+      await replica.close(true);
+    },
+  );
+
+  Deno.test(
     SUBTEST_NAME + ": queryAuthors + queryPaths",
     async (tester) => {
-      const initialCryptoDriver = GlobalCryptoDriver;
-
       const share = "+gardening.abcde";
       const replica = makeReplica(share);
 
@@ -599,8 +685,6 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       assert(!isErr(attachment));
       assert(attachment);
 
-      await streamToBytes(attachment.stream);
-
       // Is it a problem that we can theoretically provide a document not in the replica?
 
       // Test that identical bytes are only stored once with ingestBlob.
@@ -738,8 +822,6 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
               assert(!isErr(attachment2Res));
 
               assert(attachment2Res, "second attachment was kept");
-
-              await streamToBytes(attachment2Res.stream);
             },
             sanitizeOps: false,
           });
