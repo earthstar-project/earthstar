@@ -178,7 +178,7 @@ export class ReplicaCache {
     docToSet: Omit<FormatInputType<F>, "format">,
     format?: FormatArg<F>,
   ): Promise<
-    true | ValidationError
+    FormatDocType<F> | ValidationError
   > {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
 

@@ -1,6 +1,6 @@
 export { DocDriverLocalStorage } from "../replica/doc_drivers/localstorage.ts";
 export { DocDriverSqlite } from "../replica/doc_drivers/sqlite.deno.ts";
-export { DocDriverSqliteFfi } from "../replica/doc_drivers/sqlite_ffi.ts";
+// export { DocDriverSqliteFfi } from "../replica/doc_drivers/sqlite_ffi.ts";
 
 export { AttachmentDriverFilesystem } from "../replica/attachment_drivers/filesystem.ts";
 

@@ -150,6 +150,16 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       ) {
         this.docSyncIsDone.resolve(true);
         abortController.abort();
+
+        if (
+          statuses.every((status) => {
+            return status.attachments.every((transfer) =>
+              transfer.status === "complete"
+            );
+          })
+        ) {
+          this.isDone.resolve(true);
+        }
       }
 
       if (

@@ -52,6 +52,7 @@ import {
 } from "../formats/util.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
+import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");
@@ -320,7 +321,7 @@ export class Replica {
     docToSet: Omit<FormatInputType<F>, "format">,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<
-    true | ValidationError
+    FormatDocType<F> | ValidationError
   > {
     loggerSet.debug(`set`, docToSet);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -424,7 +425,7 @@ export class Replica {
     // We don't need to do anything with attachments, so just ingest the document.
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
-    const ingestEvent = await this.ingest(
+    const ingestResult = await this.ingest(
       format,
       result.doc as FormatDocType<F>,
     );
@@ -432,7 +433,7 @@ export class Replica {
 
     loggerSet.debug("...set is done.");
 
-    return ingestEvent;
+    return ingestResult;
   }
 
   /**
@@ -442,7 +443,7 @@ export class Replica {
     format: FormatArg<F>,
     docToIngest: FormatDocType<F>,
   ): Promise<
-    true | ValidationError
+    FormatDocType<F> | ValidationError
   > {
     loggerIngest.debug(`ingest`, docToIngest);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -467,6 +468,8 @@ export class Replica {
     if (isErr(docIsValid)) {
       return docIsValid;
     }
+
+    const docPromise = deferred<FormatDocType<F>>();
 
     await this.ingestLockStream.run(async () => {
       // get other docs at the same path
@@ -539,6 +542,8 @@ export class Replica {
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
       );
 
+      docPromise.resolve(docAsWritten);
+
       await this.eventWriter.write({
         kind: "success",
         maxLocalIndex,
@@ -549,7 +554,7 @@ export class Replica {
       });
     });
 
-    return true;
+    return docPromise;
   }
 
   /**
@@ -608,7 +613,7 @@ export class Replica {
     keypair: AuthorKeypair,
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
-  ): Promise<true | ValidationError> {
+  ): Promise<FormatDocType<F> | ValidationError> {
     const latestDocAtPath = await this.getLatestDocAtPath(path, format);
 
     if (!latestDocAtPath) {

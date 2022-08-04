@@ -18,7 +18,7 @@ export class SyncAgent<F> {
 
   /** Here we keep track of all the root IDs of versions we've `WANT`ed. Used to prevent offering things to another peer which they already have. */
   private rootIdsRequested: Set<string> = new Set();
-  /** A map of all the `HAVE` ids we've requested and whether we received them or not. */
+  /** A map of all the `HAVE` ids we've `WANT`ed and whether we received them or not. */
   private fulfilledMap: Map<string, boolean> = new Map();
   /** An integer representing the number of requests were fulfilled. Quicker than calculating this every time from the `fulfilledMap`. */
   private fulfilledCount = 0;

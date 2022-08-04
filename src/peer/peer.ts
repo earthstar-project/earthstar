@@ -102,7 +102,7 @@ export class Peer implements IPeer {
    */
   sync<F>(
     target: IPeer | string,
-    live = true,
+    live = false,
     formats?: FormatsArg<F>,
   ): Syncer<undefined, F> {
     try {

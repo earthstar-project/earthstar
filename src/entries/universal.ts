@@ -32,6 +32,8 @@ export * from "../replica/replica-cache.ts";
 export * from "../replica/replica-types.ts";
 export * from "../replica/util-types.ts";
 export * from "../replica/doc_drivers/memory.ts";
+export * from "../replica/attachment_drivers/memory.ts";
+export * from "../replica/driver_memory.ts";
 
 export * from "../util/bytes.ts";
 export * from "../util/doc-types.ts";
