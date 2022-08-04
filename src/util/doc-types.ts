@@ -63,7 +63,7 @@ export type DocInputWithFormat<
 > = Extract<DocInputType, { "format": FormatType }>;
 
 export type DocBlob = {
-  stream: ReadableStream<Uint8Array>;
+  stream: () => Promise<ReadableStream<Uint8Array>>;
   bytes: () => Promise<Uint8Array>;
 };
 

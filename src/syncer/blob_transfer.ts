@@ -94,11 +94,12 @@ export class BlobTransfer<F> {
           },
         });
 
-        blobRes.stream.pipeThrough(counterTransform).pipeTo(stream).then(() => {
-          this.changeStatus("complete");
+        blobRes.stream().then((readable) => {
+          this.changeStatus("in_progress");
+          readable.pipeThrough(counterTransform).pipeTo(stream).then(() => {
+            this.changeStatus("complete");
+          });
         });
-
-        this.changeStatus("in_progress");
       });
     }
   }

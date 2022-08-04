@@ -829,7 +829,6 @@ export class Replica {
     const existingAttachment = await this.getBlob(doc, format);
 
     if (existingAttachment && !isErr(existingAttachment)) {
-      await streamToBytes(existingAttachment.stream);
       return false;
     }
 

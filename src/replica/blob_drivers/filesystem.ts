@@ -142,11 +142,12 @@ export class BlobDriverFilesystem implements IReplicaBlobDriver {
       return undefined;
     }
 
-    const file = await Deno.open(filePath, { read: true });
-
     return {
       bytes: () => Deno.readFile(filePath),
-      stream: file.readable,
+      stream: async () => {
+        const file = await Deno.open(filePath);
+        return file.readable;
+      },
     };
   }
 

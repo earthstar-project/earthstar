@@ -25,7 +25,7 @@ export class BlobDriverMemory implements IReplicaBlobDriver {
 
     return Promise.resolve({
       bytes: async () => new Uint8Array(await blob.arrayBuffer()),
-      stream: blob.stream(),
+      stream: () => Promise.resolve(blob.stream()),
     });
   }
 

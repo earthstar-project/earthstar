@@ -102,7 +102,7 @@ export class PartnerLocal<
             return;
           }
 
-          return blob.stream;
+          return await blob.stream();
         },
         handleUploadRequest(
           _opts: GetTransferOpts,
@@ -151,7 +151,7 @@ export class PartnerLocal<
       return;
     }
 
-    return blob.stream;
+    return await blob.stream();
   }
 
   handleUploadRequest(
