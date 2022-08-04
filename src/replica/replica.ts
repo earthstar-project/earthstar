@@ -630,10 +630,18 @@ export class Replica {
     if (!isErr(attachmentInfo)) {
       // Wipe the attachment.
       // Ignore error indicating no attachment was found.
-      await this.replicaDriver.blobDriver.erase(
+      const eraseRes = await this.replicaDriver.blobDriver.erase(
         format.id,
         attachmentInfo.hash,
       );
+
+      if (!isErr(eraseRes)) {
+        await this.eventWriter.write({
+          kind: "attachment_prune",
+          format: format.id,
+          hash: attachmentInfo.hash,
+        });
+      }
     }
 
     const docToWipe: FormatDocType<F> = {
@@ -709,7 +717,7 @@ export class Replica {
 
     for (const attachment of erasedAttachments) {
       await this.eventWriter.write({
-        kind: "attachment_erase",
+        kind: "attachment_prune",
         format: attachment.format,
         hash: attachment.hash,
       });
@@ -866,6 +874,13 @@ export class Replica {
 
     // If it all checks out, commit.
     await stageRes.commit();
+
+    await this.eventWriter.write({
+      kind: "attachment_ingest",
+      doc,
+      hash: stageRes.hash,
+      size: stageRes.size,
+    });
 
     return true;
   }

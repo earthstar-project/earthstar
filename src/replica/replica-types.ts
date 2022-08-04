@@ -75,14 +75,15 @@ export interface ExpireEvent<
   doc: DocType;
 }
 
-export interface AttachmentIngestEvent {
+export interface AttachmentIngestEvent<DocType extends DocBase<string>> {
   kind: "attachment_ingest";
+  doc: DocType;
   hash: string;
   size: number;
 }
 
-export interface AttachmentEraseEvent {
-  kind: "attachment_erase";
+export interface AttachmentPruneEvent {
+  kind: "attachment_prune";
   hash: string;
   format: string;
 }
@@ -111,7 +112,8 @@ export type ReplicaEvent<
 > =
   | IngestEvent<DocType>
   | ExpireEvent<DocType>
-  | AttachmentEraseEvent
+  | AttachmentIngestEvent<DocType>
+  | AttachmentPruneEvent
   | ReplicaEventWillClose
   | ReplicaEventDidClose;
 
