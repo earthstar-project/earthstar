@@ -59,7 +59,7 @@ function _lengthenDerSecret(b) {
 }
 
 /**
- * A verison of the ILowLevelCrypto interface backed by native Node crypto functions.
+ * A verison of the ICrptoDriver interface backed by native Node crypto functions.
  * Requires a recent version of Node, perhaps 12+?
  * Does not work in the browser.
  */

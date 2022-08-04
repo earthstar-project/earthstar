@@ -104,6 +104,8 @@ export type IngestEvent<
  * - DocAlreadyExists — processing an old doc as you catch up
  * - IngestEvent — the result of a replica ingesting a document
  * - ExpireEvent - An ephemeral document has expired
+ * - AttachmentIngestEvent - A new attachment has been ingested
+ * - AttachmentPruneEvent - An attachment without a corresponding document has been pruned.
  * - ReplicaEventWillClose — the replica is about to close
  * - ReplicaEventDidClose — the replica has closed
  */
@@ -167,7 +169,7 @@ export interface IReplicaConfig {
 }
 
 /**
- * A replica driver provides low-level access to actual replica and is used by IReplica to actually load and save data. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ * A document driver provides low-level access to a replica's documents. ReplicaDocDrivers are not meant to be used directly by users; let the Replica talk to it for you.
  */
 export interface IReplicaDocDriver extends IReplicaConfig {
   share: ShareAddress;
@@ -228,13 +230,17 @@ export interface ReplicaOpts {
   driver: IReplicaDriver;
 }
 
+/**
+ * An attachment driver provides low-level access to a replica's attachments. ReplicaAttachmentDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ */
 export interface IReplicaAttachmentDriver {
+  /** Returns an attachment for a given format and hash.*/
   getAttachment(
     formatName: string,
     attachmentHash: string,
   ): Promise<DocAttachment | undefined>;
 
-  /** Upserts the attachment to a staging area, and returns an object used to assess whether it is what we're expecting */
+  /** Upserts the attachment to a staging area, and returns an object used to assess whether it is what we're expecting. */
   stage(
     formatName: string,
     attachment: Uint8Array | ReadableStream<Uint8Array>,
@@ -242,7 +248,9 @@ export interface IReplicaAttachmentDriver {
     {
       hash: string;
       size: number;
+      /** Commit the staged attachment to storage. */
       commit: () => Promise<void>;
+      /** Reject the staged attachment, erasing it. */
       reject: () => Promise<void>;
     } | ValidationError
   >;
@@ -267,6 +275,9 @@ export interface IReplicaAttachmentDriver {
   clearStaging(): Promise<void>;
 }
 
+/**
+ * A replica driver provides low-level access to a replica's documents and attachments. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ */
 export interface IReplicaDriver {
   docDriver: IReplicaDocDriver;
   attachmentDriver: IReplicaAttachmentDriver;

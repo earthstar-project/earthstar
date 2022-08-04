@@ -57,7 +57,6 @@ Deno.test("HaveEntryKeeper", async () => {
       historyMode: "all",
       orderBy: "localIndex ASC",
     },
-    [FormatEs5],
     "existing",
   );
 
@@ -99,7 +98,6 @@ Deno.test("HaveEntryKeeper", async () => {
       historyMode: "all",
       orderBy: "localIndex ASC",
     },
-    [FormatEs5],
     "everything",
   );
 
@@ -197,7 +195,6 @@ Deno.test({
         historyMode: "all",
         orderBy: "localIndex ASC",
       },
-      [FormatEs5],
       "existing",
     ).pipeTo(ingestWritable);
 
@@ -209,7 +206,6 @@ Deno.test({
       {
         historyMode: "all",
       },
-      [FormatEs5],
       "existing",
     );
 
@@ -222,7 +218,6 @@ Deno.test({
         historyMode: "all",
         orderBy: "localIndex ASC",
       },
-      [FormatEs5],
       "existing",
     );
 

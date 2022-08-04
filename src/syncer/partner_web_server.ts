@@ -3,9 +3,13 @@ import { ValidationError } from "../util/errors.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebServerOpts = {
+  /** A websocket created from the initial sync request. */
   socket: WebSocket;
 };
 
+/** A syncing partner created from an inbound HTTP connection.
+ * Works everywhere, but is really meant for Deno and Node.
+ */
 export class PartnerWebServer<
   IncomingTransferSourceType extends WebSocket,
 > implements ISyncPartner<IncomingTransferSourceType> {

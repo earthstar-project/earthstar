@@ -1,12 +1,15 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { ValidationError } from "../util/errors.ts";
-import { sleep } from "../util/misc.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebClientOpts = {
+  /** The URL of the replica server to sync with. */
   url: string;
 };
 
+/** A syncing partner to be used with replica servers reachable via the internet.
+ * Works everywhere.
+ */
 export class PartnerWebClient<
   IncomingTransferSourceType extends undefined,
 > implements ISyncPartner<undefined> {
@@ -152,6 +155,7 @@ export class PartnerWebClient<
     | ValidationError
     | undefined
   > {
+    // We don't expect any external requests.
     return Promise.resolve(undefined);
   }
 }

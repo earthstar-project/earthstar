@@ -102,8 +102,8 @@ export class SyncAgent<F> {
         historyMode: "all",
         orderBy: "localIndex ASC",
       },
-      formats,
       mode === "live" ? "everything" : "existing",
+      formats,
     );
 
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.

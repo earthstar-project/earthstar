@@ -9,18 +9,21 @@ import {
 export const DEFAULT_FORMAT = FormatEs5;
 export const DEFAULT_FORMATS = [DEFAULT_FORMAT];
 
+/** Returns the default format if no formats are given. */
 export function getFormatWithFallback<F = DefaultFormat>(
   format?: FormatArg<F>,
 ): FormatArg<F> {
   return format || DEFAULT_FORMAT as unknown as FormatArg<F>;
 }
 
+/** Returns the default formats if no formats are given. */
 export function getFormatsWithFallback<F = DefaultFormats>(
   formats?: FormatsArg<F>,
 ): FormatsArg<F> {
   return formats || DEFAULT_FORMATS as unknown as FormatsArg<F>;
 }
 
+/** Given an array of format names, and an array of `IFormat`, returns an array of `IFormat` restricted to those with matching names. */
 export function getFormatIntersection<F>(
   formatNames: string[],
   formats: FormatsArg<F>,
@@ -36,6 +39,7 @@ export function getFormatIntersection<F>(
   return intersection as FormatsArg<F>;
 }
 
+/** Returns an object with format names as keys, and corresponding `IFormat` as values. */
 export function getFormatLookup<F = DefaultFormats>(
   formats?: FormatsArg<F>,
 ): Record<string, FormatArg<F>> {

@@ -55,7 +55,6 @@ Deno.test("QuerySource", async () => {
         pathStartsWith: "/wanted",
       },
     },
-    [FormatEs5],
     "existing",
   );
 
@@ -82,7 +81,6 @@ Deno.test("QuerySource", async () => {
         pathStartsWith: "/wanted",
       },
     },
-    [FormatEs5],
     "everything",
   );
 
@@ -94,7 +92,6 @@ Deno.test("QuerySource", async () => {
         pathStartsWith: "/wanted",
       },
     },
-    [FormatEs5],
     "new",
   );
 

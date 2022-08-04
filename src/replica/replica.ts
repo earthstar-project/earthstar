@@ -52,7 +52,6 @@ import {
 } from "../formats/util.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
-import { streamToBytes } from "../util/streams.ts";
 
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");
@@ -78,10 +77,10 @@ function docCompareNewestFirst<
 }
 
 /**
- * A replica of a share's data, used to read, write, and synchronise data to.
+ * A replica holding a share's documents and attachments, used to read, write, and synchronise data to.
  * Should be closed using the `close` method when no longer being used.
  * ```
- * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
+ * const myReplica = new Replica(new ReplicaDriverMemory("+gardens.a37ib9"));
  * ```
  */
 export class Replica {
@@ -604,6 +603,7 @@ export class Replica {
     return numOverwritten;
   }
 
+  /** Wipe all content from a document at a given path, and erase its attachment (if it has one). */
   async wipeDocAtPath<F = DefaultFormat>(
     keypair: AuthorKeypair,
     path: string,
@@ -690,8 +690,8 @@ export class Replica {
         historyMode: "all",
         orderBy: "localIndex ASC",
       },
-      formats,
       "existing",
+      formats,
     ).pipeTo(
       new WritableStream({
         write(event) {
@@ -737,10 +737,13 @@ export class Replica {
     return this.eventMultiStream.getReadableStream(channel);
   }
 
+  /**
+   * Returns a readable stream of document events which match a given query. The events can represent existing documents, newly ingested documents, or expiring documents.
+   */
   getQueryStream<F = DefaultFormats>(
     query: Omit<Query<[string]>, "formats"> = {},
-    formats?: FormatsArg<F>,
     mode?: QuerySourceMode,
+    formats?: FormatsArg<F>,
   ): ReadableStream<QuerySourceEvent<FormatDocType<F>>> {
     const queryDocs = this.queryDocs.bind(this);
     const getEventStream = this.getEventStream.bind(this);
@@ -888,6 +891,8 @@ export class Replica {
     return true;
   }
 
+  /** Gets an attachment for a given document. Returns a `ValidationError` if the given document can't have an attachment.
+   */
   getAttachment<F = DefaultFormat>(
     doc: FormatDocType<F>,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
@@ -904,7 +909,12 @@ export class Replica {
     }
   }
 
-  attachAttachments<F = DefaultFormats>(
+  /** Returns the given array of documents with a new `attachment` property merged in. The value of this property can be:
+   * - `DocAttachment`
+   * - `undefined` (the associated document can have an attachment, but we don't have a copy)
+   * - `ValidationError` (the associated document can't have an attachment)
+   */
+  addAttachments<F = DefaultFormats>(
     docs: FormatDocType<F>[],
     formats?: FormatsArg<F>,
   ): Promise<

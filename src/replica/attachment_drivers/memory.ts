@@ -4,6 +4,9 @@ import { ValidationError } from "../../util/errors.ts";
 import { streamToBytes } from "../../util/streams.ts";
 import { IReplicaAttachmentDriver } from "../replica-types.ts";
 
+/** An attachment driver which persists attachments in memory.
+ * Works everywhere.
+ */
 export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
   private stagingMap = new Map<string, Blob>();
   private attachmentMap = new Map<string, Blob>();

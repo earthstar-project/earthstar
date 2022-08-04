@@ -11,6 +11,9 @@ import {
   SyncerMode,
 } from "./syncer_types.ts";
 
+/** A syncing partner to be used with local instances of `IPeer`.
+ * Works everywhere.
+ */
 export class PartnerLocal<
   FormatsType,
   IncomingTransferSourceType extends undefined,
@@ -25,6 +28,10 @@ export class PartnerLocal<
   // Need this for testing.
   partnerSyncer: Syncer<IncomingTransferSourceType, FormatsType>;
 
+  /**
+   * @param peer - The target peer to sync with.
+   * @param peerSelf - Our own peer.
+   */
   constructor(
     peer: IPeer,
     peerSelf: IPeer,

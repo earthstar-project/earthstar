@@ -45,6 +45,7 @@ export class Peer implements IPeer {
     keys.sort();
     return keys.map((key) => this.replicaMap.get(key) as Replica);
   }
+  /** The number of replicas held by this peer */
   size(): number {
     return this.replicaMap.size;
   }
@@ -95,8 +96,9 @@ export class Peer implements IPeer {
 
   /**
    * Begin synchronising with a remote or local peer.
-   * @param target - A HTTP URL, Websocket URL, or an instance of `Peer`.
+   * @param target - A HTTP URL or `Peer` instance.
    * @param live - Whether the connection should be kept open for newly written docs, or stop after an initial sync.
+   * @param formats - Optional. Which document formats to sync. Defaults to `es.5`.
    */
   sync<F>(
     target: IPeer | string,

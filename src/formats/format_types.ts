@@ -22,7 +22,7 @@ export interface FormatterGenerateOpts<
   prevLatestDoc?: DocType;
 }
 
-/** Formatters are each responsible for one document format such as "es.4". They are used for signing and validating documents, as well as generating new documents from a given input.
+/** Formats are each responsible for one document format such as "es.4". They are used for signing and validating documents, as well as generating new documents from a given input.
  */
 // According to the rules of Earthstar: documents are validated statelessly,
 // one document at a time, without knowing about any other documents

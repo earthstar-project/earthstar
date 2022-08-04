@@ -63,6 +63,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   >();
 
   private docSyncIsDone = deferred<true>();
+  /** If the syncer was configured with the `mode: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
   isDone = deferred<true>();
 
   constructor(opts: SyncerOpts<FormatsType, IncomingTransferSourceType>) {
@@ -342,14 +343,14 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     const existingDocsStream = replica.getQueryStream(
       { orderBy: "localIndex ASC" },
-      this.formats,
       "existing",
+      this.formats,
     );
 
     const liveDocsStream = replica.getQueryStream(
       { orderBy: "localIndex ASC" },
-      this.formats,
       "new",
+      this.formats,
     );
 
     existingDocsStream.pipeTo(makeAttachmentRequestSink());

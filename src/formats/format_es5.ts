@@ -42,7 +42,7 @@ let logger = new Logger("validator es.5", "red");
 
 /** Contains data written and signed by an identity. */
 export interface DocEs5 extends DocBase<"es.5"> {
-  /** Which document format the doc adheres to, e.g. `es.4`. */
+  /** Which document format the doc adheres to, e.g. `es.5`. */
   format: "es.5";
   author: AuthorAddress;
   text: string;
@@ -85,11 +85,13 @@ export interface DocEs5 extends DocBase<"es.5"> {
   _localIndex?: LocalIndex;
 }
 
-/** A partial es.4 doc that is about to get written. The rest of the properties will be computed automatically. */
+/** A partial es.5 doc that is about to get written. The rest of the properties will be computed automatically. */
 export interface DocInputEs5 extends DocInputBase<"es.5"> {
   /** The format the document adheres to, e.g. `es.5` */
   format: "es.5";
   path: Path;
+
+  /** Can be left blank if there is a previous version of the document with an attachment. */
   text?: string;
 
   /** Data as Uint8Array or ReadableStream, to be used as document's associated attachment. */
@@ -148,7 +150,7 @@ const ES5_CORE_SCHEMA: CheckObjOpts = {
 };
 
 /**
- * Validator for the 'es.4' format. Checks if documents are spec-compliant before ingesting, and signs them according to spec.
+ * Format for 'es.5' documents. Supports attachments.
  * @link https://earthstar-project.org/specs/data-spec
  */
 export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {

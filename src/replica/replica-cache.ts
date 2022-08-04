@@ -294,7 +294,7 @@ export class ReplicaCache {
     }
 
     // If there's no result, let's follow this query.
-    const stream = this._replica.getQueryStream(query, formats, "new");
+    const stream = this._replica.getQueryStream(query, "new", formats);
 
     const callbackSink = new CallbackSink<
       QuerySourceEvent<DocBase<string>>

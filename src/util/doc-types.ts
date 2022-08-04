@@ -62,11 +62,15 @@ export type DocInputWithFormat<
   DocInputType extends DocInputBase<string>,
 > = Extract<DocInputType, { "format": FormatType }>;
 
+/** An attachment associated with a document. */
 export type DocAttachment = {
+  /** Returns a stream to use the attachment's bytes chunk by chunk. Useful if the attachment is very big. */
   stream: () => Promise<ReadableStream<Uint8Array>>;
+  /** Returns all of the attachments bytes in one go. Handier if you know the attachment is small. */
   bytes: () => Promise<Uint8Array>;
 };
 
+/** A document with it's attachment merged onto a new `attachment` property. */
 export type DocWithAttachment<D extends DocBase<string>> = D & {
   attachment: DocAttachment | undefined | ValidationError;
 };

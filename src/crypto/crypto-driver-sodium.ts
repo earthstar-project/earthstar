@@ -14,8 +14,9 @@ const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
 /**
- * A verison of the ILowLevelCrypto interface backed by noble/ed25519.
- * Works in the browser.
+ * A verison of the ICryptoDriver interface backed a WASM wrapper of libsodium.
+ * Faster than noble by several magnitudes.
+ * Works in deno and the browser.
  */
 export const CryptoDriverSodium: ICryptoDriver = class {
   static async sha256(
