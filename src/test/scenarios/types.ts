@@ -1,5 +1,4 @@
-import { FormatsArg } from "../../formats/util.ts";
-import { IFormat } from "../../formats/format_types.ts";
+import { FormatsArg, IFormat } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import {
   IReplicaAttachmentDriver,

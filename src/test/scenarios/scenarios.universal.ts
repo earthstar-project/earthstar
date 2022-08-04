@@ -1,6 +1,6 @@
 import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { FormatsArg } from "../../formats/util.ts";
+import { FormatsArg } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
@@ -30,13 +30,14 @@ export const universalReplicaDocDrivers: Scenario<DocDriverScenario>[] = [
   },
 ];
 
-export const universalReplicaAttachmentDrivers: Scenario<AttachmentDriverScenario>[] =
-  [
-    {
-      name: "Memory",
-      item: { makeDriver: () => new AttachmentDriverMemory(), persistent: false },
-    },
-  ];
+export const universalReplicaAttachmentDrivers: Scenario<
+  AttachmentDriverScenario
+>[] = [
+  {
+    name: "Memory",
+    item: { makeDriver: () => new AttachmentDriverMemory(), persistent: false },
+  },
+];
 
 export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
   formats: FormatsArg<F>;

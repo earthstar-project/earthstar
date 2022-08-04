@@ -8,8 +8,6 @@ import { Query } from "../../query/query-types.ts";
 //--------------------------------------------------
 
 import { Logger } from "../../util/log.ts";
-import { ExtractDocType } from "../../formatters/formatter_types.ts";
-import { FormatterEs4 } from "../../formatters/formatter_es4.ts";
 const logger = new Logger("replica driver indexeddb", "gold");
 
 //================================================================================

@@ -1,6 +1,10 @@
 import { assert } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair, DocBase, DocWithAttachment } from "../util/doc-types.ts";
+import {
+  AuthorKeypair,
+  DocBase,
+  DocWithAttachment,
+} from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 import { equal } from "../../deps.ts";
@@ -118,7 +122,10 @@ export async function docAttachmentsAreEquivalent(
   const zipped = aSorted.map((doc, i) => [doc, bSorted[i]]);
 
   for (const [a, b] of zipped) {
-    if (a.attachment && b.attachment && !isErr(a.attachment) && !isErr(b.attachment)) {
+    if (
+      a.attachment && b.attachment && !isErr(a.attachment) &&
+      !isErr(b.attachment)
+    ) {
       const aBytes = await a.attachment.bytes();
       const bBytes = await b.attachment.bytes();
 
@@ -228,7 +235,7 @@ export async function storagesAttachmentsAreSynced(
   for await (const storage of storages) {
     const allDocs = await storage.getAllDocs();
 
-    const docsWithAttachments = await storage.attachAttachments(allDocs);
+    const docsWithAttachments = await storage.addAttachments(allDocs);
 
     allDocsSets.push(docsWithAttachments);
   }

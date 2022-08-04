@@ -18,12 +18,11 @@ import { Syncer } from "../../syncer/syncer.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
-import { FormatsArg } from "../../formats/util.ts";
 import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
-import { IReplicaAttachmentDriver } from "../../replica/replica-types.ts";
 import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.ts";
 import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
+import { FormatsArg } from "../../formats/format_types.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -101,8 +100,6 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
     const serverSyncerPromise = deferred<Syncer<WebSocket, F>>();
 
     const handler = async (req: Request) => {
-      // check what the url is... if it's for upload / download urls, parse the url, call the freaking syncer...
-
       const transferPattern = new URLPattern({
         pathname: "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
       });
