@@ -1,6 +1,5 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { ValidationError } from "../util/errors.ts";
-import { sleep } from "../util/misc.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebServerOpts = {

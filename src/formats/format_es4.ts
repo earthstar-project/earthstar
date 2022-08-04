@@ -45,9 +45,8 @@ export interface DocEs4 extends DocBase<"es.4"> {
   /** Which document format the doc adheres to, e.g. `es.4`. */
   format: "es.4";
   author: AuthorAddress;
-  content: string; // TODO: | null, when we have sparse mode
+  content: string;
   contentHash: string;
-  //contentLength: number,  // TODO: add for sparse mode, and enforce in the format validator
   /** When the document should be deleted, as a UNIX timestamp in microseconds. */
   deleteAfter: number | null;
   path: Path;
@@ -59,7 +58,7 @@ export interface DocEs4 extends DocBase<"es.4"> {
    * Shares were previously called workspaces, but we didn't want to break compatibility with previous versions by renaming this field.
    */
   workspace: ShareAddress;
-  // workspaceSignature: Signature,  // TODO: add for sparse mode
+  // workspaceSignature: Signature,
 
   // Local Index:
   // Our docs form a linear sequence with gaps.
@@ -342,7 +341,7 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
   static _checkBasicDocumentValidity(doc: DocEs4): true | ValidationError { // check for correct fields and datatypes
     const err = checkObj(ES4_CORE_SCHEMA)(doc);
     if (err !== null) return new ValidationError(err);
-    return true; // TODO: is there more to check?
+    return true;
   }
   static _checkAuthorCanWriteToPath(
     author: AuthorAddress,

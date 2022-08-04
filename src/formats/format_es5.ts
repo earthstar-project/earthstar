@@ -47,8 +47,6 @@ export interface DocEs5 extends DocBase<"es.5"> {
   author: AuthorAddress;
   text: string;
   textHash: string;
-
-  //contentLength: number,  // TODO: add for sparse mode, and enforce in the format validator
   /** When the document should be deleted, as a UNIX timestamp in microseconds. */
   deleteAfter?: number;
   path: Path;
@@ -56,14 +54,11 @@ export interface DocEs5 extends DocBase<"es.5"> {
   signature: Signature;
   /** When the document was written, as a UNIX timestamp in microseconds (millionths of a second, e.g. `Date.now() * 1000`).*/
   timestamp: Timestamp;
-  /** The share this document is from.
-   */
+  /** The share this document is from. */
   share: ShareAddress;
-  // workspaceSignature: Signature,  // TODO: add for sparse mode
-
-  // The size of the associated attachment, if any.
+  /** The size of the associated attachment, if any. */
   attachmentSize?: number;
-  // The hash of the associated attachment, if any.
+  /** The hash of the associated attachment, if any. */
   attachmentHash?: string;
 
   // Local Index:
@@ -193,8 +188,12 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     return Crypto.sha256base32(
       `author\t${doc.author}\n` +
         `textHash\t${doc.textHash}\n` +
-        (doc.attachmentSize === undefined ? "" : `attachmentSize\t${doc.attachmentSize}\n`) +
-        (doc.attachmentHash === undefined ? "" : `attachmentHash\t${doc.attachmentHash}\n`) +
+        (doc.attachmentSize === undefined
+          ? ""
+          : `attachmentSize\t${doc.attachmentSize}\n`) +
+        (doc.attachmentHash === undefined
+          ? ""
+          : `attachmentHash\t${doc.attachmentHash}\n`) +
         (doc.deleteAfter === undefined
           ? ""
           : `deleteAfter\t${doc.deleteAfter}\n`) +

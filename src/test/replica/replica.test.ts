@@ -261,7 +261,6 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
   );
 
   // TODO: test if erase removes docs (we already tested that it removes config, elsewhere)
-  // TODO: test basic writes
   // TODO: test querying
 
   Deno.test(
@@ -689,7 +688,11 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       // Test that identical bytes are only stored once with ingestAttachment.
 
-      const repeatIngestRes = await replica2.ingestAttachment(FormatEs5, doc, bytes1);
+      const repeatIngestRes = await replica2.ingestAttachment(
+        FormatEs5,
+        doc,
+        bytes1,
+      );
 
       assertEquals(repeatIngestRes, false);
 
@@ -773,7 +776,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
             attachment: bytes1,
           });
 
-          const attachmentDoc1 = await replica.getLatestDocAtPath("/greeting.txt");
+          const attachmentDoc1 = await replica.getLatestDocAtPath(
+            "/greeting.txt",
+          );
 
           assert(attachmentDoc1);
 
@@ -782,7 +787,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
             attachment: bytes2,
           });
 
-          const attachmentDoc2 = await replica.getLatestDocAtPath("/greeting.txt");
+          const attachmentDoc2 = await replica.getLatestDocAtPath(
+            "/greeting.txt",
+          );
 
           assert(attachmentDoc2);
 
@@ -807,7 +814,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           await test.step({
             name: "check attachments have been erased",
             fn: async () => {
-              const attachment1Res = await replica2.getAttachment(attachmentDoc1);
+              const attachment1Res = await replica2.getAttachment(
+                attachmentDoc1,
+              );
 
               assert(!isErr(attachment1Res));
 
@@ -817,7 +826,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
                 "first attachment was erased",
               );
 
-              const attachment2Res = await replica2.getAttachment(attachmentDoc2);
+              const attachment2Res = await replica2.getAttachment(
+                attachmentDoc2,
+              );
 
               assert(!isErr(attachment2Res));
 

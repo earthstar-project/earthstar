@@ -103,7 +103,6 @@ export const CryptoDriverNode = class {
   }
   static async verify(publicKey, sig, msg) {
     logger.debug("verif");
-    // TODO: convert uint8arrays to Buffers?
     if (typeof msg === "string") msg = stringToBuffer(msg);
     try {
       return crypto.verify(
@@ -116,8 +115,7 @@ export const CryptoDriverNode = class {
         },
         sig,
       );
-    } catch (e) {
-      /* istanbul ignore next */
+    } catch {
       return false;
     }
   }

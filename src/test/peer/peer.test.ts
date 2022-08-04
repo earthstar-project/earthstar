@@ -140,7 +140,7 @@ function runPeerTests(
       await storage.close(true);
     }
 
-    // TODO: eventually test peer.bus events when we have them
+    // TODO: eventually test peer events when we have them
   });
 }
 

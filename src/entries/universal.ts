@@ -15,6 +15,9 @@ export * from "../formats/default.ts";
 export * from "../formats/format_types.ts";
 
 export * from "../syncer/syncer.ts";
+export * from "../syncer/partner_local.ts";
+export * from "../syncer/partner_web_client.ts";
+export * from "../syncer/syncer_types.ts";
 
 export * from "../peer/peer-types.ts";
 export * from "../peer/peer.ts";

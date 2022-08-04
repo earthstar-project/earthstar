@@ -2,8 +2,8 @@ import { Cmp } from "./util-types.ts";
 import {
   AuthorAddress,
   AuthorKeypair,
-  DocBase,
   DocAttachment,
+  DocBase,
   DocWithAttachment,
   FormatName,
   Path,
@@ -560,7 +560,7 @@ export class Replica {
   ): Promise<number | ValidationError> {
     logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    // TODO: do this in batches
+    // TODO: stream the docs out, overwrite them.
     const docsToOverwrite = await this.queryDocs({
       filter: { author: keypair.address },
       historyMode: "all",
@@ -919,14 +919,19 @@ export class Replica {
 
     const promises = docs.map((doc) => {
       return new Promise<
-        FormatDocType<F> & { attachment: ValidationError | DocAttachment | undefined }
+        FormatDocType<F> & {
+          attachment: ValidationError | DocAttachment | undefined;
+        }
       >((resolve) => {
         const format = formatLookup[doc.format];
 
         const attachmentInfo = format.getAttachmentInfo(doc);
 
         if (!isErr(attachmentInfo)) {
-          this.replicaDriver.attachmentDriver.getAttachment(doc.format, attachmentInfo.hash)
+          this.replicaDriver.attachmentDriver.getAttachment(
+            doc.format,
+            attachmentInfo.hash,
+          )
             .then(
               (attachment) => {
                 resolve({ ...doc, attachment });

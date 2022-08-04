@@ -95,11 +95,6 @@ export interface IFormat<
     size: number,
     hash: string,
   ): DocType | ValidationError;
-
-  // TODO: add these methods for building addresses
-  // and remove them from crypto.ts and encoding.ts
-  // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
-  // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
 }
 
 export type FormatInputType<FormatterType> = FormatterType extends
