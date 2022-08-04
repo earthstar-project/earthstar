@@ -11,7 +11,7 @@ export * from "../crypto/keypair.ts";
 
 export * from "../formats/format_es4.ts";
 export * from "../formats/format_es5.ts";
-export * from "../formats/default.ts";
+export * from "../formats/util.ts";
 export * from "../formats/format_types.ts";
 
 export * from "../syncer/syncer.ts";

@@ -2,13 +2,15 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import {
   DEFAULT_FORMAT,
-  DefaultFormats,
-  FormatsArg,
   getFormatIntersection,
   getFormatLookup,
   getFormatsWithFallback,
-} from "../formats/default.ts";
-import { FormatDocType } from "../formats/format_types.ts";
+} from "../formats/util.ts";
+import {
+  DefaultFormats,
+  FormatDocType,
+  FormatsArg,
+} from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { QuerySourceEvent } from "../replica/replica-types.ts";
 import {

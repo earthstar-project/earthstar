@@ -11,7 +11,7 @@ import { Syncer } from "../syncer/syncer.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { PartnerWebClient } from "../syncer/partner_web_client.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
-import { FormatsArg } from "../formats/default.ts";
+import { FormatsArg } from "../formats/format_types.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;

@@ -8,6 +8,7 @@ import {
   Timestamp,
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
+import { DocEs5, FormatEs5 } from "./format_es5.ts";
 
 export interface FormatterGenerateOpts<
   FormatType extends string,
@@ -97,16 +98,32 @@ export interface IFormat<
   ): DocType | ValidationError;
 }
 
+/** Extracts a IFormat's input type, used to generate a new document. */
 export type FormatInputType<FormatterType> = FormatterType extends
   IFormat<infer _FormatType, infer DocInputType, infer _DocType> ? DocInputType
   : never;
 
+/** Extracts a IFormat's document type, e.g. `DocEs5` */
 export type FormatDocType<FormatterType> = FormatterType extends
   IFormat<infer _FormatType, infer _DocInputType, infer DocType> ? DocType
   : FormatterType extends
     IFormat<infer _FormatType, infer _DocInputType, infer DocType>[] ? DocType
   : never;
 
+/** Extracts a IFormat's name, e.g. `es.5` */
 export type FormatNameType<FormatterType> = FormatterType extends
   IFormat<infer FormatType, infer _DocType, infer _DocInputType> ? FormatType
   : never;
+
+/** Verifies a given type is an array of `IFormat` */
+export type FormatsArg<Init> = Init extends
+  Array<IFormat<infer _N, infer _I, infer _O>> ? Init : never;
+
+/** Verifies a given type is of type `IFormat` */
+export type FormatArg<Init> = Init extends IFormat<infer _N, infer _I, infer _O>
+  ? Init
+  : never;
+
+export type DefaultFormat = typeof FormatEs5;
+export type DefaultFormats = [DefaultFormat];
+export type DefaultDoc = DocEs5;

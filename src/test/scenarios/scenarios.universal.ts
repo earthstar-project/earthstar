@@ -1,6 +1,6 @@
 import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { FormatsArg } from "../../formats/default.ts";
+import { FormatsArg } from "../../formats/util.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";

@@ -1,21 +1,15 @@
-import { DocEs5, FormatEs5 } from "./format_es5.ts";
-import { IFormat } from "./format_types.ts";
-
-export type DefaultFormatType = typeof FormatEs5;
-export type DefaultFormats = [DefaultFormatType];
-export type DefaultDoc = DocEs5;
+import { FormatEs5 } from "./format_es5.ts";
+import {
+  DefaultFormat,
+  DefaultFormats,
+  FormatArg,
+  FormatsArg,
+} from "./format_types.ts";
 
 export const DEFAULT_FORMAT = FormatEs5;
 export const DEFAULT_FORMATS = [DEFAULT_FORMAT];
 
-export type FormatsArg<Init> = Init extends
-  Array<IFormat<infer _N, infer _I, infer _O>> ? Init : never;
-
-export type FormatArg<Init> = Init extends IFormat<infer _N, infer _I, infer _O>
-  ? Init
-  : never;
-
-export function getFormatWithFallback<F = DefaultFormatType>(
+export function getFormatWithFallback<F = DefaultFormat>(
   format?: FormatArg<F>,
 ): FormatArg<F> {
   return format || DEFAULT_FORMAT as unknown as FormatArg<F>;
@@ -41,8 +35,6 @@ export function getFormatIntersection<F>(
 
   return intersection as FormatsArg<F>;
 }
-
-// add lookup up method here
 
 export function getFormatLookup<F = DefaultFormats>(
   formats?: FormatsArg<F>,

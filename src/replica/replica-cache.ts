@@ -3,8 +3,6 @@ import {
   AuthorAddress,
   AuthorKeypair,
   DocBase,
-  DocInputBase,
-  FormatName,
   Path,
 } from "../util/doc-types.ts";
 import {
@@ -19,14 +17,15 @@ import { Logger } from "../util/log.ts";
 import { CallbackSink } from "../streams/stream_utils.ts";
 import { Replica } from "./replica.ts";
 
+import { DEFAULT_FORMATS } from "../formats/util.ts";
 import {
-  DEFAULT_FORMATS,
+  DefaultFormat,
   DefaultFormats,
-  DefaultFormatType,
   FormatArg,
+  FormatDocType,
+  FormatInputType,
   FormatsArg,
-} from "../formats/default.ts";
-import { FormatDocType, FormatInputType } from "../formats/format_types.ts";
+} from "../formats/format_types.ts";
 
 const logger = new Logger("replica-cache", "green");
 
@@ -174,7 +173,7 @@ export class ReplicaCache {
   // SET - just pass along to the backing storage
 
   /** Add a new document directly to the backing replica. */
-  set<F = DefaultFormatType>(
+  set<F = DefaultFormat>(
     keypair: AuthorKeypair,
     docToSet: Omit<FormatInputType<F>, "format">,
     format?: FormatArg<F>,
@@ -221,7 +220,7 @@ export class ReplicaCache {
   }
 
   /** Fetch latest version of a doc at a path from the cache. Returns an empty array in case of a cache miss, and queries the backing replica. */
-  getLatestDocAtPath<F = DefaultFormatType>(
+  getLatestDocAtPath<F = DefaultFormat>(
     path: Path,
     format?: FormatArg<F>,
   ): FormatDocType<F> | undefined {

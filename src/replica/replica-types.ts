@@ -1,13 +1,13 @@
 import {
-  DocBase,
   DocAttachment,
+  DocBase,
   FormatName,
   ShareAddress,
 } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Replica } from "./replica.ts";
-import { FormatsArg } from "../formats/default.ts";
+import { FormatsArg } from "../formats/format_types.ts";
 
 //================================================================================
 // TYPES AND EVENTS

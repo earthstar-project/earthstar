@@ -1,7 +1,7 @@
 import { ShareAddress } from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { FormatsArg } from "../formats/default.ts";
 import { Syncer } from "../syncer/syncer.ts";
+import { FormatsArg } from "../formats/format_types.ts";
 
 //================================================================================
 // PEER

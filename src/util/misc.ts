@@ -46,6 +46,9 @@ export function isObjectEmpty(obj: Object): Boolean {
 //================================================================================
 // Share
 
+/** Returns a valid share address generated using a given name.
+ * @returns A share address or a validation error resulting from the name given.
+ */
 export function generateShareAddress(name: string): string | ValidationError {
   const randomFromString = (str: string) => {
     return str[Math.floor(Math.random() * str.length)];

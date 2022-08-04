@@ -36,17 +36,20 @@ import {
   LockStream,
   OrCh,
 } from "../streams/stream_utils.ts";
-import { FormatDocType, FormatInputType } from "../formats/format_types.ts";
+import {
+  DefaultFormat,
+  DefaultFormats,
+  FormatArg,
+  FormatDocType,
+  FormatInputType,
+  FormatsArg,
+} from "../formats/format_types.ts";
 import {
   DEFAULT_FORMAT,
   DEFAULT_FORMATS,
-  DefaultFormats,
-  DefaultFormatType,
-  FormatArg,
-  FormatsArg,
   getFormatLookup,
   getFormatsWithFallback,
-} from "../formats/default.ts";
+} from "../formats/util.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
 import { streamToBytes } from "../util/streams.ts";
@@ -243,7 +246,7 @@ export class Replica {
     }, formats);
   }
   /** Returns the most recently written version of a document at a path. */
-  async getLatestDocAtPath<F = DefaultFormatType>(
+  async getLatestDocAtPath<F = DefaultFormat>(
     path: Path,
     format?: FormatArg<F>,
   ): Promise<FormatDocType<F> | undefined> {
@@ -313,7 +316,7 @@ export class Replica {
 
   // The Input type should match the formatter.
   // The default format should be es5
-  async set<F = DefaultFormatType>(
+  async set<F = DefaultFormat>(
     keypair: AuthorKeypair,
     docToSet: Omit<FormatInputType<F>, "format">,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
@@ -436,7 +439,7 @@ export class Replica {
   /**
    * Ingest an existing signed document to the replica.
    */
-  async ingest<F = DefaultFormatType>(
+  async ingest<F = DefaultFormat>(
     format: FormatArg<F>,
     docToIngest: FormatDocType<F>,
   ): Promise<
@@ -601,7 +604,7 @@ export class Replica {
     return numOverwritten;
   }
 
-  async wipeDocAtPath<F = DefaultFormatType>(
+  async wipeDocAtPath<F = DefaultFormat>(
     keypair: AuthorKeypair,
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
@@ -809,7 +812,7 @@ export class Replica {
   /**
    * @returns `true` (indicating it was upsert), `false` (indicating this attachment is already in storage), or a `ValidationError` (indicating something went wrong.)
    */
-  async ingestAttachment<F = DefaultFormatType>(
+  async ingestAttachment<F = DefaultFormat>(
     format: FormatArg<F>,
     doc: FormatDocType<F>,
     attachment: Uint8Array | ReadableStream<Uint8Array>,
@@ -885,7 +888,7 @@ export class Replica {
     return true;
   }
 
-  getAttachment<F = DefaultFormatType>(
+  getAttachment<F = DefaultFormat>(
     doc: FormatDocType<F>,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<DocAttachment | undefined | ValidationError> {

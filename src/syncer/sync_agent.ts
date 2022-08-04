@@ -7,7 +7,7 @@ import {
   SyncAgentStatus,
 } from "./syncer_types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-import { getFormatLookup } from "../formats/default.ts";
+import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.

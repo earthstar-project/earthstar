@@ -1,4 +1,4 @@
-import { FormatsArg } from "../formats/default.ts";
+import { FormatsArg } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { isErr } from "../util/errors.ts";
@@ -89,10 +89,11 @@ export class PartnerLocal<
             );
           }
 
-          const attachment = await partnerReplica.replicaDriver.attachmentDriver.getAttachment(
-            opts.doc.format,
-            opts.attachmentHash,
-          );
+          const attachment = await partnerReplica.replicaDriver.attachmentDriver
+            .getAttachment(
+              opts.doc.format,
+              opts.attachmentHash,
+            );
 
           if (!attachment) {
             return undefined;
@@ -138,10 +139,11 @@ export class PartnerLocal<
       );
     }
 
-    const attachment = await partnerReplica.replicaDriver.attachmentDriver.getAttachment(
-      opts.doc.format,
-      opts.attachmentHash,
-    );
+    const attachment = await partnerReplica.replicaDriver.attachmentDriver
+      .getAttachment(
+        opts.doc.format,
+        opts.attachmentHash,
+      );
 
     if (!attachment) {
       return undefined;

@@ -3,8 +3,11 @@ import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
 import { Replica } from "../replica/replica.ts";
-import { DefaultFormats, FormatsArg } from "../formats/default.ts";
-import { FormatDocType } from "../formats/format_types.ts";
+import {
+  DefaultFormats,
+  FormatDocType,
+  FormatsArg,
+} from "../formats/format_types.ts";
 
 let logger = new Logger("query helpers", "gold");
 

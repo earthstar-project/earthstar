@@ -1,8 +1,11 @@
 import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { FormatArg, FormatsArg } from "../formats/default.ts";
-import { FormatDocType } from "../formats/format_types.ts";
+import {
+  FormatArg,
+  FormatDocType,
+  FormatsArg,
+} from "../formats/format_types.ts";
 import { ValidationError } from "../util/errors.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
