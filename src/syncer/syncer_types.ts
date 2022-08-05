@@ -79,6 +79,7 @@ export type SyncAgentOpts<F> = {
   replica: Replica;
   formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
+  onRequestAttachment: (doc: FormatDocType<F>) => void;
 };
 
 // ===================
@@ -100,6 +101,10 @@ export type SyncerRequestAttachmentTransferEvent = {
   attachmentHash: string;
 };
 
+export type SyncerDoneEvent = {
+  kind: "SYNCER_DONE";
+};
+
 /** A SyncAgentEvent addressed to a specific share address. */
 export type SyncerSyncAgentEvent = SyncAgentEvent & {
   to: string;
@@ -109,7 +114,8 @@ export type SyncerSyncAgentEvent = SyncAgentEvent & {
 export type SyncerEvent =
   | SyncerSyncAgentEvent
   | SyncerDiscloseEvent
-  | SyncerRequestAttachmentTransferEvent;
+  | SyncerRequestAttachmentTransferEvent
+  | SyncerDoneEvent;
 
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */
 export interface ISyncPartner<IncomingAttachmentSourceType> {
@@ -188,6 +194,7 @@ export type SyncerStatus = Record<
       status: AttachmentTransferStatus;
       bytesLoaded: number;
       totalBytes: number;
+      kind: "download" | "upload";
     }[];
   }
 >;

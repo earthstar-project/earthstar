@@ -1,3 +1,4 @@
+import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase } from "../util/doc-types.ts";
 import { isErr, NotFoundError, ValidationError } from "../util/errors.ts";
@@ -16,6 +17,8 @@ export class AttachmentTransfer<F> {
 
   private sourceDoc: DocBase<string>;
   private statusBus = new BlockingBus<AttachmentTransferProgressEvent>();
+
+  isDone = deferred<true>();
 
   hash: string;
 
@@ -62,6 +65,8 @@ export class AttachmentTransfer<F> {
         },
       });
 
+      this.changeStatus("in_progress");
+
       replica.ingestAttachment(format, doc, counterStream).then(
         (result) => {
           if (isErr(result)) {
@@ -72,8 +77,6 @@ export class AttachmentTransfer<F> {
           this.changeStatus("complete");
         },
       );
-
-      this.changeStatus("in_progress");
     } else {
       this.kind = "upload";
 
@@ -121,13 +124,19 @@ export class AttachmentTransfer<F> {
       bytesLoaded: this.loaded,
       totalBytes: this.expectedSize,
     });
+
+    if (status === "complete") {
+      this.isDone.resolve();
+    }
   }
 
   get doc(): DocBase<string> {
     return this.sourceDoc;
   }
 
-  onProgress(callback: (event: AttachmentTransferProgressEvent) => void): () => void {
+  onProgress(
+    callback: (event: AttachmentTransferProgressEvent) => void,
+  ): () => void {
     const unsub = this.statusBus.on(callback);
     return unsub;
   }

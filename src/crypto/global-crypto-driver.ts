@@ -1,6 +1,5 @@
 import { CryptoDriverNoble } from "./crypto-driver-noble.ts";
 import { ICryptoDriver } from "./crypto-types.ts";
-import { isDeno, isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 //--------------------------------------------------
 

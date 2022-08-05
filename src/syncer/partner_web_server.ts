@@ -88,6 +88,11 @@ export class PartnerWebServer<
 
     socket.binaryType = "arraybuffer";
 
+    // Just in case the socket is already open...
+    if (socket.readyState === socket.OPEN) {
+      socketIsOpen.resolve();
+    }
+
     socket.onopen = () => {
       socketIsOpen.resolve();
     };
