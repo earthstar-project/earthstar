@@ -10,8 +10,6 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
 import { isErr } from "../util/errors.ts";
-import { DocBase } from "../util/doc-types.ts";
-import { QuerySourceEvent } from "../replica/replica-types.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -356,10 +354,10 @@ export class SyncAgent<F> {
           }
 
           if (event.kind === "DONE") {
+            isDone.resolve();
             // We wait for the partner to signal its finished before closing the queue
             // As it could still be sending us `WANT`s / expecting `DOC` events.
             await isPartnerFinished;
-            isDone.resolve();
             unsub();
             statusBus.send(getStatus());
             controller.close();

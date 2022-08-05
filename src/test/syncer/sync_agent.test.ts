@@ -558,7 +558,7 @@ for (const scenario of scenarios) {
 
       testHelper.closeOneSide("source");
 
-      await sleep(10);
+      await sleep(20);
 
       const statuses3 = await testHelper.statuses();
 
