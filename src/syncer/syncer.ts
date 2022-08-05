@@ -137,6 +137,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     });
 
     // If the syncer is in done mode, it should abort its outgoing stream when all sync agents are done.
+
     this.statusBus.on(async (status) => {
       if (this.mode === "live") {
         return;
@@ -149,15 +150,28 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       }
 
       if (
-        this.docSyncIsDone.state !== "fulfilled" &&
+        this.docSyncIsDone.state === "pending" &&
         statuses.every((status) => status.docs.status === "done")
       ) {
         this.docSyncIsDone.resolve(true);
+
+        if (this.transfersAreDone.state === "pending") {
+          await this.checkedAllExistingDocsForAttachments;
+
+          const allAttachmentsDone = Array.from(this.transfers.values())
+            .flatMap((
+              t,
+            ) => Array.from(t.values())).map((transfer) => transfer.isDone);
+
+          await Promise.all(allAttachmentsDone);
+
+          this.transfersAreDone.resolve(true);
+        }
       }
 
       if (
         this.docSyncIsDone.state === "fulfilled" &&
-        this.transfersAreDone.state !== "fulfilled"
+        this.transfersAreDone.state === "pending"
       ) {
         await this.checkedAllExistingDocsForAttachments;
 
@@ -181,6 +195,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       await this.docSyncIsDone;
       await this.checkedAllExistingDocsForAttachments;
       await this.transfersAreDone;
+
       abortController.abort();
       this.isDone.resolve();
     });
