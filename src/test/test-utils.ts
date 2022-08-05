@@ -121,6 +121,8 @@ export async function docAttachmentsAreEquivalent(
 
   const zipped = aSorted.map((doc, i) => [doc, bSorted[i]]);
 
+  // console.log(zipped.map(([a, b]) => [a.attachment, b.attachment]));
+
   for (const [a, b] of zipped) {
     if (
       a.attachment && b.attachment && !isErr(a.attachment) &&
@@ -135,18 +137,26 @@ export async function docAttachmentsAreEquivalent(
     }
 
     if (a.attachment === undefined && b.attachment !== undefined) {
+      console.log(a, b);
+      console.log("a");
       return false;
     }
 
     if (b.attachment === undefined && a.attachment !== undefined) {
+      console.log(a, b);
+      console.log("b");
       return false;
     }
 
     if (isErr(a.attachment) && !isErr(b.attachment)) {
+      console.log(a, b);
+      console.log("c");
       return false;
     }
 
     if (isErr(b.attachment) && !isErr(a.attachment)) {
+      console.log(a, b);
+      console.log("d");
       return false;
     }
   }

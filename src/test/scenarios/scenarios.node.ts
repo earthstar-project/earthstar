@@ -23,6 +23,8 @@ import { sleep } from "../../util/misc.ts";
 import { WebSocketServer } from "ws";
 import { FormatsArg } from "../../formats/format_types.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
+import { match } from "https://esm.sh/path-to-regexp@6.2.1";
+import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -51,6 +53,16 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
 
 export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   ...universalReplicaAttachmentDrivers,
+  {
+    name: "Filesystem",
+    item: {
+      makeDriver: (shareAddr: string, variant?: string) =>
+        new AttachmentDriverFilesystem(
+          `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`,
+        ),
+      persistent: true,
+    },
+  },
 ];
 
 export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
@@ -68,27 +80,28 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 
     // Set up server
 
-    this._server.on("connection", async (socket: WebSocket) => {
+    this._server.on("connection", async (socket: WebSocket, req: any) => {
       const partner = new PartnerWebServer({
         socket,
       });
 
-      const transferPattern = new URLPattern({
-        pathname: "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
-      });
+      const transferMatch = match(
+        "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
+        { decode: decodeURIComponent },
+      );
 
-      const transferMatch = transferPattern.exec(socket.url);
+      const res = transferMatch(req.url);
 
-      if (transferMatch) {
+      if (res) {
         const syncer = await serverSyncerPromise;
 
         const { shareAddress, formatName, path, author, kind } =
-          transferMatch.pathname.groups;
+          res["params"] as Record<string, any>;
 
-        syncer.handleTransferRequest({
+        await syncer.handleTransferRequest({
           shareAddress,
           formatName,
-          path: `/${path}`,
+          path: `/${path.join("/")}`,
           author,
           kind: kind as "download" | "upload",
           source: socket,

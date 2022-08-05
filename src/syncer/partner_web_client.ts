@@ -127,6 +127,10 @@ export class PartnerWebClient<
     // Return a stream which writes to the socket. nice.
     const socketIsOpen = deferred();
 
+    if (socket.readyState === socket.OPEN) {
+      socketIsOpen.resolve();
+    }
+
     socket.onopen = () => {
       socketIsOpen.resolve();
     };

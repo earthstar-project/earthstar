@@ -35,16 +35,6 @@ await build({
         ],
       },
       {
-        package: {
-          name: "@sgwilym/urlpattern-polyfill",
-          version: "1.0.0-rc8",
-        },
-        globalNames: [{
-          name: "URLPattern",
-          exportName: "URLPattern",
-        }],
-      },
-      {
         globalNames: ["TextEncoder", "TextDecoder"],
         module: "util",
       },
@@ -68,6 +58,11 @@ await build({
         name: "@noble/ed25519",
         version: "1.6.0",
       },
+
+    "https://esm.sh/path-to-regexp@6.2.1": {
+      name: "path-to-regexp",
+      version: "6.2.1",
+    },
     /* TODO: Bring back with IndexedDB
     "./src/replica/indexeddb-types.deno.d.ts":
       "./src/replica/indexeddb-types.node.d.ts",

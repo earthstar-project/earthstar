@@ -73,11 +73,13 @@ class SyncAgentTestHelper {
             replica: this.targetReplica,
             mode,
             formats: [FormatEs4],
+            onRequestAttachment: () => {},
           });
           this.sourceSyncAgent = new SyncAgent({
             replica: this.sourceReplica,
             mode,
             formats: [FormatEs4],
+            onRequestAttachment: () => {},
           });
 
           const { targetEvents, sourceEvents } = this;

@@ -9,6 +9,9 @@ import {
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
+import { isErr } from "../util/errors.ts";
+import { DocBase } from "../util/doc-types.ts";
+import { QuerySourceEvent } from "../replica/replica-types.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -85,7 +88,9 @@ export class SyncAgent<F> {
     return true;
   }
 
-  constructor({ replica, mode, formats }: SyncAgentOpts<F>) {
+  constructor(
+    { replica, mode, formats, onRequestAttachment }: SyncAgentOpts<F>,
+  ) {
     // If the replica closes, we need to abort
     replica.onEvent((event) => {
       if (event.kind === "willClose") {
@@ -311,6 +316,17 @@ export class SyncAgent<F> {
                 break;
               }
 
+              const attachment = await replica.getAttachment(
+                event.doc as FormatDocType<F>,
+                formatLookup[event.doc.format],
+              );
+
+              if (isErr(attachment) || attachment) {
+                return;
+              }
+
+              onRequestAttachment(event.doc as FormatDocType<F>);
+
               await replica.ingest(format, event.doc as FormatDocType<F>);
 
               break;
@@ -340,10 +356,10 @@ export class SyncAgent<F> {
           }
 
           if (event.kind === "DONE") {
-            isDone.resolve();
             // We wait for the partner to signal its finished before closing the queue
             // As it could still be sending us `WANT`s / expecting `DOC` events.
             await isPartnerFinished;
+            isDone.resolve();
             unsub();
             statusBus.send(getStatus());
             controller.close();

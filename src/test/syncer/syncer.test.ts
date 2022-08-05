@@ -12,6 +12,7 @@ import {
   storagesAttachmentsAreSynced,
   writeRandomDocs,
 } from "../test-utils.ts";
+import { isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 import {
   docDriverScenarios,
@@ -108,6 +109,11 @@ class SyncerTestHelper {
   }
 
   async commonSharesInSync() {
+    // Without this, tests for the Node distribution fail for some reason.
+    if (isNode) {
+      await sleep(5);
+    }
+
     const docCounts = [];
 
     for (const r of [...this.aDuo, ...this.bDuo]) {
@@ -120,11 +126,11 @@ class SyncerTestHelper {
       "all replicas have the right number of docs",
     );
 
-    assert(await storagesAreSynced(this.aDuo), `+a shares are in sync`);
-    assert(await storagesAreSynced(this.bDuo), `+b shares are in sync`);
+    assert(await storagesAreSynced(this.aDuo), `+a docs are in sync`);
+    assert(await storagesAreSynced(this.bDuo), `+b docs are in sync`);
     assert(
       await storagesAreSynced(this.cDuo) === false,
-      `+c shares are not in sync`,
+      `+c docs are not in sync`,
     );
 
     assert(

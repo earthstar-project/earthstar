@@ -73,16 +73,6 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
 
 export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   ...universalReplicaAttachmentDrivers,
-  {
-    name: "Filesystem",
-    item: {
-      makeDriver: (shareAddr: string, variant?: string) =>
-        new AttachmentDriverFilesystem(
-          `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`,
-        ),
-      persistent: true,
-    },
-  },
 ];
 
 export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
