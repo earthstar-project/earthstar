@@ -1,8 +1,11 @@
 import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { FormatArg, FormatsArg } from "../formats/default.ts";
-import { FormatDocType } from "../formats/format_types.ts";
+import {
+  FormatArg,
+  FormatDocType,
+  FormatsArg,
+} from "../formats/format_types.ts";
 import { ValidationError } from "../util/errors.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
@@ -76,6 +79,7 @@ export type SyncAgentOpts<F> = {
   replica: Replica;
   formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
+  onRequestAttachment: (doc: FormatDocType<F>) => void;
 };
 
 // ===================
@@ -88,13 +92,17 @@ export type SyncerDiscloseEvent = {
   formats: string[];
 };
 
-export type SyncerRequestBlobTransferEvent = {
+export type SyncerRequestAttachmentTransferEvent = {
   kind: "BLOB_REQ";
   /** An ID to be used for an external request to find its way back to this syncer. */
   syncerId: string;
   doc: DocBase<string>;
   shareAddress: string;
   attachmentHash: string;
+};
+
+export type SyncerDoneEvent = {
+  kind: "SYNCER_DONE";
 };
 
 /** A SyncAgentEvent addressed to a specific share address. */
@@ -106,22 +114,36 @@ export type SyncerSyncAgentEvent = SyncAgentEvent & {
 export type SyncerEvent =
   | SyncerSyncAgentEvent
   | SyncerDiscloseEvent
-  | SyncerRequestBlobTransferEvent;
+  | SyncerRequestAttachmentTransferEvent
+  | SyncerDoneEvent;
 
-export interface ISyncPartner<IncomingBlobSourceType> {
+/** Provides a syncer with the means to connect the peer being synced with (the partner). */
+export interface ISyncPartner<IncomingAttachmentSourceType> {
+  /** A stream of inbound syncer events from the partner. */
   readable: ReadableStream<SyncerEvent>;
+
+  /** A stream of outbound syncer events to the partner */
   writable: WritableStream<SyncerEvent>;
-  // request transfer (ie. a download)
+
+  /** Attempt to download an attachment directly from the partner.
+   * @returns A `ReadableStream<Uint8Array>` to read data from, a `ValidationError` if something went wrong, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
+   */
   getDownload(
     opts: GetTransferOpts,
   ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined>;
-  // handle (internal) request to initiate transfer (ie. an upload)
+
+  /** Handles (usually in-band) request from the other peer to upload an attachment.
+   * @returns A `WritableStream<Uint8Array>` to write data to, a `ValidationError` if something went wrong`, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
+   */
   handleUploadRequest(
     opts: GetTransferOpts,
   ): Promise<WritableStream<Uint8Array> | ValidationError | undefined>;
-  // handle (external) request to initiate transfer.
+
+  /** Handles an out-of-band request from the other peer to start a transfer.
+   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, a `ValidationError` if something went wrong`, or `undefined` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
+   */
   handleTransferRequest(
-    source: IncomingBlobSourceType,
+    source: IncomingAttachmentSourceType,
     kind: "upload" | "download",
   ): Promise<
     | ReadableStream<Uint8Array>
@@ -148,8 +170,9 @@ export type SyncerMode = "once" | "live";
 
 /** Options to initialise a Syncer with.
  * - `peer` - The peer to synchronise.
- * - `driver` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
+ * - `partner` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
  * - `mode` - Determines what kind of sync to carry out.
+ * - `formats` - An optional array of formats to sync. Defaults to just `es.5`.
  */
 export interface SyncerOpts<F, I> {
   peer: IPeer;
@@ -168,30 +191,31 @@ export type SyncerStatus = Record<
       path: string;
       format: string;
       hash: string;
-      status: BlobTransferStatus;
+      status: AttachmentTransferStatus;
       bytesLoaded: number;
       totalBytes: number;
+      kind: "download" | "upload";
     }[];
   }
 >;
 
 // =============== BLOB SYNCING
 
-export type BlobTransferStatus =
+export type AttachmentTransferStatus =
   | "ready"
   | "in_progress"
   | "complete"
   | "failed";
 
-export type BlobTransferOpts<F> = {
+export type AttachmentTransferOpts<F> = {
   stream: ReadableStream<Uint8Array> | WritableStream<Uint8Array>;
   replica: Replica;
   doc: FormatDocType<F>;
   format: FormatArg<F>;
 };
 
-export type BlobTransferProgressEvent = {
-  status: BlobTransferStatus;
+export type AttachmentTransferProgressEvent = {
+  status: AttachmentTransferStatus;
   bytesLoaded: number;
   totalBytes: number;
 };

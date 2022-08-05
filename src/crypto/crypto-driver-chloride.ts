@@ -23,18 +23,10 @@ setLogLevel("crypto-driver-chloride", LogLevel.Info);
 
 //================================================================================
 
-/*
-export let waitUntilChlorideIsReady = async () => {
-    logger.info('waiting for chloride to become ready...');
-    // TODO: how to do this properly?
-    // https://github.com/jedisct1/libsodium.js#usage-as-a-module
-    await sleep(2000);
-}
-*/
-
 /**
- * A verison of the ILowLevelCrypto interface backed by Chloride.
- * Works in the browser.
+ * A verison of the ICryptoDriver interface backed by Chloride.
+ * Faster than noble.
+ * Works in node and the browser.
  */
 export const CryptoDriverChloride: ICryptoDriver = class {
   static sha256(input: string | Buffer): Promise<Uint8Array> {

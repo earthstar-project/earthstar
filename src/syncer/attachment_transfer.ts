@@ -1,26 +1,29 @@
+import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase } from "../util/doc-types.ts";
 import { isErr, NotFoundError, ValidationError } from "../util/errors.ts";
 import {
-  BlobTransferOpts,
-  BlobTransferProgressEvent,
-  BlobTransferStatus,
+  AttachmentTransferOpts,
+  AttachmentTransferProgressEvent,
+  AttachmentTransferStatus,
 } from "./syncer_types.ts";
 
-export class BlobTransfer<F> {
+export class AttachmentTransfer<F> {
   kind: "download" | "upload";
-  status: BlobTransferStatus = "ready";
+  status: AttachmentTransferStatus = "ready";
 
   loaded = 0;
   expectedSize: number;
 
   private sourceDoc: DocBase<string>;
-  private statusBus = new BlockingBus<BlobTransferProgressEvent>();
+  private statusBus = new BlockingBus<AttachmentTransferProgressEvent>();
+
+  isDone = deferred<true>();
 
   hash: string;
 
   constructor(
-    { stream, replica, doc, format }: BlobTransferOpts<F>,
+    { stream, replica, doc, format }: AttachmentTransferOpts<F>,
   ) {
     this.sourceDoc = doc;
 
@@ -28,7 +31,7 @@ export class BlobTransfer<F> {
 
     if (isErr(attachmentInfo)) {
       throw new ValidationError(
-        "BlobTransfer was given a doc which has no attachment!",
+        "AttachmentTransfer was given a doc which has no attachment!",
       );
     }
 
@@ -62,7 +65,9 @@ export class BlobTransfer<F> {
         },
       });
 
-      replica.ingestBlob(format, doc, counterStream).then(
+      this.changeStatus("in_progress");
+
+      replica.ingestAttachment(format, doc, counterStream).then(
         (result) => {
           if (isErr(result)) {
             console.log(result);
@@ -72,18 +77,16 @@ export class BlobTransfer<F> {
           this.changeStatus("complete");
         },
       );
-
-      this.changeStatus("in_progress");
     } else {
       this.kind = "upload";
 
-      replica.getBlob(doc, format).then((blobRes) => {
-        if (!blobRes) {
+      replica.getAttachment(doc, format).then((attachmentRes) => {
+        if (!attachmentRes) {
           return new NotFoundError();
         }
 
-        if (isErr(blobRes)) {
-          return blobRes;
+        if (isErr(attachmentRes)) {
+          return attachmentRes;
         }
 
         const counterTransform = new TransformStream<Uint8Array, Uint8Array>({
@@ -94,11 +97,12 @@ export class BlobTransfer<F> {
           },
         });
 
-        blobRes.stream.pipeThrough(counterTransform).pipeTo(stream).then(() => {
-          this.changeStatus("complete");
+        attachmentRes.stream().then((readable) => {
+          this.changeStatus("in_progress");
+          readable.pipeThrough(counterTransform).pipeTo(stream).then(() => {
+            this.changeStatus("complete");
+          });
         });
-
-        this.changeStatus("in_progress");
       });
     }
   }
@@ -112,7 +116,7 @@ export class BlobTransfer<F> {
     });
   }
 
-  private changeStatus(status: BlobTransferStatus) {
+  private changeStatus(status: AttachmentTransferStatus) {
     this.status = status;
 
     this.statusBus.send({
@@ -120,13 +124,19 @@ export class BlobTransfer<F> {
       bytesLoaded: this.loaded,
       totalBytes: this.expectedSize,
     });
+
+    if (status === "complete") {
+      this.isDone.resolve();
+    }
   }
 
   get doc(): DocBase<string> {
     return this.sourceDoc;
   }
 
-  onProgress(callback: (event: BlobTransferProgressEvent) => void): () => void {
+  onProgress(
+    callback: (event: AttachmentTransferProgressEvent) => void,
+  ): () => void {
     const unsub = this.statusBus.on(callback);
     return unsub;
   }

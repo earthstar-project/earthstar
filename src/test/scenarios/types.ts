@@ -1,7 +1,7 @@
-import { FormatsArg } from "../../formats/default.ts";
-import { IFormat } from "../../formats/format_types.ts";
+import { FormatsArg, IFormat } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import {
+  IReplicaAttachmentDriver,
   IReplicaDocDriver,
   IReplicaDriver,
 } from "../../replica/replica-types.ts";
@@ -45,6 +45,11 @@ export type DocDriverScenario = {
   makeDriver: (share: ShareAddress, variant?: string) => IReplicaDocDriver;
   persistent: boolean;
   builtInConfigKeys: string[];
+};
+
+export type AttachmentDriverScenario = {
+  makeDriver: (shareAddr: string, variant?: string) => IReplicaAttachmentDriver;
+  persistent: boolean;
 };
 
 export type FormatScenario<

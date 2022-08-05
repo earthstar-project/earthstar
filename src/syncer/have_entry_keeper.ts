@@ -191,8 +191,8 @@ export class HaveEntryKeeper {
     if (entry) {
       const versions: Record<string, AuthorAddress> = {};
 
-      for (const id in entry.versions) {
-        versions[id] = entry.versions[id].author;
+      for (const versionId in entry.versions) {
+        versions[versionId] = entry.versions[versionId].author;
       }
 
       return { path: entry.path, versions };
@@ -216,7 +216,7 @@ export class HaveEntryKeeper {
     return {
       path,
       versions: {
-        [maybeVersion.entryId]: maybeVersion.version.author,
+        [id]: maybeVersion.version.author,
       },
     };
   }

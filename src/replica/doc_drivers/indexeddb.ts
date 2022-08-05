@@ -8,8 +8,6 @@ import { Query } from "../../query/query-types.ts";
 //--------------------------------------------------
 
 import { Logger } from "../../util/log.ts";
-import { ExtractDocType } from "../../formatters/formatter_types.ts";
-import { FormatterEs4 } from "../../formatters/formatter_es4.ts";
 const logger = new Logger("replica driver indexeddb", "gold");
 
 //================================================================================
@@ -270,7 +268,7 @@ export class DocDriverIndexedDB extends DocDriverMemory {
     const upsertedDoc = await super.upsert(doc);
 
     // After every upsert, for now, we save everything
-    // to IndexedDB as a single giant blob.
+    // to IndexedDB as a single giant attachment.
     // TODO: debounce this, only do it every 1 second or something
 
     const docs = {

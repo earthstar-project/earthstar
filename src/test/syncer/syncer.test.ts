@@ -9,27 +9,26 @@ import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
 import {
   storagesAreSynced,
-  storagesBlobsAreSynced,
+  storagesAttachmentsAreSynced,
   writeRandomDocs,
 } from "../test-utils.ts";
+import { isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
 
 import {
   docDriverScenarios,
   partnerScenarios,
 } from "../scenarios/scenarios.ts";
-import {
-  IReplicaDocDriver,
-  IReplicaDriver,
-} from "../../replica/replica-types.ts";
+import { IReplicaDocDriver } from "../../replica/replica-types.ts";
 import {
   MultiplyScenarioOutput,
   PartnerScenario,
   ScenarioItem,
 } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
-import { FormatEs4 } from "../../formats/format_es4.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { FormatEs5 } from "../../formats/format_es5.ts";
+import { isErr } from "../../util/errors.ts";
 
 class SyncerTestHelper {
   private scenario: PartnerScenario<[typeof FormatEs5]>;
@@ -52,13 +51,13 @@ class SyncerTestHelper {
         new Replica({
           driver: {
             docDriver: makeDocDriver(addr, "sync-a"),
-            blobDriver: new BlobDriverMemory(),
+            attachmentDriver: new AttachmentDriverMemory(),
           },
         }),
         new Replica({
           driver: {
             docDriver: makeDocDriver(addr, "sync-b"),
-            blobDriver: new BlobDriverMemory(),
+            attachmentDriver: new AttachmentDriverMemory(),
           },
         }),
       ] as [Replica, Replica];
@@ -83,9 +82,16 @@ class SyncerTestHelper {
       ...this.cDuo,
     ];
 
-    await Promise.all(allStorages.map((replica) => {
+    const writes = await Promise.all(allStorages.map((replica) => {
       return writeRandomDocs(keypairA, replica, 10);
     }));
+
+    assert(
+      writes.every((replicaWrites) => {
+        return replicaWrites.every((write) => isErr(write) === false);
+      }),
+      "Test docs were written successfully to replicas",
+    );
 
     const [a1, a2] = this.aDuo;
     const [b1, b2] = this.bDuo;
@@ -103,6 +109,11 @@ class SyncerTestHelper {
   }
 
   async commonSharesInSync() {
+    // Without this, tests for the Node distribution fail for some reason.
+    if (isNode) {
+      await sleep(5);
+    }
+
     const docCounts = [];
 
     for (const r of [...this.aDuo, ...this.bDuo]) {
@@ -115,23 +126,23 @@ class SyncerTestHelper {
       "all replicas have the right number of docs",
     );
 
-    assert(await storagesAreSynced(this.aDuo), `+a shares are in sync`);
-    assert(await storagesAreSynced(this.bDuo), `+b shares are in sync`);
+    assert(await storagesAreSynced(this.aDuo), `+a docs are in sync`);
+    assert(await storagesAreSynced(this.bDuo), `+b docs are in sync`);
     assert(
       await storagesAreSynced(this.cDuo) === false,
-      `+c shares are not in sync`,
+      `+c docs are not in sync`,
     );
 
     assert(
-      await storagesBlobsAreSynced(this.aDuo),
+      await storagesAttachmentsAreSynced(this.aDuo),
       `+a attachments are in sync`,
     );
     assert(
-      await storagesBlobsAreSynced(this.bDuo),
+      await storagesAttachmentsAreSynced(this.bDuo),
       `+b attachments are in sync`,
     );
     assert(
-      await storagesBlobsAreSynced(this.cDuo) === false,
+      await storagesAttachmentsAreSynced(this.cDuo) === false,
       `+c attachments are not in sync`,
     );
   }

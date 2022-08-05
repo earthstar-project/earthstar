@@ -171,7 +171,7 @@ export class DocDriverLocalStorage extends DocDriverMemory {
     const upsertedDoc = await super.upsert(doc);
 
     // After every upsert, for now, we save everything
-    // to localStorage as a single giant JSON blob.
+    // to localStorage as a single giant JSON attachment.
     // TODO: debounce this, only do it every 1 second or something
 
     const docsToBeSerialised: SerializedDriverDocs = {

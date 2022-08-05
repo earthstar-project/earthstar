@@ -8,18 +8,21 @@ import {
   Timestamp,
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
+import { DocEs5, FormatEs5 } from "./format_es5.ts";
 
 export interface FormatterGenerateOpts<
   FormatType extends string,
   DocInput extends DocInputBase<FormatType>,
+  DocType extends DocBase<FormatType>,
 > {
   keypair: AuthorKeypair;
   input: DocInput;
   share: ShareAddress;
   timestamp: Timestamp;
+  prevLatestDoc?: DocType;
 }
 
-/** Formatters are each responsible for one document format such as "es.4". They are used for signing and validating documents, as well as generating new documents from a given input.
+/** Formats are each responsible for one document format such as "es.4". They are used for signing and validating documents, as well as generating new documents from a given input.
  */
 // According to the rules of Earthstar: documents are validated statelessly,
 // one document at a time, without knowing about any other documents
@@ -39,9 +42,9 @@ export interface IFormat<
    * Generate a signed document from the input format the validator expects.
    */
   generateDocument(
-    opts: FormatterGenerateOpts<FormatType, DocInputType>,
+    opts: FormatterGenerateOpts<FormatType, DocInputType, DocType>,
   ): Promise<
-    | { doc: DocType; blob?: ReadableStream<Uint8Array> | Uint8Array }
+    | { doc: DocType; attachment?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
   >;
 
@@ -78,7 +81,7 @@ export interface IFormat<
   checkDocumentIsValid(doc: DocType, now?: number): true | ValidationError;
 
   /**
-   * Returns information about a doc's attachment, if it has one. If it doesn't, a `ValidationError` will be returned. This does not indicate if that blob is actually present locally.
+   * Returns information about a doc's attachment, if it has one. If it doesn't, a `ValidationError` will be returned. This does not indicate if that attachment is actually present locally.
    */
   getAttachmentInfo(doc: DocType): {
     size: number;
@@ -86,30 +89,41 @@ export interface IFormat<
   } | ValidationError;
 
   /**
-   * Some information can only be known once an attachment (especially if it comes in the form of a stream) has been consumed. For this reason, a Formatter's `generateDocument` method may not be able to generate a valid document for a blob, even if it already knows it has one.
+   * Some information can only be known once an attachment (especially if it comes in the form of a stream) has been consumed. For this reason, a Formatter's `generateDocument` method may not be able to generate a valid document for a attachment, even if it already knows it has one.
    */
   updateAttachmentFields(
     doc: DocType,
     size: number,
     hash: string,
   ): DocType | ValidationError;
-
-  // TODO: add these methods for building addresses
-  // and remove them from crypto.ts and encoding.ts
-  // assembleWorkspaceAddress = (name : WorkspaceName, encodedPubkey : EncodedKey) : WorkspaceAddress
-  // assembleAuthorAddress = (shortname : AuthorShortname, encodedPubkey : EncodedKey) : AuthorAddress
 }
 
+/** Extracts a IFormat's input type, used to generate a new document. */
 export type FormatInputType<FormatterType> = FormatterType extends
   IFormat<infer _FormatType, infer DocInputType, infer _DocType> ? DocInputType
   : never;
 
+/** Extracts a IFormat's document type, e.g. `DocEs5` */
 export type FormatDocType<FormatterType> = FormatterType extends
   IFormat<infer _FormatType, infer _DocInputType, infer DocType> ? DocType
   : FormatterType extends
     IFormat<infer _FormatType, infer _DocInputType, infer DocType>[] ? DocType
   : never;
 
+/** Extracts a IFormat's name, e.g. `es.5` */
 export type FormatNameType<FormatterType> = FormatterType extends
   IFormat<infer FormatType, infer _DocType, infer _DocInputType> ? FormatType
   : never;
+
+/** Verifies a given type is an array of `IFormat` */
+export type FormatsArg<Init> = Init extends
+  Array<IFormat<infer _N, infer _I, infer _O>> ? Init : never;
+
+/** Verifies a given type is of type `IFormat` */
+export type FormatArg<Init> = Init extends IFormat<infer _N, infer _I, infer _O>
+  ? Init
+  : never;
+
+export type DefaultFormat = typeof FormatEs5;
+export type DefaultFormats = [DefaultFormat];
+export type DefaultDoc = DocEs5;

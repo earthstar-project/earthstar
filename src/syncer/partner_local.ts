@@ -1,4 +1,4 @@
-import { FormatsArg } from "../formats/default.ts";
+import { FormatsArg } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { isErr } from "../util/errors.ts";
@@ -11,6 +11,9 @@ import {
   SyncerMode,
 } from "./syncer_types.ts";
 
+/** A syncing partner to be used with local instances of `IPeer`.
+ * Works everywhere.
+ */
 export class PartnerLocal<
   FormatsType,
   IncomingTransferSourceType extends undefined,
@@ -25,6 +28,10 @@ export class PartnerLocal<
   // Need this for testing.
   partnerSyncer: Syncer<IncomingTransferSourceType, FormatsType>;
 
+  /**
+   * @param peer - The target peer to sync with.
+   * @param peerSelf - Our own peer.
+   */
   constructor(
     peer: IPeer,
     peerSelf: IPeer,
@@ -89,20 +96,21 @@ export class PartnerLocal<
             );
           }
 
-          const blob = await partnerReplica.replicaDriver.blobDriver.getBlob(
-            opts.doc.format,
-            opts.attachmentHash,
-          );
+          const attachment = await partnerReplica.replicaDriver.attachmentDriver
+            .getAttachment(
+              opts.doc.format,
+              opts.attachmentHash,
+            );
 
-          if (!blob) {
+          if (!attachment) {
             return undefined;
           }
 
-          if (isErr(blob)) {
+          if (isErr(attachment)) {
             return;
           }
 
-          return blob.stream;
+          return await attachment.stream();
         },
         handleUploadRequest(
           _opts: GetTransferOpts,
@@ -138,20 +146,21 @@ export class PartnerLocal<
       );
     }
 
-    const blob = await partnerReplica.replicaDriver.blobDriver.getBlob(
-      opts.doc.format,
-      opts.attachmentHash,
-    );
+    const attachment = await partnerReplica.replicaDriver.attachmentDriver
+      .getAttachment(
+        opts.doc.format,
+        opts.attachmentHash,
+      );
 
-    if (!blob) {
+    if (!attachment) {
       return undefined;
     }
 
-    if (isErr(blob)) {
+    if (isErr(attachment)) {
       return;
     }
 
-    return blob.stream;
+    return await attachment.stream();
   }
 
   handleUploadRequest(

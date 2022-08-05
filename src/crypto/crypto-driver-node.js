@@ -59,7 +59,7 @@ function _lengthenDerSecret(b) {
 }
 
 /**
- * A verison of the ILowLevelCrypto interface backed by native Node crypto functions.
+ * A verison of the ICrptoDriver interface backed by native Node crypto functions.
  * Requires a recent version of Node, perhaps 12+?
  * Does not work in the browser.
  */
@@ -103,7 +103,6 @@ export const CryptoDriverNode = class {
   }
   static async verify(publicKey, sig, msg) {
     logger.debug("verif");
-    // TODO: convert uint8arrays to Buffers?
     if (typeof msg === "string") msg = stringToBuffer(msg);
     try {
       return crypto.verify(
@@ -116,8 +115,7 @@ export const CryptoDriverNode = class {
         },
         sig,
       );
-    } catch (e) {
-      /* istanbul ignore next */
+    } catch {
       return false;
     }
   }

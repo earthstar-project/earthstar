@@ -1,13 +1,17 @@
 import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { FormatsArg } from "../../formats/default.ts";
+import { FormatsArg } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
-import { BlobDriverMemory } from "../../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
-import { IReplicaBlobDriver } from "../../replica/replica-types.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { DocDriverScenario, PartnerScenario, Scenario } from "./types.ts";
+import {
+  AttachmentDriverScenario,
+  DocDriverScenario,
+  PartnerScenario,
+  Scenario,
+} from "./types.ts";
 
 export const universalCryptoDrivers: Scenario<ICryptoDriver>[] = [{
   name: "Noble",
@@ -25,13 +29,14 @@ export const universalReplicaDocDrivers: Scenario<DocDriverScenario>[] = [
   },
 ];
 
-export const universalReplicaBlobDrivers: Scenario<() => IReplicaBlobDriver>[] =
-  [
-    {
-      name: "Memory",
-      item: () => new BlobDriverMemory(),
-    },
-  ];
+export const universalReplicaAttachmentDrivers: Scenario<
+  AttachmentDriverScenario
+>[] = [
+  {
+    name: "Memory",
+    item: { makeDriver: () => new AttachmentDriverMemory(), persistent: false },
+  },
+];
 
 export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
   formats: FormatsArg<F>;

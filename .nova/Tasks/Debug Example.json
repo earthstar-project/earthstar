@@ -10,7 +10,7 @@
       "--unstable",
       "--allow-all"
     ],
-    "scriptPath" : "debug\/syncers.ts",
+    "scriptPath" : "example.ts",
     "stopOnEntry" : true
   },
   "openLogOnRun" : "fail"

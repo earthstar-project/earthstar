@@ -1,15 +1,13 @@
 import {
-  AuthorAddress,
+  DocAttachment,
   DocBase,
-  DocBlob,
   FormatName,
-  Path,
   ShareAddress,
 } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Replica } from "./replica.ts";
-import { FormatsArg } from "../formats/default.ts";
+import { FormatsArg } from "../formats/format_types.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -77,6 +75,19 @@ export interface ExpireEvent<
   doc: DocType;
 }
 
+export interface AttachmentIngestEvent<DocType extends DocBase<string>> {
+  kind: "attachment_ingest";
+  doc: DocType;
+  hash: string;
+  size: number;
+}
+
+export interface AttachmentPruneEvent {
+  kind: "attachment_prune";
+  hash: string;
+  format: string;
+}
+
 /**
  * - IngestEventSuccess — a new doc was written
  * - IngestEventFailure — refused an invalid doc
@@ -93,6 +104,8 @@ export type IngestEvent<
  * - DocAlreadyExists — processing an old doc as you catch up
  * - IngestEvent — the result of a replica ingesting a document
  * - ExpireEvent - An ephemeral document has expired
+ * - AttachmentIngestEvent - A new attachment has been ingested
+ * - AttachmentPruneEvent - An attachment without a corresponding document has been pruned.
  * - ReplicaEventWillClose — the replica is about to close
  * - ReplicaEventDidClose — the replica has closed
  */
@@ -101,6 +114,8 @@ export type ReplicaEvent<
 > =
   | IngestEvent<DocType>
   | ExpireEvent<DocType>
+  | AttachmentIngestEvent<DocType>
+  | AttachmentPruneEvent
   | ReplicaEventWillClose
   | ReplicaEventDidClose;
 
@@ -154,7 +169,7 @@ export interface IReplicaConfig {
 }
 
 /**
- * A replica driver provides low-level access to actual replica and is used by IReplica to actually load and save data. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ * A document driver provides low-level access to a replica's documents. ReplicaDocDrivers are not meant to be used directly by users; let the Replica talk to it for you.
  */
 export interface IReplicaDocDriver extends IReplicaConfig {
   share: ShareAddress;
@@ -215,36 +230,55 @@ export interface ReplicaOpts {
   driver: IReplicaDriver;
 }
 
-export interface IReplicaBlobDriver {
-  getBlob(
+/**
+ * An attachment driver provides low-level access to a replica's attachments. ReplicaAttachmentDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ */
+export interface IReplicaAttachmentDriver {
+  /** Returns an attachment for a given format and hash.*/
+  getAttachment(
     formatName: string,
     attachmentHash: string,
-  ): Promise<DocBlob | undefined>;
+  ): Promise<DocAttachment | undefined>;
 
-  /** Upserts the blob to a staging area, and returns an object used to assess whether it is what we're expecting */
+  /** Upserts the attachment to a staging area, and returns an object used to assess whether it is what we're expecting. */
   stage(
     formatName: string,
-    blob: Uint8Array | ReadableStream<Uint8Array>,
+    attachment: Uint8Array | ReadableStream<Uint8Array>,
   ): Promise<
     {
       hash: string;
       size: number;
+      /** Commit the staged attachment to storage. */
       commit: () => Promise<void>;
+      /** Reject the staged attachment, erasing it. */
       reject: () => Promise<void>;
     } | ValidationError
   >;
 
+  /** Erases an attachment for a given format and hash.*/
   erase(
     formatName: string,
     attachmentHash: string,
   ): Promise<true | ValidationError>;
 
+  /** Erase all stored attachments */
   wipe(): Promise<void>;
 
+  /** Delete all stored attachments not included in the provided list of hashes and their formats.
+   * @returns An array of all erased hashes and their formats.
+   */
+  filter(
+    attachments: Record<string, Set<string>>,
+  ): Promise<{ format: string; hash: string }[]>;
+
+  /** Reject all attachments waiting in staging. */
   clearStaging(): Promise<void>;
 }
 
+/**
+ * A replica driver provides low-level access to a replica's documents and attachments. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ */
 export interface IReplicaDriver {
   docDriver: IReplicaDocDriver;
-  blobDriver: IReplicaBlobDriver;
+  attachmentDriver: IReplicaAttachmentDriver;
 }

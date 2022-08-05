@@ -1,12 +1,16 @@
 import { assert } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair, DocBase, DocWithBlob } from "../util/doc-types.ts";
+import {
+  AuthorKeypair,
+  DocBase,
+  DocWithAttachment,
+} from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 import { equal } from "../../deps.ts";
 import { FormatEs4 } from "../formats/format_es4.ts";
 import { DocEs5, FormatEs5 } from "../formats/format_es5.ts";
-import { BlobDriverMemory } from "../replica/blob_drivers/memory.ts";
+import { AttachmentDriverMemory } from "../replica/attachment_drivers/memory.ts";
 import { isErr } from "../util/errors.ts";
 
 import { equals } from "https://deno.land/std@0.138.0/bytes/mod.ts";
@@ -40,7 +44,7 @@ export function makeReplica(addr: string) {
   return new Replica({
     driver: {
       docDriver: new DocDriverMemory(addr),
-      blobDriver: new BlobDriverMemory(),
+      attachmentDriver: new AttachmentDriverMemory(),
     },
   });
 }
@@ -98,9 +102,9 @@ export function docsAreEquivalent(
   return equal(aStripped, bStripped);
 }
 
-export async function docBlobsAreEquivalent(
-  docsA: DocWithBlob<DocEs5>[],
-  docsB: DocWithBlob<DocEs5>[],
+export async function docAttachmentsAreEquivalent(
+  docsA: DocWithAttachment<DocEs5>[],
+  docsB: DocWithAttachment<DocEs5>[],
 ): Promise<boolean> {
   if (docsA.length !== docsB.length) {
     return false;
@@ -113,33 +117,36 @@ export async function docBlobsAreEquivalent(
     sortByPathThenAuthor,
   );
 
-  // Zip them and compare the blobs of each.
+  // Zip them and compare the attachments of each.
 
   const zipped = aSorted.map((doc, i) => [doc, bSorted[i]]);
 
   for (const [a, b] of zipped) {
-    if (a.blob && b.blob && !isErr(a.blob) && !isErr(b.blob)) {
-      const aBytes = await a.blob.bytes();
-      const bBytes = await b.blob.bytes();
+    if (
+      a.attachment && b.attachment && !isErr(a.attachment) &&
+      !isErr(b.attachment)
+    ) {
+      const aBytes = await a.attachment.bytes();
+      const bBytes = await b.attachment.bytes();
 
       if (equals(aBytes, bBytes) === false) {
         return false;
       }
     }
 
-    if (a.blob === undefined && b.blob !== undefined) {
+    if (a.attachment === undefined && b.attachment !== undefined) {
       return false;
     }
 
-    if (b.blob === undefined && a.blob !== undefined) {
+    if (b.attachment === undefined && a.attachment !== undefined) {
       return false;
     }
 
-    if (isErr(a.blob) && !isErr(b.blob)) {
+    if (isErr(a.attachment) && !isErr(b.attachment)) {
       return false;
     }
 
-    if (isErr(b.blob) && !isErr(a.blob)) {
+    if (isErr(b.attachment) && !isErr(a.attachment)) {
       return false;
     }
   }
@@ -164,7 +171,7 @@ export function writeRandomDocs(
     return storage.set(keypair, {
       text: `${rand}`,
       path: `/${fstRand}/${rand}.txt`,
-      blob: bytes,
+      attachment: bytes,
     });
   });
 
@@ -219,18 +226,18 @@ export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
   return allDocsSynced;
 }
 
-export async function storagesBlobsAreSynced(
+export async function storagesAttachmentsAreSynced(
   storages: Replica[],
 ): Promise<boolean> {
-  const allDocsSets: DocWithBlob<DocEs5>[][] = [];
+  const allDocsSets: DocWithAttachment<DocEs5>[][] = [];
 
   // Create an array where each element is a collection of all the docs from a storage.
   for await (const storage of storages) {
     const allDocs = await storage.getAllDocs();
 
-    const docsWithBlobs = await storage.attachBlobs(allDocs);
+    const docsWithAttachments = await storage.addAttachments(allDocs);
 
-    allDocsSets.push(docsWithBlobs);
+    allDocsSets.push(docsWithAttachments);
   }
 
   for (let i = 0; i < allDocsSets.length; i++) {
@@ -243,7 +250,7 @@ export async function storagesBlobsAreSynced(
     const prevDocs = allDocsSets[i - 1];
 
     // See if they're equivalent with the current set.
-    const allSynced = await docBlobsAreEquivalent(docs, prevDocs);
+    const allSynced = await docAttachmentsAreEquivalent(docs, prevDocs);
 
     if (allSynced === false) {
       return false;

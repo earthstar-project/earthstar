@@ -1,12 +1,15 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { ValidationError } from "../util/errors.ts";
-import { sleep } from "../util/misc.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebServerOpts = {
+  /** A websocket created from the initial sync request. */
   socket: WebSocket;
 };
 
+/** A syncing partner created from an inbound HTTP connection.
+ * Works everywhere, but is really meant for Deno and Node.
+ */
 export class PartnerWebServer<
   IncomingTransferSourceType extends WebSocket,
 > implements ISyncPartner<IncomingTransferSourceType> {
@@ -84,6 +87,11 @@ export class PartnerWebServer<
     const socketIsOpen = deferred();
 
     socket.binaryType = "arraybuffer";
+
+    // Just in case the socket is already open...
+    if (socket.readyState === socket.OPEN) {
+      socketIsOpen.resolve();
+    }
 
     socket.onopen = () => {
       socketIsOpen.resolve();

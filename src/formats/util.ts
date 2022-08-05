@@ -1,32 +1,29 @@
-import { DocEs5, FormatEs5 } from "./format_es5.ts";
-import { IFormat } from "./format_types.ts";
-
-export type DefaultFormatType = typeof FormatEs5;
-export type DefaultFormats = [DefaultFormatType];
-export type DefaultDoc = DocEs5;
+import { FormatEs5 } from "./format_es5.ts";
+import {
+  DefaultFormat,
+  DefaultFormats,
+  FormatArg,
+  FormatsArg,
+} from "./format_types.ts";
 
 export const DEFAULT_FORMAT = FormatEs5;
 export const DEFAULT_FORMATS = [DEFAULT_FORMAT];
 
-export type FormatsArg<Init> = Init extends
-  Array<IFormat<infer _N, infer _I, infer _O>> ? Init : never;
-
-export type FormatArg<Init> = Init extends IFormat<infer _N, infer _I, infer _O>
-  ? Init
-  : never;
-
-export function getFormatWithFallback<F = DefaultFormatType>(
+/** Returns the default format if no formats are given. */
+export function getFormatWithFallback<F = DefaultFormat>(
   format?: FormatArg<F>,
 ): FormatArg<F> {
   return format || DEFAULT_FORMAT as unknown as FormatArg<F>;
 }
 
+/** Returns the default formats if no formats are given. */
 export function getFormatsWithFallback<F = DefaultFormats>(
   formats?: FormatsArg<F>,
 ): FormatsArg<F> {
   return formats || DEFAULT_FORMATS as unknown as FormatsArg<F>;
 }
 
+/** Given an array of format names, and an array of `IFormat`, returns an array of `IFormat` restricted to those with matching names. */
 export function getFormatIntersection<F>(
   formatNames: string[],
   formats: FormatsArg<F>,
@@ -42,8 +39,7 @@ export function getFormatIntersection<F>(
   return intersection as FormatsArg<F>;
 }
 
-// add lookup up method here
-
+/** Returns an object with format names as keys, and corresponding `IFormat` as values. */
 export function getFormatLookup<F = DefaultFormats>(
   formats?: FormatsArg<F>,
 ): Record<string, FormatArg<F>> {

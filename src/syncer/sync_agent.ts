@@ -7,8 +7,9 @@ import {
   SyncAgentStatus,
 } from "./syncer_types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-import { getFormatLookup } from "../formats/default.ts";
+import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
+import { isErr } from "../util/errors.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -18,7 +19,7 @@ export class SyncAgent<F> {
 
   /** Here we keep track of all the root IDs of versions we've `WANT`ed. Used to prevent offering things to another peer which they already have. */
   private rootIdsRequested: Set<string> = new Set();
-  /** A map of all the `HAVE` ids we've requested and whether we received them or not. */
+  /** A map of all the `HAVE` ids we've `WANT`ed and whether we received them or not. */
   private fulfilledMap: Map<string, boolean> = new Map();
   /** An integer representing the number of requests were fulfilled. Quicker than calculating this every time from the `fulfilledMap`. */
   private fulfilledCount = 0;
@@ -85,7 +86,9 @@ export class SyncAgent<F> {
     return true;
   }
 
-  constructor({ replica, mode, formats }: SyncAgentOpts<F>) {
+  constructor(
+    { replica, mode, formats, onRequestAttachment }: SyncAgentOpts<F>,
+  ) {
     // If the replica closes, we need to abort
     replica.onEvent((event) => {
       if (event.kind === "willClose") {
@@ -102,8 +105,8 @@ export class SyncAgent<F> {
         historyMode: "all",
         orderBy: "localIndex ASC",
       },
-      formats,
       mode === "live" ? "everything" : "existing",
+      formats,
     );
 
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
@@ -310,6 +313,17 @@ export class SyncAgent<F> {
                 );
                 break;
               }
+
+              const attachment = await replica.getAttachment(
+                event.doc as FormatDocType<F>,
+                formatLookup[event.doc.format],
+              );
+
+              if (isErr(attachment) || attachment) {
+                return;
+              }
+
+              onRequestAttachment(event.doc as FormatDocType<F>);
 
               await replica.ingest(format, event.doc as FormatDocType<F>);
 

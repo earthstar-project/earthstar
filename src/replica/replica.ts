@@ -2,9 +2,9 @@ import { Cmp } from "./util-types.ts";
 import {
   AuthorAddress,
   AuthorKeypair,
+  DocAttachment,
   DocBase,
-  DocBlob,
-  DocWithBlob,
+  DocWithAttachment,
   FormatName,
   Path,
   ShareAddress,
@@ -36,17 +36,23 @@ import {
   LockStream,
   OrCh,
 } from "../streams/stream_utils.ts";
-import { FormatDocType, FormatInputType } from "../formats/format_types.ts";
+import {
+  DefaultFormat,
+  DefaultFormats,
+  FormatArg,
+  FormatDocType,
+  FormatInputType,
+  FormatsArg,
+} from "../formats/format_types.ts";
 import {
   DEFAULT_FORMAT,
-  DefaultFormats,
-  DefaultFormatType,
-  FormatArg,
-  FormatsArg,
+  DEFAULT_FORMATS,
+  getFormatLookup,
   getFormatsWithFallback,
-} from "../formats/default.ts";
+} from "../formats/util.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
+import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");
@@ -72,10 +78,10 @@ function docCompareNewestFirst<
 }
 
 /**
- * A replica of a share's data, used to read, write, and synchronise data to.
+ * A replica holding a share's documents and attachments, used to read, write, and synchronise data to.
  * Should be closed using the `close` method when no longer being used.
  * ```
- * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
+ * const myReplica = new Replica(new ReplicaDriverMemory("+gardens.a37ib9"));
  * ```
  */
 export class Replica {
@@ -121,11 +127,9 @@ export class Replica {
       new WritableStream(this.callbackSink),
     );
 
-    this.eraseExpiredDocs();
-
     this.eraseInterval = setInterval(() => {
       if (!this.isClosed()) {
-        this.eraseExpiredDocs();
+        this.pruneExpiredDocsAndAttachments();
       } else {
         clearInterval(this.eraseInterval);
       }
@@ -154,12 +158,17 @@ export class Replica {
       kind: "willClose",
     });
     logger.debug("    marking self as closed...");
+    if (erase === false) {
+      await this.pruneExpiredDocsAndAttachments();
+    }
+
     this._isClosed = true;
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
+
     await this.replicaDriver.docDriver.close(erase);
 
     if (erase) {
-      await this.replicaDriver.blobDriver.wipe();
+      await this.replicaDriver.attachmentDriver.wipe();
     }
 
     logger.debug("    sending didClose nonblockingly...");
@@ -237,9 +246,9 @@ export class Replica {
     }, formats);
   }
   /** Returns the most recently written version of a document at a path. */
-  async getLatestDocAtPath<F = DefaultFormats>(
+  async getLatestDocAtPath<F = DefaultFormat>(
     path: Path,
-    formats?: FormatsArg<F>,
+    format?: FormatArg<F>,
   ): Promise<FormatDocType<F> | undefined> {
     logger.debug(`getLatestDocsAtPath("${path}")`);
 
@@ -247,10 +256,10 @@ export class Replica {
       historyMode: "latest",
       orderBy: "path ASC",
       filter: { path: path },
-    }, formats);
+    }, format ? [format] : undefined);
 
     if (docs.length === 0) return undefined;
-    return docs[0];
+    return docs[0] as FormatDocType<F>;
   }
 
   /** Returns an array of docs for a given query.
@@ -307,12 +316,12 @@ export class Replica {
 
   // The Input type should match the formatter.
   // The default format should be es5
-  async set<F = DefaultFormatType>(
+  async set<F = DefaultFormat>(
     keypair: AuthorKeypair,
     docToSet: Omit<FormatInputType<F>, "format">,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<
-    true | ValidationError
+    FormatDocType<F> | ValidationError
   > {
     loggerSet.debug(`set`, docToSet);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -339,13 +348,24 @@ export class Replica {
       }
     }
 
-    loggerSet.debug("...signing doc");
+    loggerSet.debug("...generating doc");
+
+    let cleanedDoc;
+
+    if (latestDocSamePath) {
+      const res = format.removeExtraFields(latestDocSamePath);
+
+      if (!isErr(res)) {
+        cleanedDoc = res.doc;
+      }
+    }
 
     const result = await format.generateDocument({
       keypair,
       input: { ...docToSet, format: format.id },
       share: this.share,
       timestamp,
+      prevLatestDoc: cleanedDoc,
     });
 
     if (isErr(result)) {
@@ -354,18 +374,21 @@ export class Replica {
 
     loggerSet.debug("...signature =", result.doc.signature);
 
-    if (result.blob) {
-      // stage
-      const stageResult = await this.replicaDriver.blobDriver.stage(
+    // The result has provided a new attachment for us to ingest.
+    // The lack of this does not indicate that no attachment is associated with this doc
+    // (it may refer to the attachment from the previous doc)
+    if (result.attachment) {
+      // Stage the new attachment with the attachment driver.
+      const stageResult = await this.replicaDriver.attachmentDriver.stage(
         format.id,
-        result.blob,
+        result.attachment,
       );
 
       if (isErr(stageResult)) {
         return stageResult;
       }
 
-      // update doc
+      // Update the document's attachment fields using the results derived from staging.
       const updatedDocRes = format.updateAttachmentFields(
         result.doc,
         stageResult.size,
@@ -377,18 +400,20 @@ export class Replica {
         return updatedDocRes;
       }
 
-      // commit.
-      loggerSet.debug("...ingesting blob");
+      // If everything checks out, commit the staged attachment to storage.
+      loggerSet.debug("...ingesting attachment");
       loggerSet.debug("-----------------------");
       await stageResult.commit();
 
-      loggerSet.debug("...done ingesting blob");
+      loggerSet.debug("...done ingesting attachment");
 
       loggerSet.debug("...ingesting");
       loggerSet.debug("-----------------------");
+
+      // And ingest the document.
       const ingestEvent = await this.ingest(
         format,
-        result.doc as FormatDocType<F>,
+        updatedDocRes as FormatDocType<F>,
       );
       loggerSet.debug("...done ingesting");
 
@@ -397,9 +422,10 @@ export class Replica {
       return ingestEvent;
     }
 
+    // We don't need to do anything with attachments, so just ingest the document.
     loggerSet.debug("...ingesting");
     loggerSet.debug("-----------------------");
-    const ingestEvent = await this.ingest(
+    const ingestResult = await this.ingest(
       format,
       result.doc as FormatDocType<F>,
     );
@@ -407,17 +433,17 @@ export class Replica {
 
     loggerSet.debug("...set is done.");
 
-    return ingestEvent;
+    return ingestResult;
   }
 
   /**
    * Ingest an existing signed document to the replica.
    */
-  async ingest<F = DefaultFormatType>(
+  async ingest<F = DefaultFormat>(
     format: FormatArg<F>,
     docToIngest: FormatDocType<F>,
   ): Promise<
-    true | ValidationError
+    FormatDocType<F> | ValidationError
   > {
     loggerIngest.debug(`ingest`, docToIngest);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -442,6 +468,8 @@ export class Replica {
     if (isErr(docIsValid)) {
       return docIsValid;
     }
+
+    const docPromise = deferred<FormatDocType<F>>();
 
     await this.ingestLockStream.run(async () => {
       // get other docs at the same path
@@ -514,6 +542,8 @@ export class Replica {
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
       );
 
+      docPromise.resolve(docAsWritten);
+
       await this.eventWriter.write({
         kind: "success",
         maxLocalIndex,
@@ -524,20 +554,20 @@ export class Replica {
       });
     });
 
-    return true;
+    return docPromise;
   }
 
   /**
    * Overwrite every document from this author, including history versions, with an empty doc.
     @returns The number of documents changed, or -1 if there was an error.
    */
-  async overwriteAllDocsByAuthor<F = DefaultFormatType>(
+  async overwriteAllDocsByAuthor<F = DefaultFormats>(
     keypair: AuthorKeypair,
     formats?: FormatsArg<F>,
   ): Promise<number | ValidationError> {
     logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
-    // TODO: do this in batches
+    // TODO: stream the docs out, overwrite them.
     const docsToOverwrite = await this.queryDocs({
       filter: { author: keypair.address },
       historyMode: "all",
@@ -563,17 +593,10 @@ export class Replica {
         continue;
       }
 
-      const wipedDoc = await format.wipeDocument(keypair, doc);
+      const didWipe = await this.wipeDocument(keypair, doc, format);
 
-      if (isErr(wipedDoc)) return wipedDoc;
-
-      const didIngest = await this.ingest(
-        format,
-        wipedDoc as FormatDocType<F>,
-      );
-
-      if (isErr(didIngest)) {
-        return didIngest;
+      if (isErr(didWipe)) {
+        return didWipe;
       } else {
         // success
         numOverwritten += 1;
@@ -585,13 +608,126 @@ export class Replica {
     return numOverwritten;
   }
 
-  private async eraseExpiredDocs() {
+  /** Wipe all content from a document at a given path, and erase its attachment (if it has one). */
+  async wipeDocAtPath<F = DefaultFormat>(
+    keypair: AuthorKeypair,
+    path: string,
+    format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
+  ): Promise<FormatDocType<F> | ValidationError> {
+    const latestDocAtPath = await this.getLatestDocAtPath(path, format);
+
+    if (!latestDocAtPath) {
+      return new ValidationError("No document exists at that path");
+    }
+
+    return this.wipeDocument(
+      keypair,
+      latestDocAtPath as FormatDocType<F>,
+      format,
+    );
+  }
+
+  private async wipeDocument<F>(
+    keypair: AuthorKeypair,
+    doc: FormatDocType<F>,
+    format: FormatArg<F>,
+  ) {
+    // Check if this document has an attachment by tring to get attachment info.
+    const attachmentInfo = format.getAttachmentInfo(doc);
+
+    if (!isErr(attachmentInfo)) {
+      // Wipe the attachment.
+      // Ignore error indicating no attachment was found.
+      const eraseRes = await this.replicaDriver.attachmentDriver.erase(
+        format.id,
+        attachmentInfo.hash,
+      );
+
+      if (!isErr(eraseRes)) {
+        await this.eventWriter.write({
+          kind: "attachment_prune",
+          format: format.id,
+          hash: attachmentInfo.hash,
+        });
+      }
+    }
+
+    const docToWipe: FormatDocType<F> = {
+      ...doc,
+      timestamp: doc.timestamp + 1,
+      author: keypair.address,
+    };
+
+    const wipedDoc = await format.wipeDocument(keypair, docToWipe);
+
+    if (isErr(wipedDoc)) return wipedDoc;
+
+    const didIngest = await this.ingest(
+      format,
+      wipedDoc as FormatDocType<F>,
+    );
+
+    return didIngest;
+  }
+
+  /** Erases expired docs and dangling attachments */
+  private async pruneExpiredDocsAndAttachments<F>(
+    // Because es5 is the only format with attachments, that's all we'll handle for now.
+    formats: FormatsArg<F> = DEFAULT_FORMATS as unknown as FormatsArg<F>,
+  ) {
+    // Erase expired docs
     const erasedDocs = await this.replicaDriver.docDriver.eraseExpiredDocs();
 
     for (const doc of erasedDocs) {
       await this.eventWriter.write({
         kind: "expire",
         doc,
+      });
+    }
+
+    // Erase dangling docs
+    const formatLookup = getFormatLookup(formats);
+
+    const allowedHashes: Record<string, Set<string>> = {};
+
+    await this.getQueryStream(
+      {
+        historyMode: "all",
+        orderBy: "localIndex ASC",
+      },
+      "existing",
+      formats,
+    ).pipeTo(
+      new WritableStream({
+        write(event) {
+          if (event.kind === "existing") {
+            const format = formatLookup[event.doc.format];
+
+            const attachmentInfo = format.getAttachmentInfo(event.doc);
+
+            if (!isErr(attachmentInfo)) {
+              const maybeExistingSet = allowedHashes[format.id];
+
+              if (maybeExistingSet) {
+                maybeExistingSet.add(attachmentInfo.hash);
+              } else {
+                allowedHashes[format.id] = new Set([attachmentInfo.hash]);
+              }
+            }
+          }
+        },
+      }),
+    );
+
+    const erasedAttachments = await this.replicaDriver.attachmentDriver.filter(
+      allowedHashes,
+    );
+
+    for (const attachment of erasedAttachments) {
+      await this.eventWriter.write({
+        kind: "attachment_prune",
+        format: attachment.format,
+        hash: attachment.hash,
       });
     }
   }
@@ -606,10 +742,13 @@ export class Replica {
     return this.eventMultiStream.getReadableStream(channel);
   }
 
+  /**
+   * Returns a readable stream of document events which match a given query. The events can represent existing documents, newly ingested documents, or expiring documents.
+   */
   getQueryStream<F = DefaultFormats>(
     query: Omit<Query<[string]>, "formats"> = {},
-    formats?: FormatsArg<F>,
     mode?: QuerySourceMode,
+    formats?: FormatsArg<F>,
   ): ReadableStream<QuerySourceEvent<FormatDocType<F>>> {
     const queryDocs = this.queryDocs.bind(this);
     const getEventStream = this.getEventStream.bind(this);
@@ -678,12 +817,15 @@ export class Replica {
   //--------------------------------------------------
   // BLOBS
 
-  async ingestBlob<F = DefaultFormatType>(
+  /**
+   * @returns `true` (indicating it was upsert), `false` (indicating this attachment is already in storage), or a `ValidationError` (indicating something went wrong.)
+   */
+  async ingestAttachment<F = DefaultFormat>(
     format: FormatArg<F>,
     doc: FormatDocType<F>,
-    blob: Uint8Array | ReadableStream<Uint8Array>,
+    attachment: Uint8Array | ReadableStream<Uint8Array>,
   ): Promise<
-    true | ValidationError
+    true | false | ValidationError
   > {
     if (this._isClosed) throw new ReplicaIsClosedError();
 
@@ -702,6 +844,13 @@ export class Replica {
       return Promise.resolve(docIsValid);
     }
 
+    // Check we don't already have this attachment
+    const existingAttachment = await this.getAttachment(doc, format);
+
+    if (existingAttachment && !isErr(existingAttachment)) {
+      return false;
+    }
+
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (isErr(attachmentInfo)) {
@@ -709,16 +858,17 @@ export class Replica {
       return Promise.resolve(attachmentInfo);
     }
 
-    const stageRes = await this.replicaDriver.blobDriver
+    const stageRes = await this.replicaDriver.attachmentDriver
       .stage(
         doc.format,
-        blob,
+        attachment,
       );
 
     if (isErr(stageRes)) {
       return stageRes;
     }
 
+    // Compare the staged attachment's hash and size to what the doc claims it should be.
     if (stageRes.hash !== attachmentInfo.hash) {
       await stageRes.reject();
       return new ValidationError(
@@ -733,20 +883,29 @@ export class Replica {
       );
     }
 
+    // If it all checks out, commit.
     await stageRes.commit();
+
+    await this.eventWriter.write({
+      kind: "attachment_ingest",
+      doc,
+      hash: stageRes.hash,
+      size: stageRes.size,
+    });
 
     return true;
   }
 
-  getBlob<F = DefaultFormatType>(
+  /** Gets an attachment for a given document. Returns a `ValidationError` if the given document can't have an attachment.
+   */
+  getAttachment<F = DefaultFormat>(
     doc: FormatDocType<F>,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
-  ): Promise<DocBlob | undefined | ValidationError> {
-    // Really cannot be arsed to deal with TS not understanding this right now.
+  ): Promise<DocAttachment | undefined | ValidationError> {
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (!isErr(attachmentInfo)) {
-      return this.replicaDriver.blobDriver.getBlob(
+      return this.replicaDriver.attachmentDriver.getAttachment(
         doc.format,
         attachmentInfo.hash,
       );
@@ -755,12 +914,17 @@ export class Replica {
     }
   }
 
-  attachBlobs<F = DefaultFormats>(
+  /** Returns the given array of documents with a new `attachment` property merged in. The value of this property can be:
+   * - `DocAttachment`
+   * - `undefined` (the associated document can have an attachment, but we don't have a copy)
+   * - `ValidationError` (the associated document can't have an attachment)
+   */
+  addAttachments<F = DefaultFormats>(
     docs: FormatDocType<F>[],
     formats?: FormatsArg<F>,
   ): Promise<
     Awaited<
-      DocWithBlob<FormatDocType<F>>
+      DocWithAttachment<FormatDocType<F>>
     >[]
   > {
     const f = getFormatsWithFallback(formats);
@@ -773,23 +937,28 @@ export class Replica {
 
     const promises = docs.map((doc) => {
       return new Promise<
-        FormatDocType<F> & { blob: ValidationError | DocBlob | undefined }
+        FormatDocType<F> & {
+          attachment: ValidationError | DocAttachment | undefined;
+        }
       >((resolve) => {
         const format = formatLookup[doc.format];
 
         const attachmentInfo = format.getAttachmentInfo(doc);
 
         if (!isErr(attachmentInfo)) {
-          this.replicaDriver.blobDriver.getBlob(doc.format, attachmentInfo.hash)
+          this.replicaDriver.attachmentDriver.getAttachment(
+            doc.format,
+            attachmentInfo.hash,
+          )
             .then(
-              (blob) => {
-                resolve({ ...doc, blob });
+              (attachment) => {
+                resolve({ ...doc, attachment });
               },
             );
         } else {
           return resolve({
             ...doc,
-            blob: attachmentInfo,
+            attachment: attachmentInfo,
           });
         }
       });
