@@ -4,7 +4,6 @@ import { FormatsArg } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
-import { IReplicaAttachmentDriver } from "../../replica/replica-types.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import {

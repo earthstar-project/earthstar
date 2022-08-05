@@ -17,10 +17,10 @@ const scenarios: MultiplyScenarioOutput<{
   "replicaDriverB": ScenarioItem<typeof docDriverScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriverA",
-  scenarios: docDriverScenarios.splice(0, 1),
+  scenarios: docDriverScenarios,
 }, {
   description: "replicaDriverB",
-  scenarios: docDriverScenarios.splice(0, 1),
+  scenarios: docDriverScenarios,
 });
 
 const SHARE_ADDR = "+test.a123";
@@ -394,9 +394,6 @@ for (const scenario of scenarios) {
       assert(sourceEvents[4].kind === "HAVE");
 
       // They both send a DOC to each other
-
-      console.log(sourceEvents);
-      console.log(targetEvents);
 
       assert(sourceEvents[5].kind === "DOC");
       assert(sourceEvents[5].id === Object.keys(sourceEvents[2].versions)[0]);

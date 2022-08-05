@@ -24,7 +24,6 @@ import { WebSocketServer } from "ws";
 import { FormatsArg } from "../../formats/format_types.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
 import { match } from "https://esm.sh/path-to-regexp@6.2.1";
-import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -43,7 +42,7 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
       builtInConfigKeys: ["schemaVersion", "share"],
       makeDriver: (addr, variant?: string) =>
         new DocDriverSqlite({
-          filename: `${addr}.${variant ? `${variant}.` : ""}bench.sqlite`,
+          filename: `${addr}.${variant ? `${variant}.` : ""}node.sqlite`,
           mode: "create-or-open",
           share: addr,
         }),
