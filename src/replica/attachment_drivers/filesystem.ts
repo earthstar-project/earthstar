@@ -7,7 +7,7 @@ import {
   join,
   relative,
 } from "https://deno.land/std@0.132.0/path/mod.ts";
-import { move } from "https://deno.land/std@0.149.0/fs/mod.ts";
+import { move } from "https://deno.land/std@0.149.0/fs/move.ts";
 import { randomId } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";

@@ -349,8 +349,14 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     }
 
     // make sure sqlite is using utf-8
-    this._db.pragma(SET_ENCODING_QUERY);
-    const encoding = this._db.pragma(GET_ENCODING_QUERY);
+    const encoding = this._db.pragma("encoding", { simple: true });
+
+    if (encoding !== "UTF-8") {
+      throw new Error(
+        `sqlite encoding is stubbornly set to ${encoding} instead of UTF-8`,
+      );
+    }
+
     this._db.prepare(CREATE_CONFIG_TABLE_QUERY).run();
 
     // check and set schemaVersion
@@ -373,7 +379,17 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     }
 
     this._db.prepare(CREATE_DOCS_TABLE_QUERY).run();
-    this._db.prepare(CREATE_INDEXES_QUERY).run();
+
+    const indexStatements = CREATE_INDEXES_QUERY.split("\n");
+
+    // bettersqlite3 needs a single statement per call to .prepare
+    for (const statement of indexStatements) {
+      const trimmed = statement.trim();
+
+      if (trimmed.length > 0) {
+        this._db.prepare(statement).run();
+      }
+    }
 
     for (const doc of docsToMigrate) {
       this.upsertSync(doc);

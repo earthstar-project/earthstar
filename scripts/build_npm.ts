@@ -11,7 +11,7 @@ await build({
   testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
   outDir: "./npm",
   compilerOptions: {
-    //lib: ["dom", "es2021"],
+    lib: ["dom", "es2021"],
   },
   shims: {
     deno: true,
@@ -20,6 +20,7 @@ await build({
     timers: true,
     weakRef: true,
     crypto: true,
+    blob: true,
     custom: [
       {
         module: "node:stream/web",
