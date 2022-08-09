@@ -319,11 +319,11 @@ export class SyncAgent<F> {
                 formatLookup[event.doc.format],
               );
 
-              if (isErr(attachment) || attachment) {
-                return;
+              if (attachment === undefined) {
+                onRequestAttachment(event.doc as FormatDocType<F>);
               }
 
-              onRequestAttachment(event.doc as FormatDocType<F>);
+              // if attachment is undefined, request.
 
               await replica.ingest(format, event.doc as FormatDocType<F>);
 
