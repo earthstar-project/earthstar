@@ -365,37 +365,47 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
       ATTACHMENT_INDEX_STORE,
     ], "readwrite");
 
-    const cursorReq = transaction.objectStore(ATTACHMENT_INDEX_STORE)
-      .openCursor();
+    // TODO: There is something going wrong with the batching in tests, but I think it's to do with the shim we're using.
+    // In a browser I'm confident this should work correctly — if not, the culprit is here!
+    const BATCH_SIZE = 50;
 
     const deleted: { format: string; hash: string }[] = [];
-    const deletionOps: Promise<true | ValidationError>[] = [];
-    const cursorDeferred = deferred<void>();
+    const deletionOps: (() => Promise<true | ValidationError>)[] = [];
+    const wipeDeferred = deferred<void>();
 
-    cursorReq.onsuccess = () => {
-      const res = cursorReq.result;
+    const wipeBatch = (range: IDBKeyRange | null = null) => {
+      const getAllReq = transaction.objectStore(ATTACHMENT_INDEX_STORE)
+        .getAll(range, BATCH_SIZE);
 
-      if (!res) {
-        cursorDeferred.resolve();
+      getAllReq.onsuccess = () => {
+        const results = getAllReq.result;
 
-        return;
-      }
+        for (const result of results) {
+          const [format, hash] = (result.id as string).split("___");
 
-      const [format, hash] = (res.value.id as string).split("___");
+          if (attachments[format] && !attachments[format].has(hash)) {
+            deleted.push({ format, hash });
+            deletionOps.push(() => this.erase(format, hash));
+          }
+        }
 
-      if (attachments[format] && !attachments[format].has(hash)) {
-        deleted.push({ format, hash });
+        if (results.length === BATCH_SIZE) {
+          const lastItem = results[results.length - 1];
 
-        deletionOps.push(this.erase(format, hash));
+          const nextKeyRange = IDBKeyRange.lowerBound(lastItem.id, true);
 
-        res.continue();
-      } else {
-        res.continue();
-      }
+          wipeBatch(nextKeyRange);
+        } else {
+          wipeDeferred.resolve();
+        }
+      };
     };
 
-    await cursorDeferred;
-    await Promise.all(deletionOps);
+    wipeBatch();
+
+    await wipeDeferred;
+
+    await Promise.all(deletionOps.map((op) => op()));
 
     return deleted;
   }
