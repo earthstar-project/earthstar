@@ -6,7 +6,7 @@ import { attachmentDriverScenarios } from "../scenarios/scenarios.ts";
 import { AttachmentDriverScenario, Scenario } from "../scenarios/types.ts";
 
 function runAttachmentDriverTests(
-  scenario: Scenario<AttachmentDriverScenario>,
+  scenario: Scenario<AttachmentDriverScenario>
 ) {
   Deno.test(`Attachment driver (${scenario.name})`, async (test) => {
     const driver = scenario.item.makeDriver("+fake.a123");
@@ -26,7 +26,7 @@ function runAttachmentDriverTests(
 
       const hopefullyAttachment = await driver.getAttachment(
         fakeFormat,
-        res.hash,
+        res.hash
       );
 
       assert(hopefullyAttachment);
@@ -34,14 +34,14 @@ function runAttachmentDriverTests(
       assertEquals(
         "Hello!",
         new TextDecoder().decode(await hopefullyAttachment.bytes()),
-        "attachment bytes match",
+        "attachment bytes match"
       );
       assertEquals(
         "Hello!",
         new TextDecoder().decode(
-          await streamToBytes(await hopefullyAttachment.stream()),
+          await streamToBytes(await hopefullyAttachment.stream())
         ),
-        "attachment stream matches",
+        "attachment stream matches"
       );
     });
 
@@ -61,7 +61,7 @@ function runAttachmentDriverTests(
 
       const hopefullyUndefined = await driver.getAttachment(
         fakeFormat,
-        res.hash,
+        res.hash
       );
 
       assertEquals(hopefullyUndefined, undefined);
@@ -86,20 +86,20 @@ function runAttachmentDriverTests(
 
       const hopefullyAttachment = await driver.getAttachment(
         fakeFormat,
-        res.hash,
+        res.hash
       );
 
       assert(hopefullyAttachment);
 
       assertEquals(
         "Hello!",
-        new TextDecoder().decode(await hopefullyAttachment.bytes()),
+        new TextDecoder().decode(await hopefullyAttachment.bytes())
       );
       assertEquals(
         "Hello!",
         new TextDecoder().decode(
-          await streamToBytes(await hopefullyAttachment.stream()),
-        ),
+          await streamToBytes(await hopefullyAttachment.stream())
+        )
       );
     });
 
@@ -122,7 +122,7 @@ function runAttachmentDriverTests(
 
       const hopefullyUndefined = await driver.getAttachment(
         fakeFormat,
-        res.hash,
+        res.hash
       );
 
       assertEquals(hopefullyUndefined, undefined);
@@ -143,13 +143,13 @@ function runAttachmentDriverTests(
 
       const hopefullyUndefined = await driver.getAttachment(
         fakeFormat,
-        res.hash,
+        res.hash
       );
 
       assertEquals(
         hopefullyUndefined,
         undefined,
-        "Getting erased attachment returns undefined",
+        "Getting erased attachment returns undefined"
       );
     });
 
@@ -185,7 +185,7 @@ function runAttachmentDriverTests(
       assertEquals(
         hopefullyUndefineds,
         [undefined, undefined, undefined],
-        "Getting erased attachments returns undefined",
+        "Getting erased attachments returns undefined"
       );
     });
 

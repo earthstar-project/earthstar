@@ -63,6 +63,16 @@ await build({
       name: "path-to-regexp",
       version: "6.2.1",
     },
+    "https://deno.land/std@0.123.0/node/fs/promises.ts": {
+      name: "node:fs/promises",
+    },
+    "https://deno.land/std@0.123.0/node/path.ts": {
+      name: "node:path",
+    },
+    "https://esm.sh/@nodelib/fs.walk": {
+      name: "@nodelib/fs.walk",
+      version: "1.2.8",
+    },
     /* TODO: Bring back with IndexedDB
     "./src/replica/indexeddb-types.deno.d.ts":
       "./src/replica/indexeddb-types.node.d.ts",
@@ -74,16 +84,16 @@ await build({
     // package.json properties
     name: "earthstar",
     version: Deno.args[0],
-    "engines": {
-      "node": ">=14.19.1",
+    engines: {
+      node: ">=14.19.1",
     },
     description:
       "Earthstar is a specification and Javascript library for building online tools you can truly call your own.",
     license: "LGPL-3.0-only",
     homepage: "https://earthstar-project.org",
-    "funding": {
-      "type": "opencollective",
-      "url": "https://opencollective.com/earthstar",
+    funding: {
+      type: "opencollective",
+      url: "https://opencollective.com/earthstar",
     },
     repository: {
       type: "git",
@@ -107,20 +117,20 @@ Deno.copyFileSync("README.md", "npm/README.md");
 // A truly filthy hack to compensate for Typescript's lack of support for the exports field
 Deno.writeTextFileSync(
   "npm/browser.js",
-  `export * from "./esm/src/entries/browser";`,
+  `export * from "./esm/src/entries/browser";`
 );
 
 Deno.writeTextFileSync(
   "npm/browser.d.ts",
-  `export * from './types/src/entries/browser';`,
+  `export * from './types/src/entries/browser';`
 );
 
 Deno.writeTextFileSync(
   "npm/node.js",
-  `export * from "./esm/src/entries/node";`,
+  `export * from "./esm/src/entries/node";`
 );
 
 Deno.writeTextFileSync(
   "npm/node.d.ts",
-  `export * from './types/src/entries/node';`,
+  `export * from './types/src/entries/node';`
 );
