@@ -24,6 +24,9 @@ import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
 import { FormatsArg } from "../../formats/format_types.ts";
 
+import "https://deno.land/x/indexeddb@v1.1.0/polyfill_memory.ts";
+import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/indexeddb.ts";
+
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
   {
@@ -80,6 +83,14 @@ export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
         new AttachmentDriverFilesystem(
           `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`,
         ),
+      persistent: true,
+    },
+  },
+  {
+    name: "IndexedDB",
+    item: {
+      makeDriver: (shareAddr: string) =>
+        new AttachmentDriverIndexedDB(shareAddr),
       persistent: true,
     },
   },

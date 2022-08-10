@@ -162,6 +162,8 @@ export class Replica {
       await this.pruneExpiredDocsAndAttachments();
     }
 
+    await this.replicaDriver.attachmentDriver.clearStaging();
+
     this._isClosed = true;
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
 
