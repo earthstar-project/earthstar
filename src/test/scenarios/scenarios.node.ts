@@ -24,6 +24,7 @@ import { WebSocketServer } from "ws";
 import { FormatsArg } from "../../formats/format_types.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
 import { match } from "https://esm.sh/path-to-regexp@6.2.1";
+import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.node.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -52,6 +53,16 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
 
 export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   ...universalReplicaAttachmentDrivers,
+  {
+    name: "Filesystem",
+    item: {
+      makeDriver: (shareAddr: string, variant?: string) =>
+        new AttachmentDriverFilesystem(
+          `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`
+        ),
+      persistent: true,
+    },
+  },
 ];
 
 export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
@@ -76,7 +87,7 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 
       const transferMatch = match(
         "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
-        { decode: decodeURIComponent },
+        { decode: decodeURIComponent }
       );
 
       const res = transferMatch(req.url);
@@ -84,8 +95,9 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
       if (res) {
         const syncer = await serverSyncerPromise;
 
-        const { shareAddress, formatName, path, author, kind } =
-          res["params"] as Record<string, any>;
+        const { shareAddress, formatName, path, author, kind } = res[
+          "params"
+        ] as Record<string, any>;
 
         await syncer.handleTransferRequest({
           shareAddress,
@@ -105,7 +117,7 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
           mode: "once",
           peer: peerB,
           formats: this.formats,
-        }),
+        })
       );
     });
 
@@ -120,12 +132,10 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 
     const serverSyncer = await serverSyncerPromise;
 
-    return Promise.resolve(
-      [clientSyncer, serverSyncer] as [
-        Syncer<undefined, F>,
-        Syncer<WebSocket, F>,
-      ],
-    );
+    return Promise.resolve([clientSyncer, serverSyncer] as [
+      Syncer<undefined, F>,
+      Syncer<WebSocket, F>
+    ]);
   }
 
   teardown() {
@@ -135,10 +145,11 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 }
 
 export const partnerScenarios: Scenario<
-  <F>(
-    formats: FormatsArg<F>,
-  ) => PartnerScenario<F>
->[] = [...universalPartners, {
-  name: "Web",
-  item: (formats) => new PartnerScenarioWeb(formats),
-}];
+  <F>(formats: FormatsArg<F>) => PartnerScenario<F>
+>[] = [
+  ...universalPartners,
+  {
+    name: "Web",
+    item: (formats) => new PartnerScenarioWeb(formats),
+  },
+];
