@@ -1,299 +1,179 @@
 // @deno-types="./indexeddb_types.deno.d.ts"
 
 import { ShareAddress } from "../../util/doc-types.ts";
-import { ReplicaIsClosedError } from "../../util/errors.ts";
-import { DocDriverMemory } from "./memory.ts";
-import { Query } from "../../query/query-types.ts";
 
 //--------------------------------------------------
 
 import { Logger } from "../../util/log.ts";
+import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
+import { EarthstarError, ReplicaIsClosedError } from "../../util/errors.ts";
+import { IReplicaDocDriver } from "../replica-types.ts";
+import { Query } from "../../query/query-types.ts";
+import { DocBase } from "../../util/doc-types.ts";
 const logger = new Logger("replica driver indexeddb", "gold");
 
 //================================================================================
 
-const DOC_STORE = "documents";
-const DOCUMENTS_ID = "allDocs";
-const CONFIG_STORE = "config";
-
 /** A replica driver which persists to IndexedDB in the browser. Maximum storage capacity varies, but is generally upwards of one gigabyte.
  * Works in browsers.
  */
-export class DocDriverIndexedDB extends DocDriverMemory {
-  _db: IDBDatabase | null = null;
+const DOCS_STORE = "docs";
+
+export class DocDriverIndexedDB implements IReplicaDocDriver {
+  private db = deferred<IDBDatabase>();
+  private maxLocalIndex = -1;
+  private share: ShareAddress;
+  private closed = false;
 
   /**
    * @param share - The address of the share the replica belongs to.
    */
   constructor(share: ShareAddress) {
-    super(share);
     logger.debug("constructor");
 
-    this.docByPathAndAuthor = new Map();
-    this.docsByPathNewestFirst = new Map();
-  }
+    // dnt-shim-ignore
+    if (!(window as any).indexedDB) {
+      throw new EarthstarError("IndexedDB is not supported by this runtime.");
+    }
 
-  getIndexedDb(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      if (this._db) {
-        return resolve(this._db);
-      }
+    const request = ((window as any).indexedDB as IDBFactory).open(
+      `earthstar:share_docs:${this.share}`,
+      1,
+    );
 
-      // dnt-shim-ignore
-      if (!(window as any).indexedDB) {
-        return reject();
-      }
-
-      // dnt-shim-ignore
-      const request = ((window as any).indexedDB as IDBFactory).open(
-        `earthstar:share:${this.share}`,
-        1,
+    request.onerror = () => {
+      logger.error(`Could not open IndexedDB for ${this.share}'s attachments.`);
+      logger.error(request.error);
+      throw new EarthstarError(
+        `Could not open IndexedDB for ${this.share}'s attachments.`,
       );
+    };
 
-      request.onerror = () => {
-        logger.error(`Could not open IndexedDB for ${this.share}`);
-        logger.error(request.error);
-        return reject(request.error);
-      };
+    request.onupgradeneeded = function () {
+      const db = request.result;
 
-      request.onupgradeneeded = function () {
-        const db = request.result;
+      const objectStore = db.createObjectStore(DOCS_STORE, {
+        keyPath: "_localIndex",
+      });
+      objectStore.createIndex("pathAuthorTimestamp", [
+        "path",
+        "author",
+        "timestamp",
+      ], {
+        unique: true,
+      });
 
-        // we're going to store everything in one row.
-        db.createObjectStore(DOC_STORE, { keyPath: "id" });
-        db.createObjectStore(CONFIG_STORE, { keyPath: "key" });
-      };
+      objectStore.createIndex("localIndex", [
+        "_localIndex",
+      ], {
+        unique: true,
+      });
+    };
 
-      request.onsuccess = () => {
-        this._db = request.result;
+    request.onsuccess = () => {
+      this.db.resolve(request.result);
 
-        const transaction = request.result.transaction(
-          [DOC_STORE],
-          "readonly",
-        );
+      const localIndex = request.result.transaction([DOCS_STORE]).objectStore(
+        DOCS_STORE,
+      ).index("localIndex");
 
-        const store = transaction.objectStore(DOC_STORE);
-        const retrieval = store.get(DOCUMENTS_ID);
+      const getLast = localIndex.openCursor(null, "prev");
 
-        retrieval.onsuccess = () => {
-          if (!retrieval.result || !retrieval.result["docs"]) {
-            return resolve(request.result);
-          }
-
-          const docs = retrieval.result["docs"];
-
-          this.docByPathAndAuthor = new Map(
-            Object.entries(docs.byPathAndAuthor),
-          );
-          this.docsByPathNewestFirst = new Map(
-            Object.entries(docs.byPathNewestFirst),
-          );
-
-          const localIndexes = Array.from(this.docByPathAndAuthor.values()).map(
-            (doc) => doc._localIndex as number,
-          );
-          this._maxLocalIndex = Math.max(...localIndexes);
-
-          return resolve(request.result);
-        };
-
-        retrieval.onerror = () => {
-          logger.debug(
-            `StorageIndexedDB constructing: No existing DB for ${this.share}`,
-          );
-          reject();
-        };
-      };
-    });
-  }
-
-  //--------------------------------------------------
-  // LIFECYCLE
-
-  // isClosed(): inherited
-  async close(erase: boolean): Promise<void> {
-    logger.debug("close");
-    if (this._isClosed) {
-      throw new ReplicaIsClosedError();
-    }
-    if (erase) {
-      logger.debug("...close: and erase");
-      this._configKv = {};
-      this._maxLocalIndex = -1;
-      this.docsByPathNewestFirst.clear();
-      this.docByPathAndAuthor.clear();
-
-      logger.debug("...close: erasing indexeddb");
-
-      const db = await this.getIndexedDb();
-
-      for (let key of await this.listConfigKeys()) {
-        await this.deleteConfig(key);
-      }
-
-      const deletion = db
-        .transaction(DOC_STORE, "readwrite")
-        .objectStore(DOC_STORE)
-        .delete(DOCUMENTS_ID);
-
-      deletion.onsuccess = () => {
-        logger.debug("...close: erasing is done");
-      };
-    }
-    this._isClosed = true;
-    logger.debug("...close is done.");
-  }
-
-  //--------------------------------------------------
-  // CONFIG
-
-  async getConfig(key: string): Promise<string | undefined> {
-    if (this._isClosed) {
-      throw new ReplicaIsClosedError();
-    }
-
-    const db = await this.getIndexedDb();
-
-    return new Promise((resolve, reject) => {
-      const retrieval = db
-        .transaction(CONFIG_STORE, "readonly")
-        .objectStore(CONFIG_STORE)
-        .get(key);
-
-      retrieval.onsuccess = () => {
-        if (!retrieval.result) {
-          return resolve(undefined);
+      getLast.onsuccess = () => {
+        if (getLast.result) {
+          this.maxLocalIndex = getLast.result.value._localIndex;
         }
-
-        return resolve(retrieval.result.value);
       };
-
-      retrieval.onerror = () => {
-        reject(retrieval.error);
-      };
-    });
-  }
-  async setConfig(key: string, value: string): Promise<void> {
-    if (this._isClosed) {
-      throw new ReplicaIsClosedError();
-    }
-
-    const db = await this.getIndexedDb();
-
-    return new Promise((resolve, reject) => {
-      const set = db
-        .transaction(CONFIG_STORE, "readwrite")
-        .objectStore(CONFIG_STORE)
-        .put({ key, value });
-
-      set.onsuccess = () => {
-        resolve();
-      };
-
-      set.onerror = () => {
-        reject();
-      };
-    });
-  }
-  async listConfigKeys(): Promise<string[]> {
-    if (this._isClosed) {
-      throw new ReplicaIsClosedError();
-    }
-
-    const db = await this.getIndexedDb();
-
-    return new Promise((resolve, reject) => {
-      const getKeys = db
-        .transaction(CONFIG_STORE, "readonly")
-        .objectStore(CONFIG_STORE)
-        .getAllKeys();
-
-      getKeys.onsuccess = () => {
-        resolve(getKeys.result.sort() as string[]);
-      };
-
-      getKeys.onerror = () => {
-        reject();
-      };
-    });
+    };
   }
 
-  async deleteConfig(key: string): Promise<boolean> {
-    if (this._isClosed) {
-      throw new ReplicaIsClosedError();
+  isClosed(): boolean {
+    return this.closed;
+  }
+
+  async close(erase: boolean): Promise<void> {
+    if (this.closed) throw new ReplicaIsClosedError();
+
+    this.closed = true;
+
+    const eraseDeferred = deferred<void>();
+
+    if (erase) {
+      const db = await this.db;
+
+      db.transaction([DOCS_STORE]).objectStore(DOCS_STORE).clear().onsuccess =
+        () => {
+          eraseDeferred.resolve();
+        };
+    } else {
+      eraseDeferred.resolve();
     }
 
-    const db = await this.getIndexedDb();
+    return eraseDeferred;
+  }
 
-    const hadIt = (await this.getConfig(key)) !== undefined;
-
-    return new Promise((resolve, reject) => {
-      const deletion = db
-        .transaction(CONFIG_STORE, "readwrite")
-        .objectStore(CONFIG_STORE)
-        .delete(key);
-
-      deletion.onsuccess = () => {
-        resolve(hadIt);
-      };
-
-      deletion.onerror = () => {
-        reject();
-      };
-    });
+  // TODO: This has to return a promise instead. sorry cinn.
+  getMaxLocalIndex(): number {
+    return this.maxLocalIndex;
   }
 
   //--------------------------------------------------
   // GET
 
-  // getMaxLocalIndex(): inherited
+  async queryDocs(query: Query<string[]>): Promise<DocBase<string>[]> {
+    const db = await this.db;
+    const docStore = db.transaction([DOCS_STORE], "readonly").objectStore(
+      DOCS_STORE,
+    );
+    const docs = [];
 
-  async queryDocs(query: Query) {
-    // Make sure the IndexedDB has been loaded up
-    await this.getIndexedDb();
-    const result = await super.queryDocs(query);
+    // Handle the simplest case where the path is defined by the filter.
+    if (query.filter) {
+      // This is the way to do a partial key search in IndexedDB. Unfortunately.
 
-    return result;
-  }
+      const pathLower = query.filter.path || query.filter.pathStartsWith || " ";
+      const authorLower = query.filter.author || " ";
+      const timestampLower = query.filter.timestamp ||
+        query.filter.timestampGt || 0;
 
-  //--------------------------------------------------
-  // SET
+      const pathUpper = query.filter.path || "~";
+      const authorUpper = query.filter.author || "~";
+      const timestampUpper = query.filter.timestamp ||
+        query.filter.timestampLt || Number.MAX_SAFE_INTEGER;
 
-  async upsert<DocType extends ExtractDocType<typeof FormatterEs4>>(
-    doc: DocType,
-  ): Promise<DocType> {
-    if (this._isClosed) {
-      throw new ReplicaIsClosedError();
+      const range = IDBKeyRange.bound(
+        [pathLower, authorLower, timestampLower],
+        [
+          pathUpper,
+          authorUpper,
+          timestampUpper,
+        ],
+      );
+
+      const index = docStore.index("pathAndTimestamp");
+
+      if (query.historyMode === "all") {
+        const getCursor = index.openCursor(range, "prev");
+
+        getCursor.onsuccess = () => {
+          if (getCursor.result?.value) {
+            docs.push(getCursor.result.value);
+            getCursor.result.continue();
+          }
+        };
+      } else {
+        const getCursor = index.openCursor(range, "prev");
+
+        getCursor.onsuccess = () => {
+          if (getCursor.result?.value) {
+            docs.push(getCursor.result.value);
+          }
+        };
+      }
     }
-    const upsertedDoc = await super.upsert(doc);
 
-    // After every upsert, for now, we save everything
-    // to IndexedDB as a single giant attachment.
-    // TODO: debounce this, only do it every 1 second or something
-
-    const docs = {
-      byPathAndAuthor: Object.fromEntries(this.docByPathAndAuthor),
-      byPathNewestFirst: Object.fromEntries(this.docsByPathNewestFirst),
-    };
-
-    const db = await this.getIndexedDb();
-
-    return new Promise((resolve, reject) => {
-      const put = db
-        .transaction(DOC_STORE, "readwrite")
-        .objectStore(DOC_STORE)
-        .put({
-          id: DOCUMENTS_ID,
-          docs,
-        });
-
-      put.onsuccess = () => {
-        resolve(upsertedDoc);
-      };
-
-      put.onerror = () => {
-        reject();
-      };
-    });
+    // Filter.
+    // Sort.
+    // Limit.
   }
 }

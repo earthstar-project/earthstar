@@ -27,7 +27,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
       throw new EarthstarError("IndexedDB is not supported by this runtime.");
     }
 
-    const request = ((window as any).indexedDB).open(
+    const request = ((window as any).indexedDB as IDBFactory).open(
       `earthstar:share_attachments:${this.share}`,
       1,
     );
@@ -43,7 +43,6 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
     request.onupgradeneeded = function () {
       const db = request.result;
 
-      // we're going to store everything in one row.
       db.createObjectStore(ATTACHMENT_BYTES_STORE);
       db.createObjectStore(ATTACHMENT_INDEX_STORE, { keyPath: "id" });
       db.createObjectStore(ATTACHMENT_STAGING_STORE, { keyPath: "id" });
