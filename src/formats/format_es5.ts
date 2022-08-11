@@ -543,14 +543,14 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     }
 
     // path must contain at least one '.', if and only if the document is a attachment
-    if (path.indexOf(".") === -1 && hasAttachment) {
+    if (!pathHasFileExtension(path) && hasAttachment) {
       return new ValidationError(
-        "when a attachment is provided, path must contain '.'",
+        "when a attachment is provided, the path must end with a file extension",
       );
     }
-    if (path.indexOf(".") !== -1 && hasAttachment === false) {
+    if (pathHasFileExtension(path) && hasAttachment === false) {
       return new ValidationError(
-        "when no attachment is provided, path must not contain '.'",
+        "when no attachment is provided, the path cannot end with a file extension",
       );
     }
 
@@ -614,3 +614,30 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     };
   }
 };
+
+const fileExtensionRegex = /^.*\.(\w+)$/;
+const endingWithKeypairAddrRegex = /^.*~@\w{4}\.\w{53}$/;
+
+function pathHasFileExtension(path: string): boolean {
+  if (path.indexOf(".") === -1) {
+    return false;
+  }
+
+  // Check that it's in the right position.
+  const matches = path.match(fileExtensionRegex);
+
+  if (matches === null) {
+    return false;
+  }
+
+  const extension = matches[1];
+
+  console.log(extension);
+
+  // Is this part of a keypair address?
+  if (extension.length === 53 && path.match(endingWithKeypairAddrRegex)) {
+    return false;
+  }
+
+  return true;
+}
