@@ -194,6 +194,6 @@ for (const scenario of scenarios) {
 
     // Have to do this to let the web scenario finish tearing down
     // For some reason this sleep can't be moved into the scenario.teardown itself.
-    await sleep(10);
+    await sleep(15);
   });
 }

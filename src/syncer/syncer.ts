@@ -51,7 +51,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private agentStreamSplitter = new StreamSplitter<SyncerEvent>((chunk) => {
     if (
       chunk.kind === "DISCLOSE" || chunk.kind === "BLOB_REQ" ||
-      chunk.kind === "SYNCER_DONE"
+      chunk.kind === "SYNCER_FULFILLED"
     ) {
       return;
     }
@@ -67,7 +67,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private docSyncIsDone = deferred<true>();
   private checkedAllExistingDocsForAttachments = deferred<true>();
   private transfersAreDone = deferred<true>();
-  private partnerIsDone = deferred<true>();
+  private partnerIsFulfilled = deferred<true>();
 
   /** If the syncer was configured with the `mode: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
   isDone = deferred<true>();
@@ -136,62 +136,29 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       });
     });
 
-    // If the syncer is in done mode, it should abort its outgoing stream when all sync agents are done.
+    this.checkedAllExistingDocsForAttachments.then(async () => {
+      const transfersPromises = [];
 
-    this.statusBus.on(async (status) => {
-      if (this.mode === "live") {
-        return;
-      }
+      await this.docSyncIsDone;
 
-      const statuses = [] as SyncerStatus[string][];
-
-      for (const addr in status) {
-        statuses.push(status[addr]);
-      }
-
-      if (
-        this.docSyncIsDone.state === "pending" &&
-        statuses.every((status) => status.docs.status === "done")
-      ) {
-        this.docSyncIsDone.resolve(true);
-
-        if (this.transfersAreDone.state === "pending") {
-          await this.checkedAllExistingDocsForAttachments;
-
-          const allAttachmentsDone = Array.from(this.transfers.values())
-            .flatMap((
-              t,
-            ) => Array.from(t.values())).map((transfer) => transfer.isDone);
-
-          await Promise.all(allAttachmentsDone);
-
-          this.transfersAreDone.resolve(true);
+      for (const shareTransfers of this.transfers.values()) {
+        for (const transfer of shareTransfers.values()) {
+          transfersPromises.push(transfer.isDone);
         }
       }
 
-      if (
-        this.docSyncIsDone.state === "fulfilled" &&
-        this.transfersAreDone.state === "pending"
-      ) {
-        await this.checkedAllExistingDocsForAttachments;
+      await Promise.all(transfersPromises);
 
-        const allAttachmentsDone = Array.from(this.transfers.values()).flatMap((
-          t,
-        ) => Array.from(t.values())).map((transfer) => transfer.isDone);
-
-        await Promise.all(allAttachmentsDone);
-
-        this.transfersAreDone.resolve(true);
-      }
+      this.transfersAreDone.resolve(true);
     });
 
-    this.transfersAreDone.then(async () => {
-      await this.outgoingEventBus.send({
-        kind: "SYNCER_DONE",
+    Promise.all([this.docSyncIsDone, this.transfersAreDone]).then(() => {
+      this.outgoingEventBus.send({
+        kind: "SYNCER_FULFILLED",
       });
     });
 
-    this.partnerIsDone.then(async () => {
+    this.partnerIsFulfilled.then(async () => {
       await this.docSyncIsDone;
       await this.checkedAllExistingDocsForAttachments;
       await this.transfersAreDone;
@@ -241,6 +208,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       const attachmentInfo = format.getAttachmentInfo(doc);
 
       if (isErr(attachmentInfo)) {
+        console.error(attachmentInfo);
         // shouldn't happen, but...
         return;
       }
@@ -338,7 +306,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           switch (event.kind) {
             case "DISCLOSE":
             case "BLOB_REQ":
-            case "SYNCER_DONE":
+            case "SYNCER_FULFILLED":
               break;
             default: {
               if (event.to === replica.share) {
@@ -372,7 +340,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
               // This doc can't have a attachment attached. Do nothing.
               return;
             } else if (res === undefined) {
-              onRequestAttachment(event.doc);
+              await onRequestAttachment(event.doc);
             }
           }
         },
@@ -386,6 +354,16 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     existingDocsStream.pipeTo(makeAttachmentRequestSink()).then(() => {
       this.checkedAllExistingDocsForAttachments.resolve();
+    });
+
+    agent.isDone.then(() => {
+      if (
+        Array.from(this.syncAgents.values()).every((agent) =>
+          agent.isDone.state === "fulfilled"
+        )
+      ) {
+        this.docSyncIsDone.resolve(true);
+      }
     });
 
     this.docStreams.set(address, {
@@ -462,8 +440,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         this.addTransfer(event.shareAddress, transfer);
         break;
       }
-      case "SYNCER_DONE": {
-        this.partnerIsDone.resolve();
+      case "SYNCER_FULFILLED": {
+        this.partnerIsFulfilled.resolve();
       }
     }
   }

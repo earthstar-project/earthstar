@@ -416,6 +416,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
 
     // make sure sqlite is using utf-8
     this._db.query(SET_ENCODING_QUERY);
+    this._db.query("pragma synchronous = OFF");
     const encoding = this._db.query(GET_ENCODING_QUERY);
     this._db.query(CREATE_CONFIG_TABLE_QUERY);
 

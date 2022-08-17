@@ -632,8 +632,6 @@ function pathHasFileExtension(path: string): boolean {
 
   const extension = matches[1];
 
-  console.log(extension);
-
   // Is this part of a keypair address?
   if (extension.length === 53 && path.match(endingWithKeypairAddrRegex)) {
     return false;

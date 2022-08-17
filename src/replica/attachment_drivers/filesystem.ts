@@ -8,10 +8,11 @@ import {
   relative,
 } from "https://deno.land/std@0.132.0/path/mod.ts";
 import { move } from "https://deno.land/std@0.149.0/fs/move.ts";
+import { walk } from "https://deno.land/std@0.149.0/fs/walk.ts";
+import { ensureDir } from "https://deno.land/std@0.149.0/fs/ensure_dir.ts";
 import { randomId } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
-import { walk } from "https://deno.land/std@0.132.0/fs/walk.ts";
 
 /** An attachment driver which persists attachments using the local filesystem.
  * Works with Deno and Node.
@@ -24,14 +25,8 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
     this.path = path;
   }
 
-  private async ensurePath(...args: string[]) {
-    try {
-      await Deno.lstat(join(this.path, ...args));
-    } catch {
-      await Deno.mkdir(join(this.path, ...args), {
-        recursive: true,
-      });
-    }
+  private ensureDir(...args: string[]) {
+    return ensureDir(join(this.path, ...args));
   }
 
   async stage(
@@ -39,7 +34,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
     attachment: ReadableStream<Uint8Array> | Uint8Array,
   ) {
     // Create the path
-    await this.ensurePath("staging", formatName);
+    await this.ensureDir("staging", formatName);
 
     const tempKey = randomId();
 
@@ -53,11 +48,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
         hash,
         size: attachment.byteLength,
         commit: async () => {
-          try {
-            await Deno.lstat(join(this.path, formatName));
-          } catch {
-            await Deno.mkdir(join(this.path, formatName));
-          }
+          await this.ensureDir(formatName);
 
           return move(stagingPath, join(this.path, formatName, hash), {
             overwrite: true,
@@ -94,7 +85,9 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
     return {
       hash,
       size,
-      commit: () => {
+      commit: async () => {
+        await this.ensureDir(formatName);
+
         return move(stagingPath, join(this.path, formatName, hash), {
           overwrite: true,
         });

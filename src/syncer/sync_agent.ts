@@ -9,13 +9,15 @@ import {
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
-import { isErr } from "../util/errors.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
 export class SyncAgent<F> {
   /** A bus to send events to, and which our readable streams subcribe to. */
-  private outboundEventBus = new BlockingBus<SyncAgentEvent>();
+  private outboundEventBus = new BlockingBus<
+    // Add a special internal kind to signal to the stream that it should close. This is never sent to the other peers.
+    SyncAgentEvent | { kind: "CMD_FINISHED" }
+  >();
 
   /** Here we keep track of all the root IDs of versions we've `WANT`ed. Used to prevent offering things to another peer which they already have. */
   private rootIdsRequested: Set<string> = new Set();
@@ -30,8 +32,13 @@ export class SyncAgent<F> {
   /** A promise of a hash of all documents we hold once existing documents have been processed.  */
   private initialHash = deferred<string>();
 
+  /** A promise for when we have received all HAVEs our partner has on offer */
+  private gotAllPartnerHaves = deferred<true>();
+
   /** A promise for whether our partner SyncAgent has signalled its `DONE` or not. */
-  private isPartnerFinished = deferred<true>();
+  private isPartnerFulfilled = deferred<true>();
+
+  private isFulfilled = deferred<true>();
 
   /** A writable stream which takes incoming messages from another SyncAgent. */
   writable: WritableStream<SyncAgentEvent>;
@@ -114,17 +121,18 @@ export class SyncAgent<F> {
       outboundEventBus,
       statusBus,
       initialHash,
-      isPartnerFinished,
+      isPartnerFulfilled,
       fulfilledMap,
       rootIdsRequested,
       isDone,
+      isFulfilled,
+      gotAllPartnerHaves,
     } = this;
 
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
     const registerWant = this.registerWant.bind(this);
     const fulfilWant = this.fulfilWant.bind(this);
     const getStatus = this.getStatus.bind(this);
-    const isFulfilled = this.isFulfilled.bind(this);
     const cancel = this.cancel.bind(this);
 
     // A little object we can look up formats by format name. In a type-safe-ish way.
@@ -155,13 +163,11 @@ export class SyncAgent<F> {
       outboundEventBus.send({ kind: "HASH", hash });
     });
 
-    // Wait for the partner being finished.
-    isPartnerFinished.then(() => {
-      // AND wait for all of our requests to be fulfilled
-      isFulfilled().then(() => {
-        if (this.getStatus().status !== "done") {
-          outboundEventBus.send({ kind: "DONE" });
-        }
+    gotAllPartnerHaves.then(() => {
+      isFulfilled.then(() => {
+        isPartnerFulfilled.then(() => {
+          outboundEventBus.send({ kind: "CMD_FINISHED" });
+        });
       });
     });
 
@@ -182,8 +188,7 @@ export class SyncAgent<F> {
             // Which are apparently exactly the same.
             // Consider the other side finished and exit.
             if (ourHash === event.hash && mode === "only_existing") {
-              isPartnerFinished.resolve(true);
-              outboundEventBus.send({ kind: "DONE" });
+              outboundEventBus.send({ kind: "FULFILLED" });
               break;
             }
 
@@ -194,13 +199,9 @@ export class SyncAgent<F> {
               break;
             }
 
-            // Otherwise we just want to pipe all HaveEntries to the other side until our partner is fulfilled.
+            // Otherwise we just want to pipe all HaveEntries to the other side
             haveEntryKeeper.readable.pipeTo(haveEntrySink).then(() => {
-              if (isPartnerFinished.state !== "fulfilled") {
-                isFulfilled().then(() => {
-                  outboundEventBus.send({ kind: "DONE" });
-                });
-              }
+              outboundEventBus.send({ kind: "EXHAUSTED_HAVES" });
             });
 
             break;
@@ -302,9 +303,8 @@ export class SyncAgent<F> {
           case "DOC": {
             // Ingest a document.
             // Check if we ever asked for this.
-            const didWant = fulfilWant(event.id);
 
-            if (didWant) {
+            if (fulfilledMap.has(event.id)) {
               const format = formatLookup[event.doc.format];
 
               if (!format) {
@@ -319,13 +319,14 @@ export class SyncAgent<F> {
                 formatLookup[event.doc.format],
               );
 
+              // if attachment is undefined, request.
               if (attachment === undefined) {
-                onRequestAttachment(event.doc as FormatDocType<F>);
+                await onRequestAttachment(event.doc as FormatDocType<F>);
               }
 
-              // if attachment is undefined, request.
-
               await replica.ingest(format, event.doc as FormatDocType<F>);
+
+              fulfilWant(event.id);
 
               break;
             } else {
@@ -334,8 +335,12 @@ export class SyncAgent<F> {
 
             break;
           }
-          case "DONE":
-            isPartnerFinished.resolve(true);
+          case "FULFILLED":
+            isPartnerFulfilled.resolve(true);
+            break;
+
+          case "EXHAUSTED_HAVES":
+            gotAllPartnerHaves.resolve();
             break;
 
           case "ABORT":
@@ -348,20 +353,17 @@ export class SyncAgent<F> {
     this.readable = new ReadableStream<SyncAgentEvent>({
       start(controller) {
         // Subscribe to the bus for events, and enqueue them.
-        const unsub = outboundEventBus.on(async (event) => {
-          if (isDone.state !== "rejected") {
-            controller.enqueue(event);
+        const unsub = outboundEventBus.on((event) => {
+          if (event.kind === "CMD_FINISHED") {
+            isDone.resolve();
+            controller.close();
+            statusBus.send(getStatus());
+            unsub();
+            return;
           }
 
-          if (event.kind === "DONE") {
-            isDone.resolve();
-            // We wait for the partner to signal its finished before closing the queue
-            // As it could still be sending us `WANT`s / expecting `DOC` events.
-            await isPartnerFinished;
-            unsub();
-            statusBus.send(getStatus());
-            controller.close();
-            return;
+          if (isDone.state !== "rejected") {
+            controller.enqueue(event);
           }
         });
 
@@ -373,17 +375,28 @@ export class SyncAgent<F> {
         });
       },
     });
-  }
 
-  /** A promise which resolves when all requests are fulfilled. */
-  private isFulfilled() {
-    return new Promise<void>((resolve) => {
-      const unsub = this.statusBus.on((status) => {
-        if (status.received === status.requested) {
-          resolve();
-          unsub();
-        }
-      });
+    this.gotAllPartnerHaves.then(() => {
+      const status = this.getStatus();
+
+      if (status.received === status.requested) {
+        this.isFulfilled.resolve(true);
+      } else {
+        const unsub = this.onStatusUpdate((statusUpdate) => {
+          if (statusUpdate.received === statusUpdate.requested) {
+            unsub();
+            this.isFulfilled.resolve(true);
+          }
+        });
+      }
+    });
+
+    this.isFulfilled.then(() => {
+      this.outboundEventBus.send({ kind: "FULFILLED" });
+    });
+
+    this.isDone.then(() => {
+      this.statusBus.send(this.getStatus());
     });
   }
 
@@ -399,7 +412,7 @@ export class SyncAgent<F> {
       return;
     }
 
-    this.isPartnerFinished.resolve(true);
+    this.isPartnerFulfilled.reject(reason || "Cancelled");
     this.isDone.reject(reason || "Cancelled");
   }
 }

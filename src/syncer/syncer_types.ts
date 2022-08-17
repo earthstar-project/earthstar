@@ -41,9 +41,14 @@ export type SyncAgentDocEvent = {
   doc: DocBase<string>;
 };
 
+/* An event sent when a sync agent has offered all docs it knows of. */
+export type SyncAgentExhaustedHavesEvent = {
+  kind: "EXHAUSTED_HAVES";
+};
+
 /** An event sent when a SyncAgent doesn't want anything anymore, though it'll still serve HAVE requests. */
-export type SyncAgentFinishedEvent = {
-  kind: "DONE";
+export type SyncAgentFulfilledEvent = {
+  kind: "FULFILLED";
 };
 
 export type SyncAgentAbortEvent = {
@@ -57,7 +62,8 @@ export type SyncAgentEvent =
   | SyncAgentWantEvent
   | SyncAgentDocEvent
   | SyncAgentAbortEvent
-  | SyncAgentFinishedEvent;
+  | SyncAgentExhaustedHavesEvent
+  | SyncAgentFulfilledEvent;
 
 /** The current status of a SyncAgent
  * - `requested`: The number of documents requested
@@ -79,7 +85,7 @@ export type SyncAgentOpts<F> = {
   replica: Replica;
   formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
-  onRequestAttachment: (doc: FormatDocType<F>) => void;
+  onRequestAttachment: (doc: FormatDocType<F>) => Promise<void>;
 };
 
 // ===================
@@ -101,8 +107,8 @@ export type SyncerRequestAttachmentTransferEvent = {
   attachmentHash: string;
 };
 
-export type SyncerDoneEvent = {
-  kind: "SYNCER_DONE";
+export type SyncerFulfilledEvent = {
+  kind: "SYNCER_FULFILLED";
 };
 
 /** A SyncAgentEvent addressed to a specific share address. */
@@ -115,7 +121,7 @@ export type SyncerEvent =
   | SyncerSyncAgentEvent
   | SyncerDiscloseEvent
   | SyncerRequestAttachmentTransferEvent
-  | SyncerDoneEvent;
+  | SyncerFulfilledEvent;
 
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */
 export interface ISyncPartner<IncomingAttachmentSourceType> {

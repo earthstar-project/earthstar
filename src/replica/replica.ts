@@ -172,7 +172,7 @@ export class Replica {
     }
 
     logger.debug("    sending didClose nonblockingly...");
-    await this.eventWriter.write({
+    this.eventWriter.write({
       kind: "didClose",
     });
     logger.debug("...closing done");
