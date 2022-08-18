@@ -58,7 +58,7 @@ export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
     item: {
       makeDriver: (shareAddr: string, variant?: string) =>
         new AttachmentDriverFilesystem(
-          `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`
+          `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`,
         ),
       persistent: true,
     },
@@ -87,7 +87,7 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 
       const transferMatch = match(
         "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
-        { decode: decodeURIComponent }
+        { decode: decodeURIComponent },
       );
 
       const res = transferMatch(req.url);
@@ -117,7 +117,7 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
           mode: "once",
           peer: peerB,
           formats: this.formats,
-        })
+        }),
       );
     });
 
@@ -134,7 +134,7 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 
     return Promise.resolve([clientSyncer, serverSyncer] as [
       Syncer<undefined, F>,
-      Syncer<WebSocket, F>
+      Syncer<WebSocket, F>,
     ]);
   }
 

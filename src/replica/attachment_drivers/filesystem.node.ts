@@ -33,7 +33,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
 
   async stage(
     formatName: string,
-    attachment: ReadableStream<Uint8Array> | Uint8Array
+    attachment: ReadableStream<Uint8Array> | Uint8Array,
   ) {
     // Create the path
     await this.ensurePath("staging", formatName);
@@ -85,7 +85,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
         close() {
           writeStream.end();
         },
-      })
+      }),
     );
 
     const hash = await attachmentStreamInfo.hash;
@@ -130,7 +130,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
 
   async getAttachment(
     formatName: string,
-    attachmentHash: string
+    attachmentHash: string,
   ): Promise<DocAttachment | undefined> {
     const filePath = path.join(this.path, formatName, attachmentHash);
 
@@ -172,7 +172,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   }
 
   async filter(
-    attachments: Record<string, Set<string>>
+    attachments: Record<string, Set<string>>,
   ): Promise<{ format: string; hash: string }[]> {
     try {
       await fs.lstat(this.path);

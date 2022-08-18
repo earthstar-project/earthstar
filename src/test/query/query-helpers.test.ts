@@ -39,7 +39,10 @@ let runQueryHelpersTests = async (
   function makeStorage(ws: ShareAddress): Replica {
     let driver = scenario.item.makeDriver(ws);
     return new Replica({
-      driver: { docDriver: driver, attachmentDriver: new AttachmentDriverMemory() },
+      driver: {
+        docDriver: driver,
+        attachmentDriver: new AttachmentDriverMemory(),
+      },
     });
   }
 
