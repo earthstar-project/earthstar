@@ -73,13 +73,13 @@ class SyncAgentTestHelper {
             replica: this.targetReplica,
             mode,
             formats: [FormatEs4],
-            onRequestAttachment: () => {},
+            onRequestAttachment: async () => {},
           });
           this.sourceSyncAgent = new SyncAgent({
             replica: this.sourceReplica,
             mode,
             formats: [FormatEs4],
-            onRequestAttachment: () => {},
+            onRequestAttachment: async () => {},
           });
 
           const { targetEvents, sourceEvents } = this;
@@ -215,8 +215,8 @@ for (const scenario of scenarios) {
       assertEquals(targetEvents[0].hash, sourceEvents[0].hash);
 
       // The last event from each side should be a DONE event.
-      assert(targetEvents[1].kind === "DONE");
-      assert(sourceEvents[1].kind === "DONE");
+      assert(targetEvents[1].kind === "FULFILLED");
+      assert(sourceEvents[1].kind === "FULFILLED");
 
       const statuses = await testHelper.statuses();
 
@@ -421,8 +421,8 @@ for (const scenario of scenarios) {
 
       // They both end with a DONE event.
 
-      assert(sourceEvents[8].kind === "DONE");
-      assert(targetEvents[8].kind === "DONE");
+      assert(sourceEvents[8].kind === "FULFILLED");
+      assert(targetEvents[8].kind === "FULFILLED");
 
       // They have the right status at the end.
 

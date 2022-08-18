@@ -436,6 +436,7 @@ let runQueryHelpersTests = async (
 
     for (let vector of globQueryVectors) {
       let { glob, expectedPaths } = vector;
+
       let docs = await queryByGlobAsync(storage, glob);
       let actualPaths = docs.map((doc) => doc.path);
 
@@ -444,6 +445,7 @@ let runQueryHelpersTests = async (
 
       logger.debug({ glob, docs, actualPaths, expectedPaths });
       let note = vector.note ? ` (${vector.note})` : "";
+
       assertEquals(
         actualPaths,
         expectedPaths,

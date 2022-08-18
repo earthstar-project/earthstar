@@ -295,12 +295,12 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
   //--------------------------------------------------
   // GET
 
-  getMaxLocalIndex(): number {
+  getMaxLocalIndex(): Promise<number> {
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
     }
 
-    return this._maxLocalIndex;
+    return Promise.resolve(this._maxLocalIndex);
   }
 
   queryDocs(queryToClean: Query<string[]>): Promise<DocBase<string>[]> {

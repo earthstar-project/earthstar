@@ -1,5 +1,3 @@
-// @denmo-types="../doc_drivers/indexeddb_types.deno.d.ts"
-
 import { DocAttachment, ShareAddress } from "../../util/doc-types.ts";
 import { IReplicaAttachmentDriver } from "../replica-types.ts";
 

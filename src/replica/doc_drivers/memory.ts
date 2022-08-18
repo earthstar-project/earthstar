@@ -144,7 +144,7 @@ export class DocDriverMemory implements IReplicaDocDriver {
   getMaxLocalIndex() {
     if (this._isClosed) throw new ReplicaIsClosedError();
     logger.debug(`getMaxLocalIndex(): it's ${this._maxLocalIndex}`);
-    return this._maxLocalIndex;
+    return Promise.resolve(this._maxLocalIndex);
   }
 
   async _getAllDocs(): Promise<DocBase<string>[]> {

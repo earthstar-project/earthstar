@@ -26,6 +26,7 @@ import { FormatsArg } from "../../formats/format_types.ts";
 
 import "https://deno.land/x/indexeddb@v1.1.0/polyfill_memory.ts";
 import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/indexeddb.ts";
+import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -70,6 +71,14 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
           mode: "create-or-open",
           share: addr,
         }),
+    },
+  },
+  {
+    name: "IndexedDB",
+    item: {
+      persistent: true,
+      builtInConfigKeys: [],
+      makeDriver: (addr, variant?: string) => new DocDriverIndexedDB(addr),
     },
   },
 ];

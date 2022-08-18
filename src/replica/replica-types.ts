@@ -193,9 +193,7 @@ export interface IReplicaDocDriver extends IReplicaConfig {
 
   /** The max local index used so far. */
   // The first doc will increment this and get index 1.
-  // This is synchronous because it's expected that the driver will
-  // load it once at startup and then keep it in memory.
-  getMaxLocalIndex(): number;
+  getMaxLocalIndex(): Promise<number>;
 
   /** Returns an array of Docs given a Query. */
   // these should return frozen docs
