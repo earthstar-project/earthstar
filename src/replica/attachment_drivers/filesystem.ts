@@ -209,7 +209,6 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
 
     if (erase) {
       await this.wipe();
-      //await Deno.remove(this.path, { recursive: true });
     }
 
     this.closed = true;

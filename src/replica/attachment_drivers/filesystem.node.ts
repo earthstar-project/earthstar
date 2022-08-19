@@ -8,9 +8,9 @@ import { IReplicaAttachmentDriver } from "../replica-types.ts";
 import { randomId } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
-import { walk } from "https://esm.sh/@nodelib/fs.walk";
-import * as fs from "https://deno.land/std@0.123.0/node/fs/promises.ts";
-import * as path from "https://deno.land/std@0.123.0/node/path.ts";
+import { walk } from "https://esm.sh/@nodelib/fs.walk@1.2.8";
+import * as fs from "https://deno.land/std@0.152.0/node/fs/promises.ts";
+import * as path from "https://deno.land/std@0.152.0/node/path.ts";
 import { bufferToBytes } from "../../util/buffers.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 
@@ -230,11 +230,11 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   async close(erase: boolean): Promise<void> {
     if (this.closed) throw new ReplicaIsClosedError();
 
-    this.closed = true;
-
     if (erase) {
-      await fs.rm(this.path, { recursive: true });
+      await this.wipe();
     }
+
+    this.closed = true;
 
     return;
   }

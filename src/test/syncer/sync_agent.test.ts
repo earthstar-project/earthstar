@@ -198,17 +198,6 @@ function generateDoc(keypair: AuthorKeypair, input: {
 }
 
 for (const scenario of scenarios) {
-  const test = new SyncAgentTestHelper({
-    mode: "only_existing",
-    commonDocs: [],
-    scenario,
-  });
-
-  await test.isDone();
-  await test.close();
-
-  await sleep(100);
-
   Deno.test(`SyncAgent (in sync + existing only) (${scenario.name})`, async (test) => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
