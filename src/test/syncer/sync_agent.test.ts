@@ -37,6 +37,9 @@ class SyncAgentTestHelper {
   private targetEvents: SyncAgentEvent[] = [];
   private sourceEvents: SyncAgentEvent[] = [];
 
+  private targetPiped = deferred();
+  private sourcePiped = deferred();
+
   constructor(
     { mode, commonDocs, scenario, targetDocs = [], sourceDocs = [] }: {
       mode: "only_existing" | "live";
@@ -96,7 +99,9 @@ class SyncAgentTestHelper {
                 sourceEvents.push(entry);
               },
             }),
-          );
+          ).then(() => {
+            this.sourcePiped.resolve();
+          });
 
           tr2.pipeTo(
             new WritableStream<SyncAgentEvent>({
@@ -104,7 +109,9 @@ class SyncAgentTestHelper {
                 targetEvents.push(entry);
               },
             }),
-          );
+          ).then(() => {
+            this.targetPiped.resolve();
+          });
 
           this.isReady.resolve(true);
         });
@@ -154,9 +161,19 @@ class SyncAgentTestHelper {
     };
   }
 
-  closeOneSide(side: "target" | "source") {
+  isDone() {
+    return Promise.all([
+      this.isReady,
+      this.sourceSyncAgent?.isDone,
+      this.targetSyncAgent?.isDone,
+      this.sourcePiped,
+      this.targetPiped,
+    ]);
+  }
+
+  async closeOneSide(side: "target" | "source") {
     if (side === "source") {
-      this.sourceSyncAgent?.cancel();
+      await this.sourceSyncAgent?.cancel();
       return;
     }
 
@@ -181,6 +198,17 @@ function generateDoc(keypair: AuthorKeypair, input: {
 }
 
 for (const scenario of scenarios) {
+  const test = new SyncAgentTestHelper({
+    mode: "only_existing",
+    commonDocs: [],
+    scenario,
+  });
+
+  await test.isDone();
+  await test.close();
+
+  await sleep(100);
+
   Deno.test(`SyncAgent (in sync + existing only) (${scenario.name})`, async (test) => {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
@@ -198,8 +226,7 @@ for (const scenario of scenarios) {
     );
 
     await test.step("checks hashes and finishes immediately", async () => {
-      await sleep(10);
-
+      await testHelper.isDone();
       const targetEvents = await testHelper.popEventsFromTarget();
       const sourceEvents = await testHelper.popEventsFromSource();
 
@@ -247,8 +274,8 @@ for (const scenario of scenarios) {
       scenario,
     });
 
-    await test.step("does not existing docs but does sync new ones", async () => {
-      await sleep(10);
+    await test.step("does not sync existing docs but does sync new ones", async () => {
+      await sleep(100);
 
       const targetEvents = await testHelper.popEventsFromTarget();
       const sourceEvents = await testHelper.popEventsFromSource();
@@ -278,7 +305,7 @@ for (const scenario of scenarios) {
 
       await testHelper.ingestDocs("source", [newDoc]);
 
-      await sleep(10);
+      await sleep(20);
 
       const targetEvents2 = await testHelper.popEventsFromTarget();
       const sourceEvents2 = await testHelper.popEventsFromSource();
@@ -360,7 +387,7 @@ for (const scenario of scenarios) {
     );
 
     await test.step("syncs existing docs and finishes", async () => {
-      await sleep(10);
+      await testHelper.isDone();
 
       const sourceEvents = await testHelper.popEventsFromSource();
       const targetEvents = await testHelper.popEventsFromTarget();
@@ -395,34 +422,82 @@ for (const scenario of scenarios) {
 
       // They both send a DOC to each other
 
-      assert(sourceEvents[5].kind === "DOC");
-      assert(sourceEvents[5].id === Object.keys(sourceEvents[2].versions)[0]);
+      // So the next bit can come in a different order depending on the driver,
+      // and that's okay...
+      // As long as there is a DOC, WANT, EXHAUSTED_HAVES, and another DOC
 
-      assert(targetEvents[5].kind === "DOC");
-      assert(targetEvents[5].id === Object.keys(targetEvents[2].versions)[0]);
+      const sourceLastBit = sourceEvents.slice(5, 9);
+      const targetLastBit = targetEvents.slice(5, 9);
 
-      // They then WANT the version of /common_path they don't have
+      const sndHaveVersionsSource = sourceEvents[2].versions;
+      const sndHaveVersionsTarget = targetEvents[2].versions;
 
-      assert(sourceEvents[6].kind === "WANT");
+      // Both sides send a doc to each other.
+      const sourceDoc1 = sourceLastBit.find((event) =>
+        event.kind === "DOC" &&
+        event.id === Object.keys(sndHaveVersionsSource)[0]
+      );
+
+      const targetDoc1 = targetLastBit.find((event) =>
+        event.kind === "DOC" &&
+        event.id === Object.keys(sndHaveVersionsTarget)[0]
+      );
+
+      assert(sourceDoc1);
+      assert(targetDoc1);
+
+      // They WANT the version of /common_path they don't have
+
       const wantedTargetVersionKey = Object.keys(targetEvents[4].versions)[0];
-      assert(sourceEvents[6].id === wantedTargetVersionKey);
-
-      assert(targetEvents[6].kind === "WANT");
       const wantedSourceVersionKey = Object.keys(sourceEvents[4].versions)[0];
-      assert(targetEvents[6].id === wantedSourceVersionKey);
 
-      // And then get the DOC they asked for
+      const sourceWant = sourceLastBit.find((event) =>
+        event.kind === "WANT" &&
+        event.id === wantedTargetVersionKey
+      );
 
-      assert(sourceEvents[7].kind === "DOC");
-      assert(sourceEvents[7].id === targetEvents[6].id);
+      const targetWant = targetLastBit.find((event) =>
+        event.kind === "WANT" &&
+        event.id === wantedSourceVersionKey
+      );
 
-      assert(targetEvents[7].kind === "DOC");
-      assert(targetEvents[7].id === sourceEvents[6].id);
+      assert(sourceWant);
+      assert(targetWant);
+      assert(sourceWant.kind === "WANT");
+      assert(targetWant.kind === "WANT");
+
+      // They report they've exhausted their HAVES
+
+      const sourceExhausted = sourceLastBit.find((event) =>
+        event.kind === "EXHAUSTED_HAVES"
+      );
+
+      const targetExhausted = targetLastBit.find((event) =>
+        event.kind === "EXHAUSTED_HAVES"
+      );
+
+      assert(sourceExhausted);
+      assert(targetExhausted);
+
+      // And get the DOC they asked for
+
+      const sourceDoc2 = sourceLastBit.find((event) =>
+        event.kind === "DOC" &&
+        event.id === targetWant.id
+      );
+
+      const targetDoc2 = targetLastBit.find((event) =>
+        event.kind === "DOC" &&
+        event.id === sourceWant.id
+      );
+
+      assert(sourceDoc2);
+      assert(targetDoc2);
 
       // They both end with a DONE event.
 
-      assert(sourceEvents[8].kind === "FULFILLED");
-      assert(targetEvents[8].kind === "FULFILLED");
+      assert(sourceEvents[9].kind === "FULFILLED");
+      assert(targetEvents[9].kind === "FULFILLED");
 
       // They have the right status at the end.
 
@@ -477,7 +552,7 @@ for (const scenario of scenarios) {
     });
 
     await test.step("syncs existing docs and new ones", async () => {
-      await sleep(10);
+      await sleep(100);
 
       const sourceEvents = await testHelper.popEventsFromSource();
       const targetEvents = await testHelper.popEventsFromTarget();
@@ -532,6 +607,8 @@ for (const scenario of scenarios) {
 
       await testHelper.ingestDocs("source", [newDoc]);
 
+      await sleep(20);
+
       const sourceEvents2 = await testHelper.popEventsFromSource();
       const targetEvents2 = await testHelper.popEventsFromTarget();
 
@@ -544,6 +621,8 @@ for (const scenario of scenarios) {
       assert(targetEvents2.length === 1);
       assert(targetEvents2[0].kind === "WANT");
       assert(targetEvents2[0].id === sourceEvents2[0].id);
+
+      await sleep(10);
 
       const statuses2 = await testHelper.statuses();
 
@@ -569,7 +648,7 @@ for (const scenario of scenarios) {
       const targetEvents3 = await testHelper.popEventsFromTarget();
 
       // TODO: The ABORT event is in neither of the events, even though it must have been received. What the heck.
-      // assert(sourceEvents3[0].kind === "ABORT");
+      //assert(sourceEvents3[0].kind === "ABORT");
     });
 
     await testHelper.close();

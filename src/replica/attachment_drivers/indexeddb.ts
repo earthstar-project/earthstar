@@ -3,9 +3,13 @@ import { IReplicaAttachmentDriver } from "../replica-types.ts";
 
 import { Logger } from "../../util/log.ts";
 import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
-import { EarthstarError, ValidationError } from "../../util/errors.ts";
+import {
+  EarthstarError,
+  ReplicaIsClosedError,
+  ValidationError,
+} from "../../util/errors.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { randomId } from "../../util/misc.ts";
+import { randomId, sleep } from "../../util/misc.ts";
 import { streamToBytes } from "../../util/streams.ts";
 const logger = new Logger("replica driver indexeddb", "gold");
 
@@ -16,8 +20,9 @@ const ATTACHMENT_BYTES_STORE = "attachments_bytes";
 export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
   private db = deferred<IDBDatabase>();
   private share: ShareAddress;
+  private closed = false;
 
-  constructor(share: ShareAddress) {
+  constructor(share: ShareAddress, namespace?: string) {
     this.share = share;
 
     // dnt-shim-ignore
@@ -26,7 +31,9 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
     }
 
     const request = ((window as any).indexedDB as IDBFactory).open(
-      `earthstar:share_attachments:${this.share}`,
+      `earthstar:share_attachments:${this.share}${
+        namespace ? `/${namespace}` : ""
+      }`,
       1,
     );
 
@@ -59,6 +66,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
     formatName: string,
     attachmentHash: string,
   ): Promise<DocAttachment | undefined> {
+    if (this.closed) throw new ReplicaIsClosedError();
     const resultDeferred = deferred<DocAttachment | undefined>();
 
     const indexKey = this.getIndexKey(formatName, attachmentHash);
@@ -124,6 +132,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
     formatName: string,
     attachmentHash: string,
   ): Promise<true | ValidationError> {
+    if (this.closed) throw new ReplicaIsClosedError();
     const resultDeferred = deferred<true | ValidationError>();
 
     const indexKey = this.getIndexKey(formatName, attachmentHash);
@@ -189,6 +198,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
       reject: () => Promise<void>;
     } | ValidationError
   > {
+    if (this.closed) throw new ReplicaIsClosedError();
     // How this works:
     // We write the data to a single IndexedDB object store which contains both staged / committed attachments.
     // When staging, we write a row to a store of staged attachments with the attachment's key.
@@ -286,6 +296,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
   }
 
   async wipe(): Promise<void> {
+    if (this.closed) throw new ReplicaIsClosedError();
     const db = await this.db;
     const transaction = db.transaction([
       ATTACHMENT_BYTES_STORE,
@@ -310,6 +321,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
   }
 
   async clearStaging(): Promise<void> {
+    if (this.closed) throw new ReplicaIsClosedError();
     // iterate through all the staging indexes and delete...
     const db = await this.db;
 
@@ -355,6 +367,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
   async filter(
     attachments: Record<string, Set<string>>,
   ): Promise<{ format: string; hash: string }[]> {
+    if (this.closed) throw new ReplicaIsClosedError();
     const db = await this.db;
 
     const transaction = db.transaction([
@@ -367,7 +380,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
     const BATCH_SIZE = 50;
 
     const deleted: { format: string; hash: string }[] = [];
-    const deletionOps: (() => Promise<true | ValidationError>)[] = [];
+    const deletionOps: (Promise<true | ValidationError>)[] = [];
     const wipeDeferred = deferred<void>();
 
     const wipeBatch = (range: IDBKeyRange | null = null) => {
@@ -382,7 +395,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
 
           if (attachments[format] && !attachments[format].has(hash)) {
             deleted.push({ format, hash });
-            deletionOps.push(() => this.erase(format, hash));
+            deletionOps.push(this.erase(format, hash));
           }
         }
 
@@ -401,9 +414,30 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
     wipeBatch();
 
     await wipeDeferred;
-
-    await Promise.all(deletionOps.map((op) => op()));
+    await Promise.all(deletionOps);
 
     return deleted;
+  }
+
+  isClosed(): boolean {
+    return this.closed;
+  }
+
+  async close(erase: boolean) {
+    if (this.closed) throw new ReplicaIsClosedError();
+
+    if (erase) {
+      await this.wipe();
+    }
+
+    this.closed = true;
+
+    const db = await this.db;
+
+    db.close();
+
+    await sleep(20);
+
+    return;
   }
 }

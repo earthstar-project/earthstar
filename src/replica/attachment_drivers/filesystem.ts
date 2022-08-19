@@ -1,5 +1,9 @@
 import { DocAttachment } from "../../util/doc-types.ts";
-import { isErr, ValidationError } from "../../util/errors.ts";
+import {
+  isErr,
+  ReplicaIsClosedError,
+  ValidationError,
+} from "../../util/errors.ts";
 import { IReplicaAttachmentDriver } from "../replica-types.ts";
 import {
   basename,
@@ -19,6 +23,7 @@ import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
  */
 export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   private path: string;
+  private closed = false;
 
   /** @param path - The filesystem path all attachments will be stored under. */
   constructor(path: string) {
@@ -33,6 +38,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
     formatName: string,
     attachment: ReadableStream<Uint8Array> | Uint8Array,
   ) {
+    if (this.closed) throw new ReplicaIsClosedError();
     // Create the path
     await this.ensureDir("staging", formatName);
 
@@ -99,6 +105,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   }
 
   async erase(formatName: string, attachmentHash: string) {
+    if (this.closed) throw new ReplicaIsClosedError();
     const filePath = join(this.path, formatName, attachmentHash);
 
     try {
@@ -112,6 +119,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   }
 
   async wipe() {
+    if (this.closed) throw new ReplicaIsClosedError();
     await this.clearStaging();
 
     try {
@@ -131,6 +139,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
     formatName: string,
     attachmentHash: string,
   ): Promise<DocAttachment | undefined> {
+    if (this.closed) throw new ReplicaIsClosedError();
     const filePath = join(this.path, formatName, attachmentHash);
 
     try {
@@ -149,6 +158,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   }
 
   async clearStaging() {
+    if (this.closed) throw new ReplicaIsClosedError();
     try {
       await Deno.remove(join(this.path, "staging"), { recursive: true });
     } catch {
@@ -159,6 +169,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   async filter(
     attachments: Record<string, Set<string>>,
   ): Promise<{ format: string; hash: string }[]> {
+    if (this.closed) throw new ReplicaIsClosedError();
     try {
       await Deno.lstat(this.path);
     } catch {
@@ -187,5 +198,22 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
     }
 
     return erased;
+  }
+
+  isClosed(): boolean {
+    return this.closed;
+  }
+
+  async close(erase: boolean) {
+    if (this.closed) throw new ReplicaIsClosedError();
+
+    if (erase) {
+      await this.wipe();
+      //await Deno.remove(this.path, { recursive: true });
+    }
+
+    this.closed = true;
+
+    return;
   }
 }

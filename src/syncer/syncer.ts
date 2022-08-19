@@ -504,9 +504,9 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   }
 
   /** Stop syncing. */
-  cancel() {
+  async cancel() {
     for (const [_addr, agent] of this.syncAgents) {
-      agent.cancel();
+      await agent.cancel();
     }
 
     // TODO: cancel all the doc streams used for attachments

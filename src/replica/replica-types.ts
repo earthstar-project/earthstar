@@ -176,7 +176,7 @@ export interface IReplicaDocDriver extends IReplicaConfig {
   //--------------------------------------------------
   // LIFECYCLE
 
-  /** Returns if the replica has been closed or not. */
+  /** Returns if the doc driver has been closed or not. */
   isClosed(): boolean;
 
   /**
@@ -271,6 +271,18 @@ export interface IReplicaAttachmentDriver {
 
   /** Reject all attachments waiting in staging. */
   clearStaging(): Promise<void>;
+
+  /**
+   * Close the replica Driver.
+   * The replica will call this.
+   * You cannot call close() if the replica is already closed (it will throw a ReplicaIsClosedError).
+   * If erase, actually delete and forget data locally.
+   * Erase defaults to false if not provided.
+   */
+  close(erase: boolean): Promise<void>;
+
+  /** Returns if the attachment driver has been closed or not. */
+  isClosed(): boolean;
 }
 
 /**

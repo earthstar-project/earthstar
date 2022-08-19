@@ -168,10 +168,7 @@ export class Replica {
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
 
     await this.replicaDriver.docDriver.close(erase);
-
-    if (erase) {
-      await this.replicaDriver.attachmentDriver.wipe();
-    }
+    await this.replicaDriver.attachmentDriver.close(erase);
 
     logger.debug("    sending didClose nonblockingly...");
     this.eventWriter.write({
@@ -534,11 +531,11 @@ export class Replica {
       }
       // save it
       loggerIngest.debug("  > upserting into ReplicaDriver...");
-      console.log("so...");
+
       const docAsWritten = await this.replicaDriver.docDriver.upsert(
         docToIngest,
       );
-      console.log("yeah");
+
       // TODO: pass existingDocsSamePath to save another lookup
       loggerIngest.debug("  > ...done upserting into ReplicaDriver");
       loggerIngest.debug("  > ...getting ReplicaDriver maxLocalIndex...");

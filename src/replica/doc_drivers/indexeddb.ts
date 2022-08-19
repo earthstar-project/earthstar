@@ -65,7 +65,7 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
   /**
    * @param share - The address of the share the replica belongs to.
    */
-  constructor(share: ShareAddress) {
+  constructor(share: ShareAddress, namespace?: string) {
     const addressIsValidResult = checkShareIsValid(share);
 
     if (isErr(addressIsValidResult)) {
@@ -82,7 +82,7 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
     }
 
     const request = ((window as any).indexedDB as IDBFactory).open(
-      `earthstar:share_docs:${this.share}`,
+      `earthstar:share_docs:${this.share}${namespace ? `/${namespace}` : ""}`,
       1,
     );
 
@@ -99,7 +99,7 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
 
       // Storing docs
       const docsStore = db.createObjectStore(DOCS_STORE, {
-        autoIncrement: true,
+        keyPath: ["path", "author"],
       });
 
       docsStore.createIndex("comboIndex", [
@@ -115,7 +115,7 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
         "path",
         "timestamp",
       ], {
-        unique: true,
+        unique: false,
       });
 
       docsStore.createIndex("pathAuthorIndex", [
@@ -243,17 +243,17 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
     if (query.filter?.path && query.historyMode === "latest") {
       // This range will get every document with this path with any timestamp.
       const range = IDBKeyRange.bound(
-        [query.filter.timestampGt || 0, query.filter.path],
+        [query.filter.path, query.filter.timestampGt || 0],
         [
-          query.filter.timestampLt || Number.MAX_SAFE_INTEGER,
           query.filter.path,
+          query.filter.timestampLt || Number.MAX_SAFE_INTEGER,
         ],
       );
 
       const index = docStore.index("pathTimestampIndex");
 
       // Get the last result (which will be the one with the highest timestamp)
-      const getCursor = index.openCursor(range, "prev");
+      const getCursor = index.openCursor(range);
 
       getCursor.onsuccess = () => {
         if (getCursor.result?.value) {
@@ -439,7 +439,6 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
           updatedExisting.resolve(!!updateOp.result);
         };
       } else {
-        //
         updatedExisting.resolve(false);
       }
     };
@@ -458,6 +457,10 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
 
     putOp.onsuccess = () => {
       didPut.resolve();
+    };
+
+    putOp.onerror = () => {
+      throw (putOp.error);
     };
 
     await didPut;

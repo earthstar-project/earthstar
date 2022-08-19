@@ -210,7 +210,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         "throws after closed",
       );
       await throws(
-        async () => storage.getMaxLocalIndex(),
+        async () => await storage.getMaxLocalIndex(),
         "throws after closed",
       );
       await throws(
@@ -809,6 +809,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
               assertEquals(expiredRes, undefined);
             },
             sanitizeOps: false,
+            sanitizeResources: false,
           });
 
           await test.step({
@@ -835,6 +836,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
               assert(attachment2Res, "second attachment was kept");
             },
             sanitizeOps: false,
+            sanitizeResources: false,
           });
 
           await replica2.close(true);

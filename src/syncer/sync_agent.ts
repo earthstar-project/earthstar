@@ -9,6 +9,7 @@ import {
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
+import { randomId } from "../util/misc.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -188,7 +189,8 @@ export class SyncAgent<F> {
             // Which are apparently exactly the same.
             // Consider the other side finished and exit.
             if (ourHash === event.hash && mode === "only_existing") {
-              outboundEventBus.send({ kind: "FULFILLED" });
+              gotAllPartnerHaves.resolve();
+              isFulfilled.resolve();
               break;
             }
 
@@ -213,7 +215,7 @@ export class SyncAgent<F> {
             // If not, that means we don't have any docs associated with the path this ID was made from.
             // We want it!
             if (!haveEntryKeeper.hasEntryWithId(event.id)) {
-              outboundEventBus.send({ kind: "WANT", id: event.id });
+              await outboundEventBus.send({ kind: "WANT", id: event.id });
 
               // Internally register a WANT for each version, even though we sent out a single one for the root ID.
               // The other side will send back the DOC with the version ID, NOT the root ID.
@@ -240,7 +242,7 @@ export class SyncAgent<F> {
               // That means we don't have any documents by the author associated with this ID at this path.
               // We want it!
               if (!existingEntry) {
-                outboundEventBus.send({ kind: "WANT", id: haveId });
+                await outboundEventBus.send({ kind: "WANT", id: haveId });
                 registerWant(haveId);
                 rootIdsRequested.add(event.id);
                 continue;
@@ -250,7 +252,7 @@ export class SyncAgent<F> {
               // If the one on record is lower, we want this newer version.
               const existingTimestamp = existingEntry.versions[haveId];
               if (timestamp > existingTimestamp) {
-                outboundEventBus.send({ kind: "WANT", id: haveId });
+                await outboundEventBus.send({ kind: "WANT", id: haveId });
 
                 rootIdsRequested.add(event.id);
                 registerWant(haveId);
@@ -287,13 +289,14 @@ export class SyncAgent<F> {
                 doc.author === authorAddress
               );
 
-              // Send it off!
               if (doc) {
-                outboundEventBus.send({
+                await outboundEventBus.send({
                   kind: "DOC",
                   id,
                   doc,
                 });
+              } else {
+                console.error("Got a WANT event for a document not on record.");
               }
             }
 
@@ -344,7 +347,7 @@ export class SyncAgent<F> {
             break;
 
           case "ABORT":
-            cancel();
+            await cancel();
         }
       },
     });
@@ -354,24 +357,23 @@ export class SyncAgent<F> {
       start(controller) {
         // Subscribe to the bus for events, and enqueue them.
         const unsub = outboundEventBus.on((event) => {
-          if (event.kind === "CMD_FINISHED") {
-            isDone.resolve();
+          if (isDone.state !== "rejected" && event.kind !== "CMD_FINISHED") {
+            controller.enqueue(event);
+          }
+
+          if (event.kind === "ABORT") {
+            isDone.reject("Aborted");
+          }
+
+          if (event.kind === "ABORT" || event.kind === "CMD_FINISHED") {
             controller.close();
             statusBus.send(getStatus());
             unsub();
-            return;
           }
 
-          if (isDone.state !== "rejected") {
-            controller.enqueue(event);
+          if (event.kind === "CMD_FINISHED") {
+            isDone.resolve();
           }
-        });
-
-        isDone.catch(() => {
-          controller.enqueue({ kind: "ABORT" });
-          unsub();
-          statusBus.send(getStatus());
-          controller.close();
         });
       },
     });
@@ -397,6 +399,8 @@ export class SyncAgent<F> {
 
     this.isDone.then(() => {
       this.statusBus.send(this.getStatus());
+    }).catch(() => {
+      statusBus.send(getStatus());
     });
   }
 
@@ -406,13 +410,12 @@ export class SyncAgent<F> {
   }
 
   /** Signal the SyncAgent to wrap up syncing early. */
-  cancel(reason?: string) {
+  async cancel(reason?: string) {
     // Can't cancel if we're already done or cancelled previously.
     if (this.isDone.state === "fulfilled" || this.isDone.state === "rejected") {
       return;
     }
 
-    this.isPartnerFulfilled.reject(reason || "Cancelled");
-    this.isDone.reject(reason || "Cancelled");
+    await this.outboundEventBus.send({ kind: "ABORT" });
   }
 }

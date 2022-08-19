@@ -24,7 +24,7 @@ import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
 import { FormatsArg } from "../../formats/format_types.ts";
 
-import "https://deno.land/x/indexeddb@v1.1.0/polyfill_memory.ts";
+import "https://deno.land/x/indexeddb@1.3.5/polyfill_memory.ts";
 import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/indexeddb.ts";
 import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
 
@@ -78,7 +78,8 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
     item: {
       persistent: true,
       builtInConfigKeys: [],
-      makeDriver: (addr, variant?: string) => new DocDriverIndexedDB(addr),
+      makeDriver: (addr, variant?: string) =>
+        new DocDriverIndexedDB(addr, variant),
     },
   },
 ];
@@ -98,8 +99,8 @@ export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   {
     name: "IndexedDB",
     item: {
-      makeDriver: (shareAddr: string) =>
-        new AttachmentDriverIndexedDB(shareAddr),
+      makeDriver: (shareAddr: string, variant?: string) =>
+        new AttachmentDriverIndexedDB(shareAddr, variant),
       persistent: true,
     },
   },
