@@ -1,39 +1,62 @@
 import { CryptoDriverNoble } from "../../crypto/crypto-driver-noble.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import { FormatsArg } from "../../formats/format_types.ts";
 import { IPeer } from "../../peer/peer-types.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { PartnerScenario, ReplicaScenario, Scenario } from "./types.ts";
+import {
+  AttachmentDriverScenario,
+  DocDriverScenario,
+  PartnerScenario,
+  Scenario,
+} from "./types.ts";
 
 export const universalCryptoDrivers: Scenario<ICryptoDriver>[] = [{
   name: "Noble",
   item: CryptoDriverNoble,
 }];
 
-export const universalReplicaDrivers: Scenario<ReplicaScenario>[] = [
+export const universalReplicaDocDrivers: Scenario<DocDriverScenario>[] = [
   {
     name: "Memory",
     item: {
       persistent: false,
       builtInConfigKeys: [],
-      makeDriver: (addr) => new ReplicaDriverMemory(addr),
+      makeDriver: (addr) => new DocDriverMemory(addr),
     },
   },
 ];
 
-export class PartnerScenarioLocal implements PartnerScenario {
+export const universalReplicaAttachmentDrivers: Scenario<
+  AttachmentDriverScenario
+>[] = [
+  {
+    name: "Memory",
+    item: { makeDriver: () => new AttachmentDriverMemory(), persistent: false },
+  },
+];
+
+export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
+  formats: FormatsArg<F>;
+
+  constructor(formats: FormatsArg<F>) {
+    this.formats = formats;
+  }
+
   setup(peerA: IPeer, peerB: IPeer) {
-    const partner = new PartnerLocal(peerB, "once");
+    const partner = new PartnerLocal(peerB, peerA, "once", this.formats);
 
     const syncerA = new Syncer({
       peer: peerA,
       partner,
       mode: "once",
+      formats: this.formats,
     });
 
     return Promise.resolve(
-      [syncerA, partner.partnerSyncer] as [Syncer, Syncer],
+      [syncerA, partner.partnerSyncer] as [Syncer<any, F>, Syncer<any, F>],
     );
   }
 
@@ -42,7 +65,9 @@ export class PartnerScenarioLocal implements PartnerScenario {
   }
 }
 
-export const universalPartners: Scenario<() => PartnerScenario>[] = [{
+export const universalPartners: Scenario<
+  <F>(formats: FormatsArg<F>) => PartnerScenario<F>
+>[] = [{
   name: "Local",
-  item: () => new PartnerScenarioLocal(),
+  item: (formats) => new PartnerScenarioLocal(formats),
 }];

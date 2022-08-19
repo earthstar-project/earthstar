@@ -7,15 +7,19 @@ const { createHash } = sha256_uint8array;
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { UpdatableHash } from "./updatable_hash.ts";
 const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
 /**
- * A verison of the ILowLevelCrypto interface backed by noble/ed25519.
- * Works in the browser.
+ * A verison of the ICryptoDriver interface backed by noble/ed25519.
+ * The slowest crypto driver available.
+ * Works in the browser, Deno, and Node.
  */
 export const CryptoDriverNoble: ICryptoDriver = class {
-  static sha256(input: string | Uint8Array): Promise<Uint8Array> {
+  static sha256(
+    input: string | Uint8Array,
+  ): Promise<Uint8Array> {
     if (typeof input === "string") {
       return Promise.resolve(
         createHash("sha256").update(input, "utf-8").digest(),
@@ -24,6 +28,15 @@ export const CryptoDriverNoble: ICryptoDriver = class {
       return Promise.resolve(createHash("sha256").update(input).digest());
     }
   }
+
+  static updatableSha256() {
+    return new UpdatableHash({
+      hash: createHash("sha256"),
+      update: (hash, data) => hash.update(data),
+      digest: (hash) => hash.digest(),
+    });
+  }
+
   static async generateKeypairBytes(): Promise<KeypairBytes> {
     logger.debug("generateKeypairBytes");
     const secret = ed.utils.randomPrivateKey();

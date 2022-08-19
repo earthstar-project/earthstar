@@ -1,6 +1,8 @@
 //================================================================================
 // PRIMITIVE DATA TYPES SPECIFIC TO OUR CODE
 
+import { ValidationError } from "./errors.ts";
+
 /** An identity's public address. */
 export type AuthorAddress = string;
 /** The human-identifiable portion of an identity's public address, e.g. `suzy`. */
@@ -39,8 +41,8 @@ export interface DocBase<FormatType extends string> {
   path: string;
   author: AuthorAddress;
   timestamp: Timestamp;
-  deleteAfter: Timestamp | null;
   signature: Signature;
+  deleteAfter?: number | null;
   _localIndex?: number;
 }
 
@@ -59,3 +61,16 @@ export type DocInputWithFormat<
   FormatType extends string,
   DocInputType extends DocInputBase<string>,
 > = Extract<DocInputType, { "format": FormatType }>;
+
+/** An attachment associated with a document. */
+export type DocAttachment = {
+  /** Returns a stream to use the attachment's bytes chunk by chunk. Useful if the attachment is very big. */
+  stream: () => Promise<ReadableStream<Uint8Array>>;
+  /** Returns all of the attachments bytes in one go. Handier if you know the attachment is small. */
+  bytes: () => Promise<Uint8Array>;
+};
+
+/** A document with it's attachment merged onto a new `attachment` property. */
+export type DocWithAttachment<D extends DocBase<string>> = D & {
+  attachment: DocAttachment | undefined | ValidationError;
+};

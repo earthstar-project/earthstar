@@ -1,30 +1,31 @@
 import { assertEquals } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IReplica, IReplicaDriver } from "../../replica/replica-types.ts";
+import { IReplicaDocDriver } from "../../replica/replica-types.ts";
 import {
   GlobalCryptoDriver,
   setGlobalCryptoDriver,
 } from "../../crypto/global-crypto-driver.ts";
 import { Replica } from "../../replica/replica.ts";
-import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 
 //================================================================================
 
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 const loggerTest = new Logger("test", "lightsalmon");
 const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
 //setLogLevel('test', LogLevel.Debug);
 
 const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "replicaDriver": ScenarioItem<typeof docDriverScenarios>;
   "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriver",
-  scenarios: replicaScenarios,
+  scenarios: docDriverScenarios,
 }, {
   description: "cryptoDriver",
   scenarios: cryptoScenarios,
@@ -50,9 +51,16 @@ let _runStorageConfigTests = (
 
   let makeStorageOrDriver = (
     share: ShareAddress,
-  ): IReplica | IReplicaDriver => {
+  ): Replica | IReplicaDocDriver => {
     let driver = scenario.subscenarios.replicaDriver.makeDriver(share);
-    return mode === "storage" ? new Replica({ driver }) : driver;
+    return mode === "storage"
+      ? new Replica({
+        driver: {
+          docDriver: driver,
+          attachmentDriver: new AttachmentDriverMemory(),
+        },
+      })
+      : driver;
   };
 
   Deno.test(SUBTEST_NAME + ": config basics, and close", async () => {

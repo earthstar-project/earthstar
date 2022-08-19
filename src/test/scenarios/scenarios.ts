@@ -1,19 +1,32 @@
 import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
-import { ReplicaDriverLocalStorage } from "../../replica/replica-driver-local-storage.ts";
-import { ReplicaDriverSqlite } from "../../replica/replica-driver-sqlite.deno.ts";
-import { ReplicaDriverSqliteFfi } from "../../replica/replica_driver_sqlite_ffi.ts";
-import { PartnerScenario, ReplicaScenario, Scenario } from "./types.ts";
+import { DocDriverLocalStorage } from "../../replica/doc_drivers/localstorage.ts";
+import { DocDriverSqliteFfi } from "../../replica/doc_drivers/sqlite_ffi.ts";
+import {
+  AttachmentDriverScenario,
+  DocDriverScenario,
+  PartnerScenario,
+  Scenario,
+} from "./types.ts";
 import {
   universalCryptoDrivers,
   universalPartners,
-  universalReplicaDrivers,
+  universalReplicaAttachmentDrivers,
+  universalReplicaDocDrivers,
 } from "./scenarios.universal.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { PartnerWeb } from "../../syncer/partner_web.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
+import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
+import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.ts";
+import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
+import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
+import { FormatsArg } from "../../formats/format_types.ts";
+
+import "https://deno.land/x/indexeddb@1.3.5/polyfill_memory.ts";
+import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/indexeddb.ts";
+import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -23,15 +36,15 @@ export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   },
 ];
 
-export const replicaScenarios: Scenario<ReplicaScenario>[] = [
-  ...universalReplicaDrivers,
+export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
+  ...universalReplicaDocDrivers,
   {
     name: "LocalStorage",
     item: {
       persistent: true,
       builtInConfigKeys: [],
       makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverLocalStorage(addr, variant),
+        new DocDriverLocalStorage(addr, variant),
     },
   },
   {
@@ -40,8 +53,8 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
       persistent: true,
       builtInConfigKeys: ["schemaVersion", "share"],
       makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverSqliteFfi({
-          filename: `${addr}.${variant ? `${variant}.` : ""}bench.ffi.sqlite`,
+        new DocDriverSqliteFfi({
+          filename: `${addr}.${variant ? `${variant}.` : ""}ffi.sqlite`,
           mode: "create-or-open",
           share: addr,
         }),
@@ -53,36 +66,97 @@ export const replicaScenarios: Scenario<ReplicaScenario>[] = [
       persistent: true,
       builtInConfigKeys: ["schemaVersion", "share"],
       makeDriver: (addr, variant?: string) =>
-        new ReplicaDriverSqlite({
-          filename: `${addr}.${variant ? `${variant}.` : ""}bench.sqlite`,
+        new DocDriverSqlite({
+          filename: `${addr}.${variant ? `${variant}.` : ""}sqlite`,
           mode: "create-or-open",
           share: addr,
         }),
     },
   },
+  {
+    name: "IndexedDB",
+    item: {
+      persistent: true,
+      builtInConfigKeys: [],
+      makeDriver: (addr, variant?: string) =>
+        new DocDriverIndexedDB(addr, variant),
+    },
+  },
 ];
 
-export class PartnerScenarioWeb implements PartnerScenario {
+export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
+  ...universalReplicaAttachmentDrivers,
+  {
+    name: "Filesystem",
+    item: {
+      makeDriver: (shareAddr: string, variant?: string) =>
+        new AttachmentDriverFilesystem(
+          `./src/test/tmp/${shareAddr}${variant ? `/${variant}` : ""}`,
+        ),
+      persistent: true,
+    },
+  },
+  {
+    name: "IndexedDB",
+    item: {
+      makeDriver: (shareAddr: string, variant?: string) =>
+        new AttachmentDriverIndexedDB(shareAddr, variant),
+      persistent: true,
+    },
+  },
+];
+
+export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
   private serve: Promise<void> | undefined;
   private abortController: AbortController;
 
-  constructor() {
+  formats: FormatsArg<F>;
+
+  constructor(formats: FormatsArg<F>) {
+    this.formats = formats;
     this.abortController = new AbortController();
   }
 
   async setup(peerA: IPeer, peerB: IPeer) {
-    const serverSyncerPromise = deferred<Syncer>();
+    const serverSyncerPromise = deferred<Syncer<WebSocket, F>>();
 
-    const handler = (req: Request) => {
+    const handler = async (req: Request) => {
+      const transferPattern = new URLPattern({
+        pathname: "/:syncerId/:kind/:shareAddress/:formatName/:author/:path*",
+      });
+
+      const transferMatch = transferPattern.exec(req.url);
+
+      if (transferMatch) {
+        const { socket, response } = Deno.upgradeWebSocket(req);
+
+        const syncer = await serverSyncerPromise;
+
+        const { shareAddress, formatName, path, author, kind } =
+          transferMatch.pathname.groups;
+
+        syncer.handleTransferRequest({
+          shareAddress,
+          formatName,
+          path: `/${path}`,
+          author,
+          kind: kind as "download" | "upload",
+          source: socket,
+        });
+
+        return response;
+      }
+
       const { socket, response } = Deno.upgradeWebSocket(req);
 
-      const partner = new PartnerWeb({ socket });
+      const partner = new PartnerWebServer({ socket });
 
       serverSyncerPromise.resolve(
         new Syncer({
           partner,
           mode: "once",
           peer: peerB,
+          formats: this.formats,
         }),
       );
 
@@ -97,19 +171,23 @@ export class PartnerScenarioWeb implements PartnerScenario {
       signal: this.abortController.signal,
     });
 
-    const clientSocket = new WebSocket("ws://localhost:8083");
-
     const clientSyncer = new Syncer({
-      partner: new PartnerWeb({
-        socket: clientSocket,
+      partner: new PartnerWebClient({
+        url: "ws://localhost:8083",
       }),
       mode: "once",
       peer: peerA,
+      formats: this.formats,
     });
 
     const serverSyncer = await serverSyncerPromise;
 
-    return Promise.resolve([clientSyncer, serverSyncer] as [Syncer, Syncer]);
+    return Promise.resolve(
+      [clientSyncer, serverSyncer] as [
+        Syncer<undefined, F>,
+        Syncer<WebSocket, F>,
+      ],
+    );
   }
 
   teardown() {
@@ -119,7 +197,11 @@ export class PartnerScenarioWeb implements PartnerScenario {
   }
 }
 
-export const partnerScenarios = [...universalPartners, {
+export const partnerScenarios: Scenario<
+  <F>(
+    formats: FormatsArg<F>,
+  ) => PartnerScenario<F>
+>[] = [...universalPartners, {
   name: "Web",
-  item: () => new PartnerScenarioWeb(),
+  item: (formats) => new PartnerScenarioWeb(formats),
 }];

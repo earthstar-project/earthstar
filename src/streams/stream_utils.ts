@@ -339,22 +339,6 @@ export class ChannelMultiStream<
   }
 }
 
-export async function readStream<ChunkType>(
-  stream: ReadableStream<ChunkType>,
-): Promise<ChunkType[]> {
-  const arr: ChunkType[] = [];
-
-  const writable = new WritableStream<ChunkType>({
-    write(entry) {
-      arr.push(entry);
-    },
-  });
-
-  await stream.pipeTo(writable);
-
-  return arr;
-}
-
 export class StreamSplitter<ChunkType> {
   private transforms = new Map<
     string,

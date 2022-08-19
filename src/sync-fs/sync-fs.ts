@@ -9,7 +9,7 @@ import {
 } from "https://deno.land/std@0.132.0/path/mod.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
-import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
+import { FormatEs4 } from "../formats/format_es4.ts";
 import {
   bytesExtensions,
   ES4_MAX_CONTENT_LENGTH,
@@ -178,7 +178,8 @@ Outline of how this function works:
 
 1. The contents of the directory are compared with the manifest of that directory, and a new manifest is compiled.
 2. The latest docs from the replica are retrieved before any operations are performed.
-3. The entries from the manifest are iterated over, writing contents to the replica
+3. The entries from the manifest
+are iterated over, writing contents to the replica
 4. The docs retrieved from the replica earlier are iterated over, writing contents to the file system.
 
 */
@@ -230,7 +231,7 @@ export async function syncReplicaAndFsDir(
 
     if (isAbsenceEntry(entry)) {
       // Keypair is allowed to write this path
-      const canWriteToPath = FormatValidatorEs4
+      const canWriteToPath = FormatEs4
         ._checkAuthorCanWriteToPath(opts.keypair.address, entry.path);
 
       if (isErr(canWriteToPath) && !opts.overwriteFilesAtOwnedPaths) {
@@ -240,11 +241,11 @@ export async function syncReplicaAndFsDir(
 
     if (isFileInfoEntry(entry)) {
       // Keypair is allowed to write this path
-      const canWriteToPath = FormatValidatorEs4
+      const canWriteToPath = FormatEs4
         ._checkAuthorCanWriteToPath(opts.keypair.address, entry.path);
 
       // Path is valid
-      const pathIsValid = FormatValidatorEs4._checkPathIsValid(
+      const pathIsValid = FormatEs4._checkPathIsValid(
         entry.path,
       );
 

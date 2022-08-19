@@ -8,6 +8,7 @@ import { base32StringToBytes } from "../../crypto/base32.ts";
 import { cryptoScenarios } from "../scenarios/scenarios.ts";
 import { Scenario } from "../scenarios/types.ts";
 import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import { bytesToStream } from "../../util/streams.ts";
 
 //================================================================================
 
@@ -17,7 +18,7 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
   const SUBTEST_NAME = name;
 
   Deno.test(
-    SUBTEST_NAME + ": sha256(bytes | string) --> bytes",
+    SUBTEST_NAME + ": sha256(Uint8Array | string | ReadableStream) --> bytes",
     async () => {
       let vectors: [Uint8Array | string, Uint8Array][] = [
         // input, output
@@ -33,6 +34,7 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
             "b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq",
           ),
         ],
+
         [
           "abc",
           base32StringToBytes(
@@ -45,6 +47,7 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
             "bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq",
           ),
         ],
+
         [
           snowmanString,
           base32StringToBytes(
@@ -64,8 +67,8 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
             [stringToBuffer(snowmanString), base32StringToBytes('bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga')],
             */
       ];
-      for (let [input, expectedResult] of vectors) {
-        let actualResult = await driver.sha256(input);
+      for (const [input, expectedResult] of vectors) {
+        const actualResult = await driver.sha256(input);
         assertEquals(
           identifyBufOrBytes(actualResult),
           "bytes",
@@ -76,17 +79,18 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
           32,
           "sha256 outputs 32 bytes",
         );
+
         assertEquals(
           actualResult,
           expectedResult,
-          `hash of bytes or string: ${JSON.stringify(input)}`,
+          `hash of bytes or string or stream: ${JSON.stringify(input)}`,
         );
       }
     },
   );
 
   Deno.test(SUBTEST_NAME + ": generateKeypairBytes", async () => {
-    let keypair = await driver.generateKeypairBytes();
+    const keypair = await driver.generateKeypairBytes();
     assertEquals(
       identifyBufOrBytes(keypair.pubkey),
       "bytes",
@@ -101,7 +105,7 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
     assertEquals(keypair.secret.length, 32, "secret is 32 bytes long");
     assertNotEquals(keypair.secret, keypair.pubkey, "secret is !== pubkey");
 
-    let keypair2 = await driver.generateKeypairBytes();
+    const keypair2 = await driver.generateKeypairBytes();
     assertNotEquals(
       keypair.pubkey,
       keypair2.pubkey,
@@ -115,9 +119,9 @@ export function runCryptoDriverTests(scenario: Scenario<ICryptoDriver>) {
   });
 
   Deno.test(SUBTEST_NAME + ": sign and verify", async () => {
-    let keypairBytes = await driver.generateKeypairBytes();
-    let msg = "hello";
-    let sigBytes = await driver.sign(keypairBytes, msg);
+    const keypairBytes = await driver.generateKeypairBytes();
+    const msg = "hello";
+    const sigBytes = await driver.sign(keypairBytes, msg);
 
     assertEquals(
       identifyBufOrBytes(sigBytes),

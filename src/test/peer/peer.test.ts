@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "../asserts.ts";
 
 import { ShareAddress } from "../../util/doc-types.ts";
-import { IReplica } from "../../replica/replica-types.ts";
+
 import {
   GlobalCryptoDriver,
   setGlobalCryptoDriver,
@@ -14,8 +14,9 @@ import { Peer } from "../../peer/peer.ts";
 
 import { Logger } from "../../util/log.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
-import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 const loggerTest = new Logger("test", "lightsalmon");
 const loggerTestCb = new Logger("test cb", "salmon");
@@ -27,11 +28,11 @@ const J = JSON.stringify;
 //================================================================================
 
 const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "replicaDriver": ScenarioItem<typeof docDriverScenarios>;
   "cryptoDriver": ScenarioItem<typeof cryptoScenarios>;
 }> = multiplyScenarios({
   description: "replicaDriver",
-  scenarios: replicaScenarios,
+  scenarios: docDriverScenarios,
 }, {
   description: "cryptoDriver",
   scenarios: cryptoScenarios,
@@ -44,9 +45,12 @@ function runPeerTests(
 
   setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
-  function makeStorage(share: ShareAddress): IReplica {
+  function makeStorage(share: ShareAddress): Replica {
     const storage = new Replica({
-      driver: scenario.subscenarios.replicaDriver.makeDriver(share),
+      driver: {
+        docDriver: scenario.subscenarios.replicaDriver.makeDriver(share),
+        attachmentDriver: new AttachmentDriverMemory(),
+      },
     });
     return storage;
   }
@@ -136,7 +140,7 @@ function runPeerTests(
       await storage.close(true);
     }
 
-    // TODO: eventually test peer.bus events when we have them
+    // TODO: eventually test peer events when we have them
   });
 }
 

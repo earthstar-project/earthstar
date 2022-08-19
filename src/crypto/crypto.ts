@@ -35,6 +35,10 @@ export const Crypto: ICrypto = class {
     return base32BytesToString(b32);
   }
 
+  static updatableSha256() {
+    return GlobalCryptoDriver.updatableSha256();
+  }
+
   /**
    * Generate a new author identity -- a keypair of public and private keys as strings encoded in base32.
    *
@@ -99,15 +103,15 @@ export const Crypto: ICrypto = class {
    *   * signature base32 format is valid but signature itself is invalid
    *   * unexpected failure from crypto library
    */
-  static async verify(
+  static verify(
     authorAddress: AuthorAddress,
     sig: Base32String,
     msg: string | Uint8Array,
   ): Promise<boolean> {
     logger.debug(`verify`);
     try {
-      let authorParsed = parseAuthorAddress(authorAddress);
-      if (isErr(authorParsed)) return false;
+      const authorParsed = parseAuthorAddress(authorAddress);
+      if (isErr(authorParsed)) return Promise.resolve(false);
       return GlobalCryptoDriver.verify(
         base32StringToBytes(authorParsed.pubkey),
         base32StringToBytes(sig),
@@ -116,7 +120,7 @@ export const Crypto: ICrypto = class {
     } catch (err) {
       // catch any unexpected errors
       /* istanbul ignore next */
-      return false;
+      return Promise.resolve(false);
     }
   }
 

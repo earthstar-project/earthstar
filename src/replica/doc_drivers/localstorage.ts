@@ -1,22 +1,16 @@
-import { Path, ShareAddress } from "../util/doc-types.ts";
-import { ReplicaIsClosedError } from "../util/errors.ts";
-import { ReplicaDriverMemory } from "./replica-driver-memory.ts";
+import { DocBase, Path, ShareAddress } from "../../util/doc-types.ts";
+import { ReplicaIsClosedError } from "../../util/errors.ts";
+import { DocDriverMemory } from "./memory.ts";
 
 //--------------------------------------------------
 
-import { Logger } from "../util/log.ts";
-import { checkShareIsValid } from "../core-validators/addresses.ts";
-import {
-  DocEs4,
-  FormatValidatorEs4,
-} from "../format-validators/format-validator-es4.ts";
-import { ExtractDocType } from "../format-validators/format-validator-types.ts";
+import { Logger } from "../../util/log.ts";
 let logger = new Logger("storage driver localStorage", "gold");
 
 //================================================================================
 type SerializedDriverDocs = {
-  byPathAndAuthor: Record<string, DocEs4>;
-  byPathNewestFirst: Record<Path, DocEs4[]>;
+  byPathAndAuthor: Record<string, DocBase<string>>;
+  byPathNewestFirst: Record<Path, DocBase<string>[]>;
 };
 
 function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
@@ -30,7 +24,7 @@ function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
 /** A replica driver which perists to LocalStorage, which stores a maximum of five megabytes per domain. If you're storing multiple shares, this limit will be divided among all their replicas.
  * Works in browsers and Deno.
  */
-export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
+export class DocDriverLocalStorage extends DocDriverMemory {
   _localStorageKeyConfig: string;
   _localStorageKeyDocs: string;
 
@@ -169,7 +163,7 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
   //--------------------------------------------------
   // SET
 
-  async upsert<DocType extends ExtractDocType<typeof FormatValidatorEs4>>(
+  async upsert<FormatType extends string, DocType extends DocBase<FormatType>>(
     doc: DocType,
   ): Promise<DocType> {
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -177,7 +171,7 @@ export class ReplicaDriverLocalStorage extends ReplicaDriverMemory {
     const upsertedDoc = await super.upsert(doc);
 
     // After every upsert, for now, we save everything
-    // to localStorage as a single giant JSON blob.
+    // to localStorage as a single giant JSON attachment.
     // TODO: debounce this, only do it every 1 second or something
 
     const docsToBeSerialised: SerializedDriverDocs = {

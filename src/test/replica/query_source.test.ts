@@ -1,10 +1,13 @@
 import { Crypto } from "../../crypto/crypto.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
-import { CoreDoc, QuerySourceEvent } from "../../replica/replica-types.ts";
+import { DocEs5, FormatEs5 } from "../../formats/format_es5.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
+import { QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
-import { CallbackSink, readStream } from "../../streams/stream_utils.ts";
+import { CallbackSink } from "../../streams/stream_utils.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
+import { readStream } from "../../util/streams.ts";
 import { assertEquals } from "../asserts.ts";
 
 Deno.test("QuerySource", async () => {
@@ -16,40 +19,44 @@ Deno.test("QuerySource", async () => {
   ) as AuthorKeypair;
 
   const replica = new Replica(
-    { driver: new ReplicaDriverMemory(SHARE_ADDR) },
+    {
+      driver: {
+        docDriver: new DocDriverMemory(SHARE_ADDR),
+        attachmentDriver: new AttachmentDriverMemory(),
+      },
+    },
   );
 
   await replica.set(keypair, {
-    content: "a",
-    format: "es.4",
+    text: "a",
     path: "/wanted/1",
   });
 
   await replica.set(keypair, {
-    content: "b",
-    format: "es.4",
+    text: "b",
     path: "/wanted/2",
   });
 
   await replica.set(keypairB, {
-    content: "c",
-    format: "es.4",
+    text: "c",
     path: "/wanted/1",
   });
 
   await replica.set(keypair, {
-    content: "🐸",
-    format: "es.4",
+    text: "🐸",
     path: "/unwanted/1",
   });
 
-  const existingStream = replica.getQueryStream({
-    historyMode: "all",
-    orderBy: "localIndex ASC",
-    filter: {
-      pathStartsWith: "/wanted",
+  const existingStream = replica.getQueryStream(
+    {
+      historyMode: "all",
+      orderBy: "localIndex ASC",
+      filter: {
+        pathStartsWith: "/wanted",
+      },
     },
-  }, "existing");
+    "existing",
+  );
 
   const results = await readStream(existingStream);
   const existingWantedContent = results.map((event) => {
@@ -57,7 +64,7 @@ Deno.test("QuerySource", async () => {
       return "STOP";
     }
 
-    return event.doc.content;
+    return event.doc.text;
   });
 
   assertEquals(
@@ -66,47 +73,52 @@ Deno.test("QuerySource", async () => {
     "QueryStream returned existing content which matched filter",
   );
 
-  const everythingStream = replica.getQueryStream({
-    historyMode: "all",
-    orderBy: "localIndex ASC",
-    filter: {
-      pathStartsWith: "/wanted",
+  const everythingStream = replica.getQueryStream(
+    {
+      historyMode: "all",
+      orderBy: "localIndex ASC",
+      filter: {
+        pathStartsWith: "/wanted",
+      },
     },
-  }, "everything");
+    "everything",
+  );
 
-  const onlyNewStream = replica.getQueryStream({
-    historyMode: "all",
-    orderBy: "localIndex ASC",
-    filter: {
-      pathStartsWith: "/wanted",
+  const onlyNewStream = replica.getQueryStream(
+    {
+      historyMode: "all",
+      orderBy: "localIndex ASC",
+      filter: {
+        pathStartsWith: "/wanted",
+      },
     },
-  }, "new");
+    "new",
+  );
 
   await replica.set(keypair, {
-    content: "d",
-    format: "es.4",
+    text: "d",
     path: "/wanted/3",
   });
 
   const everythingWantedContent: string[] = [];
   const newWantedContent: string[] = [];
 
-  const everythingCallbackSink = new CallbackSink<QuerySourceEvent<CoreDoc>>();
+  const everythingCallbackSink = new CallbackSink<QuerySourceEvent<DocEs5>>();
 
   everythingCallbackSink.onWrite((event) => {
     if (event.kind === "processed_all_existing") {
       return;
     }
-    everythingWantedContent.push(event.doc.content);
+    everythingWantedContent.push(event.doc.text);
   });
 
-  const newCallbackSink = new CallbackSink<QuerySourceEvent<CoreDoc>>();
+  const newCallbackSink = new CallbackSink<QuerySourceEvent<DocEs5>>();
 
   newCallbackSink.onWrite((event) => {
     if (event.kind === "processed_all_existing") {
       return;
     }
-    newWantedContent.push(event.doc.content);
+    newWantedContent.push(event.doc.text);
   });
 
   everythingStream.pipeTo(new WritableStream(everythingCallbackSink));

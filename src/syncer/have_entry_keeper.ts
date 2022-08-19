@@ -1,8 +1,8 @@
-import { CoreDoc, QuerySourceEvent } from "../replica/replica-types.ts";
+import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { HaveEntry, HaveEntryKeeperMode } from "./syncer_types.ts";
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { AuthorAddress, Path, Timestamp } from "../util/doc-types.ts";
+import { AuthorAddress, DocBase, Path, Timestamp } from "../util/doc-types.ts";
 import { xxHash32 } from "../../deps.ts";
 
 function internalEntryToHaveEntry(id: string, entry: {
@@ -54,7 +54,7 @@ export class HaveEntryKeeper {
   private liveEntryBus = new BlockingBus<HaveEntry>();
 
   /** Processes a stream of QuerySourceEvents into `HaveEntry`. */
-  writable: WritableStream<QuerySourceEvent<CoreDoc>>;
+  writable: WritableStream<QuerySourceEvent<DocBase<string>>>;
   /** A readable stream of `HaveEntry`. Only starts once the `HaveEntryKeeper is ready. */
   readable: ReadableStream<HaveEntry>;
   /** A readable stream of `HaveEntry` created from docs created DURING the lifetime of the HaveEntryKeeper. */
@@ -66,7 +66,7 @@ export class HaveEntryKeeper {
 
     const { ready, liveEntryBus } = this;
 
-    this.writable = new WritableStream<QuerySourceEvent<CoreDoc>>({
+    this.writable = new WritableStream<QuerySourceEvent<DocBase<string>>>({
       write(querySourceEvent) {
         if (
           querySourceEvent.kind === "existing" ||
@@ -120,7 +120,7 @@ export class HaveEntryKeeper {
   }
 
   /** Add a document to the ledger of `HaveEntry`. May create a new entry, or modify an existing one. */
-  addDoc(doc: CoreDoc): HaveEntry {
+  addDoc(doc: DocBase<string>): HaveEntry {
     const encoder = new TextEncoder();
 
     const pathBytes = encoder.encode(doc.path);
@@ -191,8 +191,8 @@ export class HaveEntryKeeper {
     if (entry) {
       const versions: Record<string, AuthorAddress> = {};
 
-      for (const id in entry.versions) {
-        versions[id] = entry.versions[id].author;
+      for (const versionId in entry.versions) {
+        versions[versionId] = entry.versions[versionId].author;
       }
 
       return { path: entry.path, versions };
@@ -216,7 +216,7 @@ export class HaveEntryKeeper {
     return {
       path,
       versions: {
-        [maybeVersion.entryId]: maybeVersion.version.author,
+        [id]: maybeVersion.version.author,
       },
     };
   }

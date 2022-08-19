@@ -2,4 +2,9 @@
 
 export { CryptoDriverChloride } from "../crypto/crypto-driver-chloride.ts";
 export { CryptoDriverNode } from "../crypto/crypto-driver-node.js";
-export { ReplicaDriverSqlite } from "../replica/replica-driver-sqlite.node.ts";
+
+export { DocDriverSqlite } from "../replica/doc_drivers/sqlite.node.ts";
+
+export { PartnerWebServer } from "../syncer/partner_web_server.ts";
+
+export { AttachmentDriverFilesystem } from "../replica/attachment_drivers/filesystem.node.ts";

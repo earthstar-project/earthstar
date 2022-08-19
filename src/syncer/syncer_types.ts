@@ -1,6 +1,12 @@
-import { CoreDoc, IReplica } from "../replica/replica-types.ts";
-import { ShareAddress, Timestamp } from "../util/doc-types.ts";
+import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
+import { Replica } from "../replica/replica.ts";
+import {
+  FormatArg,
+  FormatDocType,
+  FormatsArg,
+} from "../formats/format_types.ts";
+import { ValidationError } from "../util/errors.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -32,12 +38,17 @@ export type SyncAgentWantEvent = {
 export type SyncAgentDocEvent = {
   kind: "DOC";
   id: string;
-  doc: CoreDoc;
+  doc: DocBase<string>;
+};
+
+/* An event sent when a sync agent has offered all docs it knows of. */
+export type SyncAgentExhaustedHavesEvent = {
+  kind: "EXHAUSTED_HAVES";
 };
 
 /** An event sent when a SyncAgent doesn't want anything anymore, though it'll still serve HAVE requests. */
-export type SyncAgentFinishedEvent = {
-  kind: "DONE";
+export type SyncAgentFulfilledEvent = {
+  kind: "FULFILLED";
 };
 
 export type SyncAgentAbortEvent = {
@@ -51,7 +62,8 @@ export type SyncAgentEvent =
   | SyncAgentWantEvent
   | SyncAgentDocEvent
   | SyncAgentAbortEvent
-  | SyncAgentFinishedEvent;
+  | SyncAgentExhaustedHavesEvent
+  | SyncAgentFulfilledEvent;
 
 /** The current status of a SyncAgent
  * - `requested`: The number of documents requested
@@ -62,15 +74,18 @@ export type SyncAgentStatus = {
   requested: number;
   received: number;
   status: "preparing" | "syncing" | "idling" | "done" | "aborted";
+  // TODO: Add if partner is done yet.
 };
 
 /** Options used for initialisng a `SyncAgent`.
  * - `replica`: The replica to represent.
  * - `mode`: Whether to sync only existing docs or keep the connection open for new docs too.
  */
-export type SyncAgentOpts = {
-  replica: IReplica;
+export type SyncAgentOpts<F> = {
+  replica: Replica;
+  formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
+  onRequestAttachment: (doc: FormatDocType<F>) => Promise<void>;
 };
 
 // ===================
@@ -80,6 +95,20 @@ export type SyncerDiscloseEvent = {
   kind: "DISCLOSE";
   salt: string;
   shares: string[];
+  formats: string[];
+};
+
+export type SyncerRequestAttachmentTransferEvent = {
+  kind: "BLOB_REQ";
+  /** An ID to be used for an external request to find its way back to this syncer. */
+  syncerId: string;
+  doc: DocBase<string>;
+  shareAddress: string;
+  attachmentHash: string;
+};
+
+export type SyncerFulfilledEvent = {
+  kind: "SYNCER_FULFILLED";
 };
 
 /** A SyncAgentEvent addressed to a specific share address. */
@@ -88,12 +117,56 @@ export type SyncerSyncAgentEvent = SyncAgentEvent & {
 };
 
 /** An event a Syncer can send or receive. */
-export type SyncerEvent = SyncerSyncAgentEvent | SyncerDiscloseEvent;
+export type SyncerEvent =
+  | SyncerSyncAgentEvent
+  | SyncerDiscloseEvent
+  | SyncerRequestAttachmentTransferEvent
+  | SyncerFulfilledEvent;
 
-export interface ISyncPartner {
+/** Provides a syncer with the means to connect the peer being synced with (the partner). */
+export interface ISyncPartner<IncomingAttachmentSourceType> {
+  /** A stream of inbound syncer events from the partner. */
   readable: ReadableStream<SyncerEvent>;
+
+  /** A stream of outbound syncer events to the partner */
   writable: WritableStream<SyncerEvent>;
+
+  /** Attempt to download an attachment directly from the partner.
+   * @returns A `ReadableStream<Uint8Array>` to read data from, a `ValidationError` if something went wrong, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
+   */
+  getDownload(
+    opts: GetTransferOpts,
+  ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined>;
+
+  /** Handles (usually in-band) request from the other peer to upload an attachment.
+   * @returns A `WritableStream<Uint8Array>` to write data to, a `ValidationError` if something went wrong`, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
+   */
+  handleUploadRequest(
+    opts: GetTransferOpts,
+  ): Promise<WritableStream<Uint8Array> | ValidationError | undefined>;
+
+  /** Handles an out-of-band request from the other peer to start a transfer.
+   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, a `ValidationError` if something went wrong`, or `undefined` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
+   */
+  handleTransferRequest(
+    source: IncomingAttachmentSourceType,
+    kind: "upload" | "download",
+  ): Promise<
+    | ReadableStream<Uint8Array>
+    | WritableStream<Uint8Array>
+    | ValidationError
+    | undefined
+  >;
 }
+
+// ===================
+
+export type GetTransferOpts = {
+  syncerId: string;
+  doc: DocBase<string>;
+  shareAddress: string;
+  attachmentHash: string;
+};
 
 /** A mode which determines when the syncer will stop syncing.
  * - `once` - The syncer will only attempt to sync existing docs and then stop.
@@ -103,14 +176,52 @@ export type SyncerMode = "once" | "live";
 
 /** Options to initialise a Syncer with.
  * - `peer` - The peer to synchronise.
- * - `driver` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
+ * - `partner` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
  * - `mode` - Determines what kind of sync to carry out.
+ * - `formats` - An optional array of formats to sync. Defaults to just `es.5`.
  */
-export interface SyncerOpts {
+export interface SyncerOpts<F, I> {
   peer: IPeer;
-  partner: ISyncPartner;
+  partner: ISyncPartner<I>;
   mode: SyncerMode;
+  formats?: FormatsArg<F>;
 }
 
 /** A map of sync statuses by the share address they're associated with. */
-export type SyncerStatus = Record<ShareAddress, SyncAgentStatus>;
+export type SyncerStatus = Record<
+  ShareAddress,
+  {
+    docs: SyncAgentStatus;
+    attachments: {
+      author: string;
+      path: string;
+      format: string;
+      hash: string;
+      status: AttachmentTransferStatus;
+      bytesLoaded: number;
+      totalBytes: number;
+      kind: "download" | "upload";
+    }[];
+  }
+>;
+
+// =============== BLOB SYNCING
+
+export type AttachmentTransferStatus =
+  | "ready"
+  | "in_progress"
+  | "complete"
+  | "failed";
+
+export type AttachmentTransferOpts<F> = {
+  stream: ReadableStream<Uint8Array> | WritableStream<Uint8Array>;
+  replica: Replica;
+  doc: FormatDocType<F>;
+  format: FormatArg<F>;
+};
+
+export type AttachmentTransferProgressEvent = {
+  status: AttachmentTransferStatus;
+  bytesLoaded: number;
+  totalBytes: number;
+};

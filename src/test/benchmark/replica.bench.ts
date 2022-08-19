@@ -4,23 +4,24 @@ import { Replica } from "../../replica/replica.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { randomId } from "../../util/misc.ts";
 import { writeRandomDocs } from "../test-utils.ts";
-import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "docDriver": ScenarioItem<typeof docDriverScenarios>;
   "crypto": ScenarioItem<typeof cryptoScenarios>;
 }> = multiplyScenarios({
-  description: "replicaDriver",
-  scenarios: replicaScenarios,
+  description: "docDriver",
+  scenarios: docDriverScenarios,
 }, {
   description: "crypto",
   scenarios: cryptoScenarios,
 });
 
 for (const scenario of scenarios) {
-  const replicaDriver = scenario.subscenarios.replicaDriver;
+  const replicaDriver = scenario.subscenarios.docDriver;
   const crypto = scenario.subscenarios.crypto;
 
   const SHARE_ADDR = "+test.a123";
@@ -29,32 +30,39 @@ for (const scenario of scenarios) {
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair("nest") as AuthorKeypair;
 
-  const replicaToClose = new Replica({ driver: driverToClose });
+  const replicaToClose = new Replica({
+    driver: {
+      docDriver: driverToClose,
+      attachmentDriver: new AttachmentDriverMemory(),
+    },
+  });
 
   await replicaToClose.close(true);
   const driver = replicaDriver.makeDriver(SHARE_ADDR, scenario.name);
-  const replica = new Replica({ driver });
+  const replica = new Replica({
+    driver: {
+      docDriver: driver,
+      attachmentDriver: new AttachmentDriverMemory(),
+    },
+  });
 
   await writeRandomDocs(keypair, replica, 100);
 
   await replica.set(keypair, {
-    format: "es.4",
-    content: "hello",
-    path: `/stable.txt`,
+    text: "hello",
+    path: `/stable`,
   });
 
   await replica.set(keypairB, {
-    format: "es.4",
-    content: "howdy",
-    path: `/stable.txt`,
+    text: "howdy",
+    path: `/stable`,
   });
 
   Deno.bench(`Replica.set (${scenario.name})`, { group: "set" }, async () => {
     setGlobalCryptoDriver(crypto);
     await replica.set(keypair, {
-      format: "es.4",
-      content: "hi",
-      path: `/test/${randomId()}.txt`,
+      text: "hi",
+      path: `/test/${randomId()}`,
     });
   });
 
@@ -63,7 +71,7 @@ for (const scenario of scenarios) {
     { group: "queryDocs" },
     async () => {
       setGlobalCryptoDriver(crypto);
-      await replica.queryDocs();
+      await replica.queryDocs({});
     },
   );
 

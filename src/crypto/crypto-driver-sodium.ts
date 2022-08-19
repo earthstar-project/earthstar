@@ -2,31 +2,44 @@ import { ICryptoDriver, KeypairBytes } from "./crypto-types.ts";
 import { concatBytes, stringToBytes } from "../util/bytes.ts";
 import sodium from "https://deno.land/x/sodium@0.2.0/basic.ts";
 
-const { createHash } = sha256_uint8array;
-
 await sodium.ready;
+const { createHash } = sha256_uint8array;
 
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
 import { sha256_uint8array } from "../../deps.ts";
+import { UpdatableHash } from "./updatable_hash.ts";
 const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
 /**
- * A verison of the ILowLevelCrypto interface backed by noble/ed25519.
- * Works in the browser.
+ * A verison of the ICryptoDriver interface backed a WASM wrapper of libsodium.
+ * Faster than noble by several magnitudes.
+ * Works in deno and the browser.
  */
 export const CryptoDriverSodium: ICryptoDriver = class {
-  static sha256(input: string | Uint8Array): Promise<Uint8Array> {
+  static async sha256(
+    input: string | Uint8Array,
+  ): Promise<Uint8Array> {
     if (typeof input === "string") {
-      return Promise.resolve(
-        createHash("sha256").update(input, "utf-8").digest(),
-      );
+      const encoded = new TextEncoder().encode(input);
+      const result = await crypto.subtle.digest("SHA-256", encoded);
+      return Promise.resolve(new Uint8Array(result));
     } else {
-      return Promise.resolve(createHash("sha256").update(input).digest());
+      const result = await crypto.subtle.digest("SHA-256", input);
+      return Promise.resolve(new Uint8Array(result));
     }
   }
+
+  static updatableSha256() {
+    return new UpdatableHash({
+      hash: createHash("sha256"),
+      update: (hash, data) => hash.update(data),
+      digest: (hash) => hash.digest(),
+    });
+  }
+
   static generateKeypairBytes(): Promise<KeypairBytes> {
     logger.debug("generateKeypairBytes");
 

@@ -1,7 +1,9 @@
 import {
   AuthorAddress,
+  AuthorKeypair,
   Base32String,
   DocBase,
+  DocInputBase,
   LocalIndex,
   Path,
   ShareAddress,
@@ -9,10 +11,7 @@ import {
   Timestamp,
 } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import {
-  IFormatValidator,
-  ValidatorGenerateOpts,
-} from "./format-validator-types.ts";
+import { FormatterGenerateOpts, IFormat } from "./format_types.ts";
 import { Crypto } from "../crypto/crypto.ts";
 
 import {
@@ -37,19 +36,17 @@ import {
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-import { microsecondNow } from "../util/misc.ts";
 let logger = new Logger("validator es.4", "red");
 
 //================================================================================
 
 /** Contains data written and signed by an identity. */
-export interface DocEs4Fake extends DocBase {
+export interface DocEs4 extends DocBase<"es.4"> {
   /** Which document format the doc adheres to, e.g. `es.4`. */
-  format: string;
+  format: "es.4";
   author: AuthorAddress;
-  stuff: string; // TODO: | null, when we have sparse mode
+  content: string;
   contentHash: string;
-  //contentLength: number,  // TODO: add for sparse mode, and enforce in the format validator
   /** When the document should be deleted, as a UNIX timestamp in microseconds. */
   deleteAfter: number | null;
   path: Path;
@@ -60,8 +57,8 @@ export interface DocEs4Fake extends DocBase {
   /** The share this document is from.
    * Shares were previously called workspaces, but we didn't want to break compatibility with previous versions by renaming this field.
    */
-  share: ShareAddress;
-  // workspaceSignature: Signature,  // TODO: add for sparse mode
+  workspace: ShareAddress;
+  // workspaceSignature: Signature,
 
   // Local Index:
   // Our docs form a linear sequence with gaps.
@@ -88,11 +85,11 @@ export interface DocEs4Fake extends DocBase {
 }
 
 /** A partial es.4 doc that is about to get written. The rest of the properties will be computed automatically. */
-export interface DocInputEs4Fake {
+export interface DocInputEs4 extends DocInputBase<"es.4"> {
   /** The format the document adheres to, e.g. `es.4` */
   format: "es.4";
   path: Path;
-  stuff: string;
+  content: string;
   /** A UNIX timestamp in microseconds indicating when the document was written. Determined automatically if omitted. */
   timestamp?: number;
   /** A UNIX timestamp in microseconds indicating when the document should be deleted by.*/
@@ -136,15 +133,13 @@ const ES4_CORE_SCHEMA: CheckObjOpts = {
  * Validator for the 'es.4' format. Checks if documents are spec-compliant before ingesting, and signs them according to spec.
  * @link https://earthstar-project.org/specs/data-spec
  */
-export const FormatValidatorFake: IFormatValidator<
-  DocEs4Fake,
-  DocInputEs4Fake
-> = class {
-  static format: "es.fake" = "es.fake";
+
+export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4> = class {
+  static id: "es.4" = "es.4";
 
   /** Deterministic hash of this version of the document */
   static hashDocument(
-    doc: DocEs4Fake,
+    doc: DocEs4,
   ): Promise<Base32String | ValidationError> {
     // Deterministic hash of the document.
     // Can return a ValidationError, but only checks for very basic document validity.
@@ -180,7 +175,7 @@ export const FormatValidatorFake: IFormatValidator<
         `format\t${doc.format}\n` +
         `path\t${doc.path}\n` +
         `timestamp\t${doc.timestamp}\n` +
-        `share\t${doc.share}\n`, // \n at the end also, not just between
+        `workspace\t${doc.workspace}\n`, // \n at the end also, not just between
     );
   }
 
@@ -188,40 +183,41 @@ export const FormatValidatorFake: IFormatValidator<
    * Generate a signed document from the input format the validator expects.
    */
   static async generateDocument(
-    { input, keypair, share, latestDocSamePath }: ValidatorGenerateOpts<
-      DocEs4Fake,
-      DocInputEs4Fake
+    { input, keypair, share, timestamp }: FormatterGenerateOpts<
+      "es.4",
+      DocInputEs4,
+      DocEs4
     >,
-  ): Promise<DocEs4Fake | ValidationError> {
-    let timestamp: number;
-    if (typeof input.timestamp === "number") {
-      timestamp = input.timestamp;
-    } else {
-      // bump timestamp if needed to win over existing latest doc at same path
-
-      if (latestDocSamePath === undefined) {
-        timestamp = microsecondNow();
-      } else {
-        timestamp = Math.max(
-          microsecondNow(),
-          latestDocSamePath.timestamp + 1,
-        );
-      }
-    }
-
-    const doc: DocEs4Fake = {
+  ): Promise<{ doc: DocEs4 } | ValidationError> {
+    const doc: DocEs4 = {
       format: "es.4",
       author: keypair.address,
-      stuff: input.stuff,
-      contentHash: await Crypto.sha256base32(input.stuff),
+      content: input.content,
+      contentHash: await Crypto.sha256base32(input.content),
       deleteAfter: input.deleteAfter ?? null,
       path: input.path,
       timestamp,
-      share,
+      workspace: share,
       signature: "?", // signature will be added in just a moment
       // _localIndex will be added during upsert.  it's not needed for the signature.
     };
 
+    const signedDoc = await this.signDocument(keypair, doc);
+
+    if (isErr(signedDoc)) {
+      return signedDoc;
+    }
+
+    return { doc: signedDoc };
+  }
+
+  /**
+   * Generate a signed document from the input format the validator expects.
+   */
+  static async signDocument(
+    keypair: AuthorKeypair,
+    doc: DocEs4,
+  ): Promise<DocEs4 | ValidationError> {
     const hash = await this.hashDocument(doc);
     if (isErr(hash)) return hash;
 
@@ -232,6 +228,32 @@ export const FormatValidatorFake: IFormatValidator<
   }
 
   /**
+   * Overwrite the user-written contents of a document, wipe any associated data, and return the signed document.
+   */
+  static async wipeDocument(
+    keypair: AuthorKeypair,
+    doc: DocEs4,
+  ): Promise<DocEs4 | ValidationError> {
+    if (doc.content.length === 0) {
+      return doc;
+    }
+
+    const cleanedResult = this.removeExtraFields(doc);
+    if (isErr(cleanedResult)) return cleanedResult;
+    const cleanedDoc = cleanedResult.doc;
+
+    // make new doc which is empty and just barely newer than the original
+    const emptyDoc: DocEs4 = {
+      ...cleanedDoc,
+      content: "",
+      contentHash: await Crypto.sha256base32(""),
+      signature: "?",
+    };
+
+    return this.signDocument(keypair, emptyDoc);
+  }
+
+  /**
    * Return a copy of the doc without extra fields, plus the extra fields
    * as a separate object.
    * If the input is not a plain javascript object, return a ValidationError.
@@ -239,8 +261,8 @@ export const FormatValidatorFake: IFormatValidator<
    * more likely to be valid once the extra fields have been removed.
    */
   static removeExtraFields(
-    doc: DocEs4Fake,
-  ): { doc: DocEs4Fake; extras: Record<string, any> } | ValidationError {
+    doc: DocEs4,
+  ): { doc: DocEs4; extras: Record<string, any> } | ValidationError {
     if (!isPlainObject(doc)) {
       return new ValidationError("doc is not a plain javascript object");
     }
@@ -261,7 +283,7 @@ export const FormatValidatorFake: IFormatValidator<
       }
     }
     return {
-      doc: doc2 as DocEs4Fake,
+      doc: doc2 as DocEs4,
       extras,
     };
   }
@@ -273,7 +295,7 @@ export const FormatValidatorFake: IFormatValidator<
    * or you can override it for testing purposes.
    */
   static checkDocumentIsValid(
-    doc: DocEs4Fake,
+    doc: DocEs4,
     now?: number,
   ): true | ValidationError {
     if (now === undefined) now = Date.now() * 1000;
@@ -299,7 +321,7 @@ export const FormatValidatorFake: IFormatValidator<
     const errAA = checkAuthorIsValid(doc.author);
     if (isErr(errAA)) return errAA;
 
-    const errWA = checkShareIsValid(doc.share);
+    const errWA = checkShareIsValid(doc.workspace);
     if (isErr(errWA)) return errWA;
 
     // do this after validating that the author address is well-formed
@@ -308,7 +330,7 @@ export const FormatValidatorFake: IFormatValidator<
     if (isErr(errS)) return errS;
 
     // do this last since it might be slow on a large document
-    const errCH = this._checkContentMatchesHash(doc.stuff, doc.contentHash);
+    const errCH = this._checkContentMatchesHash(doc.content, doc.contentHash);
     if (isErr(errCH)) return errCH;
     return true;
   }
@@ -316,10 +338,10 @@ export const FormatValidatorFake: IFormatValidator<
   // These are broken out for easier unit testing.
   // They will not normally be used directly; use the main assertDocumentIsValid instead.
   // Return true on success.
-  static _checkBasicDocumentValidity(doc: DocEs4Fake): true | ValidationError { // check for correct fields and datatypes
+  static _checkBasicDocumentValidity(doc: DocEs4): true | ValidationError { // check for correct fields and datatypes
     const err = checkObj(ES4_CORE_SCHEMA)(doc);
     if (err !== null) return new ValidationError(err);
-    return true; // TODO: is there more to check?
+    return true;
   }
   static _checkAuthorCanWriteToPath(
     author: AuthorAddress,
@@ -427,7 +449,7 @@ export const FormatValidatorFake: IFormatValidator<
     return true;
   }
   static async _checkAuthorSignatureIsValid(
-    doc: DocEs4Fake,
+    doc: DocEs4,
   ): Promise<true | ValidationError> {
     // Check if the signature is good.
     // return a ValidationError, or return true on success.
@@ -457,5 +479,17 @@ export const FormatValidatorFake: IFormatValidator<
       return new ValidationError("content does not match contentHash");
     }
     return true;
+  }
+
+  static getAttachmentInfo(_doc: DocEs4): ValidationError {
+    return new ValidationError("es.4 does not support attachments");
+  }
+
+  static updateAttachmentFields(
+    _doc: DocEs4,
+    _size: number,
+    _hash: string,
+  ): ValidationError {
+    return new ValidationError("es.4 does not support attachments");
   }
 };

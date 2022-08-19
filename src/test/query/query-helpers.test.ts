@@ -1,8 +1,6 @@
 import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { Query } from "../../query/query-types.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { IReplica } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ValidationError } from "../../util/errors.ts";
 import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
@@ -27,18 +25,25 @@ import {
   queryByGlobAsync,
   queryByTemplateAsync,
 } from "../../query/query-helpers.ts";
-import { ReplicaScenario, Scenario } from "../scenarios/types.ts";
-import { replicaScenarios } from "../scenarios/scenarios.ts";
+import { DocDriverScenario, Scenario } from "../scenarios/types.ts";
+import { docDriverScenarios } from "../scenarios/scenarios.ts";
+import { FormatEs4 } from "../../formats/format_es4.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 let runQueryHelpersTests = async (
-  scenario: Scenario<ReplicaScenario>,
+  scenario: Scenario<DocDriverScenario>,
   test: TestContext,
 ) => {
   let SUBTEST_NAME = scenario.name;
 
-  function makeStorage(ws: ShareAddress): IReplica {
+  function makeStorage(ws: ShareAddress): Replica {
     let driver = scenario.item.makeDriver(ws);
-    return new Replica({ driver });
+    return new Replica({
+      driver: {
+        docDriver: driver,
+        attachmentDriver: new AttachmentDriverMemory(),
+      },
+    });
   }
 
   let logger = new Logger("query helpers test", "yellow");
@@ -103,7 +108,7 @@ let runQueryHelpersTests = async (
     interface Vector {
       note?: string;
       glob: string;
-      esQuery: Query;
+      esQuery: Query<string[]>;
       regex: string | null;
       matchingPaths: string[];
       nonMatchingPaths: string[];
@@ -423,15 +428,15 @@ let runQueryHelpersTests = async (
 
     for (let path of docPathsForGlobTest) {
       await storage.set(keypair1, {
-        format: "es.4",
         path: path,
         content: "content at " + path,
         timestamp: now,
-      });
+      }, FormatEs4);
     }
 
     for (let vector of globQueryVectors) {
       let { glob, expectedPaths } = vector;
+
       let docs = await queryByGlobAsync(storage, glob);
       let actualPaths = docs.map((doc) => doc.path);
 
@@ -440,6 +445,7 @@ let runQueryHelpersTests = async (
 
       logger.debug({ glob, docs, actualPaths, expectedPaths });
       let note = vector.note ? ` (${vector.note})` : "";
+
       assertEquals(
         actualPaths,
         expectedPaths,
@@ -834,10 +840,9 @@ let runQueryHelpersTests = async (
 
     for (let path of docPathsForTemplateTest) {
       await storage.set(keypair1, {
-        format: "es.4",
         path: path,
         content: "content at " + path,
-      });
+      }, FormatEs4);
     }
 
     for (let vector of templateQueryVectors) {
@@ -861,7 +866,7 @@ let runQueryHelpersTests = async (
 };
 
 Deno.test(`Query helpers`, async (test) => {
-  for (const scenario of replicaScenarios) {
+  for (const scenario of docDriverScenarios) {
     await runQueryHelpersTests(scenario, test);
   }
 });

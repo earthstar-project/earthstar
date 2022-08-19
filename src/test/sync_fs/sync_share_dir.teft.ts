@@ -19,14 +19,14 @@ import {
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Replica } from "../../replica/replica.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 
 const TEST_DIR = "src/test/fs-sync/dirs/sync_share_dir";
 const TEST_SHARE = "+test.a123";
 
 function makeReplica(address: string) {
-  const driver = new ReplicaDriverMemory(address);
-  return new Replica({ driver });
+  const driver = new DocDriverMemory(address);
+  return new Replica({ driver: { docDriver: driver, attachmentDriver: null } });
 }
 
 Deno.test("syncShareAndDir", async (test) => {

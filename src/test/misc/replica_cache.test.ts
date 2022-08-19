@@ -6,15 +6,15 @@ import {
 } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
-import { FormatValidatorEs4 } from "../../format-validators/format-validator-es4.ts";
-import { ReplicaDriverMemory } from "../../replica/replica-driver-memory.ts";
+import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaCache } from "../../replica/replica-cache.ts";
 import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
 import { throws } from "../test-utils.ts";
-
 import { sleep } from "../../util/misc.ts";
 import { LogLevel, setLogLevel } from "../../util/log.ts";
+import { FormatEs4 } from "../../formats/format_es4.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 //setLogLevel("replica-cache", LogLevel.Debug);
 
@@ -29,7 +29,12 @@ Deno.test("ReplicaCache", async () => {
   ) as AuthorKeypair;
 
   const replica = new Replica(
-    { driver: new ReplicaDriverMemory(SHARE_ADDR) },
+    {
+      driver: {
+        docDriver: new DocDriverMemory(SHARE_ADDR),
+        attachmentDriver: new AttachmentDriverMemory(),
+      },
+    },
   );
 
   const cache = new ReplicaCache(replica);
@@ -66,8 +71,7 @@ Deno.test("ReplicaCache", async () => {
   await cache._replica.set(keypair, {
     content: "Hello!",
     path: "/test/hello.txt",
-    format: "es.4",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated five times
@@ -79,8 +83,7 @@ Deno.test("ReplicaCache", async () => {
   cache._replica.set(keypair, {
     content: "Apples!",
     path: "/test/apples.txt",
-    format: "es.4",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated seven times
@@ -91,8 +94,7 @@ Deno.test("ReplicaCache", async () => {
   cache._replica.set(keypair, {
     content: "Oranges!",
     path: "/test/oranges.txt",
-    format: "es.4",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated 10 times
@@ -109,8 +111,7 @@ Deno.test("ReplicaCache", async () => {
   cache._replica.set(keypairB, {
     content: "Suzy's Oranges!",
     path: "/test/oranges.txt",
-    format: "es.4",
-  });
+  }, FormatEs4);
 
   await sleep(100);
   // Cache should have be updated 13 times
@@ -165,9 +166,8 @@ Deno.test("ReplicaCache", async () => {
   assertThrows(() => {
     cache.set(keypair, {
       content: "na",
-      format: "es.4",
       path: "bloo",
-    });
+    }, FormatEs4);
   }, ReplicaCacheIsClosedError);
 
   // Test cache expiry with a quickly expiring cache

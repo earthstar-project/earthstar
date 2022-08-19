@@ -6,7 +6,6 @@ import { stringLengthInBytes } from "../util/bytes.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-import { CoreDoc } from "../replica/replica-types.ts";
 import { equal } from "../../deps.ts";
 const logger = new Logger("query", "green");
 
@@ -14,11 +13,11 @@ const logger = new Logger("query", "green");
 
 export type WillMatch = "all" | "all-latest" | "some" | "nothing";
 export interface CleanUpQueryResult {
-  query: Query;
+  query: Query<string[]>;
   isValid: boolean;
   willMatch: WillMatch;
 }
-export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
+export function cleanUpQuery(inputQuery: Query<string[]>): CleanUpQueryResult {
   // check for invalid queries and return null
   // canonicalize and optimize queries
   // check for filters that obviously result in nothing and return a canonical empty query: { limit: 0 }
@@ -154,6 +153,8 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
     ) {
       willMatch = "nothing";
     }
+
+    /*
     if (
       filter.contentLength && filter.contentLengthGt &&
       !(filter.contentLength > filter.contentLengthGt)
@@ -172,6 +173,7 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
     ) {
       willMatch = "nothing";
     }
+    */
   }
 
   if (willMatch === "nothing") {
@@ -197,7 +199,10 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
   };
 }
 
-export function docMatchesFilter(doc: CoreDoc, filter: QueryFilter): boolean {
+export function docMatchesFilter<
+  FormatType extends string,
+  DocType extends DocBase<FormatType>,
+>(doc: DocType, filter: QueryFilter): boolean {
   // Does the doc match the filters?
   if (filter.path !== undefined && doc.path !== filter.path) return false;
   if (
@@ -231,6 +236,7 @@ export function docMatchesFilter(doc: CoreDoc, filter: QueryFilter): boolean {
     return false;
   }
 
+  /*
   const contentLength = stringLengthInBytes(doc.content);
   if (
     filter.contentLength !== undefined &&
@@ -250,17 +256,21 @@ export function docMatchesFilter(doc: CoreDoc, filter: QueryFilter): boolean {
   ) {
     return false;
   }
+  */
 
   return true;
 }
 
 /** Return whether a document is expired or not */
-export function docIsExpired(doc: CoreDoc, now?: number) {
-  const nowToUse = now || Date.now() * 1000;
-
-  if (doc.deleteAfter === null) {
+export function docIsExpired<
+  FormatType extends string,
+  DocType extends DocBase<FormatType>,
+>(doc: DocType, now?: number) {
+  if (doc.deleteAfter === null || doc.deleteAfter === undefined) {
     return false;
   }
+
+  const nowToUse = now || Date.now() * 1000;
 
   return nowToUse > doc.deleteAfter;
 }

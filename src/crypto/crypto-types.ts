@@ -4,6 +4,7 @@ import {
   Base32String,
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
+import { UpdatableHash } from "./updatable_hash.ts";
 
 export interface KeypairBytes {
   pubkey: Uint8Array;
@@ -13,7 +14,10 @@ export interface KeypairBytes {
 /** Higher-level crypto functions. Not used directly for the most part, but useful for generating new keypairs. */
 // These all handle base32-encoded strings.
 export interface ICrypto {
-  sha256base32(input: string | Uint8Array): Promise<Base32String>;
+  sha256base32(
+    input: string | Uint8Array,
+  ): Promise<Base32String>;
+  updatableSha256(): UpdatableHash<any>;
   generateAuthorKeypair(
     name: string,
   ): Promise<AuthorKeypair | ValidationError>;
@@ -34,7 +38,10 @@ export interface ICrypto {
 /** A crypto driver provides low-level access to an implementation providing ed25519 cryptography, e.g. Chloride, noble/ed25519, Node crypto. */
 // These all handle Uint8Arrays (bytes)
 export interface ICryptoDriver {
-  sha256(input: string | Uint8Array): Promise<Uint8Array>;
+  sha256(
+    input: string | Uint8Array,
+  ): Promise<Uint8Array>;
+  updatableSha256(): UpdatableHash<any>;
   generateKeypairBytes(): Promise<KeypairBytes>;
   sign(
     keypairBytes: KeypairBytes,
