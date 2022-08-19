@@ -263,6 +263,23 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
           docsPromise.resolve([]);
         }
       };
+    } else if (query.filter?.path && query.historyMode === "all") {
+      const index = docStore.index("pathAuthorIndex");
+
+      const range = IDBKeyRange.bound([query.filter.path, " "], [
+        query.filter.path,
+        "~",
+      ]);
+
+      const getOp = index.getAll(range);
+
+      getOp.onsuccess = () => {
+        if (getOp.result) {
+          docsPromise.resolve(Array.from(getOp.result));
+        } else {
+          docsPromise.resolve([]);
+        }
+      };
     } else {
       const pathLower = query.startAfter?.path || query.filter?.path ||
         query.filter?.pathStartsWith || " ";
@@ -289,17 +306,14 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
 
       const index = docStore.index("comboIndex");
 
-      const getCursor = index.openCursor(range, "prev");
+      const getOp = index.getAll(range);
 
-      const docsArr: DocBase<string>[] = [];
-
-      getCursor.onsuccess = () => {
-        if (getCursor.result?.value) {
-          docsArr.push(getCursor.result.value);
-          getCursor.result.continue();
+      getOp.onsuccess = () => {
+        if (getOp.result) {
+          docsPromise.resolve(getOp.result);
         } else {
           // done?
-          docsPromise.resolve(docsArr);
+          docsPromise.resolve([]);
         }
       };
     }
