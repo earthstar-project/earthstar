@@ -79,10 +79,10 @@ await build({
     name: "earthstar",
     version: Deno.args[0],
     engines: {
-      node: ">=14.19.1",
+      node: ">=16.0.0",
     },
     description:
-      "Earthstar is a specification and Javascript library for building online tools you can truly call your own.",
+      "Earthstar is a tool for private, undiscoverable, offline-first networks.",
     license: "LGPL-3.0-only",
     homepage: "https://earthstar-project.org",
     funding: {
