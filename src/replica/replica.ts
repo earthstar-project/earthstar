@@ -162,14 +162,13 @@ export class Replica {
       await this.pruneExpiredDocsAndAttachments();
     }
 
+    await this.replicaDriver.attachmentDriver.clearStaging();
+
     this._isClosed = true;
     logger.debug(`    closing ReplicaDriver (erase = ${erase})...`);
 
     await this.replicaDriver.docDriver.close(erase);
-
-    if (erase) {
-      await this.replicaDriver.attachmentDriver.wipe();
-    }
+    await this.replicaDriver.attachmentDriver.close(erase);
 
     logger.debug("    sending didClose nonblockingly...");
     this.eventWriter.write({
@@ -205,7 +204,7 @@ export class Replica {
   // GET
 
   /** Returns the max local index of all stored documents */
-  getMaxLocalIndex(): number {
+  getMaxLocalIndex(): Promise<number> {
     if (this._isClosed) throw new ReplicaIsClosedError();
     return this.replicaDriver.docDriver.getMaxLocalIndex();
   }
@@ -281,6 +280,7 @@ export class Replica {
     logger.debug(`queryDocs`, query);
     if (this._isClosed) throw new ReplicaIsClosedError();
     const f = getFormatsWithFallback(formats);
+
     return await this.replicaDriver.docDriver.queryDocs({
       ...query,
       formats: f.map((f) => f.id),
@@ -531,12 +531,16 @@ export class Replica {
       }
       // save it
       loggerIngest.debug("  > upserting into ReplicaDriver...");
+
       const docAsWritten = await this.replicaDriver.docDriver.upsert(
         docToIngest,
-      ); // TODO: pass existingDocsSamePath to save another lookup
+      );
+
+      // TODO: pass existingDocsSamePath to save another lookup
       loggerIngest.debug("  > ...done upserting into ReplicaDriver");
       loggerIngest.debug("  > ...getting ReplicaDriver maxLocalIndex...");
-      const maxLocalIndex = this.replicaDriver.docDriver.getMaxLocalIndex();
+      const maxLocalIndex = await this.replicaDriver.docDriver
+        .getMaxLocalIndex();
 
       loggerIngest.debug(
         " >> ingest: end of protected region, returning a WriteEvent from the lock",

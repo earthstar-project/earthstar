@@ -195,7 +195,6 @@ await syncer.isDone;
 
 logPeer("Completed sync.");
 logPeer("Yeehaw!");
-
 logFrog("...");
 
 logNarrator(

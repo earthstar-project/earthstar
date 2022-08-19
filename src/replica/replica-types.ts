@@ -176,7 +176,7 @@ export interface IReplicaDocDriver extends IReplicaConfig {
   //--------------------------------------------------
   // LIFECYCLE
 
-  /** Returns if the replica has been closed or not. */
+  /** Returns if the doc driver has been closed or not. */
   isClosed(): boolean;
 
   /**
@@ -193,9 +193,7 @@ export interface IReplicaDocDriver extends IReplicaConfig {
 
   /** The max local index used so far. */
   // The first doc will increment this and get index 1.
-  // This is synchronous because it's expected that the driver will
-  // load it once at startup and then keep it in memory.
-  getMaxLocalIndex(): number;
+  getMaxLocalIndex(): Promise<number>;
 
   /** Returns an array of Docs given a Query. */
   // these should return frozen docs
@@ -273,6 +271,18 @@ export interface IReplicaAttachmentDriver {
 
   /** Reject all attachments waiting in staging. */
   clearStaging(): Promise<void>;
+
+  /**
+   * Close the replica Driver.
+   * The replica will call this.
+   * You cannot call close() if the replica is already closed (it will throw a ReplicaIsClosedError).
+   * If erase, actually delete and forget data locally.
+   * Erase defaults to false if not provided.
+   */
+  close(erase: boolean): Promise<void>;
+
+  /** Returns if the attachment driver has been closed or not. */
+  isClosed(): boolean;
 }
 
 /**

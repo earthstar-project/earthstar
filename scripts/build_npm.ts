@@ -63,32 +63,26 @@ await build({
       name: "path-to-regexp",
       version: "6.2.1",
     },
-    "https://deno.land/std@0.123.0/node/fs/promises.ts": {
+    "https://deno.land/std@0.152.0/node/fs/promises.ts": {
       name: "node:fs/promises",
     },
-    "https://deno.land/std@0.123.0/node/path.ts": {
+    "https://deno.land/std@0.152.0/node/path.ts": {
       name: "node:path",
     },
-    "https://esm.sh/@nodelib/fs.walk": {
+    "https://esm.sh/@nodelib/fs.walk@1.2.8": {
       name: "@nodelib/fs.walk",
       version: "1.2.8",
     },
-    /* TODO: Bring back with IndexedDB
-    "./src/replica/indexeddb-types.deno.d.ts":
-      "./src/replica/indexeddb-types.node.d.ts",
-    "./src/test/scenarios/scenarios.ts":
-      "./src/test/scenarios/scenarios.node.ts",
-      */
   },
   package: {
     // package.json properties
     name: "earthstar",
     version: Deno.args[0],
     engines: {
-      node: ">=14.19.1",
+      node: ">=16.0.0",
     },
     description:
-      "Earthstar is a specification and Javascript library for building online tools you can truly call your own.",
+      "Earthstar is a tool for private, undiscoverable, offline-first networks.",
     license: "LGPL-3.0-only",
     homepage: "https://earthstar-project.org",
     funding: {
@@ -105,7 +99,6 @@ await build({
     devDependencies: {
       "@types/better-sqlite3": "7.4.2",
       "@types/chloride": "2.4.0",
-      "@types/node-fetch": "2.5.12",
     },
   },
 });
@@ -117,20 +110,20 @@ Deno.copyFileSync("README.md", "npm/README.md");
 // A truly filthy hack to compensate for Typescript's lack of support for the exports field
 Deno.writeTextFileSync(
   "npm/browser.js",
-  `export * from "./esm/src/entries/browser";`
+  `export * from "./esm/src/entries/browser";`,
 );
 
 Deno.writeTextFileSync(
   "npm/browser.d.ts",
-  `export * from './types/src/entries/browser';`
+  `export * from './types/src/entries/browser';`,
 );
 
 Deno.writeTextFileSync(
   "npm/node.js",
-  `export * from "./esm/src/entries/node";`
+  `export * from "./esm/src/entries/node";`,
 );
 
 Deno.writeTextFileSync(
   "npm/node.d.ts",
-  `export * from './types/src/entries/node';`
+  `export * from './types/src/entries/node';`,
 );

@@ -297,12 +297,12 @@ export class DocDriverSqlite implements IReplicaDocDriver {
   //--------------------------------------------------
   // GET
 
-  getMaxLocalIndex(): number {
+  getMaxLocalIndex(): Promise<number> {
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
     }
 
-    return this._maxLocalIndex;
+    return Promise.resolve(this._maxLocalIndex);
   }
 
   queryDocs(queryToClean: Query<string[]>): Promise<DocBase<string>[]> {
@@ -367,6 +367,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     }
 
     Object.freeze(doc);
+
     const row = {
       doc: JSON.stringify(doc),
       localIndex: this._maxLocalIndex + 1,
@@ -374,7 +375,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     };
 
     this._maxLocalIndex += 1;
-    //  TODOM3: Fix this any type.
+
     this._db.query(UPSERT_DOC_QUERY, row);
 
     return { ...doc, _localIndex: row.localIndex };
@@ -416,7 +417,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
 
     // make sure sqlite is using utf-8
     this._db.query(SET_ENCODING_QUERY);
-    this._db.query("pragma synchronous = OFF");
+    this._db.query("pragma synchronous = NORMAL");
     const encoding = this._db.query(GET_ENCODING_QUERY);
     this._db.query(CREATE_CONFIG_TABLE_QUERY);
 

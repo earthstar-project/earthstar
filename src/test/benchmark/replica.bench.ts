@@ -4,25 +4,24 @@ import { Replica } from "../../replica/replica.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { randomId } from "../../util/misc.ts";
 import { writeRandomDocs } from "../test-utils.ts";
-import { cryptoScenarios, replicaScenarios } from "../scenarios/scenarios.ts";
+import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
-import { FormatEs5 } from "../../formats/format_es5.ts";
-import { FormatEs4 } from "../../formats/format_es4.ts";
+import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
 const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof replicaScenarios>;
+  "docDriver": ScenarioItem<typeof docDriverScenarios>;
   "crypto": ScenarioItem<typeof cryptoScenarios>;
 }> = multiplyScenarios({
-  description: "replicaDriver",
-  scenarios: replicaScenarios,
+  description: "docDriver",
+  scenarios: docDriverScenarios,
 }, {
   description: "crypto",
   scenarios: cryptoScenarios,
 });
 
 for (const scenario of scenarios) {
-  const replicaDriver = scenario.subscenarios.replicaDriver;
+  const replicaDriver = scenario.subscenarios.docDriver;
   const crypto = scenario.subscenarios.crypto;
 
   const SHARE_ADDR = "+test.a123";
@@ -31,11 +30,21 @@ for (const scenario of scenarios) {
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair("nest") as AuthorKeypair;
 
-  const replicaToClose = new Replica({ driver: driverToClose });
+  const replicaToClose = new Replica({
+    driver: {
+      docDriver: driverToClose,
+      attachmentDriver: new AttachmentDriverMemory(),
+    },
+  });
 
   await replicaToClose.close(true);
   const driver = replicaDriver.makeDriver(SHARE_ADDR, scenario.name);
-  const replica = new Replica({ driver });
+  const replica = new Replica({
+    driver: {
+      docDriver: driver,
+      attachmentDriver: new AttachmentDriverMemory(),
+    },
+  });
 
   await writeRandomDocs(keypair, replica, 100);
 

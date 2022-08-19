@@ -47,6 +47,8 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       assert(driver);
 
       await driver.close(true);
+
+      await sleep(10);
     }
   });
 
@@ -54,7 +56,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     const share = "+gardening.abcde";
     const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
-    assertEquals(driver.getMaxLocalIndex(), -1, "Initial maxLocalIndex is -1");
+    assertEquals(
+      await driver.getMaxLocalIndex(),
+      -1,
+      "Initial maxLocalIndex is -1",
+    );
 
     const doc: DocEs4 = {
       format: "es.4",
@@ -71,7 +77,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     await driver.upsert(doc);
 
     assertEquals(
-      driver.getMaxLocalIndex(),
+      await driver.getMaxLocalIndex(),
       0,
       "maxLocalIndex is 0 after setting one doc",
     );
@@ -82,13 +88,13 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
 
     if (scenario.subscenarios.replicaDriver.persistent) {
       assertEquals(
-        driverTwo.getMaxLocalIndex(),
+        await driverTwo.getMaxLocalIndex(),
         0,
         "maxLocalIndex is 0 for a persistent driver",
       );
     } else {
       assertEquals(
-        driverTwo.getMaxLocalIndex(),
+        await driverTwo.getMaxLocalIndex(),
         -1,
         "maxLocalIndex is -1 for a non-persistent driver",
       );
@@ -104,7 +110,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
     assertEquals(
-      driver.getMaxLocalIndex(),
+      await driver.getMaxLocalIndex(),
       -1,
       "maxLocalIndex starts at -1",
     );
@@ -118,7 +124,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     assertEquals(driver.isClosed(), true, "isClosed");
 
     await throws(
-      async () => driver.getMaxLocalIndex(),
+      async () => await driver.getMaxLocalIndex(),
       "getMaxLocalIndex throws when closed",
     );
     await throws(
@@ -265,7 +271,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "upsert doc0, localIndex is now 0",
       );
       assertEquals(
-        driver.getMaxLocalIndex(),
+        await driver.getMaxLocalIndex(),
         firstDocResult._localIndex,
         "driver.getMaxLocalIndex() matches doc._localIndex",
       );
@@ -285,8 +291,9 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         1,
         "upsert doc1 from same author, localIndex is now 1",
       );
+
       assertEquals(
-        driver.getMaxLocalIndex(),
+        await driver.getMaxLocalIndex(),
         secondDocResult._localIndex,
         "driver.getMaxLocalIndex() matches doc._localIndex",
       );
@@ -306,7 +313,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "upsert doc2 from second author, localIndex is now 3",
       );
       assertEquals(
-        driver.getMaxLocalIndex(),
+        await driver.getMaxLocalIndex(),
         thirdDocResult._localIndex,
         "driver.getMaxLocalIndex() matches doc._localIndex",
       );
@@ -328,6 +335,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
 
       let allDocs = await driver.queryDocs({ historyMode: "all" }) as DocEs4[];
       assertEquals(allDocs.length, 2, "there are 2 overall docs");
+
       assertEquals(
         allDocs[0].content,
         "Hello 2",
@@ -350,7 +358,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "upsert doc3 from second author (but older), localIndex is now 3",
       );
       assertEquals(
-        driver.getMaxLocalIndex(),
+        await driver.getMaxLocalIndex(),
         fourthDocResult._localIndex,
         "driver.getMaxLocalIndex() matches doc._localIndex",
       );
@@ -394,7 +402,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "upsert doc4 from new third author (but oldest), localIndex is now 5",
       );
       assertEquals(
-        driver.getMaxLocalIndex(),
+        await driver.getMaxLocalIndex(),
         fifthDocResult._localIndex,
         "driver.getMaxLocalIndex() matches doc._localIndex",
       );
@@ -536,6 +544,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       for (const { query, expectedContent } of vectors) {
         const qr = await driver.queryDocs(query) as DocEs4[];
         const actualContent = qr.map((doc) => doc.content);
+
         assertEquals(
           actualContent,
           expectedContent,

@@ -1,6 +1,6 @@
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocAttachment } from "../../util/doc-types.ts";
-import { ValidationError } from "../../util/errors.ts";
+import { ReplicaIsClosedError, ValidationError } from "../../util/errors.ts";
 import { streamToBytes } from "../../util/streams.ts";
 import { IReplicaAttachmentDriver } from "../replica-types.ts";
 
@@ -10,6 +10,7 @@ import { IReplicaAttachmentDriver } from "../replica-types.ts";
 export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
   private stagingMap = new Map<string, Blob>();
   private attachmentMap = new Map<string, Blob>();
+  private closed = false;
 
   private getKey(formatName: string, attachmentHash: string) {
     return `${formatName}___${attachmentHash}`;
@@ -19,6 +20,7 @@ export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
     formatName: string,
     attachmentHash: string,
   ): Promise<DocAttachment | undefined> {
+    if (this.closed) throw new ReplicaIsClosedError();
     const key = this.getKey(formatName, attachmentHash);
     const attachment = this.attachmentMap.get(key);
 
@@ -40,6 +42,7 @@ export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
     formatName: string,
     attachment: ReadableStream<Uint8Array> | Uint8Array,
   ) {
+    if (this.closed) throw new ReplicaIsClosedError();
     const bytes = attachment instanceof Uint8Array
       ? attachment
       : await streamToBytes(attachment);
@@ -70,6 +73,7 @@ export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
   }
 
   erase(formatName: string, attachmentHash: string) {
+    if (this.closed) throw new ReplicaIsClosedError();
     const key = this.getKey(formatName, attachmentHash);
     if (this.attachmentMap.has(key)) {
       this.attachmentMap.delete(key);
@@ -82,6 +86,7 @@ export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
   }
 
   wipe() {
+    if (this.closed) throw new ReplicaIsClosedError();
     this.attachmentMap.clear();
     return Promise.resolve();
   }
@@ -89,6 +94,7 @@ export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
   async filter(
     hashes: Record<string, Set<string>>,
   ): Promise<{ format: string; hash: string }[]> {
+    if (this.closed) throw new ReplicaIsClosedError();
     const erasedAttachments = [];
 
     for (const key of this.attachmentMap.keys()) {
@@ -109,7 +115,24 @@ export class AttachmentDriverMemory implements IReplicaAttachmentDriver {
   }
 
   clearStaging() {
+    if (this.closed) throw new ReplicaIsClosedError();
     this.stagingMap.clear();
     return Promise.resolve();
+  }
+
+  isClosed(): boolean {
+    return this.closed;
+  }
+
+  async close(erase: boolean) {
+    if (this.closed) throw new ReplicaIsClosedError();
+
+    if (erase) {
+      await this.wipe();
+    }
+
+    this.closed = true;
+
+    return;
   }
 }
