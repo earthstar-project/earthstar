@@ -552,7 +552,8 @@ for (const scenario of scenarios) {
     });
 
     await test.step("syncs existing docs and new ones", async () => {
-      await sleep(100);
+      // Needs to be this long for the slower drivers...
+      await sleep(200);
 
       const sourceEvents = await testHelper.popEventsFromSource();
       const targetEvents = await testHelper.popEventsFromTarget();

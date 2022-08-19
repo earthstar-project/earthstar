@@ -463,9 +463,11 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
       return doc;
     }
 
-    const putOp = db.transaction([DOCS_STORE], "readwrite").objectStore(
+    const sndDocStore = db.transaction([DOCS_STORE], "readwrite").objectStore(
       DOCS_STORE,
-    ).put(doc);
+    );
+
+    const putOp = sndDocStore.put(doc);
 
     const didPut = deferred();
 
