@@ -93,6 +93,7 @@ export type SyncAgentOpts<F> = {
 /** An event for disclosing which shares a Peer has without actually revealing them. Another peer can use the salt to hash their own shares' addresses and see if they match. */
 export type SyncerDiscloseEvent = {
   kind: "DISCLOSE";
+  syncerId: string;
   salt: string;
   shares: string[];
   formats: string[];

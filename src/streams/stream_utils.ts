@@ -1,3 +1,5 @@
+import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+
 export class CombineStream<T> {
   private closed = false;
 
@@ -375,7 +377,10 @@ export class StreamSplitter<ChunkType> {
         },
       });
 
-      incomingClone.pipeThrough(filterTransform).pipeTo(newTransform.writable);
+      incomingClone.pipeThrough(filterTransform).pipeTo(newTransform.writable)
+        .catch((err) => {
+          newTransform.writable.abort(err);
+        });
 
       transforms.set(key, newTransform);
 
@@ -384,4 +389,92 @@ export class StreamSplitter<ChunkType> {
 
     return transform.readable;
   }
+}
+
+export function websocketWritable<
+  T,
+>(
+  socket: WebSocket,
+  prepareToSend: (
+    outgoing: T,
+  ) => string | ArrayBufferLike | Blob | ArrayBufferView,
+) {
+  // set socket binary type
+  socket.binaryType = "arraybuffer";
+
+  const socketIsOpen = deferred();
+  // check if socket is open
+
+  // set socket.onopen
+  if (socket.readyState === socket.OPEN) {
+    socketIsOpen.resolve();
+  }
+
+  socket.onopen = () => {
+    socketIsOpen.resolve();
+  };
+
+  return new WritableStream<T>({
+    async write(chunk, controller) {
+      // await
+      await socketIsOpen;
+
+      // try to send
+      try {
+        const toSend = prepareToSend(chunk);
+
+        socket.send(toSend);
+      } catch (err) {
+        controller.error(err);
+      }
+      // catch and error controller
+
+      socket.onclose = () => {
+        controller.error("Socket closed before we were done");
+      };
+    },
+
+    close() {
+      socket.close();
+    },
+
+    abort() {
+      socket.close(1001, "Aborting");
+    },
+  });
+}
+
+export function websocketReadable<
+  T,
+>(
+  socket: WebSocket,
+  prepareForQueue: (event: MessageEvent<any>) => T,
+) {
+  // set socket binary type
+  socket.binaryType = "arraybuffer";
+
+  let erroredOutAlready = false;
+
+  return new ReadableStream<T>({
+    start(controller) {
+      socket.onmessage = (event) => {
+        const toQueue = prepareForQueue(event);
+
+        controller.enqueue(toQueue);
+      };
+
+      socket.onclose = () => {
+        if (erroredOutAlready) {
+          return;
+        }
+
+        controller.close();
+      };
+
+      socket.onerror = (err) => {
+        erroredOutAlready = true;
+        controller.error(err);
+      };
+    },
+  });
 }
