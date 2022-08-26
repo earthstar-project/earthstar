@@ -423,6 +423,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       }
       case "BLOB_REQ": {
         // ask the partner for a send transfer, add it to our send transfers.
+
         const result = await this.partner.handleUploadRequest({
           shareAddress: event.shareAddress,
           syncerId: event.syncerId,

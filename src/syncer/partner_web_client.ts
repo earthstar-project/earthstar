@@ -40,8 +40,8 @@ export class PartnerWebClient<
 
     const socket = new WebSocket(
       this.isSecure
-        ? `wss://${hostAndPath}/${opts.mode}`
-        : `ws://${hostAndPath}/${opts.mode}`,
+        ? `wss://${hostAndPath}${opts.mode}`
+        : `ws://${hostAndPath}${opts.mode}`,
     );
 
     this.writable = websocketWritable(
@@ -60,13 +60,11 @@ export class PartnerWebClient<
     // create a new url with the share, path, and syncer ID embedded
 
     const hostAndPath =
-      `${this.url.host}${this.url.pathname}/${opts.syncerId}/download/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
+      `${this.url.host}${this.url.pathname}${opts.syncerId}/download/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
 
-    const socket = new WebSocket(
-      this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`,
-    );
+    const url = this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`;
 
-    const readable = websocketReadable(socket, (event) => {
+    const readable = websocketReadable(url, (event) => {
       if (event.data instanceof ArrayBuffer) {
         const bytes = new Uint8Array(event.data);
         return bytes;
@@ -82,14 +80,12 @@ export class PartnerWebClient<
     opts: GetTransferOpts,
   ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
     const hostAndPath =
-      `${this.url.host}${this.url.pathname}/${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
+      `${this.url.host}${this.url.pathname}${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
 
-    const socket = new WebSocket(
-      this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`,
-    );
+    const url = this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`;
 
     const writable = websocketWritable(
-      socket,
+      url,
       (outgoing: Uint8Array) => outgoing,
     );
 

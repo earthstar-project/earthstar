@@ -394,29 +394,41 @@ export class StreamSplitter<ChunkType> {
 export function websocketWritable<
   T,
 >(
-  socket: WebSocket,
+  socketOrUrl: WebSocket | string,
   prepareToSend: (
     outgoing: T,
   ) => string | ArrayBufferLike | Blob | ArrayBufferView,
 ) {
-  // set socket binary type
-  socket.binaryType = "arraybuffer";
-
   const socketIsOpen = deferred();
-  // check if socket is open
-
-  // set socket.onopen
-  if (socket.readyState === socket.OPEN) {
-    socketIsOpen.resolve();
-  }
-
-  socket.onopen = () => {
-    socketIsOpen.resolve();
-  };
+  const initialSocket = deferred<WebSocket>();
 
   return new WritableStream<T>({
     async write(chunk, controller) {
-      // await
+      if (initialSocket.state !== "fulfilled") {
+        let socket: WebSocket;
+
+        if (socketOrUrl instanceof WebSocket) {
+          socket = socketOrUrl;
+        } else {
+          socket = new WebSocket(socketOrUrl);
+        }
+
+        initialSocket.resolve(socket);
+
+        // set socket binary type
+        socket.binaryType = "arraybuffer";
+
+        // set socket.onopen
+        if (socket.readyState === socket.OPEN) {
+          socketIsOpen.resolve();
+        }
+
+        socket.onopen = () => {
+          socketIsOpen.resolve();
+        };
+      }
+
+      const socket = await initialSocket;
       await socketIsOpen;
 
       // try to send
@@ -434,11 +446,15 @@ export function websocketWritable<
       };
     },
 
-    close() {
+    async close() {
+      const socket = await initialSocket;
+
       socket.close();
     },
 
-    abort() {
+    async abort() {
+      const socket = await initialSocket;
+
       socket.close(1001, "Aborting");
     },
   });
@@ -447,16 +463,26 @@ export function websocketWritable<
 export function websocketReadable<
   T,
 >(
-  socket: WebSocket,
+  socketOrUrl: WebSocket | string,
   prepareForQueue: (event: MessageEvent<any>) => T,
 ) {
-  // set socket binary type
-  socket.binaryType = "arraybuffer";
+  const initialSocket = deferred<WebSocket>();
 
   let erroredOutAlready = false;
 
   return new ReadableStream<T>({
-    start(controller) {
+    async start(controller) {
+      if (socketOrUrl instanceof WebSocket) {
+        initialSocket.resolve(socketOrUrl);
+      } else {
+        initialSocket.resolve(new WebSocket(socketOrUrl));
+      }
+
+      const socket = await initialSocket;
+
+      // set socket binary type
+      socket.binaryType = "arraybuffer";
+
       socket.onmessage = (event) => {
         const toQueue = prepareForQueue(event);
 
@@ -475,6 +501,11 @@ export function websocketReadable<
         erroredOutAlready = true;
         controller.error(err);
       };
+    },
+    async cancel() {
+      const socket = await initialSocket;
+
+      socket.close(1001, "Aborting");
     },
   });
 }
