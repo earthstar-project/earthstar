@@ -154,7 +154,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       this.transferManager.closeToInternalTransfers();
     });
 
-    Promise.all([this.docSyncIsDone, this.transferManager.isDone]).then(() => {
+    Promise.all([
+      this.docSyncIsDone,
+      this.transferManager.fulfilledInternalTransfers,
+    ]).then(() => {
       this.outgoingEventBus.send({
         kind: "SYNCER_FULFILLED",
       });
@@ -163,7 +166,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     this.partnerIsFulfilled.then(async () => {
       await this.docSyncIsDone;
       await this.checkedAllExistingDocsForAttachments;
-      await this.transferManager.isDone;
+      await this.transferManager.fulfilledInternalTransfers;
 
       abortController.abort();
       this.isDone.resolve();
@@ -478,7 +481,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     for (const [shareAddr, agent] of this.syncAgents) {
       status[shareAddr] = {
         docs: agent.getStatus(),
-        attachments: this.transferManager.getReport(shareAddr),
+        attachments: this.transferManager.getReports(shareAddr),
       };
     }
 
@@ -498,7 +501,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       await agent.cancel();
     }
 
-    // TODO: cancel all the doc streams used for attachments
+    this.transferManager.cancel();
   }
 
   // externally callable... to get a readable...
@@ -543,7 +546,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       return;
     }
 
-    // got a writable stream! add it to the syncer's transfers.
+    // got a stream! add it to the syncer's transfers.
     const transfer = new AttachmentTransfer({
       doc: doc as FormatDocType<typeof format>,
       format,

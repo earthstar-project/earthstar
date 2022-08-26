@@ -27,6 +27,8 @@ export class AttachmentTransfer<F> {
 
   origin: "internal" | "external";
 
+  private abortController = new AbortController();
+
   constructor(
     { stream, replica, doc, format, origin }: AttachmentTransferOpts<F>,
   ) {
@@ -47,6 +49,8 @@ export class AttachmentTransfer<F> {
 
     const updateLoaded = this.updateLoaded.bind(this);
 
+    const { abortController } = this;
+
     if (stream instanceof ReadableStream) {
       // Incoming
       // pipe through our bytes counter
@@ -54,6 +58,10 @@ export class AttachmentTransfer<F> {
 
       const counterStream = new ReadableStream<Uint8Array>({
         async start(controller) {
+          abortController.signal.onabort = () => {
+            controller.error("Aborted");
+          };
+
           const reader = stream.getReader();
 
           while (true) {
@@ -83,7 +91,8 @@ export class AttachmentTransfer<F> {
 
             promise.resolve();
           },
-        ).catch(() => {
+        ).catch((err) => {
+          console.error("An attachment ingest from a transfer failed", err);
           promise.reject();
         });
 
@@ -111,7 +120,9 @@ export class AttachmentTransfer<F> {
 
         this.transferOp.resolve(() =>
           attachmentRes.stream().then((readable) => {
-            return readable.pipeThrough(counterTransform).pipeTo(stream);
+            return readable.pipeThrough(counterTransform, {
+              signal: abortController.signal,
+            }).pipeTo(stream);
           })
         );
       });
@@ -130,7 +141,8 @@ export class AttachmentTransfer<F> {
 
     transferOp().then(() => {
       this.changeStatus("complete");
-    }).catch(() => {
+    }).catch((err) => {
+      console.error("An attachment transfer failed:", err);
       this.changeStatus("failed");
     });
 
@@ -175,7 +187,7 @@ export class AttachmentTransfer<F> {
     return unsub;
   }
 
-  // TODO: abort
   abort() {
+    this.abortController.abort();
   }
 }

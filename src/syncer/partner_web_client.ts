@@ -28,22 +28,26 @@ export class PartnerWebClient<
   concurrentTransfers = 16;
 
   private isSecure: boolean;
-  private url: URL;
+  private wsUrl: URL;
 
   constructor(opts: SyncerDriverWebClientOpts) {
     // Check if it's a URL of some kind.
-    this.url = new URL(opts.url);
+    const url = new URL(opts.url);
 
     // Check if it's a web syncer
-    const hostAndPath = `${this.url.host}${this.url.pathname}`;
+    const hostAndPath = `${url.host}${url.pathname}`;
 
-    this.isSecure = this.url.protocol === "https:" ||
-      this.url.protocol === "wss:";
+    this.isSecure = url.protocol === "https:" ||
+      url.protocol === "wss:";
+
+    this.wsUrl = new URL(
+      `${this.isSecure ? "wss://" : "ws://"}${hostAndPath}/'`,
+    );
+
+    const urlWithMode = new URL(opts.mode, this.wsUrl);
 
     const socket = new WebSocket(
-      this.isSecure
-        ? `wss://${hostAndPath}${opts.mode}`
-        : `ws://${hostAndPath}${opts.mode}`,
+      urlWithMode.toString(),
     );
 
     this.writable = websocketWritable(
@@ -61,12 +65,12 @@ export class PartnerWebClient<
   ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
     // create a new url with the share, path, and syncer ID embedded
 
-    const hostAndPath =
-      `${this.url.host}${this.url.pathname}${opts.syncerId}/download/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
+    const url = new URL(
+      `${opts.syncerId}/download/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`,
+      this.wsUrl,
+    );
 
-    const url = this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`;
-
-    const readable = websocketReadable(url, (event) => {
+    const readable = websocketReadable(url.toString(), (event) => {
       if (event.data instanceof ArrayBuffer) {
         const bytes = new Uint8Array(event.data);
         return bytes;
@@ -81,13 +85,13 @@ export class PartnerWebClient<
   handleUploadRequest(
     opts: GetTransferOpts,
   ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
-    const hostAndPath =
-      `${this.url.host}${this.url.pathname}${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`;
-
-    const url = this.isSecure ? `wss://${hostAndPath}` : `ws://${hostAndPath}`;
+    const url = new URL(
+      `${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`,
+      this.wsUrl,
+    );
 
     const writable = websocketWritable(
-      url,
+      url.toString(),
       (outgoing: Uint8Array) => outgoing,
     );
 

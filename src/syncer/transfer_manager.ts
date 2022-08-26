@@ -2,7 +2,7 @@ import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
 import { ShareAddress } from "../util/doc-types.ts";
 import { EarthstarError } from "../util/errors.ts";
 import { AttachmentTransfer } from "./attachment_transfer.ts";
-import { TransferManagerReport } from "./syncer_types.ts";
+import { AttachmentTransferReport } from "./syncer_types.ts";
 
 export class TransferManager {
   private waiting: AttachmentTransfer<unknown>[] = [];
@@ -16,19 +16,20 @@ export class TransferManager {
   /** Transfers with these hashes should not be added. */
   private barredHashes = new Set<string>();
 
-  isDone = deferred<true>();
+  fulfilledInternalTransfers = deferred<true>();
 
   // This status is going to be modified a LOT so it's better to mutate than recreate from scratch.
-  private reports: Record<string, TransferManagerReport> = {};
+  private reports: Record<string, Record<string, AttachmentTransferReport>> =
+    {};
 
   constructor(activeLimit: number) {
     this.activeLimit = activeLimit;
   }
 
-  private activate(transfer: AttachmentTransfer<unknown>) {
+  private async activate(transfer: AttachmentTransfer<unknown>) {
     this.active.add(transfer);
 
-    transfer.start();
+    await transfer.start();
 
     transfer.isDone.then(() => {
       this.completed.add(transfer);
@@ -97,7 +98,7 @@ export class TransferManager {
       return;
     }
 
-    this.isDone.resolve();
+    this.fulfilledInternalTransfers.resolve();
   }
 
   addTransfer(transfer: AttachmentTransfer<unknown>) {
@@ -110,6 +111,10 @@ export class TransferManager {
     if (this.barredHashes.has(transfer.hash)) {
       return;
     }
+
+    transfer.onProgress(() => {
+      this.updateTransferStatus(transfer);
+    });
 
     if (this.active.size < this.activeLimit) {
       this.activate(transfer);
@@ -130,12 +135,37 @@ export class TransferManager {
     for (const transfer of this.active) {
       transfer.abort();
     }
-
-    this.isDone.reject();
   }
 
-  getReport(share: ShareAddress): TransferManagerReport {
-    return this.reports[share];
+  private updateTransferStatus(transfer: AttachmentTransfer<unknown>) {
+    const shareReports = this.reports[transfer.share];
+
+    if (!shareReports) {
+      this.reports[transfer.share] = {};
+    }
+
+    this.reports[transfer.share][transfer.hash] = {
+      author: transfer.doc.author,
+      path: transfer.doc.path,
+      format: transfer.doc.format,
+      hash: transfer.hash,
+      kind: transfer.kind,
+      status: transfer.status,
+      bytesLoaded: transfer.loaded,
+      totalBytes: transfer.expectedSize,
+    };
+  }
+
+  getReports(share: ShareAddress): AttachmentTransferReport[] {
+    const reports = [];
+
+    for (const key in this.reports[share]) {
+      const report = this.reports[share][key];
+
+      reports.push(report);
+    }
+
+    return reports;
   }
 
   hasTransferWithHash(hash: string): boolean {

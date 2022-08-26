@@ -196,7 +196,7 @@ export type SyncerStatus = Record<
   ShareAddress,
   {
     docs: SyncAgentStatus;
-    attachments: TransferManagerReport;
+    attachments: AttachmentTransferReport[];
   }
 >;
 
@@ -225,13 +225,6 @@ export type AttachmentTransferReport = {
   bytesLoaded: number;
   totalBytes: number;
   kind: "download" | "upload";
-};
-
-export type TransferManagerReport = {
-  waiting: Record<string, AttachmentTransferReport[]>;
-  active: Record<string, AttachmentTransferReport[]>;
-  completed: Record<string, AttachmentTransferReport[]>;
-  failed: Record<string, AttachmentTransferReport[]>;
 };
 
 export type AttachmentTransferProgressEvent = {
