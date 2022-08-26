@@ -56,9 +56,9 @@ export interface DocEs5 extends DocBase<"es.5"> {
   timestamp: Timestamp;
   /** The share this document is from. */
   share: ShareAddress;
-  /** The size of the associated attachment, if any. */
+  /** The size of the associated attachment in bytes, if any. */
   attachmentSize?: number;
-  /** The hash of the associated attachment, if any. */
+  /** The sha256 hash of the associated attachment, if any. */
   attachmentHash?: string;
 
   // Local Index:
@@ -188,19 +188,19 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     //     result += fieldname + "\t" + convertToString(value) + "\n"
     // return base32encode(sha256(result).binaryDigest())
     return Crypto.sha256base32(
-      `author\t${doc.author}\n` +
-        `textHash\t${doc.textHash}\n` +
+      (doc.attachmentHash === undefined
+        ? ""
+        : `attachmentHash\t${doc.attachmentHash}\n`) +
         (doc.attachmentSize === undefined
           ? ""
           : `attachmentSize\t${doc.attachmentSize}\n`) +
-        (doc.attachmentHash === undefined
-          ? ""
-          : `attachmentHash\t${doc.attachmentHash}\n`) +
+        `author\t${doc.author}\n` +
         (doc.deleteAfter === undefined
           ? ""
           : `deleteAfter\t${doc.deleteAfter}\n`) +
         `format\t${doc.format}\n` +
         `path\t${doc.path}\n` +
+        `textHash\t${doc.textHash}\n` +
         `timestamp\t${doc.timestamp}\n` +
         `share\t${doc.share}\n`, // \n at the end also, not just between
     );

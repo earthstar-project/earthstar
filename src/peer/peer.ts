@@ -106,7 +106,10 @@ export class Peer implements IPeer {
     formats?: FormatsArg<F>,
   ): Syncer<undefined, F> {
     try {
-      const partner = new PartnerWebClient({ url: target as string });
+      const partner = new PartnerWebClient({
+        url: target as string,
+        mode: live ? "live" : "once",
+      });
 
       const syncer = new Syncer({
         partner,
@@ -117,19 +120,28 @@ export class Peer implements IPeer {
 
       return syncer;
     } catch {
-      const syncer = new Syncer({
-        peer: this,
-        partner: new PartnerLocal(
-          target as IPeer,
-          this,
-          live ? "live" : "once",
+      if (target instanceof Peer) {
+        const syncer = new Syncer({
+          peer: this,
+          partner: new PartnerLocal(
+            target as IPeer,
+            this,
+            live ? "live" : "once",
+            formats,
+          ),
+          mode: live ? "live" : "once",
           formats,
-        ),
-        mode: live ? "live" : "once",
-        formats,
-      });
+        });
 
-      return syncer;
+        return syncer;
+      }
+
+      // This shouldn't happen.
+      console.error(
+        "Provided an invalid target for syncing to a peer:",
+        target,
+      );
+      return undefined as never;
     }
   }
 

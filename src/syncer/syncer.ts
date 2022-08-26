@@ -103,7 +103,11 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     });
 
     // Create a sink to handle incoming events, pipe the readable into that
-    opts.partner.readable.pipeTo(this.incomingStreamCloner.writable);
+    opts.partner.readable.pipeTo(this.incomingStreamCloner.writable).catch(
+      (err) => {
+        this.cancel(err);
+      },
+    );
 
     const incomingClone = this.incomingStreamCloner.getReadableStream();
 
@@ -113,13 +117,19 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           await handleIncomingEvent(event);
         },
       }),
-    );
+    ).catch((err) => {
+      this.cancel(err);
+    });
 
     const incomingCloneForAgents = this.incomingStreamCloner
       .getReadableStream();
 
     // TODO: This cloner pipes all events, so if a replica is removed and re-added to a peer, it will get events intended for a previous sync agent. Which shouldn't be a problem, but it'd be better if it didn't.
-    incomingCloneForAgents.pipeTo(this.agentStreamSplitter.writable);
+    incomingCloneForAgents.pipeTo(this.agentStreamSplitter.writable).catch(
+      (err) => {
+        this.cancel(err);
+      },
+    );
 
     // Send off a salted handshake event
     const salt = randomId();
@@ -129,6 +139,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       outgoingEventBus.send({
         kind: "DISCLOSE",
         salt,
+        syncerId: this.id,
         shares: saltedShares,
         formats: this.formats
           ? this.formats.map((f) => f.id)
@@ -147,7 +158,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         }
       }
 
-      await Promise.all(transfersPromises);
+      await Promise.allSettled(transfersPromises);
 
       this.transfersAreDone.resolve(true);
     });
@@ -187,7 +198,11 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     */
   }
 
-  private addShare(address: string, formats: FormatsArg<FormatsType>) {
+  private addShare(
+    address: string,
+    syncerId: string,
+    formats: FormatsArg<FormatsType>,
+  ) {
     // Bail if we already have a sync agent for this share.
     if (this.syncAgents.has(address)) {
       return;
@@ -228,7 +243,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       const result = await partner.getDownload({
         doc: doc,
         shareAddress: replica.share,
-        syncerId: id,
+        // We send the syncerId we received, as we want to reach that syncer
+        syncerId,
         attachmentHash: attachmentInfo.hash,
       });
 
@@ -240,6 +256,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         await outgoingEventBus.send({
           kind: "BLOB_REQ",
           shareAddress: replica.share,
+          // We send our own syncer ID here, as we want the other syncer to reach back to us
           syncerId: id,
           doc: doc,
           attachmentHash: attachmentInfo.hash,
@@ -318,7 +335,9 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           }
         },
       }),
-    ).pipeTo(agent.writable);
+    ).pipeTo(agent.writable).catch((err) => {
+      this.cancel(err);
+    });
 
     const { partner, id } = this;
     const addTransfer = this.addTransfer.bind(this);
@@ -398,7 +417,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         }
 
         for (const share of commonShareSet) {
-          this.addShare(share, intersectingFormats);
+          this.addShare(share, event.syncerId, intersectingFormats);
         }
         break;
       }
@@ -504,7 +523,9 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   }
 
   /** Stop syncing. */
-  async cancel() {
+  async cancel(reason?: any) {
+    this.isDone.reject(reason);
+
     for (const [_addr, agent] of this.syncAgents) {
       await agent.cancel();
     }

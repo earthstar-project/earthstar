@@ -1,4 +1,5 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { base32BytesToString } from "../crypto/base32.ts";
 import { Crypto } from "../crypto/crypto.ts";
 
 export class AttachmentStreamInfo {
@@ -23,7 +24,7 @@ export class AttachmentStreamInfo {
       flush() {
         const digest = updatableHash.digest();
 
-        hash.resolve(Crypto.sha256base32(digest));
+        hash.resolve(base32BytesToString(digest));
         size.resolve(currentSize);
       },
     });

@@ -1,4 +1,7 @@
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import {
+  websocketReadable,
+  websocketWritable,
+} from "../streams/stream_utils.ts";
 import { ValidationError } from "../util/errors.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
@@ -16,48 +19,19 @@ export class PartnerWebServer<
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 
-  private socketIsOpen = deferred<true>();
-
   constructor({ socket }: SyncerDriverWebServerOpts) {
-    // Handle the case where the socket is already open when handed to this constructor.
-    if (socket.readyState === WebSocket.OPEN) {
-      this.socketIsOpen.resolve(true);
-    }
-
-    socket.onopen = () => this.socketIsOpen.resolve(true);
-
-    const { socketIsOpen } = this;
-
-    this.writable = new WritableStream({
-      async write(event) {
-        await socketIsOpen;
-
-        socket.send(JSON.stringify(event));
+    this.writable = websocketWritable(
+      socket,
+      (outgoing: SyncerEvent) => {
+        return JSON.stringify(outgoing);
       },
-      close() {
-        socket.close();
+    );
+    this.readable = websocketReadable(
+      socket,
+      (incoming) => {
+        return JSON.parse(incoming.data.toString());
       },
-      abort() {
-        socket.close();
-      },
-    });
-
-    this.readable = new ReadableStream({
-      start(controller) {
-        socket.onmessage = (event) => {
-          const syncEvent = JSON.parse(event.data.toString());
-          controller.enqueue(syncEvent);
-        };
-
-        socket.onclose = () => {
-          controller.close();
-        };
-
-        socket.onerror = (err) => {
-          controller.error(err);
-        };
-      },
-    });
+    );
   }
 
   getDownload(
@@ -84,53 +58,23 @@ export class PartnerWebServer<
     | undefined
   > {
     // Return a stream which writes to the socket. nice.
-    const socketIsOpen = deferred();
-
-    socket.binaryType = "arraybuffer";
-
-    // Just in case the socket is already open...
-    if (socket.readyState === socket.OPEN) {
-      socketIsOpen.resolve();
-    }
-
-    socket.onopen = () => {
-      socketIsOpen.resolve();
-    };
-
     //  They want to download data from us
     if (kind === "download") {
-      const writable = new WritableStream<Uint8Array>({
-        async write(chunk) {
-          await socketIsOpen;
-
-          socket.send(chunk.buffer);
-        },
-        close() {
-          socket.close();
-        },
-      });
+      const writable = websocketWritable(
+        socket,
+        (outgoing: Uint8Array) => outgoing,
+      );
 
       return Promise.resolve(writable);
     } else {
       // they want to upload data to us.
-      const readable = new ReadableStream<Uint8Array>({
-        start(controller) {
-          socket.onmessage = (event) => {
-            if (event.data instanceof ArrayBuffer) {
-              const bytes = new Uint8Array(event.data);
+      const readable = websocketReadable(socket, (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(event.data);
+          return bytes;
+        }
 
-              controller.enqueue(bytes);
-            }
-          };
-
-          socket.onclose = () => {
-            controller.close();
-          };
-
-          socket.onerror = (err) => {
-            controller.error(err);
-          };
-        },
+        return null as never;
       });
 
       return Promise.resolve(readable);

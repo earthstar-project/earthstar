@@ -1,4 +1,5 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { Crypto } from "../crypto/crypto.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase } from "../util/doc-types.ts";
 import { isErr, NotFoundError, ValidationError } from "../util/errors.ts";
@@ -70,13 +71,15 @@ export class AttachmentTransfer<F> {
       replica.ingestAttachment(format, doc, counterStream).then(
         (result) => {
           if (isErr(result)) {
-            console.log(result);
             this.changeStatus("failed");
           }
 
           this.changeStatus("complete");
         },
-      );
+      ).catch((err) => {
+        console.error("Transfer failed", err);
+        this.changeStatus("failed");
+      });
     } else {
       this.kind = "upload";
 
@@ -101,6 +104,8 @@ export class AttachmentTransfer<F> {
           this.changeStatus("in_progress");
           readable.pipeThrough(counterTransform).pipeTo(stream).then(() => {
             this.changeStatus("complete");
+          }).catch(() => {
+            this.changeStatus("failed");
           });
         });
       });
@@ -127,6 +132,10 @@ export class AttachmentTransfer<F> {
 
     if (status === "complete") {
       this.isDone.resolve();
+    }
+
+    if (status === "failed") {
+      this.isDone.reject();
     }
   }
 
