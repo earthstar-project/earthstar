@@ -25,6 +25,8 @@ export class PartnerWebClient<
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 
+  concurrentTransfers = 16;
+
   private isSecure: boolean;
   private url: URL;
 

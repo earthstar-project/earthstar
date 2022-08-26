@@ -132,6 +132,9 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
   /** A stream of outbound syncer events to the partner */
   writable: WritableStream<SyncerEvent>;
 
+  /** The number of permitted concurrent attachment transfers */
+  concurrentTransfers: number;
+
   /** Attempt to download an attachment directly from the partner.
    * @returns A `ReadableStream<Uint8Array>` to read data from, a `ValidationError` if something went wrong, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
    */
@@ -193,20 +196,11 @@ export type SyncerStatus = Record<
   ShareAddress,
   {
     docs: SyncAgentStatus;
-    attachments: {
-      author: string;
-      path: string;
-      format: string;
-      hash: string;
-      status: AttachmentTransferStatus;
-      bytesLoaded: number;
-      totalBytes: number;
-      kind: "download" | "upload";
-    }[];
+    attachments: TransferManagerReport;
   }
 >;
 
-// =============== BLOB SYNCING
+// =============== Attachments
 
 export type AttachmentTransferStatus =
   | "ready"
@@ -219,6 +213,25 @@ export type AttachmentTransferOpts<F> = {
   replica: Replica;
   doc: FormatDocType<F>;
   format: FormatArg<F>;
+  origin: "internal" | "external";
+};
+
+export type AttachmentTransferReport = {
+  author: string;
+  path: string;
+  format: string;
+  hash: string;
+  status: AttachmentTransferStatus;
+  bytesLoaded: number;
+  totalBytes: number;
+  kind: "download" | "upload";
+};
+
+export type TransferManagerReport = {
+  waiting: Record<string, AttachmentTransferReport[]>;
+  active: Record<string, AttachmentTransferReport[]>;
+  completed: Record<string, AttachmentTransferReport[]>;
+  failed: Record<string, AttachmentTransferReport[]>;
 };
 
 export type AttachmentTransferProgressEvent = {

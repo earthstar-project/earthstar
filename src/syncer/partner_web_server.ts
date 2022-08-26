@@ -19,6 +19,8 @@ export class PartnerWebServer<
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 
+  concurrentTransfers = 16;
+
   constructor({ socket }: SyncerDriverWebServerOpts) {
     this.writable = websocketWritable(
       socket,
