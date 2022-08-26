@@ -414,6 +414,13 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         for (const share of commonShareSet) {
           this.addShare(share, event.syncerId, intersectingFormats);
         }
+
+        if (commonShareSet.size === 0 && this.mode === "once") {
+          this.outgoingEventBus.send({
+            "kind": "SYNCER_FULFILLED",
+          });
+        }
+
         break;
       }
       case "BLOB_REQ": {

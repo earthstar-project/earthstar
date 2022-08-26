@@ -28,21 +28,21 @@ export class PartnerWebClient<
   concurrentTransfers = 16;
 
   private isSecure: boolean;
-  private wsUrl: URL;
+  private wsUrl: string;
 
   constructor(opts: SyncerDriverWebClientOpts) {
     // Check if it's a URL of some kind.
     const url = new URL(opts.url);
 
     // Check if it's a web syncer
-    const hostAndPath = `${url.host}${url.pathname}`;
+    const hostAndPath = `${url.host}${
+      url.pathname === "/" ? "" : url.pathname
+    }`;
 
     this.isSecure = url.protocol === "https:" ||
       url.protocol === "wss:";
 
-    this.wsUrl = new URL(
-      `${this.isSecure ? "wss://" : "ws://"}${hostAndPath}/'`,
-    );
+    this.wsUrl = `${this.isSecure ? "wss://" : "ws://"}${hostAndPath}/'`;
 
     const urlWithMode = new URL(opts.mode, this.wsUrl);
 
