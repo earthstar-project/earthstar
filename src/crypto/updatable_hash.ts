@@ -21,6 +21,7 @@ export class UpdatableHash<HashType> {
     return this.hash;
   }
 
+  /** Returns the digest of the hash. **The result is not encoded to base32**. */
   digest(): Uint8Array {
     return this.internalDigest(this.hash);
   }

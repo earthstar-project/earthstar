@@ -425,19 +425,39 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     let schemaVersion = this._getConfigSync("schemaVersion");
     logger.log(`constructor    schemaVersion: ${schemaVersion}`);
 
-    let docsToMigrate: DocBase<string>[] = [];
+    const docsToMigrate: DocBase<string>[] = [];
 
     if (schemaVersion === undefined) {
-      schemaVersion = "2";
-      this.setConfig("schemaVersion", schemaVersion);
+      this.setConfig("schemaVersion", "2");
     } else if (schemaVersion !== "2") {
+      console.log("migrating...");
       // MIGRATE.
-      docsToMigrate = this.queryDocsSync({
-        historyMode: "all",
-        orderBy: "localIndex ASC",
-      });
+      const now = Date.now() * 1000;
+
+      const { sql, params } = makeDocQuerySql(
+        { historyMode: "all", orderBy: "localIndex ASC" },
+        now,
+        "documents",
+      );
+      logger.debug("  sql:", sql);
+      logger.debug("  params:", params);
+
+      const docsQuery = this._db.prepareQuery(sql);
+
+      const docRows = docsQuery.allEntries(params);
+
+      logger.debug(`  result: ${docRows.length} docs`);
+
+      docsQuery.finalize();
+
+      for (const row of docRows) {
+        docsToMigrate.push(
+          row as unknown as DocBase<string>,
+        );
+      }
 
       this._db.query(`DROP TABLE docs;`);
+      this.setConfig("schemaVersion", "2");
     }
 
     this._db.query(CREATE_DOCS_TABLE_QUERY);

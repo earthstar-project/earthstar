@@ -55,7 +55,6 @@ export interface Query<FormatsType extends FormatName[]> {
   // stop iterating after this number of docs
   /** The maximum number of documents to return. */
   limit?: number;
-  // TODO: limitBytes
 
   formats?: FormatsType;
 }
