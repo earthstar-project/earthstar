@@ -38,7 +38,7 @@ Deno.test("reconcileManifestWithDirContents", async (test) => {
 
     assertEquals(
       Object.keys(manifest.entries).sort(),
-      ["/a.txt", "/b.txt", "/c.txt", "/w/x.txt", "/w/y.txt", "/w/z.txt"],
+      ["/a", "/b", "/c", "/w/x", "/w/y", "/w/z"],
       "Manifest contains an entry for each path.",
     );
 
@@ -47,7 +47,7 @@ Deno.test("reconcileManifestWithDirContents", async (test) => {
 
   // Check that the manifest adds an absence entry after a file is deleted.
   await test.step("After removing a file", async () => {
-    await Deno.remove(join(TEST_DIR, "b.txt"));
+    await Deno.remove(join(TEST_DIR, "b"));
     const { entries, share } = await reconcileManifestWithDirContents(
       TEST_DIR,
       TEST_SHARE,
@@ -57,37 +57,37 @@ Deno.test("reconcileManifestWithDirContents", async (test) => {
 
     assertEquals(
       Object.keys(entries).sort(),
-      ["/a.txt", "/b.txt", "/c.txt", "/w/x.txt", "/w/y.txt", "/w/z.txt"],
+      ["/a", "/b", "/c", "/w/x", "/w/y", "/w/z"],
       "Manifest contains an entry for each path.",
     );
 
-    assert(isAbsenceEntry(entries["/b.txt"]), "/b.txt is an absence entry");
+    assert(isAbsenceEntry(entries["/b"]), "/b is an absence entry");
     assert(
-      !isAbsenceEntry(entries["/a.txt"]),
-      "/a.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/a"]),
+      "/a is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/c.txt"]),
-      "/.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/c"]),
+      "/ is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/w/x.txt"]),
-      "/w/x.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/w/x"]),
+      "/w/x is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/w/y.txt"]),
-      "/w/y.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/w/y"]),
+      "/w/y is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/w/z.txt"]),
-      "/w/z.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/w/z"]),
+      "/w/z is NOT an absence entry",
     );
   });
 
   let prevZEntry: FileInfoEntry | null = null;
 
   await test.step("After re-adding a file", async () => {
-    await Deno.writeTextFile(join(TEST_DIR, "b.txt"), "I'm back baby");
+    await Deno.writeTextFile(join(TEST_DIR, "b"), "I'm back baby");
 
     const { entries, share } = await reconcileManifestWithDirContents(
       TEST_DIR,
@@ -98,42 +98,42 @@ Deno.test("reconcileManifestWithDirContents", async (test) => {
 
     assertEquals(
       Object.keys(entries).sort(),
-      ["/a.txt", "/b.txt", "/c.txt", "/w/x.txt", "/w/y.txt", "/w/z.txt"],
+      ["/a", "/b", "/c", "/w/x", "/w/y", "/w/z"],
       "Manifest contains an entry for each path.",
     );
 
     assert(
-      !isAbsenceEntry(entries["/b.txt"]),
-      "/b.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/b"]),
+      "/b is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/a.txt"]),
-      "/a.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/a"]),
+      "/a is NOT an absence entry",
     );
 
     assert(
-      !isAbsenceEntry(entries["/c.txt"]),
-      "/.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/c"]),
+      "/ is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/w/x.txt"]),
-      "/w/x.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/w/x"]),
+      "/w/x is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/w/y.txt"]),
-      "/w/y.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/w/y"]),
+      "/w/y is NOT an absence entry",
     );
     assert(
-      !isAbsenceEntry(entries["/w/z.txt"]),
-      "/w/z.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/w/z"]),
+      "/w/z is NOT an absence entry",
     );
 
     // We'll remember that for the next test.
-    prevZEntry = entries["/w/z.txt"];
+    prevZEntry = entries["/w/z"];
   });
 
   await test.step("After updating a file", async () => {
-    await Deno.writeTextFile(join(TEST_DIR, "w", "z.txt"), "Updated!");
+    await Deno.writeTextFile(join(TEST_DIR, "w", "z"), "Updated!");
 
     const { entries, share } = await reconcileManifestWithDirContents(
       TEST_DIR,
@@ -144,19 +144,19 @@ Deno.test("reconcileManifestWithDirContents", async (test) => {
 
     assertEquals(
       Object.keys(entries).sort(),
-      ["/a.txt", "/b.txt", "/c.txt", "/w/x.txt", "/w/y.txt", "/w/z.txt"],
+      ["/a", "/b", "/c", "/w/x", "/w/y", "/w/z"],
       "Manifest contains an entry for each path.",
     );
 
     assert(
-      !isAbsenceEntry(entries["/w/z.txt"]),
-      "/w/z.txt is NOT an absence entry",
+      !isAbsenceEntry(entries["/w/z"]),
+      "/w/z is NOT an absence entry",
     );
 
     assertNotEquals(
       prevZEntry,
-      entries["/w/z.txt"],
-      "Entry for /w/z.txt has changed",
+      entries["/w/z"],
+      "Entry for /w/z has changed",
     );
   });
 
@@ -171,13 +171,13 @@ export function writeManifest(dirPath: string, manifest: SyncFsManifest) {
 }
 
 export async function writeSampleDirContents(dirPath: string) {
-  await Deno.writeTextFile(join(dirPath, "a.txt"), "Hello!");
-  await Deno.writeTextFile(join(dirPath, "b.txt"), "Hi!");
-  await Deno.writeTextFile(join(dirPath, "c.txt"), "Yo!");
+  await Deno.writeTextFile(join(dirPath, "a"), "Hello!");
+  await Deno.writeTextFile(join(dirPath, "b"), "Hi!");
+  await Deno.writeTextFile(join(dirPath, "c"), "Yo!");
 
   await ensureDir(join(dirPath, "w"));
 
-  await Deno.writeTextFile(join(dirPath, "w", "x.txt"), "Hello!");
-  await Deno.writeTextFile(join(dirPath, "w", "y.txt"), "Hi!");
-  await Deno.writeTextFile(join(dirPath, "w", "z.txt"), "Yo!");
+  await Deno.writeTextFile(join(dirPath, "w", "x"), "Hello!");
+  await Deno.writeTextFile(join(dirPath, "w", "y"), "Hi!");
+  await Deno.writeTextFile(join(dirPath, "w", "z"), "Yo!");
 }

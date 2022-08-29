@@ -9,18 +9,15 @@ import {
   extname,
   join,
 } from "https://deno.land/std@0.132.0/path/mod.ts";
-import {
-  decode,
-  encode,
-} from "https://deno.land/std@0.126.0/encoding/base64.ts";
-import { bytesExtensions } from "./constants.ts";
+
 import { ensureDir } from "https://deno.land/std@0.132.0/fs/mod.ts";
 import { AuthorKeypair } from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { CoreDoc } from "../replica/replica-types.ts";
+import { DocEs5 } from "../formats/format_es5.ts";
+import { EarthstarError, isErr } from "../util/errors.ts";
 
 export function isAbsenceEntry(
-  o: AbsenceEntry | FileInfoEntry | CoreDoc,
+  o: AbsenceEntry | FileInfoEntry | DocEs5,
 ): o is AbsenceEntry {
   if ("fileLastSeenMs" in o) {
     return true;
@@ -30,7 +27,7 @@ export function isAbsenceEntry(
 }
 
 export function isFileInfoEntry(
-  o: AbsenceEntry | FileInfoEntry | CoreDoc,
+  o: AbsenceEntry | FileInfoEntry | DocEs5,
 ): o is FileInfoEntry {
   if ("abspath" in o) {
     return true;
@@ -40,8 +37,8 @@ export function isFileInfoEntry(
 }
 
 export function isDoc(
-  o: AbsenceEntry | FileInfoEntry | CoreDoc,
-): o is CoreDoc {
+  o: AbsenceEntry | FileInfoEntry | DocEs5,
+): o is DocEs5 {
   if ("signature" in o) {
     return true;
   }
@@ -150,30 +147,54 @@ export function getTupleWinners<TypeA, TypeB>(
   return winners;
 }
 
-export async function writeDocToDir(doc: CoreDoc, dir: string) {
+export async function writeDocToDir(
+  doc: DocEs5,
+  replica: Replica,
+  dir: string,
+) {
   const pathToWrite = join(dir, doc.path);
-  const extension = extname(doc.path);
   const enclosingDir = dirname(pathToWrite);
+  const isAttachmentDoc = doc.attachmentHash !== undefined;
 
-  if (doc.content.length === 0) {
+  if (doc.text.length === 0) {
     try {
       await Deno.remove(join(dir, doc.path));
       return removeEmptyDir(enclosingDir, dir);
     } catch {
       // Document is gone from the FS already.
+
       return;
     }
   }
 
   await ensureDir(enclosingDir);
 
-  if (bytesExtensions.includes(extension)) {
-    const contents = decode(doc.content);
+  if (isAttachmentDoc) {
+    const attachment = await replica.getAttachment(doc);
 
-    return Deno.writeFile(pathToWrite, contents);
+    if (isErr(attachment) || attachment === undefined) {
+      throw new EarthstarError("Do not have attachment for document");
+    }
+
+    try {
+      await Deno.truncate(pathToWrite);
+    } catch {
+      // It's fine if the pathToWrite isn't there yet
+    }
+
+    return (await attachment.stream()).pipeTo(
+      new WritableStream({
+        async write(chunk) {
+          await Deno.writeFile(pathToWrite, chunk, {
+            create: true,
+            append: true,
+          });
+        },
+      }),
+    );
   }
 
-  return Deno.writeTextFile(pathToWrite, doc.content);
+  return Deno.writeTextFile(pathToWrite, doc.text);
 }
 
 export async function removeEmptyDir(dir: string, rootDir: string) {
@@ -202,11 +223,7 @@ export async function writeEntryToReplica(
       return;
     }
 
-    return replica.set(keypair, {
-      path: entry.path,
-      content: "",
-      format: "es.4",
-    });
+    return replica.wipeDocAtPath(keypair, entry.path);
   }
 
   const extension = extname(entry.path);
@@ -217,26 +234,24 @@ export async function writeEntryToReplica(
     return removeEmptyDir(entry.dirName, rootDir);
   }
 
-  if (!bytesExtensions.includes(extension)) {
-    const content = await Deno.readTextFile(entry.abspath);
+  // A doc without an attachment
+  if (extension === "") {
+    const text = await Deno.readTextFile(entry.abspath);
     const timestamp = entry.mtimeMs ? entry.mtimeMs * 1000 : undefined;
 
     return replica.set(keypair, {
       path: entry.path,
-      format: "es.4",
-      content,
-      deleteAfter,
+      text,
       timestamp,
+      deleteAfter,
     });
   }
 
-  const content = await Deno.readFile(entry.abspath);
-  const base64Content = encode(content);
+  const file = await Deno.open(entry.abspath);
 
   return replica.set(keypair, {
     path: entry.path,
-    format: "es.4",
-    content: base64Content,
     deleteAfter,
+    attachment: file.readable,
   });
 }
