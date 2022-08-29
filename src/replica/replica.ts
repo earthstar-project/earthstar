@@ -11,6 +11,7 @@ import {
 } from "../util/doc-types.ts";
 import { Query } from "../query/query-types.ts";
 import {
+  IngestEvent,
   IReplicaDriver,
   QuerySourceEvent,
   QuerySourceMode,
@@ -321,7 +322,7 @@ export class Replica {
     docToSet: Omit<FormatInputType<F>, "format">,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<
-    FormatDocType<F> | ValidationError
+    IngestEvent<FormatDocType<F>>
   > {
     loggerSet.debug(`set`, docToSet);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -369,7 +370,11 @@ export class Replica {
     });
 
     if (isErr(result)) {
-      return result;
+      return {
+        kind: "failure",
+        reason: "invalid_document",
+        err: result,
+      };
     }
 
     loggerSet.debug("...signature =", result.doc.signature);
@@ -385,7 +390,11 @@ export class Replica {
       );
 
       if (isErr(stageResult)) {
-        return stageResult;
+        return {
+          kind: "failure",
+          reason: `invalid_document`,
+          err: stageResult,
+        };
       }
 
       // Update the document's attachment fields using the results derived from staging.
@@ -397,7 +406,11 @@ export class Replica {
 
       if (isErr(updatedDocRes)) {
         await stageResult.reject();
-        return updatedDocRes;
+        return {
+          kind: "failure",
+          reason: `invalid_document`,
+          err: updatedDocRes,
+        };
       }
 
       // If everything checks out, commit the staged attachment to storage.
@@ -443,7 +456,7 @@ export class Replica {
     format: FormatArg<F>,
     docToIngest: FormatDocType<F>,
   ): Promise<
-    FormatDocType<F> | ValidationError
+    IngestEvent<FormatDocType<F>>
   > {
     loggerIngest.debug(`ingest`, docToIngest);
     if (this._isClosed) throw new ReplicaIsClosedError();
@@ -454,7 +467,11 @@ export class Replica {
       .removeExtraFields(docToIngest);
 
     if (isErr(removeResultsOrErr)) {
-      return removeResultsOrErr;
+      return {
+        kind: "failure",
+        reason: "invalid_document",
+        err: removeResultsOrErr,
+      };
     }
     docToIngest = removeResultsOrErr.doc as FormatDocType<F>; // a copy of doc without extra fields
 
@@ -466,10 +483,14 @@ export class Replica {
     const docIsValid = format.checkDocumentIsValid(docToIngest);
 
     if (isErr(docIsValid)) {
-      return docIsValid;
+      return {
+        kind: "failure",
+        reason: "invalid_document",
+        err: docIsValid,
+      };
     }
 
-    const docPromise = deferred<FormatDocType<F>>();
+    const ingestPromise = deferred<IngestEvent<FormatDocType<F>>>();
 
     await this.ingestLockStream.run(async () => {
       // get other docs at the same path
@@ -511,21 +532,24 @@ export class Replica {
           loggerIngest.debug(
             "  > new doc is GT prevSameAuthor, so it is obsolete",
           );
-          await this.eventWriter.write({
+          ingestPromise.resolve({
             kind: "nothing_happened",
             reason: "obsolete_from_same_author",
             doc: docToIngest,
           });
+
+          return;
         }
         if (docComp === Cmp.EQ) {
           loggerIngest.debug(
             "  > new doc is EQ prevSameAuthor, so it is redundant (already_had_it)",
           );
-          await this.eventWriter.write({
+          ingestPromise.resolve({
             kind: "nothing_happened",
             reason: "already_had_it",
             doc: docToIngest,
           });
+
           return;
         }
       }
@@ -546,7 +570,14 @@ export class Replica {
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
       );
 
-      docPromise.resolve(docAsWritten);
+      ingestPromise.resolve({
+        kind: "success",
+        maxLocalIndex,
+        doc: docAsWritten, // with updated extra properties like _localIndex
+        docIsLatest: isLatest,
+        prevDocFromSameAuthor: prevSameAuthor as FormatDocType<F>,
+        prevLatestDoc: prevLatest as FormatDocType<F>,
+      });
 
       await this.eventWriter.write({
         kind: "success",
@@ -558,7 +589,7 @@ export class Replica {
       });
     });
 
-    return docPromise;
+    return ingestPromise;
   }
 
   /**
@@ -617,7 +648,7 @@ export class Replica {
     keypair: AuthorKeypair,
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
-  ): Promise<FormatDocType<F> | ValidationError> {
+  ): Promise<IngestEvent<FormatDocType<F>> | ValidationError> {
     const latestDocAtPath = await this.getLatestDocAtPath(path, format);
 
     if (!latestDocAtPath) {
@@ -635,7 +666,7 @@ export class Replica {
     keypair: AuthorKeypair,
     doc: FormatDocType<F>,
     format: FormatArg<F>,
-  ) {
+  ): Promise<IngestEvent<FormatDocType<F>>> {
     // Check if this document has an attachment by tring to get attachment info.
     const attachmentInfo = format.getAttachmentInfo(doc);
 
@@ -664,7 +695,13 @@ export class Replica {
 
     const wipedDoc = await format.wipeDocument(keypair, docToWipe);
 
-    if (isErr(wipedDoc)) return wipedDoc;
+    if (isErr(wipedDoc)) {
+      return {
+        kind: "failure",
+        err: wipedDoc,
+        reason: "invalid_document",
+      };
+    }
 
     const didIngest = await this.ingest(
       format,

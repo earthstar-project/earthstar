@@ -12,7 +12,7 @@ import {
 } from "../util/errors.ts";
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 import { Query } from "../query/query-types.ts";
-import { QuerySourceEvent } from "./replica-types.ts";
+import { IngestEvent, QuerySourceEvent } from "./replica-types.ts";
 import { Logger } from "../util/log.ts";
 import { CallbackSink } from "../streams/stream_utils.ts";
 import { Replica } from "./replica.ts";
@@ -178,7 +178,7 @@ export class ReplicaCache {
     docToSet: Omit<FormatInputType<F>, "format">,
     format?: FormatArg<F>,
   ): Promise<
-    FormatDocType<F> | ValidationError
+    IngestEvent<FormatDocType<F>> | ValidationError
   > {
     if (this._isClosed) throw new ReplicaCacheIsClosedError();
 

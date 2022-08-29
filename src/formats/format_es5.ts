@@ -111,7 +111,7 @@ const FUTURE_CUTOFF_MICROSECONDS = FUTURE_CUTOFF_MINUTES * 60 * 1000 * 1000;
 const MIN_TIMESTAMP = 10000000000000; // 10^13
 const MAX_TIMESTAMP = 9007199254740990; // Number.MAX_SAFE_INTEGER - 1
 
-const MAX_TEXT_LENGTH = 8000; // 4 million bytes = 4 megabytes (measured as bytes of utf-8, not normal string length)
+const MAX_TEXT_LENGTH = 8000; // 8 thousand bytes = 8 kilobytes (measured as bytes of utf-8, not normal string length)
 
 const HASH_STR_LEN = 53; // number of base32 characters including leading 'b', which is 32 raw bytes when decoded
 const SIG_STR_LEN = 104; // number of base32 characters including leading 'b', which is 64 raw bytes when decoded
@@ -225,7 +225,9 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       );
     }
 
-    const nextText = input.text || prevLatestDoc?.text as string;
+    const nextText = input.text !== undefined
+      ? input.text
+      : prevLatestDoc?.text as string;
 
     const doc: DocEs5 = {
       ...prevLatestDoc,
