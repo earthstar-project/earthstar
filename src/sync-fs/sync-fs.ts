@@ -28,7 +28,7 @@ import {
   zipByPath,
 } from "./util.ts";
 import { AttachmentStreamInfo } from "../util/attachment_stream_info.ts";
-import { FormatEs5 } from "../formats/format_es5.ts";
+import { DocEs5, FormatEs5 } from "../formats/format_es5.ts";
 
 const textEncoder = new TextEncoder();
 
@@ -238,6 +238,8 @@ export async function syncReplicaAndFsDir(
     }
 
     if (isAbsenceEntry(entry)) {
+      const isAttachmentPath = extname(entry.path) !== "";
+
       // New change is valid
       const result = await FormatEs5.generateDocument({
         keypair: opts.keypair,
@@ -253,7 +255,16 @@ export async function syncReplicaAndFsDir(
       if (isErr(result)) {
         errors.push(result);
       } else {
-        const isValidDoc = FormatEs5.checkDocumentIsValid(result.doc);
+        let docToValidate = result.doc;
+        if (isAttachmentPath) {
+          docToValidate = FormatEs5.updateAttachmentFields(
+            result.doc,
+            0,
+            "bwxkuyopgmzy4s4y3t5dr4wc5qjrm2t2usy7qzeyifwg46m2njr4a",
+          ) as DocEs5;
+        }
+
+        const isValidDoc = FormatEs5.checkDocumentIsValid(docToValidate);
 
         if (isErr(isValidDoc) && !opts.overwriteFilesAtOwnedPaths) {
           errors.push(isValidDoc);
@@ -274,29 +285,33 @@ export async function syncReplicaAndFsDir(
         );
       }
 
-      const text = isAttachmentPath
-        ? (await opts.replica.getLatestDocAtPath(entry.path))?.text
-        : "";
-
       // New change is valid
+
       const result = await FormatEs5.generateDocument({
         keypair: opts.keypair,
         share: opts.replica.share,
         timestamp: Date.now() * 1000,
         input: {
           path: entry.path,
-          text: text || "",
+          text: "fake",
           format: "es.5",
-          ...(isAttachmentPath
-            ? { attachment: (await (Deno.open(entry.abspath))).readable }
-            : {}),
         },
       });
 
       if (isErr(result)) {
         errors.push(result);
       } else {
-        const isValidDoc = FormatEs5.checkDocumentIsValid(result.doc);
+        let docToValidate = result.doc;
+
+        if (isAttachmentPath) {
+          docToValidate = FormatEs5.updateAttachmentFields(
+            result.doc,
+            1,
+            "bwxkuyopgmzy4s4y3t5dr4wc5qjrm2t2usy7qzeyifwg46m2njr4a",
+          ) as DocEs5;
+        }
+
+        const isValidDoc = FormatEs5.checkDocumentIsValid(docToValidate);
 
         if (isErr(isValidDoc)) {
           const cantWrite = isValidDoc.message.includes("can't write to path");
@@ -363,6 +378,8 @@ export async function syncReplicaAndFsDir(
   }
 
   const latestDocs = await opts.replica.getLatestDocs();
+
+  //console.log(latestDocs);
 
   for (const doc of latestDocs) {
     // Make sure not to re-write any ephemeral docs to the filesystem.
