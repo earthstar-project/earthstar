@@ -31,6 +31,7 @@ import {
   SyncerStatus,
 } from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
+import { TransferManager } from "./transfer_manager.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
@@ -59,14 +60,11 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     return chunk.to;
   });
   private formats: FormatsArg<FormatsType>;
-  private transfers = new Map<
-    ShareAddress,
-    Map<string, AttachmentTransfer<FormatsType>>
-  >();
+  private transferManager: TransferManager;
 
   private docSyncIsDone = deferred<true>();
   private checkedAllExistingDocsForAttachments = deferred<true>();
-  private transfersAreDone = deferred<true>();
+
   private partnerIsFulfilled = deferred<true>();
 
   /** If the syncer was configured with the `mode: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
@@ -83,6 +81,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     this.mode = opts.mode;
     this.formats = getFormatsWithFallback(opts.formats);
     this.partner = opts.partner;
+
+    this.transferManager = new TransferManager(
+      this.partner.concurrentTransfers,
+    );
 
     const abortController = new AbortController();
 
@@ -148,22 +150,14 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     });
 
     this.checkedAllExistingDocsForAttachments.then(async () => {
-      const transfersPromises = [];
-
       await this.docSyncIsDone;
-
-      for (const shareTransfers of this.transfers.values()) {
-        for (const transfer of shareTransfers.values()) {
-          transfersPromises.push(transfer.isDone);
-        }
-      }
-
-      await Promise.allSettled(transfersPromises);
-
-      this.transfersAreDone.resolve(true);
+      this.transferManager.closeToInternalTransfers();
     });
 
-    Promise.all([this.docSyncIsDone, this.transfersAreDone]).then(() => {
+    Promise.all([
+      this.docSyncIsDone,
+      this.transferManager.fulfilledInternalTransfers,
+    ]).then(() => {
       this.outgoingEventBus.send({
         kind: "SYNCER_FULFILLED",
       });
@@ -172,7 +166,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     this.partnerIsFulfilled.then(async () => {
       await this.docSyncIsDone;
       await this.checkedAllExistingDocsForAttachments;
-      await this.transfersAreDone;
+      await this.transferManager.fulfilledInternalTransfers;
 
       abortController.abort();
       this.isDone.resolve();
@@ -229,7 +223,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       }
 
       // Check if there's already a transfer for this attachment in progress...
-      const existingTransfer = transfers.get(replica.share)?.get(
+      const existingTransfer = this.transferManager.hasTransferWithHash(
         attachmentInfo.hash,
       );
 
@@ -276,9 +270,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         doc: doc,
         format,
         stream: result,
+        origin: "internal",
       });
 
-      addTransfer(replica.share, transfer);
+      addTransfer(transfer);
     };
 
     const agent = new SyncAgent({
@@ -296,7 +291,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     // Have to do this because we'll be using these values in a context where 'this' is different
     // (the streams below)
-    const { outgoingEventBus, transfers } = this;
+    const { outgoingEventBus } = this;
 
     // Pipe the agent's outgoing events into our event bus so they'll be sent out.
     agent.readable.pipeTo(
@@ -419,10 +414,18 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         for (const share of commonShareSet) {
           this.addShare(share, event.syncerId, intersectingFormats);
         }
+
+        if (commonShareSet.size === 0 && this.mode === "once") {
+          this.outgoingEventBus.send({
+            "kind": "SYNCER_FULFILLED",
+          });
+        }
+
         break;
       }
       case "BLOB_REQ": {
         // ask the partner for a send transfer, add it to our send transfers.
+
         const result = await this.partner.handleUploadRequest({
           shareAddress: event.shareAddress,
           syncerId: event.syncerId,
@@ -454,9 +457,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           format,
           replica,
           stream: result,
+          origin: "external",
         });
 
-        this.addTransfer(event.shareAddress, transfer);
+        this.addTransfer(transfer);
         break;
       }
       case "SYNCER_FULFILLED": {
@@ -466,18 +470,9 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   }
 
   private addTransfer(
-    shareAddress: string,
     transfer: AttachmentTransfer<FormatsType>,
   ) {
-    const existingMap = this.transfers.get(shareAddress);
-
-    if (existingMap) {
-      existingMap.set(transfer.hash, transfer);
-    } else {
-      const map = new Map();
-      map.set(transfer.hash, transfer);
-      this.transfers.set(shareAddress, map);
-    }
+    this.transferManager.addTransfer(transfer);
 
     transfer.onProgress(() => {
       this.statusBus.send(this.getStatus());
@@ -491,26 +486,9 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     const status: SyncerStatus = {};
 
     for (const [shareAddr, agent] of this.syncAgents) {
-      const transfers = this.transfers.get(shareAddr);
-
-      const transferStatuses = [];
-
-      for (const [, transfer] of transfers || []) {
-        transferStatuses.push({
-          author: transfer.doc.author,
-          path: transfer.doc.path,
-          format: transfer.doc.format,
-          hash: transfer.hash,
-          status: transfer.status,
-          bytesLoaded: transfer.loaded,
-          totalBytes: transfer.expectedSize,
-          kind: transfer.kind,
-        });
-      }
-
       status[shareAddr] = {
         docs: agent.getStatus(),
-        attachments: transferStatuses,
+        attachments: this.transferManager.getReports(shareAddr),
       };
     }
 
@@ -530,7 +508,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       await agent.cancel();
     }
 
-    // TODO: cancel all the doc streams used for attachments
+    this.transferManager.cancel();
   }
 
   // externally callable... to get a readable...
@@ -575,15 +553,16 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       return;
     }
 
-    // got a writable stream! add it to the syncer's transfers.
+    // got a stream! add it to the syncer's transfers.
     const transfer = new AttachmentTransfer({
       doc: doc as FormatDocType<typeof format>,
       format,
       replica,
       stream: result,
+      origin: "external",
     });
 
-    this.addTransfer(shareAddress, transfer);
+    this.addTransfer(transfer);
   }
 }
 

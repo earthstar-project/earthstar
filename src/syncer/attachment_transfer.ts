@@ -1,7 +1,7 @@
 import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-import { Crypto } from "../crypto/crypto.ts";
+
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { DocBase } from "../util/doc-types.ts";
+import { DocBase, ShareAddress } from "../util/doc-types.ts";
 import { isErr, NotFoundError, ValidationError } from "../util/errors.ts";
 import {
   AttachmentTransferOpts,
@@ -12,21 +12,29 @@ import {
 export class AttachmentTransfer<F> {
   kind: "download" | "upload";
   status: AttachmentTransferStatus = "ready";
+  share: ShareAddress;
 
   loaded = 0;
   expectedSize: number;
 
   private sourceDoc: DocBase<string>;
   private statusBus = new BlockingBus<AttachmentTransferProgressEvent>();
+  private transferOp = deferred<() => Promise<void>>();
 
   isDone = deferred<true>();
 
   hash: string;
 
+  origin: "internal" | "external";
+
+  private abortController = new AbortController();
+
   constructor(
-    { stream, replica, doc, format }: AttachmentTransferOpts<F>,
+    { stream, replica, doc, format, origin }: AttachmentTransferOpts<F>,
   ) {
     this.sourceDoc = doc;
+    this.share = replica.share;
+    this.origin = origin;
 
     const attachmentInfo = format.getAttachmentInfo(doc);
 
@@ -41,6 +49,8 @@ export class AttachmentTransfer<F> {
 
     const updateLoaded = this.updateLoaded.bind(this);
 
+    const { abortController } = this;
+
     if (stream instanceof ReadableStream) {
       // Incoming
       // pipe through our bytes counter
@@ -48,6 +58,10 @@ export class AttachmentTransfer<F> {
 
       const counterStream = new ReadableStream<Uint8Array>({
         async start(controller) {
+          abortController.signal.onabort = () => {
+            controller.error("Aborted");
+          };
+
           const reader = stream.getReader();
 
           while (true) {
@@ -66,30 +80,34 @@ export class AttachmentTransfer<F> {
         },
       });
 
-      this.changeStatus("in_progress");
+      this.transferOp.resolve(() => {
+        const promise = deferred<void>();
 
-      replica.ingestAttachment(format, doc, counterStream).then(
-        (result) => {
-          if (isErr(result)) {
-            this.changeStatus("failed");
-          }
+        replica.ingestAttachment(format, doc, counterStream).then(
+          (result) => {
+            if (isErr(result)) {
+              promise.reject();
+            }
 
-          this.changeStatus("complete");
-        },
-      ).catch((err) => {
-        console.error("Transfer failed", err);
-        this.changeStatus("failed");
+            promise.resolve();
+          },
+        ).catch((err) => {
+          console.error("An attachment ingest from a transfer failed", err);
+          promise.reject();
+        });
+
+        return promise;
       });
     } else {
       this.kind = "upload";
 
       replica.getAttachment(doc, format).then((attachmentRes) => {
         if (!attachmentRes) {
-          return new NotFoundError();
+          throw new NotFoundError();
         }
 
         if (isErr(attachmentRes)) {
-          return attachmentRes;
+          throw attachmentRes;
         }
 
         const counterTransform = new TransformStream<Uint8Array, Uint8Array>({
@@ -100,16 +118,35 @@ export class AttachmentTransfer<F> {
           },
         });
 
-        attachmentRes.stream().then((readable) => {
-          this.changeStatus("in_progress");
-          readable.pipeThrough(counterTransform).pipeTo(stream).then(() => {
-            this.changeStatus("complete");
-          }).catch(() => {
-            this.changeStatus("failed");
-          });
-        });
+        this.transferOp.resolve(() =>
+          attachmentRes.stream().then((readable) => {
+            return readable.pipeThrough(counterTransform, {
+              signal: abortController.signal,
+            }).pipeTo(stream);
+          })
+        );
       });
     }
+  }
+
+  async start() {
+    if (this.status !== "ready") {
+      // maybe throw here.
+      return;
+    }
+
+    const transferOp = await this.transferOp;
+
+    this.changeStatus("in_progress");
+
+    transferOp().then(() => {
+      this.changeStatus("complete");
+    }).catch((err) => {
+      console.error("An attachment transfer failed:", err);
+      this.changeStatus("failed");
+    });
+
+    return;
   }
 
   private updateLoaded(toAdd: number) {
@@ -150,5 +187,7 @@ export class AttachmentTransfer<F> {
     return unsub;
   }
 
-  // TODO: abort
+  abort() {
+    this.abortController.abort();
+  }
 }

@@ -40,6 +40,7 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   ) {
     if (this.closed) throw new ReplicaIsClosedError();
     // Create the path
+
     await this.ensureDir("staging", formatName);
 
     const tempKey = randomId();

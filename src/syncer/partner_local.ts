@@ -21,6 +21,8 @@ export class PartnerLocal<
   readable: ReadableStream<SyncerEvent>;
   writable: WritableStream<SyncerEvent>;
 
+  concurrentTransfers = 1024;
+
   private incomingEventBus = new BlockingBus<SyncerEvent>();
   private outgoingEventBus = new BlockingBus<SyncerEvent>();
   private partnerPeer: IPeer;
@@ -85,6 +87,7 @@ export class PartnerLocal<
             });
           },
         }),
+        concurrentTransfers: 1024,
         async getDownload(
           opts: GetTransferOpts,
         ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
