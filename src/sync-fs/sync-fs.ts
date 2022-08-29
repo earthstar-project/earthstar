@@ -73,7 +73,9 @@ export async function reconcileManifestWithDirContents(
 
         const streamInfo = new AttachmentStreamInfo();
 
-        await file.readable.pipeTo(streamInfo.writable);
+        await file.readable.pipeThrough(streamInfo).pipeTo(
+          new WritableStream(),
+        );
 
         exposedContentSize = await streamInfo.size;
         exposedContentHash = await streamInfo.hash;
@@ -90,7 +92,6 @@ export async function reconcileManifestWithDirContents(
         dirName: dirname(path),
         path: esPath,
         abspath: resolve(path),
-        size: stat.size,
         exposedContentSize,
         mtimeMs: stat.mtime?.getTime() || null,
         birthtimeMs: stat.birthtime?.getTime() || null,
