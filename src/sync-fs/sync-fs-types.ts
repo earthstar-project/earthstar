@@ -30,9 +30,8 @@ export interface FileInfoEntry {
   dirName: string;
   path: string;
   abspath: string;
-  size: number;
-  contentsSize: number;
+  exposedContentSize: number;
   mtimeMs: number | null; // modified time (write)
   birthtimeMs: number | null; // created time
-  hash: string;
+  exposedContentHash: string;
 }

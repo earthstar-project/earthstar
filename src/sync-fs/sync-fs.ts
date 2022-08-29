@@ -1,4 +1,3 @@
-import { encode } from "https://deno.land/std@0.126.0/encoding/base64.ts";
 import { walk } from "https://deno.land/std@0.132.0/fs/mod.ts";
 import {
   dirname,
@@ -9,13 +8,7 @@ import {
 } from "https://deno.land/std@0.132.0/path/mod.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
-import { FormatEs4 } from "../formats/format_es4.ts";
-import {
-  bytesExtensions,
-  ES4_MAX_CONTENT_LENGTH,
-  IGNORED_FILES,
-  MANIFEST_FILE_NAME,
-} from "./constants.ts";
+import { IGNORED_FILES, MANIFEST_FILE_NAME } from "./constants.ts";
 import {
   FileInfoEntry,
   SyncFsManifest,
@@ -34,6 +27,8 @@ import {
   writeManifest,
   zipByPath,
 } from "./util.ts";
+import { AttachmentStreamInfo } from "../util/attachment_stream_info.ts";
+import { DocEs5, FormatEs5 } from "../formats/format_es5.ts";
 
 const textEncoder = new TextEncoder();
 
@@ -70,27 +65,37 @@ export async function reconcileManifestWithDirContents(
       const stat = await Deno.stat(path);
       const extension = extname(path);
 
-      let contents = "";
+      let exposedContentSize = 0;
+      let exposedContentHash = "";
 
-      if (bytesExtensions.includes(extension)) {
-        const fileContents = await Deno.readFile(path);
-        contents = encode(fileContents);
+      if (extension !== "") {
+        const file = await Deno.open(path);
+
+        const streamInfo = new AttachmentStreamInfo();
+
+        await file.readable.pipeThrough(streamInfo).pipeTo(
+          new WritableStream(),
+        );
+
+        exposedContentSize = await streamInfo.size;
+        exposedContentHash = await streamInfo.hash;
       } else {
-        contents = await Deno.readTextFile(path);
+        const contents = await Deno.readTextFile(path);
+
+        exposedContentHash = await Crypto.sha256base32(contents);
+        exposedContentSize = textEncoder.encode(contents).byteLength;
       }
 
-      const hash = await Crypto.sha256base32(contents);
       const esPath = `/${relative(fsDirPath, path)}`;
 
       const record: FileInfoEntry = {
         dirName: dirname(path),
         path: esPath,
         abspath: resolve(path),
-        size: stat.size,
-        contentsSize: textEncoder.encode(contents).length,
+        exposedContentSize,
         mtimeMs: stat.mtime?.getTime() || null,
         birthtimeMs: stat.birthtime?.getTime() || null,
-        hash,
+        exposedContentHash,
       };
 
       fileEntries[esPath] = record;
@@ -141,7 +146,10 @@ export async function reconcileManifestWithDirContents(
 
       // If entry a has been modified more recently, it should win.
       // But if the content hasn't changed, we want to preserve the old timestamp.
-      if (latestA > latestB || entryA.hash === entryB.hash) {
+      if (
+        latestA > latestB ||
+        entryA.exposedContentHash === entryB.exposedContentHash
+      ) {
         return entryA;
       }
 
@@ -230,62 +238,115 @@ export async function syncReplicaAndFsDir(
     }
 
     if (isAbsenceEntry(entry)) {
-      // Keypair is allowed to write this path
-      const canWriteToPath = FormatEs4
-        ._checkAuthorCanWriteToPath(opts.keypair.address, entry.path);
+      const isAttachmentPath = extname(entry.path) !== "";
 
-      if (isErr(canWriteToPath) && !opts.overwriteFilesAtOwnedPaths) {
-        errors.push(canWriteToPath);
+      // New change is valid
+      const result = await FormatEs5.generateDocument({
+        keypair: opts.keypair,
+        share: opts.replica.share,
+        timestamp: Date.now() * 1000,
+        input: {
+          path: entry.path,
+          text: "",
+          format: "es.5",
+        },
+      });
+
+      if (isErr(result)) {
+        errors.push(result);
+      } else {
+        let docToValidate = result.doc;
+        if (isAttachmentPath) {
+          docToValidate = FormatEs5.updateAttachmentFields(
+            result.doc,
+            0,
+            "bwxkuyopgmzy4s4y3t5dr4wc5qjrm2t2usy7qzeyifwg46m2njr4a",
+          ) as DocEs5;
+        }
+
+        const isValidDoc = FormatEs5.checkDocumentIsValid(docToValidate);
+
+        if (isErr(isValidDoc) && !opts.overwriteFilesAtOwnedPaths) {
+          errors.push(isValidDoc);
+        }
       }
     }
 
     if (isFileInfoEntry(entry)) {
-      // Keypair is allowed to write this path
-      const canWriteToPath = FormatEs4
-        ._checkAuthorCanWriteToPath(opts.keypair.address, entry.path);
+      const isAttachmentPath = extname(entry.abspath) !== "";
 
-      // Path is valid
-      const pathIsValid = FormatEs4._checkPathIsValid(
-        entry.path,
-      );
-
-      // Size of file is not too big.
-      const sizeIsOkay = entry.contentsSize <= ES4_MAX_CONTENT_LENGTH;
-
-      if (isErr(canWriteToPath) && !opts.overwriteFilesAtOwnedPaths) {
-        const correspondingDoc = await opts.replica.getLatestDocAtPath(
-          entry.path,
-        );
-
-        if (!correspondingDoc) {
-          errors.push(canWriteToPath);
-        }
-
-        // Only push this error if the corresponding doc's timestamp is older than the fileinfoentry's
-        // AND if the hash is different.
-        if (
-          correspondingDoc && entry.mtimeMs &&
-          (entry.mtimeMs * 1000 > correspondingDoc.timestamp &&
-            correspondingDoc.contentHash !== entry.hash)
-        ) {
-          errors.push(canWriteToPath);
-        }
-      } else if (
-        isErr(canWriteToPath) && opts.overwriteFilesAtOwnedPaths === true
-      ) {
-        delete reconciledManifest.entries[key];
-      }
-
-      if (isErr(pathIsValid)) {
-        errors.push(pathIsValid);
-      }
+      const sizeIsOkay = isAttachmentPath || entry.exposedContentSize <= 8000;
 
       if (!sizeIsOkay) {
         errors.push(
           new EarthstarError(
-            `File too big for the es.4 format: ${entry.path}`,
+            `File too big for the es.5 format's text field: ${entry.path}`,
           ),
         );
+      }
+
+      // New change is valid
+
+      const result = await FormatEs5.generateDocument({
+        keypair: opts.keypair,
+        share: opts.replica.share,
+        timestamp: Date.now() * 1000,
+        input: {
+          path: entry.path,
+          text: "fake",
+          format: "es.5",
+        },
+      });
+
+      if (isErr(result)) {
+        errors.push(result);
+      } else {
+        let docToValidate = result.doc;
+
+        if (isAttachmentPath) {
+          docToValidate = FormatEs5.updateAttachmentFields(
+            result.doc,
+            1,
+            "bwxkuyopgmzy4s4y3t5dr4wc5qjrm2t2usy7qzeyifwg46m2njr4a",
+          ) as DocEs5;
+        }
+
+        const isValidDoc = FormatEs5.checkDocumentIsValid(docToValidate);
+
+        if (isErr(isValidDoc)) {
+          const cantWrite = isValidDoc.message.includes("can't write to path");
+
+          if (cantWrite && !opts.overwriteFilesAtOwnedPaths) {
+            // Check if there's already a doc at this path
+            const correspondingDoc = await opts.replica.getLatestDocAtPath(
+              entry.path,
+            );
+
+            if (!correspondingDoc) {
+              errors.push(isValidDoc);
+            }
+
+            // Only push this error if the corresponding doc's timestamp is older than the fileinfoentry's
+            // AND if the hash is different.
+            const hashToCompare = isAttachmentPath
+              ? correspondingDoc?.attachmentHash
+              : correspondingDoc?.textHash;
+
+            if (
+              correspondingDoc && entry.mtimeMs &&
+              ((entry.mtimeMs * 1000 > correspondingDoc.timestamp) &&
+                hashToCompare !== entry.exposedContentHash)
+            ) {
+              errors.push(isValidDoc);
+            }
+          } else if (
+            cantWrite && opts.overwriteFilesAtOwnedPaths === true
+          ) {
+            delete reconciledManifest.entries[key];
+          } else {
+            errors.push(isValidDoc);
+          }
+        }
       }
     }
   }
@@ -318,13 +379,19 @@ export async function syncReplicaAndFsDir(
 
   const latestDocs = await opts.replica.getLatestDocs();
 
+  //console.log(latestDocs);
+
   for (const doc of latestDocs) {
     // Make sure not to re-write any ephemeral docs to the filesystem.
     if (doc.deleteAfter && Date.now() * 1000 > doc.deleteAfter) {
       return;
     }
 
-    await writeDocToDir(doc, opts.dirPath);
+    try {
+      await writeDocToDir(doc, opts.replica, opts.dirPath);
+    } catch (err) {
+      // Maybe we log something here...
+    }
   }
 
   // Wipe any empty dirs
