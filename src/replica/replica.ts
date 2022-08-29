@@ -689,7 +689,7 @@ export class Replica {
 
     const docToWipe: FormatDocType<F> = {
       ...doc,
-      timestamp: doc.timestamp + 1,
+      timestamp: Math.max(doc.timestamp + 1, Date.now() * 1000),
       author: keypair.address,
     };
 
