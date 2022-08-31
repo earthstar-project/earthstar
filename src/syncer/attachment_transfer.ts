@@ -2,7 +2,7 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase, ShareAddress } from "../util/doc-types.ts";
-import { isErr, NotFoundError, ValidationError } from "../util/errors.ts";
+import { isErr, ValidationError } from "../util/errors.ts";
 import {
   AttachmentTransferOpts,
   AttachmentTransferProgressEvent,
@@ -49,8 +49,6 @@ export class AttachmentTransfer<F> {
 
     const updateLoaded = this.updateLoaded.bind(this);
 
-    const { abortController } = this;
-
     if (stream instanceof ReadableStream) {
       // Incoming
       // pipe through our bytes counter
@@ -58,10 +56,6 @@ export class AttachmentTransfer<F> {
 
       const counterStream = new ReadableStream<Uint8Array>({
         async start(controller) {
-          abortController.signal.onabort = () => {
-            controller.error("Aborted");
-          };
-
           const reader = stream.getReader();
 
           while (true) {
@@ -86,14 +80,13 @@ export class AttachmentTransfer<F> {
         replica.ingestAttachment(format, doc, counterStream).then(
           (result) => {
             if (isErr(result)) {
-              promise.reject();
+              promise.reject(result);
             }
 
             promise.resolve();
           },
         ).catch((err) => {
-          console.error("An attachment ingest from a transfer failed", err);
-          promise.reject();
+          promise.reject(err);
         });
 
         return promise;
@@ -101,13 +94,17 @@ export class AttachmentTransfer<F> {
     } else {
       this.kind = "upload";
 
-      replica.getAttachment(doc, format).then((attachmentRes) => {
+      replica.getAttachment(doc, format).then(async (attachmentRes) => {
         if (!attachmentRes) {
-          throw new NotFoundError();
+          this.changeStatus("missing_attachment");
+          await stream.abort();
+          return;
         }
 
         if (isErr(attachmentRes)) {
-          throw attachmentRes;
+          this.changeStatus("failed");
+          await stream.abort();
+          return;
         }
 
         const counterTransform = new TransformStream<Uint8Array, Uint8Array>({
@@ -120,9 +117,7 @@ export class AttachmentTransfer<F> {
 
         this.transferOp.resolve(() =>
           attachmentRes.stream().then((readable) => {
-            return readable.pipeThrough(counterTransform, {
-              signal: abortController.signal,
-            }).pipeTo(stream);
+            return readable.pipeThrough(counterTransform).pipeTo(stream);
           })
         );
       });
@@ -141,8 +136,7 @@ export class AttachmentTransfer<F> {
 
     transferOp().then(() => {
       this.changeStatus("complete");
-    }).catch((err) => {
-      console.error("An attachment transfer failed:", err);
+    }).catch(() => {
       this.changeStatus("failed");
     });
 
@@ -159,6 +153,13 @@ export class AttachmentTransfer<F> {
   }
 
   private changeStatus(status: AttachmentTransferStatus) {
+    if (
+      this.status === "complete" || this.status === "failed" ||
+      this.status === "missing_attachment"
+    ) {
+      return;
+    }
+
     this.status = status;
 
     this.statusBus.send({
@@ -172,7 +173,11 @@ export class AttachmentTransfer<F> {
     }
 
     if (status === "failed") {
-      this.isDone.reject();
+      this.isDone.reject("Attachment transfer failed");
+    }
+
+    if (status === "missing_attachment") {
+      this.isDone.reject("The other peer does not have this attachment");
     }
   }
 

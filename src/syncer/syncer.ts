@@ -38,7 +38,9 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   peer: IPeer;
   id = randomId();
   private partner: ISyncPartner<IncomingTransferSourceType>;
-  private outgoingEventBus = new BlockingBus<SyncerEvent>();
+  private outgoingEventBus = new BlockingBus<
+    SyncerEvent | { kind: "CMD_FINISHED" }
+  >();
   private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
   private docStreams = new Map<
     ShareAddress,
@@ -86,27 +88,30 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       this.partner.concurrentTransfers,
     );
 
-    const abortController = new AbortController();
-
     // Create a new readable stream which is subscribed to events from this syncer.
     // Pipe it to the outgoing stream to the other peer.
     const outgoingStream = new ReadableStream({
       start(controller) {
         outgoingEventBus.on((event) => {
+          if (event.kind === "CMD_FINISHED") {
+            controller.close();
+            return;
+          }
+
           controller.enqueue(event);
         });
       },
     });
 
-    outgoingStream.pipeTo(opts.partner.writable, {
-      signal: abortController.signal,
-    }).catch(() => {
+    outgoingStream.pipeTo(opts.partner.writable).catch(() => {
       // We'll abort the signal eventually, so we catch that here.
     });
 
     // Create a sink to handle incoming events, pipe the readable into that
     opts.partner.readable.pipeTo(this.incomingStreamCloner.writable).catch(
       (err) => {
+        console.log("cancel a");
+
         this.cancel(err);
       },
     );
@@ -151,6 +156,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     this.checkedAllExistingDocsForAttachments.then(async () => {
       await this.docSyncIsDone;
+
       this.transferManager.closeToInternalTransfers();
     });
 
@@ -168,7 +174,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       await this.checkedAllExistingDocsForAttachments;
       await this.transferManager.fulfilledInternalTransfers;
 
-      abortController.abort();
+      // we're going to
+      this.outgoingEventBus.send({ kind: "CMD_FINISHED" });
       this.isDone.resolve();
     });
 
@@ -225,6 +232,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       // Check if there's already a transfer for this attachment in progress...
       const existingTransfer = this.transferManager.hasTransferWithHash(
         attachmentInfo.hash,
+        "download",
       );
 
       if (existingTransfer) {
@@ -452,15 +460,20 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         const format = getFormatLookup(this.formats)[event.doc.format];
 
         // got a writable stream! add it to the syncer's transfers.
-        const transfer = new AttachmentTransfer({
-          doc: event.doc as FormatDocType<FormatsType>,
-          format,
-          replica,
-          stream: result,
-          origin: "external",
-        });
+        try {
+          const transfer = new AttachmentTransfer({
+            doc: event.doc as FormatDocType<FormatsType>,
+            format,
+            replica,
+            stream: result,
+            origin: "external",
+          });
 
-        this.addTransfer(transfer);
+          this.addTransfer(transfer);
+        } catch {
+          // This can happen if we don't have the attachment, or the doc can't have an attachment.
+        }
+
         break;
       }
       case "SYNCER_FULFILLED": {

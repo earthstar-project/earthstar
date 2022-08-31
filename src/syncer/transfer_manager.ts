@@ -14,7 +14,8 @@ export class TransferManager {
   private isClosedToInternalRequests = false;
 
   /** Transfers with these hashes should not be added. */
-  private barredHashes = new Set<string>();
+  private barredHashesUpload = new Set<string>();
+  private barredHashesDownload = new Set<string>();
 
   fulfilledInternalTransfers = deferred<true>();
 
@@ -33,16 +34,11 @@ export class TransferManager {
 
     transfer.isDone.then(() => {
       this.completed.add(transfer);
-
-      this.admit();
     }).catch(() => {
       this.failed.add(transfer);
-
-      // If a transfer with this hash comes through again, we should allow it.
-      this.barredHashes.delete(transfer.hash);
     }).finally(() => {
       this.active.delete(transfer);
-
+      this.admit();
       this.checkInternallyMadeTransfersFinished();
     });
   }
@@ -103,17 +99,35 @@ export class TransferManager {
 
   addTransfer(transfer: AttachmentTransfer<unknown>) {
     if (this.isClosedToInternalRequests && transfer.origin === "internal") {
+      console.log(transfer);
       throw new EarthstarError(
-        "Tried to add internal transfer after transfer manager was sealed to internal transfers.",
+        "Tried to add internal transfer after transfer manager was closed to internal transfers.",
       );
     }
 
-    if (this.barredHashes.has(transfer.hash)) {
+    if (
+      transfer.kind === "upload" &&
+        this.barredHashesUpload.has(transfer.hash) ||
+      transfer.kind === "download" &&
+        this.barredHashesDownload.has(transfer.hash)
+    ) {
+      console.log("barred", transfer);
       return;
     }
 
     transfer.onProgress(() => {
       this.updateTransferStatus(transfer);
+    });
+
+    transfer.isDone.catch(() => {
+      this.failed.add(transfer);
+
+      // If a transfer with this hash comes through again, we should allow it.
+      const barredHashes = transfer.kind === "download"
+        ? this.barredHashesDownload
+        : this.barredHashesUpload;
+
+      barredHashes.delete(transfer.hash);
     });
 
     if (this.active.size < this.activeLimit) {
@@ -144,7 +158,7 @@ export class TransferManager {
       this.reports[transfer.share] = {};
     }
 
-    this.reports[transfer.share][transfer.hash] = {
+    this.reports[transfer.share][transfer.hash + transfer.kind] = {
       author: transfer.doc.author,
       path: transfer.doc.path,
       format: transfer.doc.format,
@@ -168,7 +182,11 @@ export class TransferManager {
     return reports;
   }
 
-  hasTransferWithHash(hash: string): boolean {
-    return this.barredHashes.has(hash);
+  hasTransferWithHash(hash: string, kind: "upload" | "download"): boolean {
+    const barredHashes = kind === "download"
+      ? this.barredHashesDownload
+      : this.barredHashesUpload;
+
+    return barredHashes.has(hash);
   }
 }

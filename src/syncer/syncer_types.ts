@@ -112,6 +112,10 @@ export type SyncerFulfilledEvent = {
   kind: "SYNCER_FULFILLED";
 };
 
+export type SyncerHeartbeat = {
+  kind: "HEARTBEAT";
+};
+
 /** A SyncAgentEvent addressed to a specific share address. */
 export type SyncerSyncAgentEvent = SyncAgentEvent & {
   to: string;
@@ -206,7 +210,8 @@ export type AttachmentTransferStatus =
   | "ready"
   | "in_progress"
   | "complete"
-  | "failed";
+  | "failed"
+  | "missing_attachment";
 
 export type AttachmentTransferOpts<F> = {
   stream: ReadableStream<Uint8Array> | WritableStream<Uint8Array>;
