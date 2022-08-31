@@ -7,6 +7,7 @@ import {
   FormatsArg,
 } from "../formats/format_types.ts";
 import { ValidationError } from "../util/errors.ts";
+import { TransferManager } from "./transfer_manager.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
 export type HaveEntry = {
@@ -41,6 +42,15 @@ export type SyncAgentDocEvent = {
   doc: DocBase<string>;
 };
 
+export type SyncAgentWantAttachmentEvent = {
+  kind: "WANT_ATTACHMENT";
+  /** An ID to be used for an external request to find its way back to this syncer. */
+  syncerId: string;
+  doc: DocBase<string>;
+  shareAddress: string;
+  attachmentHash: string;
+};
+
 /* An event sent when a sync agent has offered all docs it knows of. */
 export type SyncAgentExhaustedHavesEvent = {
   kind: "EXHAUSTED_HAVES";
@@ -61,6 +71,7 @@ export type SyncAgentEvent =
   | SyncAgentHaveEvent
   | SyncAgentWantEvent
   | SyncAgentDocEvent
+  | SyncAgentWantAttachmentEvent
   | SyncAgentAbortEvent
   | SyncAgentExhaustedHavesEvent
   | SyncAgentFulfilledEvent;
@@ -85,7 +96,8 @@ export type SyncAgentOpts<F> = {
   replica: Replica;
   formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
-  onRequestAttachment: (doc: FormatDocType<F>) => Promise<void>;
+  transferManager: TransferManager<F, unknown>;
+  syncerId: string;
 };
 
 // ===================
@@ -97,15 +109,6 @@ export type SyncerDiscloseEvent = {
   salt: string;
   shares: string[];
   formats: string[];
-};
-
-export type SyncerRequestAttachmentTransferEvent = {
-  kind: "BLOB_REQ";
-  /** An ID to be used for an external request to find its way back to this syncer. */
-  syncerId: string;
-  doc: DocBase<string>;
-  shareAddress: string;
-  attachmentHash: string;
 };
 
 export type SyncerFulfilledEvent = {
@@ -125,7 +128,6 @@ export type SyncerSyncAgentEvent = SyncAgentEvent & {
 export type SyncerEvent =
   | SyncerSyncAgentEvent
   | SyncerDiscloseEvent
-  | SyncerRequestAttachmentTransferEvent
   | SyncerFulfilledEvent;
 
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */
@@ -144,17 +146,17 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
    */
   getDownload(
     opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined>;
+  ): Promise<ReadableStream<Uint8Array> | undefined>;
 
   /** Handles (usually in-band) request from the other peer to upload an attachment.
-   * @returns A `WritableStream<Uint8Array>` to write data to, a `ValidationError` if something went wrong`, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
+   * @returns A `WritableStream<Uint8Array>` to write data to, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
    */
   handleUploadRequest(
     opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | ValidationError | undefined>;
+  ): Promise<WritableStream<Uint8Array> | undefined>;
 
   /** Handles an out-of-band request from the other peer to start a transfer.
-   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, a `ValidationError` if something went wrong`, or `undefined` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
+   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, or `undefined` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
    */
   handleTransferRequest(
     source: IncomingAttachmentSourceType,
@@ -162,7 +164,6 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
   ): Promise<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
-    | ValidationError
     | undefined
   >;
 }

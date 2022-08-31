@@ -64,7 +64,7 @@ export class PartnerWebClient<
 
   getDownload(
     opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
+  ): Promise<ReadableStream<Uint8Array> | undefined> {
     // create a new url with the share, path, and syncer ID embedded
 
     const url = new URL(
@@ -86,7 +86,7 @@ export class PartnerWebClient<
 
   handleUploadRequest(
     opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
+  ): Promise<WritableStream<Uint8Array> | undefined> {
     const url = new URL(
       `${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`,
       this.wsUrl,
@@ -106,7 +106,6 @@ export class PartnerWebClient<
   ): Promise<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
-    | ValidationError
     | undefined
   > {
     // We don't expect any external requests.

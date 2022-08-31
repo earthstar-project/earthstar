@@ -38,14 +38,14 @@ export class PartnerWebServer<
 
   getDownload(
     _opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
+  ): Promise<ReadableStream<Uint8Array> | undefined> {
     // Server can't initiate a request with a client.
     return Promise.resolve(undefined);
   }
 
   handleUploadRequest(
     _opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
+  ): Promise<WritableStream<Uint8Array> | undefined> {
     // Server won't get in-band BLOB_REQ messages
     return Promise.resolve(undefined);
   }
@@ -56,7 +56,6 @@ export class PartnerWebServer<
   ): Promise<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
-    | ValidationError
     | undefined
   > {
     // Return a stream which writes to the socket. nice.

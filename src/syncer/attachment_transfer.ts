@@ -3,6 +3,7 @@ import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase, ShareAddress } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
+import { MultiDeferred } from "./multi_deferred.ts";
 import {
   AttachmentTransferOpts,
   AttachmentTransferProgressEvent,
@@ -21,7 +22,7 @@ export class AttachmentTransfer<F> {
   private statusBus = new BlockingBus<AttachmentTransferProgressEvent>();
   private transferOp = deferred<() => Promise<void>>();
 
-  isDone = deferred<true>();
+  private multiDeferred = new MultiDeferred();
 
   hash: string;
 
@@ -169,15 +170,15 @@ export class AttachmentTransfer<F> {
     });
 
     if (status === "complete") {
-      this.isDone.resolve();
+      this.multiDeferred.resolve();
     }
 
     if (status === "failed") {
-      this.isDone.reject("Attachment transfer failed");
+      this.multiDeferred.reject("Attachment transfer failed");
     }
 
     if (status === "missing_attachment") {
-      this.isDone.reject("The other peer does not have this attachment");
+      this.multiDeferred.reject("The other peer does not have this attachment");
     }
   }
 
@@ -194,5 +195,9 @@ export class AttachmentTransfer<F> {
 
   abort() {
     this.abortController.abort();
+  }
+
+  isDone() {
+    return this.multiDeferred.getPromise();
   }
 }

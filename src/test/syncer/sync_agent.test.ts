@@ -5,6 +5,7 @@ import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.
 import { Replica } from "../../replica/replica.ts";
 import { SyncAgentEvent, SyncAgentStatus } from "../../syncer/syncer_types.ts";
 import { SyncAgent } from "../../syncer/sync_agent.ts";
+import { TransferManager } from "../../syncer/transfer_manager.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { assert, assertEquals } from "../asserts.ts";
@@ -76,13 +77,16 @@ class SyncAgentTestHelper {
             replica: this.targetReplica,
             mode,
             formats: [FormatEs4],
-            onRequestAttachment: async () => {},
+         transferManager: new TransferManager({
+           formats,
+           
+         })
           });
           this.sourceSyncAgent = new SyncAgent({
             replica: this.sourceReplica,
             mode,
             formats: [FormatEs4],
-            onRequestAttachment: async () => {},
+            
           });
 
           const { targetEvents, sourceEvents } = this;

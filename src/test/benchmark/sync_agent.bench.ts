@@ -55,8 +55,8 @@ for (const scenario of scenarios) {
       syncAgentA.readable.pipeTo(syncAgentB.writable);
       syncAgentB.readable.pipeTo(syncAgentA.writable);
 
-      await syncAgentA.isDone;
-      await syncAgentB.isDone;
+      await syncAgentA.isDone();
+      await syncAgentB.isDone();
     },
   );
 }

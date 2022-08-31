@@ -90,11 +90,11 @@ export class PartnerLocal<
         concurrentTransfers: 1024,
         async getDownload(
           opts: GetTransferOpts,
-        ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
+        ): Promise<ReadableStream<Uint8Array> | undefined> {
           const partnerReplica = peerSelf.getReplica(opts.shareAddress);
 
           if (!partnerReplica) {
-            return new ValidationError(
+            throw new ValidationError(
               "Tried to get a receiving transfer for an unknown share.",
             );
           }
@@ -117,7 +117,7 @@ export class PartnerLocal<
         },
         handleUploadRequest(
           _opts: GetTransferOpts,
-        ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
+        ): Promise<WritableStream<Uint8Array> | undefined> {
           // Just return undefined here because we know how to directly get a transfer from this partner.
           return Promise.resolve(undefined);
         },
@@ -127,7 +127,6 @@ export class PartnerLocal<
         ): Promise<
           | ReadableStream<Uint8Array>
           | WritableStream<Uint8Array>
-          | ValidationError
           | undefined
         > {
           // Don't need to implement this either.
@@ -140,11 +139,11 @@ export class PartnerLocal<
 
   async getDownload(
     opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | ValidationError | undefined> {
+  ): Promise<ReadableStream<Uint8Array> | undefined> {
     const partnerReplica = this.partnerPeer.getReplica(opts.shareAddress);
 
     if (!partnerReplica) {
-      return new ValidationError(
+      throw new ValidationError(
         "Tried to get a receiving transfer for an unknown share.",
       );
     }
@@ -168,7 +167,7 @@ export class PartnerLocal<
 
   handleUploadRequest(
     _opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | ValidationError | undefined> {
+  ): Promise<WritableStream<Uint8Array> | undefined> {
     // Just return undefined here because we know how to directly get a transfer from this partner.
     return Promise.resolve(undefined);
   }
@@ -179,7 +178,6 @@ export class PartnerLocal<
   ): Promise<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
-    | ValidationError
     | undefined
   > {
     // Don't need to implement this either.

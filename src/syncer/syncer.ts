@@ -3,25 +3,19 @@ import { Crypto } from "../crypto/crypto.ts";
 import {
   DEFAULT_FORMAT,
   getFormatIntersection,
-  getFormatLookup,
   getFormatsWithFallback,
 } from "../formats/util.ts";
-import {
-  DefaultFormats,
-  FormatDocType,
-  FormatsArg,
-} from "../formats/format_types.ts";
+import { DefaultFormats, FormatsArg } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
-import { QuerySourceEvent } from "../replica/replica-types.ts";
+
 import {
   BlockingBus,
   CloneStream,
   StreamSplitter,
 } from "../streams/stream_utils.ts";
 import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
-import { isErr } from "../util/errors.ts";
+
 import { randomId } from "../util/misc.ts";
-import { AttachmentTransfer } from "./attachment_transfer.ts";
 import {
   ISyncPartner,
   SyncAgentEvent,
@@ -32,6 +26,7 @@ import {
 } from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
 import { TransferManager } from "./transfer_manager.ts";
+import { MultiDeferred } from "./multi_deferred.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
@@ -42,18 +37,12 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     SyncerEvent | { kind: "CMD_FINISHED" }
   >();
   private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
-  private docStreams = new Map<
-    ShareAddress,
-    {
-      existing: ReadableStream<QuerySourceEvent<FormatDocType<FormatsType>>>;
-    }
-  >();
   private mode: SyncerMode;
   private incomingStreamCloner = new CloneStream<SyncerEvent>();
   private statusBus = new BlockingBus<SyncerStatus>();
   private agentStreamSplitter = new StreamSplitter<SyncerEvent>((chunk) => {
     if (
-      chunk.kind === "DISCLOSE" || chunk.kind === "BLOB_REQ" ||
+      chunk.kind === "DISCLOSE" ||
       chunk.kind === "SYNCER_FULFILLED"
     ) {
       return;
@@ -62,15 +51,14 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     return chunk.to;
   });
   private formats: FormatsArg<FormatsType>;
-  private transferManager: TransferManager;
-
-  private docSyncIsDone = deferred<true>();
-  private checkedAllExistingDocsForAttachments = deferred<true>();
+  private transferManager: TransferManager<
+    FormatsType,
+    IncomingTransferSourceType
+  >;
 
   private partnerIsFulfilled = deferred<true>();
 
-  /** If the syncer was configured with the `mode: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
-  isDone = deferred<true>();
+  private isDoneMultiDeferred = new MultiDeferred();
 
   constructor(opts: SyncerOpts<FormatsType, IncomingTransferSourceType>) {
     // Have to do this because we'll be using these values in a context where 'this' is different
@@ -85,7 +73,11 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     this.partner = opts.partner;
 
     this.transferManager = new TransferManager(
-      this.partner.concurrentTransfers,
+      {
+        partner: this.partner,
+        formats: this.formats,
+        syncerId: this.id,
+      },
     );
 
     // Create a new readable stream which is subscribed to events from this syncer.
@@ -110,8 +102,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     // Create a sink to handle incoming events, pipe the readable into that
     opts.partner.readable.pipeTo(this.incomingStreamCloner.writable).catch(
       (err) => {
-        console.log("cancel a");
-
+        // HERE... websocket passing out
         this.cancel(err);
       },
     );
@@ -154,31 +145,23 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       });
     });
 
-    this.checkedAllExistingDocsForAttachments.then(async () => {
-      await this.docSyncIsDone;
-
-      this.transferManager.closeToInternalTransfers();
-    });
-
-    Promise.all([
-      this.docSyncIsDone,
-      this.transferManager.fulfilledInternalTransfers,
-    ]).then(() => {
+    this.transferManager.internallyMadeTransfersFinished().then(() => {
       this.outgoingEventBus.send({
         kind: "SYNCER_FULFILLED",
       });
     });
 
     this.partnerIsFulfilled.then(async () => {
-      await this.docSyncIsDone;
-      await this.checkedAllExistingDocsForAttachments;
-      await this.transferManager.fulfilledInternalTransfers;
+      await this.transferManager.internallyMadeTransfersFinished();
+      console.log("all internally made transfers are finished");
 
       // we're going to
       this.outgoingEventBus.send({ kind: "CMD_FINISHED" });
-      this.isDone.resolve();
+      this.isDoneMultiDeferred.resolve();
     });
 
+    // TODO: What do we do when transfers change?
+    // This should not be permitted during 'once' mode...
     /*
     this.peer.onReplicasChange(() => {
       // send out disclose event again
@@ -201,7 +184,6 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
   private addShare(
     address: string,
-    syncerId: string,
     formats: FormatsArg<FormatsType>,
   ) {
     // Bail if we already have a sync agent for this share.
@@ -218,77 +200,12 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       return;
     }
 
-    const onRequestAttachment = async (doc: FormatDocType<FormatsType>) => {
-      const format = lookup[doc.format];
-
-      const attachmentInfo = format.getAttachmentInfo(doc);
-
-      if (isErr(attachmentInfo)) {
-        console.error(attachmentInfo);
-        // shouldn't happen, but...
-        return;
-      }
-
-      // Check if there's already a transfer for this attachment in progress...
-      const existingTransfer = this.transferManager.hasTransferWithHash(
-        attachmentInfo.hash,
-        "download",
-      );
-
-      if (existingTransfer) {
-        return;
-      }
-
-      // This doc can have a attachment attached, but we don't have it.
-      // Ask our partner to fulfil it.
-
-      const result = await partner.getDownload({
-        doc: doc,
-        shareAddress: replica.share,
-        // We send the syncerId we received, as we want to reach that syncer
-        syncerId,
-        attachmentHash: attachmentInfo.hash,
-      });
-
-      // the result is:
-      // The partner has no way to get a receiving transfer. We must ask for one...
-      // ... and hope that the transfer comes from without..
-
-      if (result === undefined) {
-        await outgoingEventBus.send({
-          kind: "BLOB_REQ",
-          shareAddress: replica.share,
-          // We send our own syncer ID here, as we want the other syncer to reach back to us
-          syncerId: id,
-          doc: doc,
-          attachmentHash: attachmentInfo.hash,
-        });
-        return;
-      }
-
-      // We got an error - e.g. some kind of unexpected failure. shit happens.
-      if (isErr(result)) {
-        return;
-      }
-
-      // We got a transfer! Add it to our syncer's transfers.
-
-      const transfer = new AttachmentTransfer({
-        replica,
-        doc: doc,
-        format,
-        stream: result,
-        origin: "internal",
-      });
-
-      addTransfer(transfer);
-    };
-
     const agent = new SyncAgent({
       replica,
       mode: this.mode === "once" ? "only_existing" : "live",
       formats,
-      onRequestAttachment,
+      transferManager: this.transferManager,
+      syncerId: this.id,
     });
 
     agent.onStatusUpdate(() => {
@@ -325,7 +242,6 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         transform(event, controller) {
           switch (event.kind) {
             case "DISCLOSE":
-            case "BLOB_REQ":
             case "SYNCER_FULFILLED":
               break;
             default: {
@@ -342,55 +258,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       this.cancel(err);
     });
 
-    const { partner, id } = this;
-    const addTransfer = this.addTransfer.bind(this);
-
-    const lookup = getFormatLookup(formats);
-
-    const makeAttachmentRequestSink = () =>
-      new WritableStream<
-        QuerySourceEvent<FormatDocType<FormatsType>>
-      >({
-        async write(event) {
-          if (event.kind === "existing" || event.kind === "success") {
-            // Get the right format here...
-            const format = lookup[event.doc.format];
-
-            const res = await replica.getAttachment(event.doc, format);
-
-            if (isErr(res)) {
-              // This doc can't have a attachment attached. Do nothing.
-              return;
-            } else if (res === undefined) {
-              await onRequestAttachment(event.doc);
-            }
-          }
-        },
-      });
-
-    const existingDocsStream = replica.getQueryStream(
-      { orderBy: "localIndex ASC" },
-      "existing",
-      this.formats,
-    );
-
-    existingDocsStream.pipeTo(makeAttachmentRequestSink()).then(() => {
-      this.checkedAllExistingDocsForAttachments.resolve();
-    });
-
-    agent.isDone.then(() => {
-      if (
-        Array.from(this.syncAgents.values()).every((agent) =>
-          agent.isDone.state === "fulfilled"
-        )
-      ) {
-        this.docSyncIsDone.resolve(true);
-      }
-    });
-
-    this.docStreams.set(address, {
-      existing: existingDocsStream,
-    });
+    this.transferManager.registerSyncAgent(agent);
   }
 
   /** Handle inbound events from the other peer. */
@@ -420,8 +288,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         }
 
         for (const share of commonShareSet) {
-          this.addShare(share, event.syncerId, intersectingFormats);
+          this.addShare(share, intersectingFormats);
         }
+
+        this.transferManager.allSyncAgentsKnown();
 
         if (commonShareSet.size === 0 && this.mode === "once") {
           this.outgoingEventBus.send({
@@ -431,67 +301,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
         break;
       }
-      case "BLOB_REQ": {
-        // ask the partner for a send transfer, add it to our send transfers.
-
-        const result = await this.partner.handleUploadRequest({
-          shareAddress: event.shareAddress,
-          syncerId: event.syncerId,
-          doc: event.doc,
-          attachmentHash: event.attachmentHash,
-        });
-
-        // got some kind of failure, oops.
-        if (isErr(result)) {
-          return;
-        }
-
-        // or can't get it, oh well.
-        if (result === undefined) {
-          return;
-        }
-
-        const replica = this.peer.getReplica(event.shareAddress);
-
-        if (!replica) {
-          return;
-        }
-
-        const format = getFormatLookup(this.formats)[event.doc.format];
-
-        // got a writable stream! add it to the syncer's transfers.
-        try {
-          const transfer = new AttachmentTransfer({
-            doc: event.doc as FormatDocType<FormatsType>,
-            format,
-            replica,
-            stream: result,
-            origin: "external",
-          });
-
-          this.addTransfer(transfer);
-        } catch {
-          // This can happen if we don't have the attachment, or the doc can't have an attachment.
-        }
-
-        break;
-      }
       case "SYNCER_FULFILLED": {
         this.partnerIsFulfilled.resolve();
       }
     }
-  }
-
-  private addTransfer(
-    transfer: AttachmentTransfer<FormatsType>,
-  ) {
-    this.transferManager.addTransfer(transfer);
-
-    transfer.onProgress(() => {
-      this.statusBus.send(this.getStatus());
-    });
-
-    this.statusBus.send(this.getStatus());
   }
 
   /** Get the status of all shares' syncing progress. */
@@ -515,7 +328,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
   /** Stop syncing. */
   async cancel(reason?: any) {
-    this.isDone.reject(reason);
+    this.isDoneMultiDeferred.reject(reason);
 
     for (const [_addr, agent] of this.syncAgents) {
       await agent.cancel();
@@ -525,7 +338,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   }
 
   // externally callable... to get a readable...
-  async handleTransferRequest(
+  handleTransferRequest(
     { shareAddress, path, author, source, kind, formatName }: {
       shareAddress: string;
       formatName: string;
@@ -535,47 +348,27 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       kind: "upload" | "download";
     },
   ) {
-    const result = await this.partner.handleTransferRequest(source, kind);
-
-    if (isErr(result)) {
-      // pity.
-      return;
-    }
-
-    // or can't get it, oh well.
-    if (result === undefined) {
-      return;
-    }
-
     const replica = this.peer.getReplica(shareAddress);
 
     if (!replica) {
       return;
     }
 
-    const format = getFormatLookup(this.formats)[formatName];
+    return this.transferManager.handleTransferRequest(
+      {
+        replica,
+        author,
+        formatName,
+        kind,
+        path,
+        source,
+      },
+    );
+  }
 
-    if (!format) {
-      return;
-    }
-
-    const docs = await replica.getAllDocsAtPath(path, [format]);
-    const doc = docs.find((doc) => doc.author === author);
-
-    if (!doc) {
-      return;
-    }
-
-    // got a stream! add it to the syncer's transfers.
-    const transfer = new AttachmentTransfer({
-      doc: doc as FormatDocType<typeof format>,
-      format,
-      replica,
-      stream: result,
-      origin: "external",
-    });
-
-    this.addTransfer(transfer);
+  /** If the syncer was configured with the `mode: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
+  isDone() {
+    return this.isDoneMultiDeferred.getPromise();
   }
 }
 

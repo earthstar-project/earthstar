@@ -105,7 +105,7 @@ class SyncerTestHelper {
 
     const [syncerA, syncerB] = await this.scenario.setup(peerA, peerB);
 
-    return Promise.all([syncerA.isDone, syncerB.isDone]);
+    return Promise.all([syncerA.isDone(), syncerB.isDone()]);
   }
 
   async commonSharesInSync() {

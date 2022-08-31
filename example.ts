@@ -191,7 +191,7 @@ logRabbit("Let's sync them.");
 
 const syncer = peerRabbit.sync(peerFrog);
 
-await syncer.isDone;
+await syncer.isDone();
 
 logPeer("Completed sync.");
 logPeer("Yeehaw!");

@@ -34,12 +34,12 @@ const [a1, a2] = makeReplicaDuo(ADDRESS_A);
 const [b1, b2] = makeReplicaDuo(ADDRESS_B);
 const [c1, c2] = makeReplicaDuo(ADDRESS_C);
 
-await writeRandomDocs(keypair, a1, 100);
-await writeRandomDocs(keypair, a2, 100);
-await writeRandomDocs(keypair, b1, 100);
-await writeRandomDocs(keypair, b2, 100);
-await writeRandomDocs(keypair, c1, 100);
-await writeRandomDocs(keypair, c2, 100);
+await writeRandomDocs(keypair, a1, 10);
+await writeRandomDocs(keypair, a2, 10);
+await writeRandomDocs(keypair, b1, 10);
+await writeRandomDocs(keypair, b2, 10);
+await writeRandomDocs(keypair, c1, 10);
+await writeRandomDocs(keypair, c2, 10);
 
 const peer1 = new Peer();
 const peer2 = new Peer();
@@ -59,7 +59,11 @@ const syncer = peer1.sync(peer2, false);
 // attach all attachments.
 console.log("syncing...");
 
-await syncer.isDone;
+syncer.onStatusChange((status) => {
+  //console.log(status);
+});
+
+await syncer.isDone();
 
 console.log("...done.");
 
@@ -70,12 +74,15 @@ for (const [x, y] of pairs) {
   const fstDocs = await x.getAllDocs();
   const sndDocs = await y.getAllDocs();
 
-  const fstWithAttachments = await a1.attachAttachments(fstDocs);
-  const sndWithAttachments = await a2.attachAttachments(sndDocs);
+  const fstWithAttachments = await a1.addAttachments(fstDocs);
+  const sndWithAttachments = await a2.addAttachments(sndDocs);
 
   console.group(x.share);
 
-  const res = await docAttachmentsAreEquivalent(fstWithAttachments, sndWithAttachments);
+  const res = await docAttachmentsAreEquivalent(
+    fstWithAttachments,
+    sndWithAttachments,
+  );
 
   if (res) {
     console.log(`Attachments synced!`);

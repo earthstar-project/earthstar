@@ -1,192 +1,227 @@
-import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
-import { ShareAddress } from "../util/doc-types.ts";
-import { EarthstarError } from "../util/errors.ts";
+import {
+  FormatArg,
+  FormatDocType,
+  FormatsArg,
+} from "../formats/format_types.ts";
+import { getFormatLookup } from "../formats/util.ts";
+import { QuerySourceEvent } from "../replica/replica-types.ts";
+import { Replica } from "../replica/replica.ts";
+import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
+import { EarthstarError, isErr } from "../util/errors.ts";
 import { AttachmentTransfer } from "./attachment_transfer.ts";
-import { AttachmentTransferReport } from "./syncer_types.ts";
+import { PromiseEnroller } from "./promise_enroller.ts";
+import { GetTransferOpts, ISyncPartner } from "./syncer_types.ts";
+import { SyncAgent } from "./sync_agent.ts";
+import { TransferQueue } from "./transfer_queue.ts";
 
-export class TransferManager {
-  private waiting: AttachmentTransfer<unknown>[] = [];
-  private active = new Set<AttachmentTransfer<unknown>>();
-  private failed = new Set<AttachmentTransfer<unknown>>();
-  private completed = new Set<AttachmentTransfer<unknown>>();
+export type TransferManagerOpts<FormatsType, IncomingAttachmentSourceType> = {
+  partner: ISyncPartner<IncomingAttachmentSourceType>;
+  formats: FormatsArg<FormatsType>;
+  syncerId: string;
+};
 
-  private activeLimit: number;
-  private isClosedToInternalRequests = false;
+export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
+  private partner: ISyncPartner<IncomingAttachmentSourceType>;
+  private queue: TransferQueue;
+  private formats: FormatsArg<FormatsType>;
+  private syncerId: string;
+  private checkedForAttachmentsEnroller = new PromiseEnroller();
 
-  /** Transfers with these hashes should not be added. */
-  private barredHashesUpload = new Set<string>();
-  private barredHashesDownload = new Set<string>();
+  private formatsLookup: Record<string, FormatArg<FormatsType>>;
 
-  fulfilledInternalTransfers = deferred<true>();
+  constructor(
+    opts: TransferManagerOpts<FormatsType, IncomingAttachmentSourceType>,
+  ) {
+    this.partner = opts.partner;
+    this.queue = new TransferQueue(this.partner.concurrentTransfers);
+    this.formats = opts.formats;
+    this.syncerId = opts.syncerId;
+    this.formatsLookup = getFormatLookup(this.formats);
 
-  // This status is going to be modified a LOT so it's better to mutate than recreate from scratch.
-  private reports: Record<string, Record<string, AttachmentTransferReport>> =
-    {};
-
-  constructor(activeLimit: number) {
-    this.activeLimit = activeLimit;
-  }
-
-  private async activate(transfer: AttachmentTransfer<unknown>) {
-    this.active.add(transfer);
-
-    await transfer.start();
-
-    transfer.isDone.then(() => {
-      this.completed.add(transfer);
-    }).catch(() => {
-      this.failed.add(transfer);
-    }).finally(() => {
-      this.active.delete(transfer);
-      this.admit();
-      this.checkInternallyMadeTransfersFinished();
+    this.checkedForAttachmentsEnroller.isDone().then(() => {
+      this.queue.closeToInternalTransfers();
     });
   }
 
-  private queue(transfer: AttachmentTransfer<unknown>) {
-    this.waiting.push(transfer);
+  // pass a syncagent's isDone to this
+  registerSyncAgent(agent: SyncAgent<FormatsType>) {
+    // create a sealed thing for when all syncagents are done syncing docs.
+
+    const existingDocsStream = agent.replica.getQueryStream(
+      { orderBy: "localIndex ASC" },
+      "existing",
+      this.formats,
+    );
+
+    const { formatsLookup } = this;
+    const handleDownload = this.handleDownload.bind(this);
+
+    const pipePromise = existingDocsStream.pipeTo(
+      new WritableStream<
+        QuerySourceEvent<FormatDocType<FormatsType>>
+      >({
+        async write(event) {
+          if (event.kind === "existing" || event.kind === "success") {
+            // Get the right format here...
+            const format = formatsLookup[event.doc.format];
+
+            const res = await agent.replica.getAttachment(event.doc, format);
+
+            if (isErr(res)) {
+              // This doc can't have a attachment attached. Do nothing.
+              return;
+            } else if (res === undefined) {
+              await handleDownload(event.doc, agent.replica);
+            }
+          }
+        },
+      }),
+    );
+
+    this.checkedForAttachmentsEnroller.enrol(pipePromise);
+    this.checkedForAttachmentsEnroller.enrol(agent.isDone());
   }
 
-  private admit() {
-    if (this.waiting.length === 0) {
-      return;
-    }
-
-    if (this.active.size >= this.activeLimit) {
-      return;
-    }
-
-    const first = this.waiting.shift();
-
-    if (first) {
-      this.activate(first);
-    }
+  // call this when all the sync agents have been constructed
+  allSyncAgentsKnown() {
+    this.checkedForAttachmentsEnroller.seal();
   }
 
-  private checkInternallyMadeTransfersFinished() {
-    if (this.isClosedToInternalRequests === false) {
+  private queueTransfer(transfer: AttachmentTransfer<unknown>) {
+    // Check if we already queued it from the queue
+    if (this.queue.hasQueuedTransfer(transfer.hash, transfer.kind)) {
       return;
     }
 
-    let atLeastOneInternalWaiting = false;
-
-    for (const waiting of this.waiting) {
-      if (waiting.origin === "internal") {
-        atLeastOneInternalWaiting = true;
-        break;
-      }
-    }
-
-    if (atLeastOneInternalWaiting) {
-      return;
-    }
-
-    let atLeastOneInternalActive = false;
-
-    for (const active of this.active) {
-      if (active.origin === "internal") {
-        atLeastOneInternalActive = true;
-        break;
-      }
-    }
-
-    if (atLeastOneInternalActive) {
-      return;
-    }
-
-    this.fulfilledInternalTransfers.resolve();
+    // Queue it up!
+    this.queue.addTransfer(transfer);
   }
 
-  addTransfer(transfer: AttachmentTransfer<unknown>) {
-    if (this.isClosedToInternalRequests && transfer.origin === "internal") {
-      console.log(transfer);
+  // This will be called by the sync agent
+  async handleDownload(
+    doc: FormatDocType<FormatsType>,
+    replica: Replica,
+  ): Promise<boolean> {
+    const format = this.formatsLookup[doc.format];
+    const attachmentInfo = format.getAttachmentInfo(doc);
+
+    if (isErr(attachmentInfo)) {
       throw new EarthstarError(
-        "Tried to add internal transfer after transfer manager was closed to internal transfers.",
+        "TransferManager: attempted to download doc with no attachment.",
       );
     }
 
-    if (
-      transfer.kind === "upload" &&
-        this.barredHashesUpload.has(transfer.hash) ||
-      transfer.kind === "download" &&
-        this.barredHashesDownload.has(transfer.hash)
-    ) {
-      console.log("barred", transfer);
+    const result = await this.partner.getDownload({
+      doc,
+      shareAddress: replica.share,
+      syncerId: this.syncerId,
+      attachmentHash: attachmentInfo.hash,
+    });
+
+    if (result === undefined) {
+      // The sync agent will send a blob req.
+      return false;
+    }
+
+    const transfer = new AttachmentTransfer({
+      replica,
+      doc,
+      format,
+      stream: result,
+      origin: "internal",
+    });
+
+    this.queueTransfer(transfer);
+
+    // The sync agent will be happy...
+    return true;
+  }
+
+  async handleUpload(
+    transferOpts: GetTransferOpts,
+    replica: Replica,
+  ): Promise<boolean> {
+    const result = await this.partner.handleUploadRequest({
+      shareAddress: transferOpts.shareAddress,
+      syncerId: transferOpts.syncerId,
+      doc: transferOpts.doc,
+      attachmentHash: transferOpts.attachmentHash,
+    });
+
+    if (result === undefined) {
+      return false;
+    }
+
+    const format = this.formatsLookup[transferOpts.doc.format];
+
+    try {
+      const transfer = new AttachmentTransfer({
+        doc: transferOpts.doc as FormatDocType<FormatsType>,
+        format,
+        replica,
+        stream: result,
+        origin: "external",
+      });
+
+      this.queueTransfer(transfer);
+    } catch {
+      // This can happen if we don't have the attachment, or the doc can't have an attachment.
+      return false;
+    }
+
+    return true;
+  }
+
+  async handleTransferRequest(
+    { replica, path, author, source, kind, formatName }: {
+      replica: Replica;
+      formatName: string;
+      path: Path;
+      author: AuthorAddress;
+      source: IncomingAttachmentSourceType;
+      kind: "upload" | "download";
+    },
+  ) {
+    const stream = await this.partner.handleTransferRequest(source, kind);
+
+    if (stream === undefined) {
       return;
     }
 
-    transfer.onProgress(() => {
-      this.updateTransferStatus(transfer);
-    });
+    const format = getFormatLookup(this.formats)[formatName];
 
-    transfer.isDone.catch(() => {
-      this.failed.add(transfer);
-
-      // If a transfer with this hash comes through again, we should allow it.
-      const barredHashes = transfer.kind === "download"
-        ? this.barredHashesDownload
-        : this.barredHashesUpload;
-
-      barredHashes.delete(transfer.hash);
-    });
-
-    if (this.active.size < this.activeLimit) {
-      this.activate(transfer);
-    } else {
-      this.queue(transfer);
+    if (!format) {
+      return;
     }
-  }
 
-  closeToInternalTransfers() {
-    this.isClosedToInternalRequests = true;
+    const docs = await replica.getAllDocsAtPath(path, [format]);
+    const doc = docs.find((doc) => doc.author === author);
 
-    this.checkInternallyMadeTransfersFinished();
+    if (!doc) {
+      return;
+    }
+
+    // got a stream! add it to the syncer's transfers.
+    const transfer = new AttachmentTransfer({
+      doc: doc as FormatDocType<typeof format>,
+      format,
+      replica,
+      stream,
+      origin: "external",
+    });
+
+    this.queueTransfer(transfer);
   }
 
   cancel() {
-    this.isClosedToInternalRequests = true;
-
-    for (const transfer of this.active) {
-      transfer.abort();
-    }
+    this.queue.cancel();
   }
 
-  private updateTransferStatus(transfer: AttachmentTransfer<unknown>) {
-    const shareReports = this.reports[transfer.share];
-
-    if (!shareReports) {
-      this.reports[transfer.share] = {};
-    }
-
-    this.reports[transfer.share][transfer.hash + transfer.kind] = {
-      author: transfer.doc.author,
-      path: transfer.doc.path,
-      format: transfer.doc.format,
-      hash: transfer.hash,
-      kind: transfer.kind,
-      status: transfer.status,
-      bytesLoaded: transfer.loaded,
-      totalBytes: transfer.expectedSize,
-    };
+  getReports(shareAddress: ShareAddress) {
+    return this.queue.getReports(shareAddress);
   }
 
-  getReports(share: ShareAddress): AttachmentTransferReport[] {
-    const reports = [];
-
-    for (const key in this.reports[share]) {
-      const report = this.reports[share][key];
-
-      reports.push(report);
-    }
-
-    return reports;
-  }
-
-  hasTransferWithHash(hash: string, kind: "upload" | "download"): boolean {
-    const barredHashes = kind === "download"
-      ? this.barredHashesDownload
-      : this.barredHashesUpload;
-
-    return barredHashes.has(hash);
+  internallyMadeTransfersFinished() {
+    return this.queue.internallyMadeTransfersFinished();
   }
 }
