@@ -6,7 +6,6 @@ import {
   FormatDocType,
   FormatsArg,
 } from "../formats/format_types.ts";
-import { ValidationError } from "../util/errors.ts";
 import { TransferManager } from "./transfer_manager.ts";
 
 /** Describes a group of docs under a common path which a syncing replica possesses. */
@@ -44,8 +43,6 @@ export type SyncAgentDocEvent = {
 
 export type SyncAgentWantAttachmentEvent = {
   kind: "WANT_ATTACHMENT";
-  /** An ID to be used for an external request to find its way back to this syncer. */
-  syncerId: string;
   doc: DocBase<string>;
   shareAddress: string;
   attachmentHash: string;
@@ -97,7 +94,6 @@ export type SyncAgentOpts<F> = {
   formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
   transferManager: TransferManager<F, unknown>;
-  syncerId: string;
 };
 
 // ===================
@@ -128,6 +124,7 @@ export type SyncerSyncAgentEvent = SyncAgentEvent & {
 export type SyncerEvent =
   | SyncerSyncAgentEvent
   | SyncerDiscloseEvent
+  | SyncerHeartbeat
   | SyncerFulfilledEvent;
 
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */

@@ -398,7 +398,6 @@ export function websocketWritable<
   prepareToSend: (
     outgoing: T,
   ) => string | ArrayBufferLike | Blob | ArrayBufferView,
-  heartbeat?: boolean,
 ) {
   const socketIsOpen = deferred();
   const initialSocket = deferred<WebSocket>();
@@ -438,14 +437,6 @@ export function websocketWritable<
       const socket = await initialSocket;
       await socketIsOpen;
 
-      /*
-      if (heartbeat) {
-        heartbeatInterval = setInterval(() => {
-          socket.send("ping");
-        }, 1000);
-      }
-      */
-
       // try to send
       try {
         const toSend = prepareToSend(chunk);
@@ -483,7 +474,6 @@ export function websocketReadable<
 >(
   socketOrUrl: WebSocket | string,
   prepareForQueue: (event: MessageEvent<any>) => T,
-  heartbeat?: boolean,
 ) {
   const initialSocket = deferred<WebSocket>();
 

@@ -22,6 +22,13 @@ export class PromiseEnroller<ReturnType> {
 
     promise.then(() => {
       this.checkAllDone();
+    }).catch((err) => {
+      if (this.allowRejectedPromises) {
+        // Swallow the error.
+        return;
+      }
+
+      throw err;
     });
   }
 

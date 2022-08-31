@@ -137,7 +137,8 @@ export class AttachmentTransfer<F> {
 
     transferOp().then(() => {
       this.changeStatus("complete");
-    }).catch(() => {
+    }).catch((err) => {
+      console.log(err);
       this.changeStatus("failed");
     });
 

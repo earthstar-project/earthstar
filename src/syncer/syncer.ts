@@ -43,7 +43,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private agentStreamSplitter = new StreamSplitter<SyncerEvent>((chunk) => {
     if (
       chunk.kind === "DISCLOSE" ||
-      chunk.kind === "SYNCER_FULFILLED"
+      chunk.kind === "SYNCER_FULFILLED" ||
+      chunk.kind === "HEARTBEAT"
     ) {
       return;
     }
@@ -57,8 +58,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   >;
 
   private partnerIsFulfilled = deferred<true>();
-
   private isDoneMultiDeferred = new MultiDeferred();
+  private heartbeatInterval: number;
 
   constructor(opts: SyncerOpts<FormatsType, IncomingTransferSourceType>) {
     // Have to do this because we'll be using these values in a context where 'this' is different
@@ -76,9 +77,16 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       {
         partner: this.partner,
         formats: this.formats,
-        syncerId: this.id,
       },
     );
+
+    this.transferManager.onReportUpdate(() => {
+      this.statusBus.send(this.getStatus());
+    });
+
+    this.heartbeatInterval = setInterval(() => {
+      this.outgoingEventBus.send({ kind: "HEARTBEAT" });
+    }, 1000);
 
     // Create a new readable stream which is subscribed to events from this syncer.
     // Pipe it to the outgoing stream to the other peer.
@@ -153,9 +161,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     this.partnerIsFulfilled.then(async () => {
       await this.transferManager.internallyMadeTransfersFinished();
-      console.log("all internally made transfers are finished");
 
-      // we're going to
+      clearInterval(this.heartbeatInterval);
       this.outgoingEventBus.send({ kind: "CMD_FINISHED" });
       this.isDoneMultiDeferred.resolve();
     });
@@ -205,7 +212,6 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       mode: this.mode === "once" ? "only_existing" : "live",
       formats,
       transferManager: this.transferManager,
-      syncerId: this.id,
     });
 
     agent.onStatusUpdate(() => {
@@ -243,6 +249,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           switch (event.kind) {
             case "DISCLOSE":
             case "SYNCER_FULFILLED":
+            case "HEARTBEAT":
               break;
             default: {
               if (event.to === replica.share) {
@@ -291,6 +298,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           this.addShare(share, intersectingFormats);
         }
 
+        this.transferManager.registerOtherSyncerId(event.syncerId);
         this.transferManager.allSyncAgentsKnown();
 
         if (commonShareSet.size === 0 && this.mode === "once") {
@@ -333,6 +341,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     for (const [_addr, agent] of this.syncAgents) {
       await agent.cancel();
     }
+
+    clearInterval(this.heartbeatInterval);
 
     this.transferManager.cancel();
   }

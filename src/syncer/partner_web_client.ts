@@ -53,12 +53,10 @@ export class PartnerWebClient<
     this.writable = websocketWritable(
       socket,
       (outgoing: SyncerEvent) => JSON.stringify(outgoing),
-      true,
     );
     this.readable = websocketReadable(
       socket,
       (incoming) => JSON.parse(incoming.data.toString()),
-      true,
     );
   }
 

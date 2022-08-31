@@ -99,7 +99,7 @@ export class SyncAgent<F> {
   }
 
   constructor(
-    { replica, mode, formats, transferManager, syncerId }: SyncAgentOpts<F>,
+    { replica, mode, formats, transferManager }: SyncAgentOpts<F>,
   ) {
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
     const {
@@ -343,7 +343,6 @@ export class SyncAgent<F> {
                     attachmentHash: attachmentInfo.hash,
                     doc: event.doc,
                     shareAddress: replica.share,
-                    syncerId,
                   });
                 }
               }

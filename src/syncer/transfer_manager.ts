@@ -1,3 +1,4 @@
+import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
 import {
   FormatArg,
   FormatDocType,
@@ -6,28 +7,32 @@ import {
 import { getFormatLookup } from "../formats/util.ts";
 import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { Replica } from "../replica/replica.ts";
+import { BlockingBus } from "../streams/stream_utils.ts";
 import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
 import { AttachmentTransfer } from "./attachment_transfer.ts";
 import { PromiseEnroller } from "./promise_enroller.ts";
-import { GetTransferOpts, ISyncPartner } from "./syncer_types.ts";
+import {
+  AttachmentTransferReport,
+  GetTransferOpts,
+  ISyncPartner,
+} from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
 import { TransferQueue } from "./transfer_queue.ts";
 
 export type TransferManagerOpts<FormatsType, IncomingAttachmentSourceType> = {
   partner: ISyncPartner<IncomingAttachmentSourceType>;
   formats: FormatsArg<FormatsType>;
-  syncerId: string;
 };
 
 export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   private partner: ISyncPartner<IncomingAttachmentSourceType>;
   private queue: TransferQueue;
   private formats: FormatsArg<FormatsType>;
-  private syncerId: string;
+  private otherSyncerId = deferred<string>();
   private checkedForAttachmentsEnroller = new PromiseEnroller();
-
   private formatsLookup: Record<string, FormatArg<FormatsType>>;
+  private reportDidUpdateBus = new BlockingBus<void>();
 
   constructor(
     opts: TransferManagerOpts<FormatsType, IncomingAttachmentSourceType>,
@@ -35,7 +40,6 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     this.partner = opts.partner;
     this.queue = new TransferQueue(this.partner.concurrentTransfers);
     this.formats = opts.formats;
-    this.syncerId = opts.syncerId;
     this.formatsLookup = getFormatLookup(this.formats);
 
     this.checkedForAttachmentsEnroller.isDone().then(() => {
@@ -93,6 +97,10 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       return;
     }
 
+    transfer.onProgress(() => {
+      this.reportDidUpdateBus.send();
+    });
+
     // Queue it up!
     this.queue.addTransfer(transfer);
   }
@@ -114,7 +122,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     const result = await this.partner.getDownload({
       doc,
       shareAddress: replica.share,
-      syncerId: this.syncerId,
+      syncerId: await this.otherSyncerId,
       attachmentHash: attachmentInfo.hash,
     });
 
@@ -138,12 +146,12 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   }
 
   async handleUpload(
-    transferOpts: GetTransferOpts,
+    transferOpts: Omit<GetTransferOpts, "syncerId">,
     replica: Replica,
   ): Promise<boolean> {
     const result = await this.partner.handleUploadRequest({
       shareAddress: transferOpts.shareAddress,
-      syncerId: transferOpts.syncerId,
+      syncerId: await this.otherSyncerId,
       doc: transferOpts.doc,
       attachmentHash: transferOpts.attachmentHash,
     });
@@ -221,7 +229,15 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     return this.queue.getReports(shareAddress);
   }
 
+  onReportUpdate(cb: () => void) {
+    return this.reportDidUpdateBus.on(cb);
+  }
+
   internallyMadeTransfersFinished() {
     return this.queue.internallyMadeTransfersFinished();
+  }
+
+  registerOtherSyncerId(id: string) {
+    this.otherSyncerId.resolve(id);
   }
 }

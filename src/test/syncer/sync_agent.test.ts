@@ -3,7 +3,11 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { Replica } from "../../replica/replica.ts";
-import { SyncAgentEvent, SyncAgentStatus } from "../../syncer/syncer_types.ts";
+import {
+  ISyncPartner,
+  SyncAgentEvent,
+  SyncAgentStatus,
+} from "../../syncer/syncer_types.ts";
 import { SyncAgent } from "../../syncer/sync_agent.ts";
 import { TransferManager } from "../../syncer/transfer_manager.ts";
 import { AuthorKeypair } from "../../util/doc-types.ts";
@@ -25,6 +29,27 @@ const scenarios: MultiplyScenarioOutput<{
 });
 
 const SHARE_ADDR = "+test.a123";
+
+class FakePartner implements ISyncPartner<null> {
+  concurrentTransfers = 16;
+
+  readable = new ReadableStream();
+  writable = new WritableStream();
+
+  getDownload(): Promise<ReadableStream<Uint8Array> | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  handleUploadRequest(): Promise<WritableStream<Uint8Array> | undefined> {
+    return Promise.resolve(undefined);
+  }
+
+  handleTransferRequest(): Promise<
+    ReadableStream<Uint8Array> | WritableStream<Uint8Array> | undefined
+  > {
+    return Promise.resolve(undefined);
+  }
+}
 
 class SyncAgentTestHelper {
   private targetReplica: Replica;
@@ -77,16 +102,19 @@ class SyncAgentTestHelper {
             replica: this.targetReplica,
             mode,
             formats: [FormatEs4],
-         transferManager: new TransferManager({
-           formats,
-           
-         })
+            transferManager: new TransferManager({
+              formats: [FormatEs4],
+              partner: new FakePartner(),
+            }),
           });
           this.sourceSyncAgent = new SyncAgent({
             replica: this.sourceReplica,
             mode,
             formats: [FormatEs4],
-            
+            transferManager: new TransferManager({
+              formats: [FormatEs4],
+              partner: new FakePartner(),
+            }),
           });
 
           const { targetEvents, sourceEvents } = this;
