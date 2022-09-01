@@ -32,7 +32,9 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   private otherSyncerId = deferred<string>();
   private checkedForAttachmentsEnroller = new PromiseEnroller();
   private formatsLookup: Record<string, FormatArg<FormatsType>>;
-  private reportDidUpdateBus = new BlockingBus<void>();
+  private reportDidUpdateBus = new BlockingBus<
+    Record<string, AttachmentTransferReport[]>
+  >();
 
   constructor(
     opts: TransferManagerOpts<FormatsType, IncomingAttachmentSourceType>,
@@ -44,6 +46,10 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
 
     this.checkedForAttachmentsEnroller.isDone().then(() => {
       this.queue.closeToInternalTransfers();
+    });
+
+    this.queue.onReportUpdate(async (report) => {
+      await this.reportDidUpdateBus.send(report);
     });
   }
 
@@ -91,18 +97,14 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     this.checkedForAttachmentsEnroller.seal();
   }
 
-  private queueTransfer(transfer: AttachmentTransfer<unknown>) {
+  private async queueTransfer(transfer: AttachmentTransfer<unknown>) {
     // Check if we already queued it from the queue
     if (this.queue.hasQueuedTransfer(transfer.hash, transfer.kind)) {
       return;
     }
 
-    transfer.onProgress(() => {
-      this.reportDidUpdateBus.send();
-    });
-
     // Queue it up!
-    this.queue.addTransfer(transfer);
+    await this.queue.addTransfer(transfer);
   }
 
   // This will be called by the sync agent
@@ -139,7 +141,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       origin: "internal",
     });
 
-    this.queueTransfer(transfer);
+    await this.queueTransfer(transfer);
 
     // The sync agent will be happy...
     return true;
@@ -171,7 +173,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
         origin: "external",
       });
 
-      this.queueTransfer(transfer);
+      await this.queueTransfer(transfer);
     } catch {
       // This can happen if we don't have the attachment, or the doc can't have an attachment.
       return false;
@@ -218,15 +220,15 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       origin: "external",
     });
 
-    this.queueTransfer(transfer);
+    await this.queueTransfer(transfer);
   }
 
   cancel() {
     this.queue.cancel();
   }
 
-  getReports(shareAddress: ShareAddress) {
-    return this.queue.getReports(shareAddress);
+  getReport() {
+    return this.queue.getReport();
   }
 
   onReportUpdate(cb: () => void) {

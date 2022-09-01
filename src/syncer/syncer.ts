@@ -80,8 +80,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       },
     );
 
-    this.transferManager.onReportUpdate(() => {
-      this.statusBus.send(this.getStatus());
+    this.transferManager.onReportUpdate(async () => {
+      await this.statusBus.send(this.getStatus());
     });
 
     this.heartbeatInterval = setInterval(() => {
@@ -322,7 +322,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     for (const [shareAddr, agent] of this.syncAgents) {
       status[shareAddr] = {
         docs: agent.getStatus(),
-        attachments: this.transferManager.getReports(shareAddr),
+        attachments: this.transferManager.getReport()[shareAddr],
       };
     }
 

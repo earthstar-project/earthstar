@@ -1,4 +1,4 @@
-import { ShareAddress } from "../util/doc-types.ts";
+import { BlockingBus } from "../streams/stream_utils.ts";
 import { AttachmentTransfer } from "./attachment_transfer.ts";
 import { PromiseEnroller } from "./promise_enroller.ts";
 import { AttachmentTransferReport } from "./syncer_types.ts";
@@ -16,6 +16,10 @@ export class TransferQueue {
   // This status is going to be modified a LOT so it's better to mutate than recreate from scratch.
   private reports: Record<string, Record<string, AttachmentTransferReport>> =
     {};
+
+  private reportBus = new BlockingBus<
+    Record<string, AttachmentTransferReport[]>
+  >();
 
   constructor(activeLimit: number) {
     this.activeLimit = activeLimit;
@@ -56,7 +60,7 @@ export class TransferQueue {
     }
   }
 
-  addTransfer(transfer: AttachmentTransfer<unknown>) {
+  async addTransfer(transfer: AttachmentTransfer<unknown>) {
     transfer.onProgress(() => {
       this.updateTransferStatus(transfer);
     });
@@ -66,7 +70,7 @@ export class TransferQueue {
     }
 
     if (this.active.size < this.activeLimit) {
-      this.activate(transfer);
+      await this.activate(transfer);
     } else {
       this.queue(transfer);
     }
@@ -101,18 +105,27 @@ export class TransferQueue {
       bytesLoaded: transfer.loaded,
       totalBytes: transfer.expectedSize,
     };
+
+    this.reportBus.send(this.getReport());
   }
 
-  getReports(share: ShareAddress): AttachmentTransferReport[] {
-    const reports = [];
+  getReport(): Record<string, AttachmentTransferReport[]> {
+    const report: Record<string, AttachmentTransferReport[]> = {};
 
-    for (const key in this.reports[share]) {
-      const report = this.reports[share][key];
+    for (const shareKey in this.reports) {
+      const transferReports = [];
 
-      reports.push(report);
+      const shareReport = this.reports[shareKey];
+
+      for (const key in shareReport) {
+        const transferReport = shareReport[key];
+        transferReports.push(transferReport);
+      }
+
+      report[shareKey] = transferReports;
     }
 
-    return reports;
+    return report;
   }
 
   hasQueuedTransfer(hash: string, kind: "upload" | "download") {
@@ -129,6 +142,12 @@ export class TransferQueue {
     }
 
     return false;
+  }
+
+  onReportUpdate(
+    cb: (report: Record<string, AttachmentTransferReport[]>) => void,
+  ) {
+    return this.reportBus.on(cb);
   }
 
   internallyMadeTransfersFinished() {

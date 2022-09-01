@@ -80,8 +80,15 @@ export class AttachmentTransfer<F> {
 
         replica.ingestAttachment(format, doc, counterStream).then(
           (result) => {
+            if (isErr(result) && this.loaded === 0) {
+              // The other peer didn't have this attachment.
+              this.changeStatus("missing_attachment");
+              return;
+            }
+
             if (isErr(result)) {
               promise.reject(result);
+              return;
             }
 
             promise.resolve();
@@ -97,13 +104,13 @@ export class AttachmentTransfer<F> {
 
       replica.getAttachment(doc, format).then(async (attachmentRes) => {
         if (!attachmentRes) {
-          this.changeStatus("missing_attachment");
+          await this.changeStatus("missing_attachment");
           await stream.abort();
           return;
         }
 
         if (isErr(attachmentRes)) {
-          this.changeStatus("failed");
+          await this.changeStatus("failed");
           await stream.abort();
           return;
         }
@@ -133,13 +140,12 @@ export class AttachmentTransfer<F> {
 
     const transferOp = await this.transferOp;
 
-    this.changeStatus("in_progress");
+    await this.changeStatus("in_progress");
 
-    transferOp().then(() => {
-      this.changeStatus("complete");
-    }).catch((err) => {
-      console.log(err);
-      this.changeStatus("failed");
+    transferOp().then(async () => {
+      await this.changeStatus("complete");
+    }).catch(async () => {
+      await this.changeStatus("failed");
     });
 
     return;
@@ -154,7 +160,7 @@ export class AttachmentTransfer<F> {
     });
   }
 
-  private changeStatus(status: AttachmentTransferStatus) {
+  private async changeStatus(status: AttachmentTransferStatus) {
     if (
       this.status === "complete" || this.status === "failed" ||
       this.status === "missing_attachment"
@@ -164,7 +170,7 @@ export class AttachmentTransfer<F> {
 
     this.status = status;
 
-    this.statusBus.send({
+    await this.statusBus.send({
       status: status,
       bytesLoaded: this.loaded,
       totalBytes: this.expectedSize,
