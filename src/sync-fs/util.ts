@@ -58,6 +58,10 @@ export async function hasFilesButNoManifest(
     // SyncFsManifestis not present.
     const items = [];
     for await (const dirEntry of Deno.readDir(fsDirPath)) {
+      if (dirEntry.name === ".DS_Store") {
+        continue;
+      }
+
       items.push(dirEntry);
     }
 
