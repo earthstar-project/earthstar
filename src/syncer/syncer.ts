@@ -322,7 +322,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     for (const [shareAddr, agent] of this.syncAgents) {
       status[shareAddr] = {
         docs: agent.getStatus(),
-        attachments: this.transferManager.getReport()[shareAddr],
+        attachments: this.transferManager.getReport()[shareAddr] || [],
       };
     }
 
