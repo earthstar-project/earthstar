@@ -8,7 +8,7 @@ import { getFormatLookup } from "../formats/util.ts";
 import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
+import { AuthorAddress, Path } from "../util/doc-types.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
 import { AttachmentTransfer } from "./attachment_transfer.ts";
 import { PromiseEnroller } from "./promise_enroller.ts";

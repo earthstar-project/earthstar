@@ -8,6 +8,7 @@ import {
   dirname,
   extname,
   join,
+  resolve,
 } from "https://deno.land/std@0.132.0/path/mod.ts";
 
 import { ensureDir } from "https://deno.land/std@0.132.0/fs/mod.ts";
@@ -155,7 +156,7 @@ export async function writeDocToDir(
   doc: DocEs5,
   replica: Replica,
   dir: string,
-) {
+): Promise<FileInfoEntry | AbsenceEntry> {
   const pathToWrite = join(dir, doc.path);
   const enclosingDir = dirname(pathToWrite);
   const isAttachmentDoc = doc.attachmentHash !== undefined;
@@ -163,11 +164,19 @@ export async function writeDocToDir(
   if (doc.text.length === 0) {
     try {
       await Deno.remove(join(dir, doc.path));
-      return removeEmptyDir(enclosingDir, dir);
+      await removeEmptyDir(enclosingDir, dir);
+
+      return {
+        path: doc.path,
+        fileLastSeenMs: 0,
+      };
     } catch {
       // Document is gone from the FS already.
 
-      return;
+      return {
+        path: doc.path,
+        fileLastSeenMs: 0,
+      };
     }
   }
 
@@ -186,7 +195,7 @@ export async function writeDocToDir(
       // It's fine if the pathToWrite isn't there yet
     }
 
-    return (await attachment.stream()).pipeTo(
+    await (await attachment.stream()).pipeTo(
       new WritableStream({
         async write(chunk) {
           await Deno.writeFile(pathToWrite, chunk, {
@@ -196,9 +205,33 @@ export async function writeDocToDir(
         },
       }),
     );
+
+    const stat = await Deno.lstat(pathToWrite);
+
+    return {
+      exposedContentHash: doc.attachmentHash as string,
+      exposedContentSize: doc.attachmentSize as number,
+      dirName: dirname(pathToWrite),
+      path: doc.path,
+      abspath: resolve(pathToWrite),
+      mtimeMs: stat.mtime?.getTime() || null,
+      birthtimeMs: stat.birthtime?.getTime() || null,
+    };
   }
 
-  return Deno.writeTextFile(pathToWrite, doc.text);
+  await Deno.writeTextFile(pathToWrite, doc.text);
+
+  const stat = await Deno.lstat(pathToWrite);
+
+  return {
+    exposedContentHash: doc.textHash as string,
+    exposedContentSize: new TextEncoder().encode(doc.text).byteLength,
+    dirName: dirname(pathToWrite),
+    path: doc.path,
+    abspath: resolve(pathToWrite),
+    mtimeMs: stat.mtime?.getTime() || null,
+    birthtimeMs: stat.birthtime?.getTime() || null,
+  };
 }
 
 export async function removeEmptyDir(dir: string, rootDir: string) {
@@ -249,6 +282,10 @@ export async function writeEntryToReplica(
       timestamp,
       deleteAfter,
     });
+  }
+
+  if (correspondingDoc?.attachmentHash === entry.exposedContentHash) {
+    return Promise.resolve();
   }
 
   const file = await Deno.open(entry.abspath);

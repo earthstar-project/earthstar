@@ -150,7 +150,7 @@ class SyncerTestHelper {
   testAbort() {}
 
   async teardown() {
-    this.scenario.teardown();
+    await this.scenario.teardown();
 
     const allStorages = [
       ...this.aDuo,

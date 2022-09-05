@@ -508,6 +508,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         docsA[0].timestamp > docsA[1].timestamp,
         "docs are ordered latest first within this path",
       );
+
       assertEquals(
         docsA_actualAuthorAndContent,
         docsA_expectedAuthorAndContent,
@@ -564,8 +565,8 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         (doc) => [doc.author, doc.content],
       );
       docsA_expectedAuthorAndContent = [
-        [keypair2.address, "content2"], // latest first
-        [keypair1.address, ""],
+        [keypair1.address, ""], // latest first
+        [keypair2.address, "content2"],
       ];
       assertEquals(
         docsA.length,
@@ -576,6 +577,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         docsA[0].timestamp > docsA[1].timestamp,
         "docs are ordered latest first within this path",
       );
+
       assertEquals(
         docsA_actualAuthorAndContent,
         docsA_expectedAuthorAndContent,

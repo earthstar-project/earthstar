@@ -399,11 +399,11 @@ export function websocketWritable<
     outgoing: T,
   ) => string | ArrayBufferLike | Blob | ArrayBufferView,
 ) {
-  const socketIsOpen = deferred();
+  const socketIsOpen = deferred<true>();
   const initialSocket = deferred<WebSocket>();
 
   const setUpSocket = () => {
-    if (initialSocket.state !== "fulfilled") {
+    if (initialSocket.state === "pending") {
       let socket: WebSocket;
 
       if (socketOrUrl instanceof WebSocket) {
@@ -452,6 +452,8 @@ export function websocketWritable<
     },
 
     async close() {
+      setUpSocket();
+
       const socket = await initialSocket;
       await socketIsOpen;
 
@@ -460,9 +462,8 @@ export function websocketWritable<
 
     async abort() {
       setUpSocket();
-      await socketIsOpen;
-
       const socket = await initialSocket;
+      await socketIsOpen;
 
       socket.close();
     },
@@ -480,7 +481,7 @@ export function websocketReadable<
   let erroredOutAlready = false;
 
   const setupSocket = () => {
-    if (initialSocket.state !== "fulfilled") {
+    if (initialSocket.state === "pending") {
       if (socketOrUrl instanceof WebSocket) {
         initialSocket.resolve(socketOrUrl);
       } else {

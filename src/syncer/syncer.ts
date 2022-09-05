@@ -153,8 +153,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       });
     });
 
-    this.transferManager.internallyMadeTransfersFinished().then(() => {
-      this.outgoingEventBus.send({
+    this.transferManager.internallyMadeTransfersFinished().then(async () => {
+      await this.outgoingEventBus.send({
         kind: "SYNCER_FULFILLED",
       });
     });
@@ -163,7 +163,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       await this.transferManager.internallyMadeTransfersFinished();
 
       clearInterval(this.heartbeatInterval);
-      this.outgoingEventBus.send({ kind: "CMD_FINISHED" });
+      await this.outgoingEventBus.send({ kind: "CMD_FINISHED" });
       this.isDoneMultiDeferred.resolve();
     });
 

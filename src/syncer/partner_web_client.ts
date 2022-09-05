@@ -2,7 +2,6 @@ import {
   websocketReadable,
   websocketWritable,
 } from "../streams/stream_utils.ts";
-import { ValidationError } from "../util/errors.ts";
 import {
   GetTransferOpts,
   ISyncPartner,

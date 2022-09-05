@@ -32,14 +32,16 @@ export class MultiDeferred<ReturnType> {
   }
 
   getPromise() {
+    const promise = deferred<ReturnType>();
+
     if (this.state === "fulfilled") {
-      return Promise.resolve();
+      promise.resolve();
     } else if (this.state === "rejected") {
-      return Promise.reject();
+      promise.reject();
+    } else {
+      this.deferreds.add(promise);
     }
 
-    const promise = deferred<ReturnType>();
-    this.deferreds.add(promise);
     return promise;
   }
 }
