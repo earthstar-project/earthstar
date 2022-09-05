@@ -37,15 +37,16 @@ export class DocDriverLocalStorage extends DocDriverMemory {
     logger.debug("constructor");
 
     // each config item starts with this prefix and gets its own entry in localstorage
-    this._localStorageKeyConfig = `stonesoup:config:${share}${
+    this._localStorageKeyConfig = `earthstar:config:${share}${
       key ? `:${key}` : ""
     }`; // TODO: change this to "earthstar:..." later
     // but all docs are stored together inside this one item, as a giant JSON object
-    this._localStorageKeyDocs = `stonesoup:documents:pathandauthor:${share}${
+    this._localStorageKeyDocs = `earthstar:documents:pathandauthor:${share}${
       key ? `:${key}` : ""
     }`;
 
     const existingData = localStorage.getItem(this._localStorageKeyDocs);
+
     if (existingData !== null) {
       logger.debug("...constructor: loading data from localStorage");
       const parsed = JSON.parse(existingData);
@@ -92,6 +93,7 @@ export class DocDriverLocalStorage extends DocDriverMemory {
       this.docByPathAndAuthor.clear();
 
       logger.debug("...close: erasing localStorage");
+
       localStorage.removeItem(this._localStorageKeyDocs);
       for (const key of this._listConfigKeysSync()) {
         this._deleteConfigSync(key);
