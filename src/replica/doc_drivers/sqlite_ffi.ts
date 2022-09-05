@@ -22,7 +22,7 @@ import {
   UPSERT_CONFIG_QUERY,
   UPSERT_DOC_QUERY,
 } from "./sqlite.shared.ts";
-import * as Sqlite from "https://deno.land/x/sqlite3@0.4.3/mod.ts";
+import * as Sqlite from "https://deno.land/x/sqlite3@0.5.2/mod.ts";
 
 //--------------------------------------------------
 
@@ -164,13 +164,13 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
 
     this.ensureTables();
 
-    const [maxLocalIndexResult] = this._db.queryObject<{
-      "MAX(localIndex)": number | null;
-    }>(
+    const statement = this._db.prepare(
       MAX_LOCAL_INDEX_QUERY,
     );
 
-    const maxLocalIndex = maxLocalIndexResult["MAX(localIndex)"];
+    const maxLocalIndexResult = statement.get<[number | null]>();
+
+    const maxLocalIndex = maxLocalIndexResult ? maxLocalIndexResult[0] : -1;
 
     // We have to do this because the maxLocalIndexDb could be 0, which is falsy.
     this._maxLocalIndex = maxLocalIndex !== null ? maxLocalIndex : -1;
@@ -245,26 +245,27 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
     }
-    this._db.execute(UPSERT_CONFIG_QUERY, { key: key, content: content });
+    this._db.exec(UPSERT_CONFIG_QUERY, { key: key, content: content });
 
     return Promise.resolve();
   }
 
   _getConfigSync(key: string): string | undefined {
-    const [configQueryResult] = this._db.queryObject<{ content: string }>(
-      SELECT_CONFIG_CONTENT_QUERY,
-      { key },
-    );
+    const statement = this._db.prepare(SELECT_CONFIG_CONTENT_QUERY);
 
-    if (configQueryResult) {
-      return configQueryResult.content;
+    const result = statement.get<[string]>({ key });
+
+    if (result) {
+      return result[0];
     }
   }
 
   _listConfigKeysSync(): string[] {
-    const keysQuery = this._db.queryArray<string[]>(SELECT_KEY_CONFIG_QUERY);
+    const statement = this._db.prepare(SELECT_KEY_CONFIG_QUERY);
 
-    return sortedInPlace(keysQuery.map(([key]) => key));
+    const result = statement.values<[string]>();
+
+    return sortedInPlace(result.map(([key]) => key));
   }
 
   getConfig(key: string): Promise<string | undefined> {
@@ -287,7 +288,7 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
       throw new ReplicaIsClosedError();
     }
 
-    this._db.execute(DELETE_CONFIG_QUERY, { key: key });
+    this._db.exec(DELETE_CONFIG_QUERY, { key: key });
 
     return Promise.resolve(this._db.changes > 0);
   }
@@ -327,7 +328,9 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
     logger.debug("  sql:", sql);
     logger.debug("  params:", params);
 
-    const docRows = this._db.queryObject<SqlDocRow>(sql, params);
+    const statement = this._db.prepare(sql);
+
+    const docRows = statement.all<SqlDocRow>(params);
 
     logger.debug(`  result: ${docRows.length} docs`);
 
@@ -370,7 +373,7 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
 
     this._maxLocalIndex += 1;
 
-    this._db.execute(UPSERT_DOC_QUERY, row);
+    this._db.exec(UPSERT_DOC_QUERY, row);
 
     return { ...doc, _localIndex: row.localIndex };
   }
@@ -382,12 +385,11 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
 
     const now = Date.now() * 1000;
 
-    const docsToWipe = this._db.queryObject<SqlDocRow>(
-      SELECT_EXPIRED_DOC_QUERY,
-      { now },
-    );
+    const statement = this._db.prepare(SELECT_EXPIRED_DOC_QUERY);
 
-    this._db.execute(DELETE_EXPIRED_DOC_QUERY, { now });
+    const docsToWipe = statement.all<SqlDocRow>({ now });
+
+    this._db.exec(DELETE_EXPIRED_DOC_QUERY, { now });
 
     const docs = [];
 
@@ -406,19 +408,21 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
     }
 
     // make sure sqlite is using utf-8
-    this._db.execute(SET_ENCODING_QUERY);
-    const [{ encoding }] = this._db.queryObject(GET_ENCODING_QUERY);
+    this._db.exec(SET_ENCODING_QUERY);
+    const encodingRes = this._db.prepare(GET_ENCODING_QUERY).get<[string]>();
 
-    if (encoding !== "UTF-8") {
+    if (encodingRes && encodingRes[0] !== "UTF-8") {
       throw new Error(
-        `sqlite encoding is stubbornly set to ${encoding} instead of UTF-8`,
+        `sqlite encoding is stubbornly set to ${
+          encodingRes[0]
+        } instead of UTF-8`,
       );
     }
 
-    this._db.execute("pragma journal_mode = WAL");
-    this._db.execute("pragma synchronous = normal");
-    this._db.execute("pragma temp_store = memory");
-    this._db.execute(CREATE_CONFIG_TABLE_QUERY);
+    this._db.exec("pragma journal_mode = WAL");
+    this._db.exec("pragma synchronous = normal");
+    this._db.exec("pragma temp_store = memory");
+    this._db.exec(CREATE_CONFIG_TABLE_QUERY);
 
     // check and set schemaVersion
     let schemaVersion = this._getConfigSync("schemaVersion");
@@ -436,11 +440,11 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
         orderBy: "localIndex ASC",
       });
 
-      this._db.execute(`DROP TABLE docs;`);
+      this._db.exec(`DROP TABLE docs;`);
     }
 
-    this._db.execute(CREATE_DOCS_TABLE_QUERY);
-    this._db.execute(CREATE_INDEXES_QUERY);
+    this._db.exec(CREATE_DOCS_TABLE_QUERY);
+    this._db.exec(CREATE_INDEXES_QUERY);
 
     for (const doc of docsToMigrate) {
       this.upsertSync(doc);

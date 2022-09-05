@@ -1,0 +1,17 @@
+{
+  "extension" : {
+    "identifier" : "panic.JavaScript",
+    "name" : "JavaScript"
+  },
+  "extensionTemplate" : "denoDebug",
+  "extensionValues" : {
+    "request" : "launch",
+    "runtimeArgs" : [
+      "--unstable",
+      "--allow-all"
+    ],
+    "scriptPath" : "debug\/syncers.ts",
+    "stopOnEntry" : true
+  },
+  "openLogOnRun" : "fail"
+}

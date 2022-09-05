@@ -379,8 +379,6 @@ export async function syncReplicaAndFsDir(
 
   const latestDocs = await opts.replica.getLatestDocs();
 
-  //console.log(latestDocs);
-
   for (const doc of latestDocs) {
     // Make sure not to re-write any ephemeral docs to the filesystem.
     if (doc.deleteAfter && Date.now() * 1000 > doc.deleteAfter) {
@@ -388,7 +386,9 @@ export async function syncReplicaAndFsDir(
     }
 
     try {
-      await writeDocToDir(doc, opts.replica, opts.dirPath);
+      const newEntry = await writeDocToDir(doc, opts.replica, opts.dirPath);
+
+      reconciledManifest.entries[newEntry.path] = newEntry;
     } catch (err) {
       // Maybe we log something here...
     }
@@ -405,10 +405,5 @@ export async function syncReplicaAndFsDir(
     // Not sure why this fails sometimes...
   }
 
-  const manifestAfterOps = await reconcileManifestWithDirContents(
-    opts.dirPath,
-    opts.replica.share,
-  );
-
-  await writeManifest(manifestAfterOps, opts.dirPath);
+  await writeManifest(reconciledManifest, opts.dirPath);
 }

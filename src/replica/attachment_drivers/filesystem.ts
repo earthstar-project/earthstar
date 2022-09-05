@@ -99,8 +99,14 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
           overwrite: true,
         });
       },
-      reject: () => {
-        return Deno.remove(stagingPath);
+      reject: async () => {
+        try {
+          // We may have gotten an empty stream, in which case no file would have been written.
+          await Deno.lstat(stagingPath);
+          return Deno.remove(stagingPath);
+        } catch {
+          return Promise.resolve();
+        }
       },
     };
   }

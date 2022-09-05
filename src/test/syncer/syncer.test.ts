@@ -105,7 +105,7 @@ class SyncerTestHelper {
 
     const [syncerA, syncerB] = await this.scenario.setup(peerA, peerB);
 
-    return Promise.all([syncerA.isDone, syncerB.isDone]);
+    return Promise.all([syncerA.isDone(), syncerB.isDone()]);
   }
 
   async commonSharesInSync() {
@@ -150,7 +150,7 @@ class SyncerTestHelper {
   testAbort() {}
 
   async teardown() {
-    this.scenario.teardown();
+    await this.scenario.teardown();
 
     const allStorages = [
       ...this.aDuo,

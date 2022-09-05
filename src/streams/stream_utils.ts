@@ -399,34 +399,40 @@ export function websocketWritable<
     outgoing: T,
   ) => string | ArrayBufferLike | Blob | ArrayBufferView,
 ) {
-  const socketIsOpen = deferred();
+  const socketIsOpen = deferred<true>();
   const initialSocket = deferred<WebSocket>();
+
+  const setUpSocket = () => {
+    if (initialSocket.state === "pending") {
+      let socket: WebSocket;
+
+      if (socketOrUrl instanceof WebSocket) {
+        socket = socketOrUrl;
+      } else {
+        socket = new WebSocket(socketOrUrl);
+      }
+
+      initialSocket.resolve(socket);
+
+      // set socket binary type
+      socket.binaryType = "arraybuffer";
+
+      // set socket.onopen
+      if (socket.readyState === socket.OPEN) {
+        socketIsOpen.resolve();
+      }
+
+      socket.onopen = () => {
+        socketIsOpen.resolve();
+      };
+    }
+  };
+
+  let heartbeatInterval: number;
 
   return new WritableStream<T>({
     async write(chunk, controller) {
-      if (initialSocket.state !== "fulfilled") {
-        let socket: WebSocket;
-
-        if (socketOrUrl instanceof WebSocket) {
-          socket = socketOrUrl;
-        } else {
-          socket = new WebSocket(socketOrUrl);
-        }
-
-        initialSocket.resolve(socket);
-
-        // set socket binary type
-        socket.binaryType = "arraybuffer";
-
-        // set socket.onopen
-        if (socket.readyState === socket.OPEN) {
-          socketIsOpen.resolve();
-        }
-
-        socket.onopen = () => {
-          socketIsOpen.resolve();
-        };
-      }
+      setUpSocket();
 
       const socket = await initialSocket;
       await socketIsOpen;
@@ -434,28 +440,32 @@ export function websocketWritable<
       // try to send
       try {
         const toSend = prepareToSend(chunk);
-
         socket.send(toSend);
       } catch (err) {
         controller.error(err);
       }
-      // catch and error controller
 
       socket.onclose = () => {
+        clearInterval(heartbeatInterval);
         controller.error("Socket closed before we were done");
       };
     },
 
     async close() {
+      setUpSocket();
+
       const socket = await initialSocket;
+      await socketIsOpen;
 
       socket.close();
     },
 
     async abort() {
+      setUpSocket();
       const socket = await initialSocket;
+      await socketIsOpen;
 
-      socket.close(1001, "Aborting");
+      socket.close();
     },
   });
 }
@@ -470,13 +480,19 @@ export function websocketReadable<
 
   let erroredOutAlready = false;
 
-  return new ReadableStream<T>({
-    async start(controller) {
+  const setupSocket = () => {
+    if (initialSocket.state === "pending") {
       if (socketOrUrl instanceof WebSocket) {
         initialSocket.resolve(socketOrUrl);
       } else {
         initialSocket.resolve(new WebSocket(socketOrUrl));
       }
+    }
+  };
+
+  return new ReadableStream<T>({
+    async start(controller) {
+      setupSocket();
 
       const socket = await initialSocket;
 
@@ -499,10 +515,13 @@ export function websocketReadable<
 
       socket.onerror = (err) => {
         erroredOutAlready = true;
+
         controller.error(err);
       };
     },
     async cancel() {
+      setupSocket();
+
       const socket = await initialSocket;
 
       socket.close(1001, "Aborting");
