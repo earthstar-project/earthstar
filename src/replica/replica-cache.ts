@@ -17,7 +17,7 @@ import { Logger } from "../util/log.ts";
 import { CallbackSink } from "../streams/stream_utils.ts";
 import { Replica } from "./replica.ts";
 
-import { DEFAULT_FORMATS } from "../formats/util.ts";
+import { DEFAULT_FORMAT, DEFAULT_FORMATS } from "../formats/util.ts";
 import {
   DefaultFormat,
   DefaultFormats,
@@ -168,21 +168,6 @@ export class ReplicaCache {
 
   isClosed() {
     return this._isClosed;
-  }
-
-  // SET - just pass along to the backing storage
-
-  /** Add a new document directly to the backing replica. */
-  set<F = DefaultFormat>(
-    keypair: AuthorKeypair,
-    docToSet: Omit<FormatInputType<F>, "format">,
-    format?: FormatArg<F>,
-  ): Promise<
-    IngestEvent<FormatDocType<F>> | ValidationError
-  > {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-
-    return this._replica.set(keypair, docToSet, format);
   }
 
   // GET
@@ -364,25 +349,6 @@ export class ReplicaCache {
     return Array.from(authorsSet).sort();
   }
 
-  // OVERWRITE
-
-  // We just call the backing storage's implementation
-  // A user calling this method probably wants to be sure
-  // that their docs are _really_ deleted,
-  // so we don't do a quick and dirty version in the cache here.
-
-  /** Call this method on the backing replica. */
-  overwriteAllDocsByAuthor<F = DefaultFormats>(
-    keypair: AuthorKeypair,
-    formats?: FormatsArg<F>,
-  ) {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
-      throw new ReplicaIsClosedError();
-    }
-    return this._replica.overwriteAllDocsByAuthor(keypair, formats);
-  }
-
   // CACHE
 
   // Update cache entries as best as we can until results from the backing storage arrive.
@@ -548,5 +514,52 @@ export class ReplicaCache {
     return () => {
       this._onCacheUpdatedCallbacks.delete(callback);
     };
+  }
+
+  // PASSTHROUGH TO REPLICA
+  // These should just be methods which modify the replica
+
+  // SET - just pass along to the backing storage
+
+  /** Add a new document directly to the backing replica. */
+  set<F = DefaultFormat>(
+    keypair: AuthorKeypair,
+    docToSet: Omit<FormatInputType<F>, "format">,
+    format?: FormatArg<F>,
+  ): Promise<
+    IngestEvent<FormatDocType<F>> | ValidationError
+  > {
+    if (this._isClosed) throw new ReplicaCacheIsClosedError();
+
+    return this._replica.set(keypair, docToSet, format);
+  }
+
+  // OVERWRITE
+
+  // We just call the backing storage's implementation
+  // A user calling this method probably wants to be sure
+  // that their docs are _really_ deleted,
+  // so we don't do a quick and dirty version in the cache here.
+
+  /** Call this method on the backing replica. */
+  overwriteAllDocsByAuthor<F = DefaultFormats>(
+    keypair: AuthorKeypair,
+    formats?: FormatsArg<F>,
+  ) {
+    if (this._isClosed) throw new ReplicaCacheIsClosedError();
+    if (this._replica.isClosed()) {
+      throw new ReplicaIsClosedError();
+    }
+    return this._replica.overwriteAllDocsByAuthor(keypair, formats);
+  }
+
+  wipeDocAtPath<F = DefaultFormat>(
+    keypair: AuthorKeypair,
+    path: string,
+    format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
+  ): Promise<IngestEvent<FormatDocType<F>> | ValidationError> {
+    if (this._isClosed) throw new ReplicaCacheIsClosedError();
+
+    return this._replica.wipeDocAtPath(keypair, path, format);
   }
 }
