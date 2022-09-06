@@ -26,16 +26,16 @@ export class AttachmentTransfer<F> {
 
   hash: string;
 
-  origin: "internal" | "external";
+  requester: "us" | "them";
 
   private abortController = new AbortController();
 
   constructor(
-    { stream, replica, doc, format, origin }: AttachmentTransferOpts<F>,
+    { stream, replica, doc, format, requester }: AttachmentTransferOpts<F>,
   ) {
     this.sourceDoc = doc;
     this.share = replica.share;
-    this.origin = origin;
+    this.requester = requester;
 
     const attachmentInfo = format.getAttachmentInfo(doc);
 

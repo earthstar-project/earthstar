@@ -216,7 +216,7 @@ export type AttachmentTransferOpts<F> = {
   replica: Replica;
   doc: FormatDocType<F>;
   format: FormatArg<F>;
-  origin: "internal" | "external";
+  requester: "us" | "them";
 };
 
 export type AttachmentTransferReport = {

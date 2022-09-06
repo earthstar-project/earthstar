@@ -35,7 +35,7 @@ export class SyncAgent<F> {
   private initialHash = deferred<string>();
 
   /** A promise for when we have received all HAVEs our partner has on offer */
-  private gotAllPartnerHaves = deferred<true>();
+  gotAllPartnerHaves = deferred<true>();
 
   /** A promise for whether our partner SyncAgent has signalled its `DONE` or not. */
   private isPartnerFulfilled = deferred<true>();
@@ -337,6 +337,11 @@ export class SyncAgent<F> {
                   const attachmentInfo = format.getAttachmentInfo(
                     event.doc,
                   ) as { size: number; hash: string };
+
+                  transferManager.registerExpectedTransfer(
+                    replica.share,
+                    attachmentInfo.hash,
+                  );
 
                   await outboundEventBus.send({
                     kind: "WANT_ATTACHMENT",

@@ -124,6 +124,7 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
     const clientSyncer = new Syncer({
       partner: new PartnerWebClient({
         url: "ws://localhost:8083",
+        mode: "once",
       }),
       mode: "once",
       peer: peerA,

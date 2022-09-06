@@ -462,6 +462,7 @@ export function websocketWritable<
 
     async abort() {
       setUpSocket();
+
       const socket = await initialSocket;
       await socketIsOpen;
 
@@ -474,7 +475,7 @@ export function websocketReadable<
   T,
 >(
   socketOrUrl: WebSocket | string,
-  prepareForQueue: (event: MessageEvent<any>) => T,
+  prepareForQueue: (event: MessageEvent) => T,
 ) {
   const initialSocket = deferred<WebSocket>();
 
@@ -485,7 +486,12 @@ export function websocketReadable<
       if (socketOrUrl instanceof WebSocket) {
         initialSocket.resolve(socketOrUrl);
       } else {
-        initialSocket.resolve(new WebSocket(socketOrUrl));
+        try {
+          const socket = new WebSocket(socketOrUrl);
+          initialSocket.resolve(socket);
+        } catch (err) {
+          initialSocket.reject(err);
+        }
       }
     }
   };
@@ -500,7 +506,7 @@ export function websocketReadable<
       socket.binaryType = "arraybuffer";
 
       socket.onmessage = (event) => {
-        const toQueue = prepareForQueue(event);
+        const toQueue = prepareForQueue(event as unknown as MessageEvent);
 
         controller.enqueue(toQueue);
       };
@@ -524,7 +530,7 @@ export function websocketReadable<
 
       const socket = await initialSocket;
 
-      socket.close(1001, "Aborting");
+      socket.close();
     },
   });
 }

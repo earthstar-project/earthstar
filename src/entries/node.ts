@@ -9,4 +9,5 @@ export { PartnerWebServer } from "../syncer/partner_web_server.ts";
 
 export { AttachmentDriverFilesystem } from "../replica/attachment_drivers/filesystem.node.ts";
 export { ReplicaDriverFs } from "../replica/driver_fs.ts";
-export { syncReplicaAndFsDir } from "../sync-fs/sync-fs.ts";
+
+//export { syncReplicaAndFsDir } from "../sync-fs/sync-fs.ts";

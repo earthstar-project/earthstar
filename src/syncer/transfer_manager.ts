@@ -1,4 +1,7 @@
-import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
+import {
+  Deferred,
+  deferred,
+} from "https://deno.land/std@0.150.0/async/deferred.ts";
 import {
   FormatArg,
   FormatDocType,
@@ -8,7 +11,7 @@ import { getFormatLookup } from "../formats/util.ts";
 import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { AuthorAddress, Path } from "../util/doc-types.ts";
+import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
 import { AttachmentTransfer } from "./attachment_transfer.ts";
 import { PromiseEnroller } from "./promise_enroller.ts";
@@ -16,6 +19,7 @@ import {
   AttachmentTransferReport,
   GetTransferOpts,
   ISyncPartner,
+  SyncAgentWantAttachmentEvent,
 } from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
 import { TransferQueue } from "./transfer_queue.ts";
@@ -30,11 +34,13 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   private queue: TransferQueue;
   private formats: FormatsArg<FormatsType>;
   private otherSyncerId = deferred<string>();
-  private checkedForAttachmentsEnroller = new PromiseEnroller();
+  private receivedAllExpectedTransfersEnroller = new PromiseEnroller();
+  private madeAllAttachmentRequestsEnroller = new PromiseEnroller();
   private formatsLookup: Record<string, FormatArg<FormatsType>>;
   private reportDidUpdateBus = new BlockingBus<
     Record<string, AttachmentTransferReport[]>
   >();
+  private expectedTransferPromises = new Map<string, Deferred<void>>();
 
   constructor(
     opts: TransferManagerOpts<FormatsType, IncomingAttachmentSourceType>,
@@ -44,12 +50,16 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     this.formats = opts.formats;
     this.formatsLookup = getFormatLookup(this.formats);
 
-    this.checkedForAttachmentsEnroller.isDone().then(() => {
-      this.queue.closeToInternalTransfers();
-    });
-
     this.queue.onReportUpdate(async (report) => {
       await this.reportDidUpdateBus.send(report);
+    });
+
+    this.madeAllAttachmentRequestsEnroller.isDone().then(() => {
+      this.receivedAllExpectedTransfersEnroller.seal();
+    });
+
+    this.receivedAllExpectedTransfersEnroller.isDone().then(() => {
+      this.queue.gotAllTransfersRequestedByUs();
     });
   }
 
@@ -88,13 +98,24 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       }),
     );
 
-    this.checkedForAttachmentsEnroller.enrol(pipePromise);
-    this.checkedForAttachmentsEnroller.enrol(agent.isDone());
+    this.madeAllAttachmentRequestsEnroller.enrol(pipePromise);
+    this.madeAllAttachmentRequestsEnroller.enrol(agent.isDone());
   }
 
   // call this when all the sync agents have been constructed
   allSyncAgentsKnown() {
-    this.checkedForAttachmentsEnroller.seal();
+    this.madeAllAttachmentRequestsEnroller.seal();
+  }
+
+  registerExpectedTransfer(share: ShareAddress, hash: string) {
+    const promise = deferred<void>();
+    const key = `${share}_${hash}`;
+    this.expectedTransferPromises.set(key, promise);
+    this.receivedAllExpectedTransfersEnroller.enrol(promise);
+  }
+
+  allTransfersRequested() {
+    this.receivedAllExpectedTransfersEnroller.seal();
   }
 
   private async queueTransfer(transfer: AttachmentTransfer<unknown>) {
@@ -138,7 +159,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       doc,
       format,
       stream: result,
-      origin: "internal",
+      requester: "us",
     });
 
     await this.queueTransfer(transfer);
@@ -170,7 +191,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
         format,
         replica,
         stream: result,
-        origin: "external",
+        requester: "them",
       });
 
       await this.queueTransfer(transfer);
@@ -217,8 +238,17 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       format,
       replica,
       stream,
-      origin: "external",
+      requester: kind === "upload" ? "us" : "them",
     });
+
+    if (transfer.requester === "us") {
+      const key = `${transfer.share}_${transfer.hash}`;
+      const promise = this.expectedTransferPromises.get(key);
+
+      if (promise) {
+        promise.resolve();
+      }
+    }
 
     await this.queueTransfer(transfer);
   }
@@ -235,8 +265,8 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     return this.reportDidUpdateBus.on(cb);
   }
 
-  internallyMadeTransfersFinished() {
-    return this.queue.internallyMadeTransfersFinished();
+  transfersRequestedByUsFinished() {
+    return this.queue.transfersRequestedByUsFinished();
   }
 
   registerOtherSyncerId(id: string) {

@@ -11,7 +11,7 @@ export class TransferQueue {
 
   private activeLimit: number;
 
-  private enroller = new PromiseEnroller(true);
+  private transfersRequestedByUsEnroller = new PromiseEnroller(true);
 
   // This status is going to be modified a LOT so it's better to mutate than recreate from scratch.
   private reports: Record<string, Record<string, AttachmentTransferReport>> =
@@ -65,8 +65,8 @@ export class TransferQueue {
       this.updateTransferStatus(transfer);
     });
 
-    if (transfer.origin === "internal") {
-      this.enroller.enrol(transfer.isDone());
+    if (transfer.requester === "us") {
+      this.transfersRequestedByUsEnroller.enrol(transfer.isDone());
     }
 
     if (this.active.size < this.activeLimit) {
@@ -76,12 +76,12 @@ export class TransferQueue {
     }
   }
 
-  closeToInternalTransfers() {
-    this.enroller.seal();
+  gotAllTransfersRequestedByUs() {
+    this.transfersRequestedByUsEnroller.seal();
   }
 
   cancel() {
-    this.enroller.seal();
+    this.transfersRequestedByUsEnroller.seal();
 
     for (const transfer of this.active) {
       transfer.abort();
@@ -150,7 +150,7 @@ export class TransferQueue {
     return this.reportBus.on(cb);
   }
 
-  internallyMadeTransfersFinished() {
-    return this.enroller.isDone();
+  transfersRequestedByUsFinished() {
+    return this.transfersRequestedByUsEnroller.isDone();
   }
 }
