@@ -106,6 +106,7 @@ export class Replica {
     ReplicaEvent<DocBase<string>>
   >();
   private eraseInterval: number;
+  private expireEventTimeouts = new Map<string, number>();
 
   constructor({ driver }: ReplicaOpts) {
     const addressIsValidResult = checkShareIsValid(driver.docDriver.share);
@@ -135,6 +136,9 @@ export class Replica {
         clearInterval(this.eraseInterval);
       }
     }, 1000 * 60 * 60);
+
+    // Prune any docs which expired while the replica was inactive
+    this.pruneExpiredDocsAndAttachments();
   }
 
   //--------------------------------------------------
@@ -177,6 +181,10 @@ export class Replica {
     });
     logger.debug("...closing done");
     clearInterval(this.eraseInterval);
+
+    for (const timeout of this.expireEventTimeouts.values()) {
+      clearTimeout(timeout);
+    }
 
     return Promise.resolve();
   }
@@ -418,6 +426,13 @@ export class Replica {
       loggerSet.debug("-----------------------");
       await stageResult.commit();
 
+      await this.eventWriter.write({
+        kind: "attachment_ingest",
+        doc: updatedDocRes,
+        hash: stageResult.hash,
+        size: stageResult.size,
+      });
+
       loggerSet.debug("...done ingesting attachment");
 
       loggerSet.debug("...ingesting");
@@ -587,6 +602,29 @@ export class Replica {
         prevDocFromSameAuthor: prevSameAuthor,
         prevLatestDoc: prevLatest,
       });
+
+      if (docAsWritten.deleteAfter) {
+        // Check for any previous delete after
+        const key = `${docAsWritten.path}|${docAsWritten.author}`;
+
+        const existingTimeout = this.expireEventTimeouts.get(key);
+
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+
+        const waitFor = (docAsWritten.deleteAfter / 1000) - Date.now();
+
+        this.expireEventTimeouts.set(
+          key,
+          setTimeout(() => {
+            this.eventWriter.write({
+              kind: "expire",
+              doc: docAsWritten,
+            });
+          }, waitFor),
+        );
+      }
     });
 
     return ingestPromise;
@@ -943,6 +981,10 @@ export class Replica {
     doc: FormatDocType<F>,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<DocAttachment | undefined | ValidationError> {
+    if (doc.deleteAfter && doc.deleteAfter < Date.now() * 1000) {
+      return Promise.resolve(new ValidationError("This document has expired"));
+    }
+
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (!isErr(attachmentInfo)) {
