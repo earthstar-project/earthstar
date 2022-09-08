@@ -49,7 +49,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
   //--------------------------------------------------
   // LIFECYCLE
 
-  async close(erase: boolean): Promise<void> {
+  close(erase: boolean): Promise<void> {
     logger.debug("close");
     if (this._isClosed) {
       throw new ReplicaIsClosedError();
@@ -61,7 +61,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     if (erase === true && this._filename !== ":memory:") {
       logger.log(`...close: and erase`);
       try {
-        await Deno.remove(this._filename);
+        fs.rmSync(this._filename);
       } catch (err) {
         logger.error("Failed to delete Sqlite file.");
         logger.error(err);

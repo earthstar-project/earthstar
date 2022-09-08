@@ -53,7 +53,7 @@ import {
 } from "../formats/util.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { deferred } from "../../deps.ts";
 
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");
@@ -106,6 +106,7 @@ export class Replica {
     ReplicaEvent<DocBase<string>>
   >();
   private eraseInterval: number;
+  private expireEventTimeouts = new Map<string, number>();
 
   constructor({ driver }: ReplicaOpts) {
     const addressIsValidResult = checkShareIsValid(driver.docDriver.share);
@@ -154,6 +155,10 @@ export class Replica {
     logger.debug("closing...");
     if (this._isClosed) throw new ReplicaIsClosedError();
     // TODO: do this all in a lock?
+    for (const timeout of this.expireEventTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+
     logger.debug("    sending willClose blockingly...");
     await this.eventWriter.write({
       kind: "willClose",
@@ -418,6 +423,13 @@ export class Replica {
       loggerSet.debug("-----------------------");
       await stageResult.commit();
 
+      await this.eventWriter.write({
+        kind: "attachment_ingest",
+        doc: updatedDocRes,
+        hash: stageResult.hash,
+        size: stageResult.size,
+      });
+
       loggerSet.debug("...done ingesting attachment");
 
       loggerSet.debug("...ingesting");
@@ -587,6 +599,29 @@ export class Replica {
         prevDocFromSameAuthor: prevSameAuthor,
         prevLatestDoc: prevLatest,
       });
+
+      if (docAsWritten.deleteAfter) {
+        // Check for any previous delete after
+        const key = `${docAsWritten.path}|${docAsWritten.author}`;
+
+        const existingTimeout = this.expireEventTimeouts.get(key);
+
+        if (existingTimeout) {
+          clearTimeout(existingTimeout);
+        }
+
+        const waitFor = (docAsWritten.deleteAfter / 1000) - Date.now();
+
+        this.expireEventTimeouts.set(
+          key,
+          setTimeout(() => {
+            this.eventWriter.write({
+              kind: "expire",
+              doc: docAsWritten,
+            });
+          }, waitFor),
+        );
+      }
     });
 
     return ingestPromise;
@@ -943,6 +978,10 @@ export class Replica {
     doc: FormatDocType<F>,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<DocAttachment | undefined | ValidationError> {
+    if (doc.deleteAfter && doc.deleteAfter < Date.now() * 1000) {
+      return Promise.resolve(new ValidationError("This document has expired"));
+    }
+
     const attachmentInfo = format.getAttachmentInfo(doc);
 
     if (!isErr(attachmentInfo)) {

@@ -1,7 +1,4 @@
-import {
-  Deferred,
-  deferred,
-} from "https://deno.land/std@0.150.0/async/deferred.ts";
+import { Deferred, deferred } from "../../deps.ts";
 
 export class MultiDeferred<ReturnType> {
   private deferreds = new Set<Deferred<ReturnType>>();

@@ -2,7 +2,7 @@ import { DocAttachment, ShareAddress } from "../../util/doc-types.ts";
 import { IReplicaAttachmentDriver } from "../replica-types.ts";
 
 import { Logger } from "../../util/log.ts";
-import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
+
 import {
   EarthstarError,
   ReplicaIsClosedError,
@@ -11,6 +11,7 @@ import {
 import { Crypto } from "../../crypto/crypto.ts";
 import { randomId, sleep } from "../../util/misc.ts";
 import { streamToBytes } from "../../util/streams.ts";
+import { deferred } from "../../../deps.ts";
 const logger = new Logger("replica driver indexeddb", "gold");
 
 const ATTACHMENT_STAGING_STORE = "attachment_staging_index";

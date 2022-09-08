@@ -1,7 +1,4 @@
-import {
-  Deferred,
-  deferred,
-} from "https://deno.land/std@0.150.0/async/deferred.ts";
+import { Deferred, deferred } from "../../deps.ts";
 import {
   FormatArg,
   FormatDocType,
@@ -19,7 +16,6 @@ import {
   AttachmentTransferReport,
   GetTransferOpts,
   ISyncPartner,
-  SyncAgentWantAttachmentEvent,
 } from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
 import { TransferQueue } from "./transfer_queue.ts";

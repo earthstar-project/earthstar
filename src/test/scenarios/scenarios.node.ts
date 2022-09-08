@@ -16,15 +16,14 @@ import {
 import { Syncer } from "../../syncer/syncer.ts";
 import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
 import { IPeer } from "../../peer/peer-types.ts";
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-//import { WebSocketServer } from "https://esm.sh/ws";
 import { CryptoDriverChloride } from "../../crypto/crypto-driver-chloride.ts";
 import { sleep } from "../../util/misc.ts";
-import { WebSocketServer } from "ws";
+import { WebSocketServer } from "https://esm.sh/ws@8.8.1";
 import { FormatsArg } from "../../formats/format_types.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
 import { match } from "https://esm.sh/path-to-regexp@6.2.1";
 import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.node.ts";
+import { deferred } from "../../../deps.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,

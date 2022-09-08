@@ -1,6 +1,6 @@
 import { default as chloride } from "../node/chloride.ts";
-import { Buffer } from "https://deno.land/std@0.122.0/node/buffer.ts";
-import crypto from "https://deno.land/std@0.119.0/node/crypto.ts";
+import { Buffer } from "https://deno.land/std@0.154.0/node/buffer.ts";
+import crypto from "https://deno.land/std@0.154.0/node/crypto.ts";
 import { ICryptoDriver, KeypairBytes } from "./crypto-types.ts";
 import {
   concatBytes,

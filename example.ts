@@ -1,5 +1,5 @@
 import * as Earthstar from "./mod.ts";
-import { assert } from "https://deno.land/std@0.150.0/testing/asserts.ts";
+import { assert } from "https://deno.land/std@0.154.0/testing/asserts.ts";
 
 // In which the story begins and we generate some keypairs.
 // =======================================================================

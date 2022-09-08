@@ -1,4 +1,4 @@
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { deferred } from "../../deps.ts";
 import { base32BytesToString } from "../crypto/base32.ts";
 import { Crypto } from "../crypto/crypto.ts";
 

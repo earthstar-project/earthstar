@@ -1,4 +1,4 @@
-import { assert } from "./asserts.ts";
+import { assert, equal } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
 import {
   AuthorKeypair,
@@ -7,13 +7,13 @@ import {
 } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
-import { equal } from "../../deps.ts";
-import { FormatEs4 } from "../formats/format_es4.ts";
-import { DocEs5, FormatEs5 } from "../formats/format_es5.ts";
+
+import { DocEs5 } from "../formats/format_es5.ts";
 import { AttachmentDriverMemory } from "../replica/attachment_drivers/memory.ts";
 import { isErr } from "../util/errors.ts";
 
-import { equals } from "https://deno.land/std@0.138.0/bytes/mod.ts";
+import { equals as bytesEqual } from "https://deno.land/std@0.154.0/bytes/mod.ts";
+import { shallowEqualObjects } from "../../deps.ts";
 
 // for testing unicode
 export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -53,7 +53,9 @@ export function makeNReplicas(addr: string, number: number) {
   return Array.from({ length: number }, () => makeReplica(addr));
 }
 
-function stripLocalIndexFromDoc({ _localIndex, ...rest }: DocBase<string>) {
+function stripLocalIndexFromDoc(
+  { _localIndex, ...rest }: DocBase<string>,
+) {
   return { ...rest };
 }
 
@@ -129,7 +131,7 @@ export async function docAttachmentsAreEquivalent(
       const aBytes = await a.attachment.bytes();
       const bBytes = await b.attachment.bytes();
 
-      if (equals(aBytes, bBytes) === false) {
+      if (bytesEqual(aBytes, bBytes) === false) {
         return false;
       }
     }
@@ -276,7 +278,7 @@ export async function storageHasAllStoragesDocs(
     }
 
     return strippedADocs.find((aDoc) => {
-      return equal(doc, aDoc);
+      return shallowEqualObjects(doc, aDoc);
     }) !== undefined;
   }, true);
 

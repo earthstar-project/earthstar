@@ -13,6 +13,7 @@ import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { DocEs4 } from "../../formats/format_es4.ts";
+import { DocEs5 } from "../../formats/format_es5.ts";
 
 const scenarios: MultiplyScenarioOutput<{
   "replicaDriver": ScenarioItem<typeof docDriverScenarios>;
@@ -220,21 +221,20 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       const share = "+gardening.abcde";
       const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
-      const doc0: DocEs4 = {
-        format: "es.4",
+      const doc0: DocEs5 = {
+        format: "es.5",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
-        content: "Hello 0",
-        contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
-        deleteAfter: null,
+        text: "Hello 0",
+        textHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
         path: "/posts/post-0000.txt",
         timestamp: 1619627796035000,
-        workspace: "+gardening.abc",
+        share: "+gardening.abc",
         signature: "whatever0", // upsert does not check signature or validate doc
       };
       // same author, newer
       const doc1 = {
         ...doc0,
-        content: "Hello 1",
+        text: "Hello 1",
         timestamp: doc0.timestamp + 1, // make sure this one wins
         signature: "whatever1", // everything assumes different docs have different sigs
       };
@@ -242,7 +242,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       const doc2 = {
         ...doc0,
         author: "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
-        content: "Hello 2",
+        text: "Hello 2",
         timestamp: doc0.timestamp + 2, // make sure this one wins
         signature: "whatever2", // everything assumes different docs have different sigs
       };
@@ -250,7 +250,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       const doc3 = {
         ...doc0,
         author: "@timm.baaaaaaaaaaaaaaaaaaaaaaaaazbqjwtzcnr7zyef2hvpftw45clq",
-        content: "Hello 3",
+        text: "Hello 3",
         timestamp: doc0.timestamp - 3, // make sure this one wins
         signature: "whatever3", // everything assumes different docs have different sigs
       };
@@ -258,12 +258,12 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       const doc4 = {
         ...doc0,
         author: "@bobo.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxnr7zyef2hvpftw45clq",
-        content: "Hello 4",
+        text: "Hello 4",
         timestamp: doc0.timestamp - 4, // make sure this one wins
         signature: "whatever4", // everything assumes different docs have different sigs
       };
 
-      const firstDocResult: DocEs4 = await driver.upsert(doc0);
+      const firstDocResult: DocEs5 = await driver.upsert(doc0);
 
       assertEquals(
         firstDocResult._localIndex,
@@ -276,11 +276,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "driver.getMaxLocalIndex() matches doc._localIndex",
       );
 
-      let docs = await driver.queryDocs({}) as DocEs4[];
+      let docs = await driver.queryDocs({}) as DocEs5[];
 
       assertEquals(docs.length, 1, "query returns 1 doc");
       assertEquals(docs[0]._localIndex, 0, "docs[0]._localIndex is 0");
-      assertEquals(docs[0].content, "Hello 0", "content is from doc0");
+      assertEquals(docs[0].text, "Hello 0", "content is from doc0");
 
       //-----------------
 
@@ -298,10 +298,10 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "driver.getMaxLocalIndex() matches doc._localIndex",
       );
 
-      docs = await driver.queryDocs({}) as DocEs4[];
+      docs = await driver.queryDocs({}) as DocEs5[];
       assertEquals(docs.length, 1, "query returns 1 doc");
       assertEquals(docs[0]._localIndex, 1, "docs[0]._localIndex");
-      assertEquals(docs[0].content, "Hello 1", "content is from doc1");
+      assertEquals(docs[0].text, "Hello 1", "content is from doc1");
 
       //-----------------
 
@@ -320,7 +320,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
 
       let latestDocs = await driver.queryDocs({
         historyMode: "latest",
-      }) as DocEs4[];
+      }) as DocEs5[];
       assertEquals(latestDocs.length, 1, "there is 1 latest doc");
       assertEquals(
         latestDocs[0]._localIndex,
@@ -328,21 +328,37 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "latestDocs[0]._localIndex",
       );
       assertEquals(
-        latestDocs[0].content,
+        latestDocs[0].text,
         "Hello 2",
         "content is from doc2",
       );
 
-      let allDocs = await driver.queryDocs({ historyMode: "all" }) as DocEs4[];
+      let latestDocByPath = await driver.queryDocs({
+        historyMode: "latest",
+        filter: { path: "/posts/post-0000.txt" },
+      }) as DocEs5[];
+      assertEquals(latestDocByPath.length, 1, "there is 1 latest doc");
+      assertEquals(
+        latestDocByPath[0]._localIndex,
+        2,
+        "latestDocByPath[0]._localIndex",
+      );
+      assertEquals(
+        latestDocByPath[0].text,
+        "Hello 2",
+        "content is from doc2",
+      );
+
+      let allDocs = await driver.queryDocs({ historyMode: "all" }) as DocEs5[];
       assertEquals(allDocs.length, 2, "there are 2 overall docs");
 
       assertEquals(
-        allDocs[0].content,
+        allDocs[0].text,
         "Hello 2",
         "latestDocs[0].content is 2 (it's the latest)",
       );
       assertEquals(
-        allDocs[1].content,
+        allDocs[1].text,
         "Hello 1",
         "latestDocs[1].content is 1",
       );
@@ -366,7 +382,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       // latest doc is now from author 1
       latestDocs = await driver.queryDocs({
         historyMode: "latest",
-      }) as DocEs4[];
+      }) as DocEs5[];
       assertEquals(latestDocs.length, 1, "there is 1 latest doc");
       assertEquals(
         latestDocs[0]._localIndex,
@@ -374,20 +390,36 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "latestDocs[0]._localIndex",
       );
       assertEquals(
-        latestDocs[0].content,
+        latestDocs[0].text,
         "Hello 1",
         "content is from doc1",
       );
 
-      allDocs = await driver.queryDocs({ historyMode: "all" }) as DocEs4[];
+      latestDocByPath = await driver.queryDocs({
+        historyMode: "latest",
+        filter: { path: "/posts/post-0000.txt" },
+      }) as DocEs5[];
+      assertEquals(latestDocByPath.length, 1, "there is 1 latest doc");
+      assertEquals(
+        latestDocByPath[0]._localIndex,
+        1,
+        "latestDocByPath[0]._localIndex",
+      );
+      assertEquals(
+        latestDocByPath[0].text,
+        "Hello 1",
+        "content is from doc1",
+      );
+
+      allDocs = await driver.queryDocs({ historyMode: "all" }) as DocEs5[];
       assertEquals(allDocs.length, 2, "there are 2 overall docs");
       assertEquals(
-        allDocs[0].content,
+        allDocs[0].text,
         "Hello 1",
         "latestDocs[0].content is 1 (it's the latest)",
       );
       assertEquals(
-        allDocs[1].content,
+        allDocs[1].text,
         "Hello 3",
         "latestDocs[1].content is 3",
       );
@@ -410,7 +442,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       // latest doc is still from author 1
       latestDocs = await driver.queryDocs({
         historyMode: "latest",
-      }) as DocEs4[];
+      }) as DocEs5[];
       assertEquals(latestDocs.length, 1, "there is 1 latest doc");
       assertEquals(
         latestDocs[0]._localIndex,
@@ -418,25 +450,41 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         "latestDocs[0]._localIndex is 1",
       );
       assertEquals(
-        latestDocs[0].content,
+        latestDocs[0].text,
         "Hello 1",
         "content is from doc1",
       );
 
-      allDocs = await driver.queryDocs({ historyMode: "all" }) as DocEs4[];
+      latestDocByPath = await driver.queryDocs({
+        historyMode: "latest",
+        filter: { path: "/posts/post-0000.txt" },
+      }) as DocEs5[];
+      assertEquals(latestDocs.length, 1, "there is 1 latest doc");
+      assertEquals(
+        latestDocByPath[0]._localIndex,
+        1,
+        "latestDocByPath[0]._localIndex is 1",
+      );
+      assertEquals(
+        latestDocByPath[0].text,
+        "Hello 1",
+        "content is from doc1",
+      );
+
+      allDocs = await driver.queryDocs({ historyMode: "all" }) as DocEs5[];
       assertEquals(allDocs.length, 3, "there are 2 overall docs");
       assertEquals(
-        allDocs[0].content,
+        allDocs[0].text,
         "Hello 1",
         "latestDocs[0].content is 1 (it's the latest)",
       );
       assertEquals(
-        allDocs[1].content,
+        allDocs[1].text,
         "Hello 3",
         "latestDocs[1].content is 3",
       );
       assertEquals(
-        allDocs[2].content,
+        allDocs[2].text,
         "Hello 4",
         "latestDocs[2].content is 4",
       );
@@ -542,8 +590,8 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       ];
 
       for (const { query, expectedContent } of vectors) {
-        const qr = await driver.queryDocs(query) as DocEs4[];
-        const actualContent = qr.map((doc) => doc.content);
+        const qr = await driver.queryDocs(query) as DocEs5[];
+        const actualContent = qr.map((doc) => doc.text);
 
         assertEquals(
           actualContent,
@@ -560,6 +608,47 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
           (initialCryptoDriver as any).name
         }, ended as ${(GlobalCryptoDriver as any).name}`,
       );
+    },
+  );
+
+  Deno.test(
+    `${SUBTEST_NAME}: filtering out expired docs`,
+    async (test) => {
+      const share = "+gardening.abcde";
+      const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
+
+      const now = Date.now() * 1000;
+
+      await test.step({
+        name: "inserting expiring doc and checking presence",
+        fn: async () => {
+          const expiredDoc0: DocEs4 = {
+            format: "es.4",
+            author:
+              "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
+            content: "Hello 0",
+            contentHash:
+              "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+            deleteAfter: now + 1000,
+            path: "/posts/!post-0000.txt",
+            timestamp: now,
+            workspace: "+gardening.abc",
+            signature: "whatever0", // upsert does not check signature or validate doc
+          };
+
+          await driver.upsert(expiredDoc0);
+
+          await sleep(100);
+
+          const allDocs = await driver.queryDocs({ "historyMode": "all" });
+
+          assertEquals(allDocs, []);
+        },
+        sanitizeOps: false,
+        sanitizeResources: false,
+      });
+
+      await driver.close(true);
     },
   );
 

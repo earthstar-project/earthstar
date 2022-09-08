@@ -62,7 +62,7 @@ if (proceed) {
 
   // Push to origin
   console.log("Pushing git tag to origin...");
-  await run(["git", "push", "origin"]);
+  await run(["git", "push", "origin", nextTag]);
 
   console.log("Publishing to NPM...");
   await run(["npm", "publish", "./npm", "--tag", "alpha"]);

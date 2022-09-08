@@ -11,6 +11,7 @@ let logger = new Logger("storage driver localStorage", "gold");
 type SerializedDriverDocs = {
   byPathAndAuthor: Record<string, DocBase<string>>;
   byPathNewestFirst: Record<Path, DocBase<string>[]>;
+  latestDocsByPath: Record<string, DocBase<string>>;
 };
 
 function isSerializedDriverDocs(value: any): value is SerializedDriverDocs {
@@ -39,9 +40,9 @@ export class DocDriverLocalStorage extends DocDriverMemory {
     // each config item starts with this prefix and gets its own entry in localstorage
     this._localStorageKeyConfig = `earthstar:config:${share}${
       key ? `:${key}` : ""
-    }`; // TODO: change this to "earthstar:..." later
+    }`;
     // but all docs are stored together inside this one item, as a giant JSON object
-    this._localStorageKeyDocs = `earthstar:documents:pathandauthor:${share}${
+    this._localStorageKeyDocs = `earthstar:documents:${share}${
       key ? `:${key}` : ""
     }`;
 
@@ -64,6 +65,7 @@ export class DocDriverLocalStorage extends DocDriverMemory {
       this.docsByPathNewestFirst = new Map(
         Object.entries(parsed.byPathNewestFirst),
       );
+      this.latestDocsByPath = new Map(Object.entries(parsed.latestDocsByPath));
 
       const localIndexes = Array.from(this.docByPathAndAuthor.values()).map((
         doc,
@@ -179,6 +181,7 @@ export class DocDriverLocalStorage extends DocDriverMemory {
     const docsToBeSerialised: SerializedDriverDocs = {
       byPathAndAuthor: Object.fromEntries(this.docByPathAndAuthor),
       byPathNewestFirst: Object.fromEntries(this.docsByPathNewestFirst),
+      latestDocsByPath: Object.fromEntries(this.latestDocsByPath),
     };
 
     localStorage.setItem(

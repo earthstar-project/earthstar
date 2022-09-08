@@ -1,5 +1,4 @@
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
-
+import { deferred } from "../../deps.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase, ShareAddress } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";

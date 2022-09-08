@@ -1,4 +1,4 @@
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { deferred } from "../../../deps.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
@@ -7,6 +7,7 @@ import {
   ISyncPartner,
   SyncAgentEvent,
   SyncAgentStatus,
+  SyncerEvent,
 } from "../../syncer/syncer_types.ts";
 import { SyncAgent } from "../../syncer/sync_agent.ts";
 import { TransferManager } from "../../syncer/transfer_manager.ts";
@@ -33,8 +34,8 @@ const SHARE_ADDR = "+test.a123";
 class FakePartner implements ISyncPartner<null> {
   concurrentTransfers = 16;
 
-  readable = new ReadableStream();
-  writable = new WritableStream();
+  readable = new ReadableStream<SyncerEvent>();
+  writable = new WritableStream<SyncerEvent>();
 
   getDownload(): Promise<ReadableStream<Uint8Array> | undefined> {
     return Promise.resolve(undefined);

@@ -6,7 +6,7 @@ import { stringLengthInBytes } from "../util/bytes.ts";
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
-import { equal } from "../../deps.ts";
+import { shallowEqualObjects } from "../../deps.ts";
 const logger = new Logger("query", "green");
 
 //================================================================================
@@ -105,12 +105,14 @@ export function cleanUpQuery(inputQuery: Query<string[]>): CleanUpQueryResult {
   let willMatch: WillMatch = query.historyMode === "all" ? "all" : "all-latest";
 
   // if there are filters, match some
-  if (query.filter !== undefined && !equal(query.filter, {})) {
+  if (query.filter !== undefined && !shallowEqualObjects(query.filter, {})) {
     willMatch = "some";
   }
 
   // a startAfter makes us match some
-  if (query.startAfter !== undefined && !equal(query.startAfter, {})) {
+  if (
+    query.startAfter !== undefined && !shallowEqualObjects(query.startAfter, {})
+  ) {
     willMatch = "some";
   }
 

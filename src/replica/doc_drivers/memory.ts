@@ -177,6 +177,13 @@ export class DocDriverMemory implements IReplicaDocDriver {
     if (query.historyMode === "latest" && query.filter?.path) {
       const maybeDoc = this.latestDocsByPath.get(query.filter.path);
 
+      if (
+        maybeDoc && maybeDoc.deleteAfter &&
+        maybeDoc.deleteAfter < Date.now() * 1000
+      ) {
+        return [];
+      }
+
       return maybeDoc ? [maybeDoc] : [];
     }
 
@@ -185,7 +192,23 @@ export class DocDriverMemory implements IReplicaDocDriver {
         query.filter.path,
       );
 
-      return maybeDocs ? maybeDocs : [];
+      if (maybeDocs) {
+        const notExpired = [];
+
+        for (const doc of maybeDocs) {
+          if (doc.deleteAfter === null || doc.deleteAfter === undefined) {
+            notExpired.push(doc);
+          }
+
+          if (doc.deleteAfter && doc.deleteAfter > Date.now() * 1000) {
+            notExpired.push(doc);
+          }
+        }
+
+        return notExpired;
+      }
+
+      return [];
     }
 
     // get history docs or all docs
@@ -198,6 +221,8 @@ export class DocDriverMemory implements IReplicaDocDriver {
 
     const filteredDocs: DocBase<string>[] = [];
     logger.debug(`    filtering docs`);
+
+    const microNow = Date.now() * 1000;
 
     for (const doc of docs) {
       // skip ahead until we reach startAfter
@@ -244,6 +269,10 @@ export class DocDriverMemory implements IReplicaDocDriver {
           }
           // doc.path is now < startAfter.localIndex (we're descending)
         }
+      }
+
+      if (doc.deleteAfter && doc.deleteAfter < microNow) {
+        continue;
       }
 
       // apply filter: skip docs that don't match

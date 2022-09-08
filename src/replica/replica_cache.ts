@@ -1,23 +1,40 @@
-import { equal, fast_json_stable_stringify as stringify } from "../../deps.ts";
+import {
+  fast_json_stable_stringify as stringify,
+  shallowEqualArrays,
+  shallowEqualObjects,
+} from "../../deps.ts";
 import {
   AuthorAddress,
   AuthorKeypair,
+  DocAttachment,
   DocBase,
+  DocWithAttachment,
   Path,
 } from "../util/doc-types.ts";
 import {
+  isErr,
   ReplicaCacheIsClosedError,
   ReplicaIsClosedError,
   ValidationError,
 } from "../util/errors.ts";
 import { cleanUpQuery, docMatchesFilter } from "../query/query.ts";
 import { Query } from "../query/query-types.ts";
-import { IngestEvent, QuerySourceEvent } from "./replica-types.ts";
+import {
+  AttachmentIngestEvent,
+  ExpireEvent,
+  IngestEvent,
+  IngestEventSuccess,
+  QuerySourceEvent,
+} from "./replica-types.ts";
 import { Logger } from "../util/log.ts";
 import { CallbackSink } from "../streams/stream_utils.ts";
 import { Replica } from "./replica.ts";
 
-import { DEFAULT_FORMAT, DEFAULT_FORMATS } from "../formats/util.ts";
+import {
+  DEFAULT_FORMAT,
+  DEFAULT_FORMATS,
+  getFormatLookup,
+} from "../formats/util.ts";
 import {
   DefaultFormat,
   DefaultFormats,
@@ -102,11 +119,17 @@ function sortAndLimit<DocType extends DocBase<string>>(
   return filteredDocs;
 }
 
-type CacheEntry<DocType> = {
+type DocsCacheEntry<DocType> = {
   docs: DocType[];
   stream: ReadableStream<QuerySourceEvent<DocBase<string>>>;
   expires: number;
   close: () => void;
+};
+
+type AttachmentCacheEntry<F> = {
+  expires: number;
+  attachment: DocAttachment | undefined | ValidationError;
+  format: FormatArg<F>;
 };
 
 /** A cached, synchronous interface to a replica, useful for reactive abstractions. Always returns results from its cache, and proxies the query to the backing replica in case of a cache miss.
@@ -122,20 +145,20 @@ type CacheEntry<DocType> = {
 export class ReplicaCache {
   version = 0;
 
-  _replica: Replica;
+  private replica: Replica;
 
-  _docCache = new Map<
+  private docCache = new Map<
     string,
-    CacheEntry<DocBase<string>>
+    DocsCacheEntry<DocBase<string>>
   >();
 
-  _timeToLive: number;
+  private timeToLive: number;
 
-  _onCacheUpdatedCallbacks = new Set<(entry: string) => void>();
+  private onCacheUpdatedCallbacks = new Set<() => void>();
 
-  _isClosed = false;
+  private closed = false;
 
-  _onFireCacheUpdatedsWrapper = (cb: () => void) => cb();
+  private onFireCacheUpdatedsWrapper = (cb: () => void) => cb();
 
   /**
    * Create a new ReplicaCache.
@@ -147,27 +170,44 @@ export class ReplicaCache {
     timeToLive?: number,
     onCacheUpdatedWrapper?: (cb: () => void) => void,
   ) {
-    this._replica = replica;
-    this._timeToLive = timeToLive || 1000;
+    this.replica = replica;
+    this.timeToLive = timeToLive || 1000;
 
     if (onCacheUpdatedWrapper) {
-      this._onFireCacheUpdatedsWrapper = onCacheUpdatedWrapper;
+      this.onFireCacheUpdatedsWrapper = onCacheUpdatedWrapper;
     }
+
+    const onReplicaEvent = this.onReplicaEvent.bind(this);
+
+    this.replica.getEventStream("*").pipeTo(
+      new WritableStream({
+        write(event) {
+          if (
+            event.kind === "attachment_ingest" || event.kind === "success" ||
+            event.kind === "expire"
+          ) {
+            onReplicaEvent(event);
+          }
+        },
+      }),
+    ).catch(() => {});
   }
 
   async close() {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    this._isClosed = true;
+    if (this.closed) throw new ReplicaCacheIsClosedError();
+    this.closed = true;
 
     await Promise.all(
-      Array.from(this._docCache.values()).map((entry) => entry.close()),
+      Array.from(this.docCache.values()).map((entry) => entry.close()),
     );
 
-    this._docCache.clear();
+    this.docCache.clear();
+
+    this.onCacheUpdatedCallbacks.clear();
   }
 
   isClosed() {
-    return this._isClosed;
+    return this.closed;
   }
 
   // GET
@@ -225,8 +265,8 @@ export class ReplicaCache {
     query: Omit<Query<[string]>, "formats"> = {},
     formats?: FormatsArg<F>,
   ): FormatDocType<F>[] {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
+    if (this.closed) throw new ReplicaCacheIsClosedError();
+    if (this.replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
 
@@ -247,31 +287,31 @@ export class ReplicaCache {
 
     // Check if the cache has anything from this
     // and if so, return it.
-    const cachedResult = this._docCache.get(queryString);
+    const cachedResult = this.docCache.get(queryString);
 
     if (cachedResult) {
       // If the result has expired, query the storage again.
       if (Date.now() > cachedResult.expires) {
-        this._replica.queryDocs(query, formats).then((docs) => {
+        this.replica.queryDocs(query, formats).then((docs) => {
           const localIndexes = docs.map(justLocalIndex).sort();
           const cacheLocalIndexes = cachedResult.docs.map(justLocalIndex)
             .sort();
 
           // Return early if the new result is the same as the cached result.
           // (The sets of localIndexes should be identical if they're the same)
-          if (equal(localIndexes, cacheLocalIndexes)) {
+          if (shallowEqualArrays(localIndexes, cacheLocalIndexes)) {
             return;
           }
 
-          this._docCache.set(queryString, {
+          this.docCache.set(queryString, {
             stream: cachedResult.stream,
             close: cachedResult.close,
             docs: docs,
-            expires: Date.now() + this._timeToLive,
+            expires: Date.now() + this.timeToLive,
           });
 
           logger.debug("Updated cache because result expired.");
-          this._fireOnCacheUpdateds(queryString);
+          this.fireOnCacheUpdateds();
         });
       }
 
@@ -279,7 +319,7 @@ export class ReplicaCache {
     }
 
     // If there's no result, let's follow this query.
-    const stream = this._replica.getQueryStream(query, "new", formats);
+    const stream = this.replica.getQueryStream(query, "new", formats);
 
     const callbackSink = new CallbackSink<
       QuerySourceEvent<DocBase<string>>
@@ -306,23 +346,23 @@ export class ReplicaCache {
     // Set an empty entry in the cache so that calls which happen
     // while we wait for the first request to resolve don't queue up
     // more 'initial' queries.
-    this._docCache.set(queryString, {
+    this.docCache.set(queryString, {
       stream,
       docs: [],
-      expires: Date.now() + this._timeToLive,
+      expires: Date.now() + this.timeToLive,
       close,
     });
 
     // Query the storage, set the eventual result in the cache.
-    this._replica.queryDocs(queryWithFormats).then((docs) => {
-      this._docCache.set(queryString, {
+    this.replica.queryDocs(queryWithFormats).then((docs) => {
+      this.docCache.set(queryString, {
         stream,
         close,
         docs: docs,
-        expires: Date.now() + this._timeToLive,
+        expires: Date.now() + this.timeToLive,
       });
       logger.debug("Updated cache with a new entry.");
-      this._fireOnCacheUpdateds(queryString);
+      this.fireOnCacheUpdateds();
     });
 
     // Return an empty result for the moment.
@@ -353,7 +393,7 @@ export class ReplicaCache {
 
   // Update cache entries as best as we can until results from the backing storage arrive.
   _updateCache(key: string, doc: DocBase<string>): void {
-    const entry = this._docCache.get(key);
+    const entry = this.docCache.get(key);
 
     // This shouldn't happen really.
     if (!entry) {
@@ -391,11 +431,11 @@ export class ReplicaCache {
 
     const appendDoc = () => {
       const nextDocs = [...entry.docs, doc];
-      this._docCache.set(key, {
+      this.docCache.set(key, {
         ...entry,
         docs: sortAndLimit(query, nextDocs),
       });
-      this._fireOnCacheUpdateds(key);
+      this.fireOnCacheUpdateds();
     };
 
     const replaceDoc = ({ exact }: { exact: boolean }) => {
@@ -416,11 +456,11 @@ export class ReplicaCache {
         return existingDoc;
       });
 
-      this._docCache.set(key, {
+      this.docCache.set(key, {
         ...entry,
         docs: sortAndLimit(query, nextDocs),
       });
-      this._fireOnCacheUpdateds(key);
+      this.fireOnCacheUpdateds();
     };
 
     const documentsWithSamePath = entry.docs.filter(
@@ -475,7 +515,7 @@ export class ReplicaCache {
 
     // If the doc's author or content has changed.
     const docIsDifferent = doc.author !== latestDoc?.author ||
-      !equal(doc, latestDoc);
+      !shallowEqualObjects(doc, latestDoc);
 
     const docIsLater = doc.timestamp > latestDoc.timestamp;
 
@@ -492,27 +532,27 @@ export class ReplicaCache {
 
   // SUBSCRIBE
 
-  _fireOnCacheUpdateds(entry: string) {
+  private fireOnCacheUpdateds() {
     this.version++;
 
-    this._onFireCacheUpdatedsWrapper(() => {
-      this._onCacheUpdatedCallbacks.forEach((cb) => {
-        cb(entry);
+    this.onFireCacheUpdatedsWrapper(() => {
+      this.onCacheUpdatedCallbacks.forEach((cb) => {
+        cb();
       });
     });
   }
 
   /** Subscribes to the cache, calling a callback when previously returned results can be considered stale. Returns a function for unsubscribing. */
-  onCacheUpdated(callback: (entryKey: string) => void): () => void {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
+  onCacheUpdated(callback: () => void): () => void {
+    if (this.closed) throw new ReplicaCacheIsClosedError();
+    if (this.replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
 
-    this._onCacheUpdatedCallbacks.add(callback);
+    this.onCacheUpdatedCallbacks.add(callback);
 
     return () => {
-      this._onCacheUpdatedCallbacks.delete(callback);
+      this.onCacheUpdatedCallbacks.delete(callback);
     };
   }
 
@@ -529,9 +569,9 @@ export class ReplicaCache {
   ): Promise<
     IngestEvent<FormatDocType<F>> | ValidationError
   > {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
+    if (this.closed) throw new ReplicaCacheIsClosedError();
 
-    return this._replica.set(keypair, docToSet, format);
+    return this.replica.set(keypair, docToSet, format);
   }
 
   // OVERWRITE
@@ -546,11 +586,11 @@ export class ReplicaCache {
     keypair: AuthorKeypair,
     formats?: FormatsArg<F>,
   ) {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
-    if (this._replica.isClosed()) {
+    if (this.closed) throw new ReplicaCacheIsClosedError();
+    if (this.replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
-    return this._replica.overwriteAllDocsByAuthor(keypair, formats);
+    return this.replica.overwriteAllDocsByAuthor(keypair, formats);
   }
 
   wipeDocAtPath<F = DefaultFormat>(
@@ -558,8 +598,136 @@ export class ReplicaCache {
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<IngestEvent<FormatDocType<F>> | ValidationError> {
-    if (this._isClosed) throw new ReplicaCacheIsClosedError();
+    if (this.closed) throw new ReplicaCacheIsClosedError();
 
-    return this._replica.wipeDocAtPath(keypair, path, format);
+    return this.replica.wipeDocAtPath(keypair, path, format);
+  }
+
+  // ATTACHMENTS
+
+  private attachmentCache = new Map<
+    string,
+    AttachmentCacheEntry<any>
+  >();
+
+  private onReplicaEvent(
+    event:
+      | ExpireEvent<DocBase<string>>
+      | IngestEventSuccess<DocBase<string>>
+      | AttachmentIngestEvent<DocBase<string>>,
+  ) {
+    const cacheKey = `${event.doc.path}|${event.doc.author}`;
+    const cacheEntry = this.attachmentCache.get(cacheKey);
+
+    // We're not interested in this hash. Return early.
+    if (!cacheEntry) {
+      return;
+    }
+
+    // Update cache
+    this.replica.getAttachment(event.doc, cacheEntry.format).then((res) => {
+      // Update cache
+
+      this.attachmentCache.set(
+        cacheKey,
+        {
+          expires: Date.now() + this.timeToLive,
+          attachment: res,
+          format: cacheEntry.format,
+        },
+      );
+
+      this.fireOnCacheUpdateds();
+    });
+  }
+
+  getAttachment<F = DefaultFormat>(
+    doc: FormatDocType<F>,
+    format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
+  ): DocAttachment | undefined | ValidationError {
+    if (this.closed) throw new ReplicaCacheIsClosedError();
+    if (this.replica.isClosed()) {
+      throw new ReplicaIsClosedError();
+    }
+
+    // Check if this doc can have an attachment.
+    const attachmentInfo = format.getAttachmentInfo(doc);
+
+    if (isErr(attachmentInfo)) {
+      return attachmentInfo;
+    }
+
+    const cacheKey = `${doc.path}|${doc.author}`;
+
+    // Check if it's in the cache.
+    const cachedResult = this.attachmentCache.get(cacheKey);
+
+    if (cachedResult) {
+      if (Date.now() > cachedResult.expires) {
+        this.replica.getAttachment(doc, format).then((res) => {
+          // Update cache
+          this.attachmentCache.set(
+            cacheKey,
+            {
+              expires: Date.now() + this.timeToLive,
+              attachment: res,
+              format,
+            },
+          );
+
+          this.fireOnCacheUpdateds();
+        });
+      }
+
+      return cachedResult.attachment;
+    }
+
+    // Set an empty entry in the cache so that calls which happen
+    // while we wait for the first request to resolve don't queue up
+    // more 'initial' queries.
+    this.attachmentCache.set(cacheKey, {
+      attachment: undefined,
+      expires: Date.now() + this.timeToLive,
+      format,
+    });
+
+    // Query the storage, set the eventual result in the cache.
+    this.replica.getAttachment(doc, format).then((res) => {
+      // Update cache
+
+      this.attachmentCache.set(
+        cacheKey,
+        {
+          expires: Date.now() + this.timeToLive,
+          attachment: res,
+          format,
+        },
+      );
+
+      this.fireOnCacheUpdateds();
+    });
+
+    // Return the nothing for now.
+    return undefined;
+  }
+
+  addAttachments<F = DefaultFormats>(
+    docs: FormatDocType<F>[],
+    formats?: FormatsArg<F>,
+  ): DocWithAttachment<FormatDocType<F>>[] {
+    const result: DocWithAttachment<FormatDocType<F>>[] = [];
+
+    const lookup = getFormatLookup(formats);
+
+    for (const doc of docs) {
+      const cachedResult = this.getAttachment(doc, lookup[doc.format]);
+
+      result.push({
+        ...doc,
+        attachment: cachedResult,
+      });
+    }
+
+    return result;
   }
 }

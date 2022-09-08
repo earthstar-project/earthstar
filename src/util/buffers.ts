@@ -1,4 +1,4 @@
-import { Buffer } from "https://deno.land/std@0.122.0/node/buffer.ts";
+import { Buffer } from "https://deno.land/std@0.154.0/node/buffer.ts";
 
 /**
  * This file provides common operations on Buffer.

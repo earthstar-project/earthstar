@@ -10,10 +10,10 @@ import {
   dirname,
   join,
   relative,
-} from "https://deno.land/std@0.132.0/path/mod.ts";
-import { move } from "https://deno.land/std@0.149.0/fs/move.ts";
-import { walk } from "https://deno.land/std@0.149.0/fs/walk.ts";
-import { ensureDir } from "https://deno.land/std@0.149.0/fs/ensure_dir.ts";
+} from "https://deno.land/std@0.154.0/path/mod.ts";
+import { move } from "https://deno.land/std@0.154.0/fs/move.ts";
+import { walk } from "https://deno.land/std@0.154.0/fs/walk.ts";
+import { ensureDir } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
 import { randomId } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";

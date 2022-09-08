@@ -1,4 +1,3 @@
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import {
   DEFAULT_FORMAT,
@@ -27,6 +26,7 @@ import {
 import { SyncAgent } from "./sync_agent.ts";
 import { TransferManager } from "./transfer_manager.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
+import { deferred } from "../../deps.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {

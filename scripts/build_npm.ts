@@ -14,29 +14,50 @@ await build({
     lib: ["dom", "es2021"],
   },
   shims: {
-    deno: true,
-    undici: true,
-    webSocket: true,
+    deno: "dev",
     timers: true,
     weakRef: true,
-    crypto: true,
     blob: true,
+    crypto: "dev",
     custom: [
       {
-        module: "node:stream/web",
+        package: {
+          name: "cross-fetch",
+          version: "3.1.5",
+        },
+        globalNames: [
+          "Request",
+          "Response",
+          "Headers",
+        ],
+      },
+      {
+        package: {
+          name: "@sgwilym/isomorphic-streams",
+          version: "1.0.4",
+        },
         globalNames: [
           "WritableStream",
           "TransformStream",
           "ReadableStream",
-          { name: "Transformer", typeOnly: true },
           "TransformStreamDefaultController",
           { name: "UnderlyingSink", typeOnly: true },
           "WritableStreamDefaultWriter",
         ],
       },
       {
+        package: {
+          name: "isomorphic-ws",
+          version: "5.0.0",
+        },
+        globalNames: [{ name: "WebSocket", exportName: "default" }],
+      },
+      {
+        package: {
+          name: "textencoder-ponyfill",
+          version: "1.0.2",
+        },
         globalNames: ["TextEncoder", "TextDecoder"],
-        module: "util",
       },
     ],
   },
@@ -49,6 +70,8 @@ await build({
       name: "chloride",
       version: "2.4.1",
     },
+
+    "./src/replica/driver_fs.ts": "./src/replica/driver_fs.node.ts",
     "https://esm.sh/better-sqlite3?dts": {
       name: "better-sqlite3",
       version: "7.5.0",
@@ -63,15 +86,19 @@ await build({
       name: "path-to-regexp",
       version: "6.2.1",
     },
-    "https://deno.land/std@0.152.0/node/fs/promises.ts": {
+    "https://deno.land/std@0.154.0/node/fs/promises.ts": {
       name: "node:fs/promises",
     },
-    "https://deno.land/std@0.152.0/node/path.ts": {
+    "https://deno.land/std@0.154.0/node/path.ts": {
       name: "node:path",
     },
     "https://esm.sh/@nodelib/fs.walk@1.2.8": {
       name: "@nodelib/fs.walk",
       version: "1.2.8",
+    },
+    "https://esm.sh/ws@8.8.1": {
+      name: "ws",
+      version: "8.8.1",
     },
   },
   package: {
@@ -99,6 +126,7 @@ await build({
     devDependencies: {
       "@types/better-sqlite3": "7.4.2",
       "@types/chloride": "2.4.0",
+      "@types/ws": "8.5.3",
     },
   },
 });
