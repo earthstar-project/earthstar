@@ -17,13 +17,20 @@ await build({
     deno: "dev",
     timers: true,
     weakRef: true,
-    blob: true,
     crypto: "dev",
     custom: [
       {
         package: {
-          name: "cross-fetch",
-          version: "3.1.5",
+          name: "isomorphic-blob",
+          version: "1.0.1",
+        },
+
+        globalNames: ["Blob"],
+      },
+      {
+        package: {
+          name: "isomorphic-undici-ponyfill",
+          version: "1.0.0",
         },
         globalNames: [
           "Request",

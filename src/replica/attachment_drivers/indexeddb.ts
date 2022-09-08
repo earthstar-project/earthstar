@@ -224,7 +224,7 @@ export class AttachmentDriverIndexedDB implements IReplicaAttachmentDriver {
     ], "readwrite");
 
     const dataPut = transaction.objectStore(ATTACHMENT_BYTES_STORE).put(
-      attachment,
+      bytes,
       blobKey,
     );
     const stagingPut = transaction.objectStore(ATTACHMENT_STAGING_STORE).put({
