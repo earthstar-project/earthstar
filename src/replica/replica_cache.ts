@@ -160,8 +160,6 @@ export class ReplicaCache {
 
   private onFireCacheUpdatedsWrapper = (cb: () => void) => cb();
 
-  private streamAbortController = new AbortController();
-
   /**
    * Create a new ReplicaCache.
    * @param timeToLive - The number of milliseconds a cached document is considered valid for.
@@ -181,41 +179,17 @@ export class ReplicaCache {
 
     const onReplicaEvent = this.onReplicaEvent.bind(this);
 
-    this.replica.getEventStream("attachment_ingest").pipeTo(
+    this.replica.getEventStream("*").pipeTo(
       new WritableStream({
         write(event) {
-          onReplicaEvent(
-            event as AttachmentIngestEvent<DocBase<string>>,
-          );
+          if (
+            event.kind === "attachment_ingest" || event.kind === "success" ||
+            event.kind === "expire"
+          ) {
+            onReplicaEvent(event);
+          }
         },
       }),
-      {
-        signal: this.streamAbortController.signal,
-      },
-    ).catch(() => {});
-
-    this.replica.getEventStream("success").pipeTo(
-      new WritableStream({
-        write(event) {
-          onReplicaEvent(
-            event as IngestEventSuccess<DocBase<string>>,
-          );
-        },
-      }),
-      {
-        signal: this.streamAbortController.signal,
-      },
-    ).catch(() => {});
-
-    this.replica.getEventStream("expire").pipeTo(
-      new WritableStream({
-        write(event) {
-          onReplicaEvent(event as ExpireEvent<DocBase<string>>);
-        },
-      }),
-      {
-        signal: this.streamAbortController.signal,
-      },
     ).catch(() => {});
   }
 
@@ -653,6 +627,7 @@ export class ReplicaCache {
     // Update cache
     this.replica.getAttachment(event.doc, cacheEntry.format).then((res) => {
       // Update cache
+
       this.attachmentCache.set(
         cacheKey,
         {

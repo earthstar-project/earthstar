@@ -136,9 +136,6 @@ export class Replica {
         clearInterval(this.eraseInterval);
       }
     }, 1000 * 60 * 60);
-
-    // Prune any docs which expired while the replica was inactive
-    this.pruneExpiredDocsAndAttachments();
   }
 
   //--------------------------------------------------
@@ -158,6 +155,10 @@ export class Replica {
     logger.debug("closing...");
     if (this._isClosed) throw new ReplicaIsClosedError();
     // TODO: do this all in a lock?
+    for (const timeout of this.expireEventTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+
     logger.debug("    sending willClose blockingly...");
     await this.eventWriter.write({
       kind: "willClose",
@@ -181,10 +182,6 @@ export class Replica {
     });
     logger.debug("...closing done");
     clearInterval(this.eraseInterval);
-
-    for (const timeout of this.expireEventTimeouts.values()) {
-      clearTimeout(timeout);
-    }
 
     return Promise.resolve();
   }

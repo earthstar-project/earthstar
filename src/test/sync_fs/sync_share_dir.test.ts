@@ -682,7 +682,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "sub", "to-delete"));
       },
-      EarthstarError,
+      Deno.errors.NotFound,
       undefined,
       "stat /sub/to-delete",
     );
@@ -691,7 +691,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "sub"));
       },
-      EarthstarError,
+      Deno.errors.NotFound,
       undefined,
       `stat /sub/ dir`,
     );
@@ -700,7 +700,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "sub2", "to-delete"));
       },
-      EarthstarError,
+      Deno.errors.NotFound,
       undefined,
       "stat /sub2/to-delete",
     );
@@ -711,7 +711,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "delete.txt"));
       },
-      EarthstarError,
+      Deno.errors.NotFound,
       undefined,
       "stat delete.txt",
     );
@@ -759,7 +759,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "message.txt"));
       },
-      EarthstarError,
+      Deno.errors.NotFound,
       undefined,
       "/message.txt is gone from the fs",
     );
@@ -848,7 +848,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.readTextFile(join(TEST_DIR, "!ephemeral"));
       },
-      EarthstarError,
+      Deno.errors.NotFound,
       undefined,
       "reading ephemeral doc which should have been deleted.",
     );
@@ -875,7 +875,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.readTextFile(join(TEST_DIR, "!ephemeral2"));
       },
-      EarthstarError,
+      Deno.errors.NotFound,
       undefined,
       "ephemeral doc defined on fs-side is gone",
     );
