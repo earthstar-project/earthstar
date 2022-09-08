@@ -1,15 +1,12 @@
-import { emptyDir, ensureDir } from "https://deno.land/std@0.132.0/fs/mod.ts";
-import { join } from "https://deno.land/std@0.132.0/path/mod.ts";
-import {
-  assert,
-  assertEquals,
-  assertNotEquals,
-} from "https://deno.land/std@0.132.0/testing/asserts.ts";
+import { emptyDir } from "https://deno.land/std@0.154.0/fs/empty_dir.ts";
+import { ensureDir } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
+import { join } from "https://deno.land/std@0.154.0/path/mod.ts";
 import { MANIFEST_FILE_NAME } from "../../sync-fs/constants.ts";
 import { reconcileManifestWithDirContents } from "../../sync-fs/sync-fs.ts";
 import { FileInfoEntry, SyncFsManifest } from "../../sync-fs/sync-fs-types.ts";
 import { isAbsenceEntry } from "../../sync-fs/util.ts";
 import { Crypto } from "../../crypto/crypto.ts";
+import { assert, assertEquals, assertNotEquals } from "../asserts.ts";
 
 const TEST_DIR = "src/test/fs-sync/dirs/reconcile_manifest";
 const TEST_SHARE = "+test.a123";

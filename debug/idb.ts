@@ -1,9 +1,9 @@
-import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
 import { IDBDatabase } from "https://deno.land/x/indexeddb@v1.1.0/lib/indexeddb.ts";
 import {
   IDBKeyRange,
   indexedDB,
 } from "https://deno.land/x/indexeddb@v1.1.0/ponyfill_memory.ts";
+import { deferred } from "../deps.ts";
 
 // setup
 

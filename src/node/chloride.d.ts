@@ -1,4 +1,4 @@
-import { type Buffer } from "https://deno.land/std@0.122.0/node/buffer.ts";
+import { type Buffer } from "https://deno.land/std@0.154.0/node/buffer.ts";
 
 export interface KeyPair {
   publicKey: Buffer;

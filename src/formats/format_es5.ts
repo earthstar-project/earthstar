@@ -95,7 +95,7 @@ export interface DocInputEs5 extends DocInputBase<"es.5"> {
   text?: string;
 
   /** Data as Uint8Array or ReadableStream, to be used as document's associated attachment. */
-  attachment?: Uint8Array | ReadableStream;
+  attachment?: Uint8Array | ReadableStream<Uint8Array>;
 
   /** A UNIX timestamp in microseconds indicating when the document was written. Determined automatically if omitted. */
   timestamp?: number;

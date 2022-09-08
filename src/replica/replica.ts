@@ -53,7 +53,7 @@ import {
 } from "../formats/util.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { deferred } from "../../deps.ts";
 
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");

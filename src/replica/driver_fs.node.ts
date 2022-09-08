@@ -1,8 +1,11 @@
-import { join } from "https://deno.land/std@0.154.0/path/mod.ts";
-import { ensureDirSync } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
+import { join } from "https://deno.land/std@0.154.0/node/path.ts";
+import {
+  existsSync,
+  mkdirSync,
+} from "https://deno.land/std@0.154.0/node/fs.ts";
 import { ShareAddress } from "../util/doc-types.ts";
-import { AttachmentDriverFilesystem } from "./attachment_drivers/filesystem.ts";
-import { DocDriverSqlite } from "./doc_drivers/sqlite.deno.ts";
+import { AttachmentDriverFilesystem } from "./attachment_drivers/filesystem.node.ts";
+import { DocDriverSqlite } from "./doc_drivers/sqlite.node.ts";
 import {
   IReplicaAttachmentDriver,
   IReplicaDocDriver,
@@ -14,7 +17,9 @@ export class ReplicaDriverFs implements IReplicaDriver {
   attachmentDriver: IReplicaAttachmentDriver;
 
   constructor(shareAddress: ShareAddress, dirPath: string) {
-    ensureDirSync(dirPath);
+    if (!existsSync(dirPath)) {
+      mkdirSync(dirPath);
+    }
 
     this.docDriver = new DocDriverSqlite({
       filename: join(dirPath, `${shareAddress}.sql`),

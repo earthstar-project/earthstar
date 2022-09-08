@@ -1,6 +1,8 @@
 import {
   assert,
   assertEquals,
+  assertExists,
+  assertNotStrictEquals,
   assertStrictEquals,
   assertThrows,
 } from "../asserts.ts";
@@ -12,7 +14,6 @@ import { ReplicaCache } from "../../replica/replica-cache.ts";
 import { ReplicaCacheIsClosedError } from "../../util/errors.ts";
 import { throws } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
-import { LogLevel, setLogLevel } from "../../util/log.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 
@@ -62,7 +63,7 @@ Deno.test("ReplicaCache", async () => {
 
   assertEquals(values.allDocs, [], "Cache for allDocs is empty");
   assertEquals(values.latestDocs, [], "Cache for latestDocs is empty");
-  assertStrictEquals(
+  assertEquals(
     values.orangesDoc,
     undefined,
     "latestDocAtPath result is undefined",

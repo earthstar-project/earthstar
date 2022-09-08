@@ -16,7 +16,6 @@ import {
 } from "./scenarios.universal.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { IPeer } from "../../peer/peer-types.ts";
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { serve } from "https://deno.land/std@0.129.0/http/server.ts";
 import { DocDriverSqlite } from "../../replica/doc_drivers/sqlite.deno.ts";
 import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/filesystem.ts";
@@ -27,6 +26,7 @@ import { FormatsArg } from "../../formats/format_types.ts";
 import "https://deno.land/x/indexeddb@1.3.5/polyfill_memory.ts";
 import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/indexeddb.ts";
 import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
+import { deferred } from "../../../deps.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,

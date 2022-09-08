@@ -1,9 +1,8 @@
 import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { HaveEntry, HaveEntryKeeperMode } from "./syncer_types.ts";
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { AuthorAddress, DocBase, Path, Timestamp } from "../util/doc-types.ts";
-import { xxHash32 } from "../../deps.ts";
+import { deferred, xxHash32 } from "../../deps.ts";
 
 function internalEntryToHaveEntry(id: string, entry: {
   path: string;

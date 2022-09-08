@@ -1,4 +1,8 @@
-import { equal, fast_json_stable_stringify as stringify } from "../../deps.ts";
+import {
+  fast_json_stable_stringify as stringify,
+  shallowEqualArrays,
+  shallowEqualObjects,
+} from "../../deps.ts";
 import {
   AuthorAddress,
   AuthorKeypair,
@@ -259,7 +263,7 @@ export class ReplicaCache {
 
           // Return early if the new result is the same as the cached result.
           // (The sets of localIndexes should be identical if they're the same)
-          if (equal(localIndexes, cacheLocalIndexes)) {
+          if (shallowEqualArrays(localIndexes, cacheLocalIndexes)) {
             return;
           }
 
@@ -475,7 +479,7 @@ export class ReplicaCache {
 
     // If the doc's author or content has changed.
     const docIsDifferent = doc.author !== latestDoc?.author ||
-      !equal(doc, latestDoc);
+      !shallowEqualObjects(doc, latestDoc);
 
     const docIsLater = doc.timestamp > latestDoc.timestamp;
 

@@ -9,10 +9,10 @@ import { randomId } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { AttachmentStreamInfo } from "../../util/attachment_stream_info.ts";
 import { walk } from "https://esm.sh/@nodelib/fs.walk@1.2.8";
-import * as fs from "https://deno.land/std@0.152.0/node/fs/promises.ts";
-import * as path from "https://deno.land/std@0.152.0/node/path.ts";
+import * as fs from "https://deno.land/std@0.154.0/node/fs/promises.ts";
+import * as path from "https://deno.land/std@0.154.0/node/path.ts";
 import { bufferToBytes } from "../../util/buffers.ts";
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { deferred } from "../../../deps.ts";
 
 /** An attachment driver which persists attachments using the local filesystem.
  * Works with Deno and Node.

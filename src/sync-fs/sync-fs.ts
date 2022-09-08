@@ -1,11 +1,11 @@
-import { walk } from "https://deno.land/std@0.132.0/fs/mod.ts";
+import { walk } from "https://deno.land/std@0.154.0/fs/walk.ts";
 import {
   dirname,
   extname,
   join,
   relative,
   resolve,
-} from "https://deno.land/std@0.132.0/path/mod.ts";
+} from "https://deno.land/std@0.154.0/path/mod.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
 import { IGNORED_FILES, MANIFEST_FILE_NAME } from "./constants.ts";

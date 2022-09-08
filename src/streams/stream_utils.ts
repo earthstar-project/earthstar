@@ -1,4 +1,4 @@
-import { deferred } from "https://deno.land/std@0.138.0/async/deferred.ts";
+import { deferred } from "../../deps.ts";
 
 export class CombineStream<T> {
   private closed = false;
@@ -42,10 +42,10 @@ export class CombineStream<T> {
     this.checkClosed();
 
     for (const writableStream of this.writables) {
-      await writableStream.close();
+      await writableStream.abort();
     }
 
-    this.transform.writable.close();
+    this.transform.writable.abort();
 
     this.closed = true;
   }
@@ -77,7 +77,7 @@ export class CloneMidStream<ChunkType> {
   private closed = false;
 
   private subscribers: {
-    transform: TransformStream<ChunkType>;
+    transform: TransformStream<ChunkType, ChunkType>;
     writer: WritableStreamDefaultWriter<ChunkType>;
   }[] = [];
 
@@ -130,11 +130,11 @@ export class CloneMidStream<ChunkType> {
     this.checkClosed();
 
     for (const writableStream of this.writables) {
-      await writableStream.close();
+      await writableStream.abort();
     }
 
     for (const { transform } of this.subscribers) {
-      await transform.writable.close();
+      await transform.writable.abort();
       await transform.readable.cancel();
     }
 
@@ -270,7 +270,7 @@ export class LockStream {
   async close() {
     this.checkClosed();
 
-    await this.writable.close();
+    await this.writable.abort();
 
     this.closed = true;
   }

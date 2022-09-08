@@ -1,10 +1,6 @@
-import { emptyDir, ensureDir } from "https://deno.land/std@0.132.0/fs/mod.ts";
-import { join } from "https://deno.land/std@0.132.0/path/mod.ts";
-import {
-  assert,
-  assertEquals,
-  assertRejects,
-} from "https://deno.land/std@0.132.0/testing/asserts.ts";
+import { emptyDir } from "https://deno.land/std@0.154.0/fs/empty_dir.ts";
+import { ensureDir } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
+import { join } from "https://deno.land/std@0.154.0/path/mod.ts";
 import { MANIFEST_FILE_NAME } from "../../sync-fs/constants.ts";
 import { syncReplicaAndFsDir } from "../../sync-fs/sync-fs.ts";
 import { SyncFsManifest } from "../../sync-fs/sync-fs-types.ts";
@@ -15,7 +11,8 @@ import { Replica } from "../../replica/replica.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { sleep } from "../../util/misc.ts";
-import { isErr } from "../../util/errors.ts";
+import { EarthstarError, isErr } from "../../util/errors.ts";
+import { assert, assertEquals, assertRejects } from "../asserts.ts";
 
 const TEST_DIR = "src/test/fs-sync/dirs/sync_share_dir";
 const TEST_SHARE = "+test.a123";
@@ -56,7 +53,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica: replica,
         });
       },
-      undefined,
+      EarthstarError,
       "Tried to sync a directory for the first time, but it was not empty.",
       "throws on trying to sync dirty folder without a manifest",
     );
@@ -99,7 +96,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica: otherReplica,
         });
       },
-      undefined,
+      EarthstarError,
       "Tried to sync a replica for",
       "throws when trying to sync with a folder which had been synced with another share",
     );
@@ -151,7 +148,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica: replica,
         });
       },
-      undefined,
+      EarthstarError,
       `author ${keypairA.address} can't write to path`,
       "trying to write a file at someone else's own path",
     );
@@ -237,7 +234,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica: replica3,
         });
       },
-      undefined,
+      EarthstarError,
       `author ${keypairA.address} can't write to path`,
       "trying to write a file at someone else's own path",
     );
@@ -269,7 +266,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica,
         });
       },
-      undefined,
+      EarthstarError,
       `author ${keypairA.address} can't write to path`,
       "trying to modify a file at someone's else's owned path",
     );
@@ -306,7 +303,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica,
         });
       },
-      undefined,
+      EarthstarError,
       `author ${keypairA.address} can't write to path`,
       "trying to delete a file at someone's else's owned path",
     );
@@ -364,7 +361,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica,
         });
       },
-      undefined,
+      EarthstarError,
       `author ${keypairA.address} can't write to path`,
       "throws when trying to delete a file at someone's else's own path",
     );
@@ -396,7 +393,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica,
         });
       },
-      undefined,
+      EarthstarError,
       `author ${keypairA.address} can't write to path`,
       "trying to delete a file at someone's else's owned path",
     );
@@ -426,7 +423,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica,
         });
       },
-      undefined,
+      EarthstarError,
       `invalid path`,
       "throws when trying to write an invalid path",
     );
@@ -451,7 +448,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica,
         });
       },
-      undefined,
+      EarthstarError,
       `invalid path`,
       "throws when trying to write an invalid path (attachment variant)",
     );
@@ -479,7 +476,7 @@ Deno.test("syncShareAndDir", async (test) => {
           replica,
         });
       },
-      undefined,
+      EarthstarError,
       `File too big for the es.5 format's text field`,
       "throws because big.jpg is too big",
     );
@@ -676,7 +673,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "to-delete"));
       },
-      undefined,
+      Deno.errors.NotFound,
       undefined,
       "stat /to-delete",
     );
@@ -685,7 +682,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "sub", "to-delete"));
       },
-      undefined,
+      EarthstarError,
       undefined,
       "stat /sub/to-delete",
     );
@@ -694,7 +691,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "sub"));
       },
-      undefined,
+      EarthstarError,
       undefined,
       `stat /sub/ dir`,
     );
@@ -703,7 +700,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "sub2", "to-delete"));
       },
-      undefined,
+      EarthstarError,
       undefined,
       "stat /sub2/to-delete",
     );
@@ -714,7 +711,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "delete.txt"));
       },
-      undefined,
+      EarthstarError,
       undefined,
       "stat delete.txt",
     );
@@ -753,7 +750,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "to-delete"));
       },
-      undefined,
+      Deno.errors.NotFound,
       undefined,
       "/to-delete is gone from the fs",
     );
@@ -762,7 +759,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.stat(join(TEST_DIR, "message.txt"));
       },
-      undefined,
+      EarthstarError,
       undefined,
       "/message.txt is gone from the fs",
     );
@@ -851,7 +848,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.readTextFile(join(TEST_DIR, "!ephemeral"));
       },
-      undefined,
+      EarthstarError,
       undefined,
       "reading ephemeral doc which should have been deleted.",
     );
@@ -878,7 +875,7 @@ Deno.test("syncShareAndDir", async (test) => {
       () => {
         return Deno.readTextFile(join(TEST_DIR, "!ephemeral2"));
       },
-      undefined,
+      EarthstarError,
       undefined,
       "ephemeral doc defined on fs-side is gone",
     );

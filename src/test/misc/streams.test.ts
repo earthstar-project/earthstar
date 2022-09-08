@@ -15,7 +15,7 @@ import {
 import { assert, assertEquals } from "../asserts.ts";
 
 function makeNumberStream(startFrom: number) {
-  return new ReadableStream({
+  return new ReadableStream<number>({
     start(controller) {
       for (let i = startFrom; i < startFrom + 10; i++) {
         controller.enqueue(i);
@@ -26,8 +26,11 @@ function makeNumberStream(startFrom: number) {
   });
 }
 
-function makeEventStream(key: string, startFrom: number) {
-  return new ReadableStream({
+type TestChannel = "fromZero" | "fromHundred" | "fromThousand";
+type TestEvent = { channel: TestChannel; value: number };
+
+function makeEventStream(key: TestChannel, startFrom: number) {
+  return new ReadableStream<TestEvent>({
     start(controller) {
       for (let i = startFrom; i < startFrom + 10; i++) {
         controller.enqueue({
@@ -181,9 +184,6 @@ Deno.test("ChannelMultiStream", async () => {
   const stream0 = makeEventStream("fromZero", 0);
   const stream100 = makeEventStream("fromHundred", 100);
   const stream1000 = makeEventStream("fromThousand", 1000);
-
-  type TestEvent = { channel: TestChannel; value: number };
-  type TestChannel = "fromZero" | "fromHundred" | "fromThousand";
 
   const outgoingStreams: ReadableStream<TestEvent>[] = [
     stream0,

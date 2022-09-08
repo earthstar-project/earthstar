@@ -9,9 +9,9 @@ import {
   extname,
   join,
   resolve,
-} from "https://deno.land/std@0.132.0/path/mod.ts";
+} from "https://deno.land/std@0.154.0/path/mod.ts";
 
-import { ensureDir } from "https://deno.land/std@0.132.0/fs/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
 import { AuthorKeypair } from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { DocEs5 } from "../formats/format_es5.ts";
