@@ -594,8 +594,12 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   static getAttachmentInfo(
     doc: DocEs5,
   ): { size: number; hash: string } | ValidationError {
+    if (doc.attachmentHash && doc.attachmentSize === 0) {
+      return new ValidationError("This document has had its attachment wiped");
+    }
+
     if (!doc.attachmentHash || !doc.attachmentSize) {
-      return new ValidationError("This document has no attachment");
+      return new ValidationError("This document has no attachment.");
     }
 
     return {
