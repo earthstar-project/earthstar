@@ -28,7 +28,7 @@ export * from "../query/query-helpers.ts";
 
 export * from "../replica/compare.ts";
 export * from "../replica/replica.ts";
-export * from "../replica/replica-cache.ts";
+export * from "../replica/replica_cache.ts";
 export * from "../replica/replica-types.ts";
 export * from "../replica/util-types.ts";
 export * from "../replica/doc_drivers/memory.ts";
