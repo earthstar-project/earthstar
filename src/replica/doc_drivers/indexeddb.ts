@@ -3,7 +3,6 @@ import { ShareAddress } from "../../util/doc-types.ts";
 //--------------------------------------------------
 
 import { Logger } from "../../util/log.ts";
-import { deferred } from "https://deno.land/std@0.150.0/async/deferred.ts";
 import {
   EarthstarError,
   isErr,
@@ -18,6 +17,7 @@ import { Cmp } from "../util-types.ts";
 import { compareArrays, compareByObjKey } from "../compare.ts";
 import { checkShareIsValid } from "../../core-validators/addresses.ts";
 import { sleep } from "../../util/misc.ts";
+import { deferred } from "../../../deps.ts";
 const logger = new Logger("replica driver indexeddb", "gold");
 
 function docComparePathASCthenNewestFirst<DocType extends DocBase<string>>(
@@ -253,7 +253,7 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
       const index = docStore.index("pathTimestampIndex");
 
       // Get the last result (which will be the one with the highest timestamp)
-      const getCursor = index.openCursor(range);
+      const getCursor = index.openCursor(range, "prev");
 
       getCursor.onsuccess = () => {
         if (getCursor.result?.value) {
