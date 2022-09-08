@@ -612,6 +612,47 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
   );
 
   Deno.test(
+    `${SUBTEST_NAME}: filtering out expired docs`,
+    async (test) => {
+      const share = "+gardening.abcde";
+      const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
+
+      const now = Date.now() * 1000;
+
+      await test.step({
+        name: "inserting expiring doc and checking presence",
+        fn: async () => {
+          const expiredDoc0: DocEs4 = {
+            format: "es.4",
+            author:
+              "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
+            content: "Hello 0",
+            contentHash:
+              "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+            deleteAfter: now + 1000,
+            path: "/posts/!post-0000.txt",
+            timestamp: now,
+            workspace: "+gardening.abc",
+            signature: "whatever0", // upsert does not check signature or validate doc
+          };
+
+          await driver.upsert(expiredDoc0);
+
+          await sleep(100);
+
+          const allDocs = await driver.queryDocs({ "historyMode": "all" });
+
+          assertEquals(allDocs, []);
+        },
+        sanitizeOps: false,
+        sanitizeResources: false,
+      });
+
+      await driver.close(true);
+    },
+  );
+
+  Deno.test(
     `${SUBTEST_NAME}: erasing expired docs`,
     async (test) => {
       const initialCryptoDriver = GlobalCryptoDriver;

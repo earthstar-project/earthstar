@@ -199,6 +199,8 @@ export class DocDriverMemory implements IReplicaDocDriver {
     const filteredDocs: DocBase<string>[] = [];
     logger.debug(`    filtering docs`);
 
+    const microNow = Date.now() * 1000;
+
     for (const doc of docs) {
       // skip ahead until we reach startAfter
       if (query.orderBy === "path ASC") {
@@ -244,6 +246,10 @@ export class DocDriverMemory implements IReplicaDocDriver {
           }
           // doc.path is now < startAfter.localIndex (we're descending)
         }
+      }
+
+      if (doc.deleteAfter && doc.deleteAfter < microNow) {
+        continue;
       }
 
       // apply filter: skip docs that don't match

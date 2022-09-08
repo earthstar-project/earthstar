@@ -340,55 +340,12 @@ export class DocDriverIndexedDB implements IReplicaDocDriver {
     logger.debug(`    filtering docs`);
 
     // Filter.
+    const now = Date.now() * 1000;
+
     for (const doc of docs) {
-      // I think we might not need this here.
-      // skip ahead until we reach startAfter
-      /*
-      if (query.orderBy === "path ASC") {
-        if (query.startAfter !== undefined) {
-          if (
-            query.startAfter.path !== undefined &&
-            doc.path <= query.startAfter.path
-          ) {
-            continue;
-          }
-          // doc.path is now > startAfter.path
-        }
+      if (doc.deleteAfter && doc.deleteAfter < now) {
+        continue;
       }
-      if (query.orderBy === "path DESC") {
-        if (query.startAfter !== undefined) {
-          if (
-            query.startAfter.path !== undefined &&
-            doc.path >= query.startAfter.path
-          ) {
-            continue;
-          }
-          // doc.path is now < startAfter.path (we're descending)
-        }
-      }
-      if (query.orderBy === "localIndex ASC") {
-        if (query.startAfter !== undefined) {
-          if (
-            query.startAfter.localIndex !== undefined &&
-            (doc._localIndex ?? 0) <= query.startAfter.localIndex
-          ) {
-            continue;
-          }
-          // doc.path is now > startAfter.localIndex
-        }
-      }
-      if (query.orderBy === "localIndex DESC") {
-        if (query.startAfter !== undefined) {
-          if (
-            query.startAfter.localIndex !== undefined &&
-            (doc._localIndex ?? 0) >= query.startAfter.localIndex
-          ) {
-            continue;
-          }
-          // doc.path is now < startAfter.localIndex (we're descending)
-        }
-      }
-      */
 
       // apply filter: skip docs that don't match
       if (query.filter && !docMatchesFilter(doc, query.filter)) continue;
