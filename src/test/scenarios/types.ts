@@ -56,7 +56,8 @@ export type FormatScenario<
   N extends FormatName,
   I extends DocInputBase<N>,
   O extends DocBase<N>,
-  F extends IFormat<N, I, O>,
+  C,
+  F extends IFormat<N, I, O, C>,
 > = {
   format: F;
   makeInputDoc: () => I;

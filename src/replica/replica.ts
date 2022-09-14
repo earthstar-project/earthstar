@@ -1,7 +1,6 @@
 import { Cmp } from "./util-types.ts";
 import {
   AuthorAddress,
-  AuthorKeypair,
   DocAttachment,
   DocBase,
   DocWithAttachment,
@@ -41,6 +40,7 @@ import {
   DefaultFormat,
   DefaultFormats,
   FormatArg,
+  FormatCredentialsType,
   FormatDocType,
   FormatInputType,
   FormatsArg,
@@ -50,6 +50,7 @@ import {
   DEFAULT_FORMATS,
   getFormatLookup,
   getFormatsWithFallback,
+  getFormatWithFallback,
 } from "../formats/util.ts";
 
 import { docMatchesFilter } from "../query/query.ts";
@@ -323,7 +324,7 @@ export class Replica {
   // The Input type should match the formatter.
   // The default format should be es5
   async set<F = DefaultFormat>(
-    keypair: AuthorKeypair,
+    credentials: FormatCredentialsType<F>,
     docToSet: Omit<FormatInputType<F>, "format">,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<
@@ -367,7 +368,7 @@ export class Replica {
     }
 
     const result = await format.generateDocument({
-      keypair,
+      credentials,
       input: { ...docToSet, format: format.id },
       share: this.share,
       timestamp,
@@ -403,7 +404,8 @@ export class Replica {
       }
 
       // Update the document's attachment fields using the results derived from staging.
-      const updatedDocRes = format.updateAttachmentFields(
+      const updatedDocRes = await format.updateAttachmentFields(
+        credentials,
         result.doc,
         stageResult.size,
         stageResult.hash,
@@ -492,7 +494,7 @@ export class Replica {
       loggerIngest.debug(`...extra fields found: ${J(extraFields)}`);
     }
 
-    const docIsValid = format.checkDocumentIsValid(docToIngest);
+    const docIsValid = await format.checkDocumentIsValid(docToIngest);
 
     if (isErr(docIsValid)) {
       return {
@@ -631,39 +633,33 @@ export class Replica {
    * Overwrite every document from this author, including history versions, with an empty doc.
     @returns The number of documents changed, or -1 if there was an error.
    */
-  async overwriteAllDocsByAuthor<F = DefaultFormats>(
-    keypair: AuthorKeypair,
-    formats?: FormatsArg<F>,
+  async overwriteAllDocsByAuthor<F = DefaultFormat>(
+    credentials: FormatCredentialsType<F>,
+    format?: FormatArg<F>,
   ): Promise<number | ValidationError> {
-    logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
+    const f = getFormatWithFallback(format);
+
+    const authorAddress = f.authorFromCredentials(credentials);
+
+    logger.debug(`overwriteAllDocsByAuthor("${authorAddress}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     // TODO: stream the docs out, overwrite them.
     const docsToOverwrite = await this.queryDocs({
-      filter: { author: keypair.address },
+      filter: { author: authorAddress },
       historyMode: "all",
-    }, formats);
+    }, [f]);
     logger.debug(
       `    ...found ${docsToOverwrite.length} docs to overwrite`,
     );
     let numOverwritten = 0;
     let numAlreadyEmpty = 0;
 
-    const f = getFormatsWithFallback(formats);
-
-    const formatLookup: Record<string, FormatArg<F>> = {};
-
-    for (const format of f) {
-      formatLookup[format.id] = format as typeof formatLookup[string];
-    }
-
-    for (const doc of docsToOverwrite) {
-      const format = formatLookup[doc.format];
-
-      if (!format) {
-        continue;
-      }
-
-      const didWipe = await this.wipeDocument(keypair, doc, format);
+    for (const doc of docsToOverwrite as FormatDocType<F>[]) {
+      const didWipe = await this.wipeDocument(
+        credentials,
+        doc,
+        getFormatWithFallback(format),
+      );
 
       if (isErr(didWipe)) {
         return didWipe;
@@ -680,7 +676,7 @@ export class Replica {
 
   /** Wipe all content from a document at a given path, and erase its attachment (if it has one). */
   async wipeDocAtPath<F = DefaultFormat>(
-    keypair: AuthorKeypair,
+    credentials: FormatCredentialsType<F>,
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<IngestEvent<FormatDocType<F>> | ValidationError> {
@@ -691,44 +687,26 @@ export class Replica {
     }
 
     return this.wipeDocument(
-      keypair,
+      credentials,
       latestDocAtPath as FormatDocType<F>,
       format,
     );
   }
 
   private async wipeDocument<F>(
-    keypair: AuthorKeypair,
+    credentials: FormatCredentialsType<F>,
     doc: FormatDocType<F>,
     format: FormatArg<F>,
   ): Promise<IngestEvent<FormatDocType<F>>> {
-    // Check if this document has an attachment by tring to get attachment info.
-    const attachmentInfo = format.getAttachmentInfo(doc);
-
-    if (!isErr(attachmentInfo)) {
-      // Wipe the attachment.
-      // Ignore error indicating no attachment was found.
-      const eraseRes = await this.replicaDriver.attachmentDriver.erase(
-        format.id,
-        attachmentInfo.hash,
-      );
-
-      if (!isErr(eraseRes)) {
-        await this.eventWriter.write({
-          kind: "attachment_prune",
-          format: format.id,
-          hash: attachmentInfo.hash,
-        });
-      }
-    }
+    const author = format.authorFromCredentials(credentials);
 
     const docToWipe: FormatDocType<F> = {
       ...doc,
       timestamp: Math.max(doc.timestamp + 1, Date.now() * 1000),
-      author: keypair.address,
+      author,
     };
 
-    const wipedDoc = await format.wipeDocument(keypair, docToWipe);
+    const wipedDoc = await format.wipeDocument(credentials, docToWipe);
 
     if (isErr(wipedDoc)) {
       return {
@@ -742,6 +720,28 @@ export class Replica {
       format,
       wipedDoc as FormatDocType<F>,
     );
+
+    if (didIngest.kind === "success") {
+      // Check if this document has an attachment by tring to get attachment info.
+      const attachmentInfo = format.getAttachmentInfo(doc);
+
+      if (!isErr(attachmentInfo)) {
+        // Wipe the attachment.
+        // Ignore error indicating no attachment was found.
+        const eraseRes = await this.replicaDriver.attachmentDriver.erase(
+          format.id,
+          attachmentInfo.hash,
+        );
+
+        if (!isErr(eraseRes)) {
+          await this.eventWriter.write({
+            kind: "attachment_prune",
+            format: format.id,
+            hash: attachmentInfo.hash,
+          });
+        }
+      }
+    }
 
     return didIngest;
   }
@@ -914,7 +914,7 @@ export class Replica {
     doc = removeResultsOrErr.doc as FormatDocType<F>; // a copy of doc without extra fields
 
     // check doc is valid
-    const docIsValid = format.checkDocumentIsValid(doc);
+    const docIsValid = await format.checkDocumentIsValid(doc);
 
     if (isErr(docIsValid)) {
       return Promise.resolve(docIsValid);

@@ -1,14 +1,10 @@
 import { assert, equal } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
-import {
-  AuthorKeypair,
-  DocBase,
-  DocWithAttachment,
-} from "../util/doc-types.ts";
+import { DocBase, DocWithAttachment } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 
-import { DocEs5 } from "../formats/format_es5.ts";
+import { DocEs5, Es5Credentials } from "../formats/format_es5.ts";
 import { AttachmentDriverMemory } from "../replica/attachment_drivers/memory.ts";
 import { isErr } from "../util/errors.ts";
 
@@ -157,7 +153,7 @@ export async function docAttachmentsAreEquivalent(
 }
 
 export function writeRandomDocs(
-  keypair: AuthorKeypair,
+  credentials: Es5Credentials,
   storage: Replica,
   n: number,
 ) {
@@ -170,7 +166,7 @@ export function writeRandomDocs(
       new Uint8Array((Math.random() + 0.1) * 32 * 32 * 32),
     );
 
-    return storage.set(keypair, {
+    return storage.set(credentials, {
       text: `${rand}`,
       path: `/${fstRand}/${rand}.txt`,
       attachment: bytes,

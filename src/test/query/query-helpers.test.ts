@@ -3,7 +3,7 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { Query } from "../../query/query-types.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ValidationError } from "../../util/errors.ts";
-import { AuthorKeypair, ShareAddress } from "../../util/doc-types.ts";
+import { ShareAddress } from "../../util/doc-types.ts";
 import { microsecondNow } from "../../util/misc.ts";
 
 //================================================================================
@@ -29,6 +29,7 @@ import { DocDriverScenario, Scenario } from "../scenarios/types.ts";
 import { docDriverScenarios } from "../scenarios/scenarios.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { AuthorKeypair } from "../../crypto/crypto-types.ts";
 
 let runQueryHelpersTests = async (
   scenario: Scenario<DocDriverScenario>,

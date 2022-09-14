@@ -1,5 +1,5 @@
+import { Es5Credentials } from "../formats/format_es5.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair } from "../util/doc-types.ts";
 
 /**
  * Options for syncing a replica with a filesystem directory.
@@ -11,7 +11,7 @@ import { AuthorKeypair } from "../util/doc-types.ts";
 export type SyncFsOptions = {
   dirPath: string;
   replica: Replica;
-  keypair: AuthorKeypair;
+  credentials: Es5Credentials;
   allowDirtyDirWithoutManifest: boolean;
   overwriteFilesAtOwnedPaths?: boolean;
 };

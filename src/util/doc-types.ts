@@ -20,12 +20,6 @@ export type LocalIndex = number;
 export type Base32String = string;
 export type FormatName = string;
 
-/** An identity used to sign documents. */
-export interface AuthorKeypair {
-  address: AuthorAddress;
-  secret: string;
-}
-
 export type ParsedAddress = {
   address: AuthorAddress;
   name: AuthorShortname;

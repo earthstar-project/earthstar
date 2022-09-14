@@ -41,7 +41,7 @@ export function assembleShareAddress(
 export function checkAuthorIsValid(
   addr: AuthorAddress,
 ): true | ValidationError {
-  let parsed = parseAuthorAddress(addr);
+  const parsed = parseAuthorAddress(addr);
   if (notErr(parsed)) return true;
   return parsed;
 }
@@ -50,9 +50,22 @@ export function checkAuthorIsValid(
 export function checkShareIsValid(
   addr: ShareAddress,
 ): true | ValidationError {
-  let parsed = parseShareAddress(addr);
+  const parsed = parseShareAddress(addr);
   if (notErr(parsed)) return true;
   return parsed;
+}
+
+/** Parse a share or author address into its parts */
+export function parseAuthorOrShareAddress(
+  address: AuthorAddress | ShareAddress,
+): ParsedAddress | ValidationError {
+  if (address.startsWith("@")) {
+    return parseAuthorAddress(address);
+  } else if (address.startsWith("+")) {
+    return parseShareAddress(address);
+  }
+
+  return new ValidationError("address must start with either @ or +");
 }
 
 /** Parse an author address into its parts. */
@@ -104,7 +117,7 @@ export function parseAddress(
   address: string,
   opts: ParseAddressOpts,
 ): ParsedAddress | ValidationError {
-  let {
+  const {
     sigil,
     separator,
     minNameLength,
@@ -129,13 +142,13 @@ export function parseAddress(
       `address must contain a separator character: "${separator}"`,
     );
   }
-  let parts = address.slice(1).split(separator);
+  const parts = address.slice(1).split(separator);
   if (parts.length !== 2) {
     return new ValidationError(
       `address must have exactly 2 parts separated by a "${separator}" separator`,
     );
   }
-  let [name, pubkey] = parts;
+  const [name, pubkey] = parts;
   if (name.length < minNameLength || name.length > maxNameLength) {
     return new ValidationError(
       `name must be between ${minNameLength} and ${maxNameLength} characters long, but is ${name.length}`,

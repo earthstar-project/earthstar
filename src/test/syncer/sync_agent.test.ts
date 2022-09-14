@@ -1,4 +1,5 @@
 import { deferred } from "../../../deps.ts";
+import { AuthorKeypair } from "../../crypto/crypto-types.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
@@ -11,7 +12,7 @@ import {
 } from "../../syncer/syncer_types.ts";
 import { SyncAgent } from "../../syncer/sync_agent.ts";
 import { TransferManager } from "../../syncer/transfer_manager.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
+
 import { sleep } from "../../util/misc.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { docDriverScenarios } from "../scenarios/scenarios.ts";
@@ -214,12 +215,12 @@ class SyncAgentTestHelper {
   }
 }
 
-function generateDoc(keypair: AuthorKeypair, input: {
+function generateDoc(credentials: AuthorKeypair, input: {
   path: string;
   content: string;
 }) {
   return FormatEs4.generateDocument({
-    keypair,
+    credentials,
     share: SHARE_ADDR,
     input: {
       format: "es.4",
@@ -280,7 +281,7 @@ for (const scenario of scenarios) {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
     const { doc: commonDoc } = await FormatEs4.generateDocument({
-      keypair,
+      credentials: keypair,
       share: SHARE_ADDR,
       input: {
         format: "es.4",

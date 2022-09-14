@@ -242,7 +242,7 @@ export async function syncReplicaAndFsDir(
 
       // New change is valid
       const result = await FormatEs5.generateDocument({
-        keypair: opts.keypair,
+        credentials: opts.credentials,
         share: opts.replica.share,
         timestamp: Date.now() * 1000,
         input: {
@@ -257,14 +257,15 @@ export async function syncReplicaAndFsDir(
       } else {
         let docToValidate = result.doc;
         if (isAttachmentPath) {
-          docToValidate = FormatEs5.updateAttachmentFields(
+          docToValidate = await FormatEs5.updateAttachmentFields(
+            opts.credentials,
             result.doc,
             0,
-            "bwxkuyopgmzy4s4y3t5dr4wc5qjrm2t2usy7qzeyifwg46m2njr4a",
+            "b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq",
           ) as DocEs5;
         }
 
-        const isValidDoc = FormatEs5.checkDocumentIsValid(docToValidate);
+        const isValidDoc = await FormatEs5.checkDocumentIsValid(docToValidate);
 
         if (isErr(isValidDoc) && !opts.overwriteFilesAtOwnedPaths) {
           errors.push(isValidDoc);
@@ -288,7 +289,7 @@ export async function syncReplicaAndFsDir(
       // New change is valid
 
       const result = await FormatEs5.generateDocument({
-        keypair: opts.keypair,
+        credentials: opts.credentials,
         share: opts.replica.share,
         timestamp: Date.now() * 1000,
         input: {
@@ -304,14 +305,15 @@ export async function syncReplicaAndFsDir(
         let docToValidate = result.doc;
 
         if (isAttachmentPath) {
-          docToValidate = FormatEs5.updateAttachmentFields(
+          docToValidate = await FormatEs5.updateAttachmentFields(
+            opts.credentials,
             result.doc,
             1,
             "bwxkuyopgmzy4s4y3t5dr4wc5qjrm2t2usy7qzeyifwg46m2njr4a",
           ) as DocEs5;
         }
 
-        const isValidDoc = FormatEs5.checkDocumentIsValid(docToValidate);
+        const isValidDoc = await FormatEs5.checkDocumentIsValid(docToValidate);
 
         if (isErr(isValidDoc)) {
           const cantWrite = isValidDoc.message.includes("can't write to path");
@@ -374,7 +376,12 @@ export async function syncReplicaAndFsDir(
       }
     }
 
-    await writeEntryToReplica(entry, opts.replica, opts.keypair, opts.dirPath);
+    await writeEntryToReplica(
+      entry,
+      opts.replica,
+      opts.credentials,
+      opts.dirPath,
+    );
   }
 
   const latestDocs = await opts.replica.getLatestDocs();

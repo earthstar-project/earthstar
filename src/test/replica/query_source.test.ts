@@ -1,22 +1,36 @@
+import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { DocEs5, FormatEs5 } from "../../formats/format_es5.ts";
+import { DocEs5 } from "../../formats/format_es5.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { QuerySourceEvent } from "../../replica/replica-types.ts";
 import { Replica } from "../../replica/replica.ts";
 import { CallbackSink } from "../../streams/stream_utils.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { readStream } from "../../util/streams.ts";
 import { assertEquals } from "../asserts.ts";
 
 Deno.test("QuerySource", async () => {
-  const SHARE_ADDR = "+test.a123";
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "test",
+  ) as ShareKeypair;
 
-  const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+  const SHARE_ADDR = shareKeypair.shareAddress;
+
+  const keypairA = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair(
     "suzy",
   ) as AuthorKeypair;
+
+  const credentialsA = {
+    shareSecret: shareKeypair.secret,
+    authorKeypair: keypairA,
+  };
+
+  const credentialsB = {
+    shareSecret: shareKeypair.secret,
+    authorKeypair: keypairB,
+  };
 
   const replica = new Replica(
     {
@@ -27,22 +41,22 @@ Deno.test("QuerySource", async () => {
     },
   );
 
-  await replica.set(keypair, {
+  await replica.set(credentialsA, {
     text: "a",
     path: "/wanted/1",
   });
 
-  await replica.set(keypair, {
+  await replica.set(credentialsA, {
     text: "b",
     path: "/wanted/2",
   });
 
-  await replica.set(keypairB, {
+  await replica.set(credentialsB, {
     text: "c",
     path: "/wanted/1",
   });
 
-  await replica.set(keypair, {
+  await replica.set(credentialsA, {
     text: "🐸",
     path: "/unwanted/1",
   });
@@ -95,7 +109,7 @@ Deno.test("QuerySource", async () => {
     "new",
   );
 
-  await replica.set(keypair, {
+  await replica.set(credentialsA, {
     text: "d",
     path: "/wanted/3",
   });

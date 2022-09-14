@@ -6,20 +6,35 @@ import { Replica } from "../../replica/replica.ts";
 
 import { HaveEntryKeeper } from "../../syncer/have_entry_keeper.ts";
 import { HaveEntry } from "../../syncer/syncer_types.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
+
 import { sleep } from "../../util/misc.ts";
 import { readStream } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { writeRandomDocs } from "../test-utils.ts";
 import { DocEs5, FormatEs5 } from "../../formats/format_es5.ts";
+import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 
 Deno.test("HaveEntryKeeper", async () => {
-  const SHARE_ADDR = "+test.a123";
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "test",
+  ) as ShareKeypair;
 
-  const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+  const SHARE_ADDR = shareKeypair.shareAddress;
+
+  const keypairA = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair(
     "suzy",
   ) as AuthorKeypair;
+
+  const credentialsA = {
+    shareSecret: shareKeypair.secret,
+    authorKeypair: keypairA,
+  };
+
+  const credentialsB = {
+    shareSecret: shareKeypair.secret,
+    authorKeypair: keypairB,
+  };
 
   const replica = new Replica(
     {
@@ -30,22 +45,22 @@ Deno.test("HaveEntryKeeper", async () => {
     },
   );
 
-  await replica.set(keypair, {
+  await replica.set(credentialsA, {
     path: "/shared_path",
     text: "Hello",
   });
 
-  await replica.set(keypairB, {
+  await replica.set(credentialsB, {
     path: "/shared_path",
     text: "Howdy",
   });
 
-  await replica.set(keypair, {
+  await replica.set(credentialsB, {
     path: "/another_path",
     text: "Greetings",
   });
 
-  await replica.set(keypairB, {
+  await replica.set(credentialsB, {
     path: "/yet_another_path",
     text: "Yo.",
   });
@@ -105,12 +120,12 @@ Deno.test("HaveEntryKeeper", async () => {
 
   const liveEntryStream = liveHaveKeeper.readable;
 
-  await replica.set(keypairB, {
+  await replica.set(credentialsB, {
     path: "/more_paths",
     text: "Hiiiii",
   });
 
-  await replica.set(keypairB, {
+  await replica.set(credentialsB, {
     path: "/another_path",
     text: "Hiiiii",
   });
@@ -160,11 +175,22 @@ Deno.test("HaveEntryKeeper", async () => {
 Deno.test({
   name: "HaveEntryKeeper hashes",
   fn: async () => {
-    const SHARE_ADDR = "+test.a123";
+    const shareKeypair = await Crypto.generateShareKeypair(
+      "test",
+    ) as ShareKeypair;
+
+    const SHARE_ADDR = shareKeypair.shareAddress;
+
+    const keypairA = await Crypto.generateAuthorKeypair(
+      "test",
+    ) as AuthorKeypair;
+
+    const credentialsA = {
+      shareSecret: shareKeypair.secret,
+      authorKeypair: keypairA,
+    };
 
     // Set up two replicas to have the same docs.
-
-    const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
     const replica = new Replica({
       driver: {
@@ -173,7 +199,7 @@ Deno.test({
       },
     });
 
-    await writeRandomDocs(keypair, replica, 1000);
+    await writeRandomDocs(credentialsA, replica, 1000);
 
     const otherReplica = new Replica({
       driver: {

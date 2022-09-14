@@ -6,13 +6,16 @@ import {
 } from "../asserts.ts";
 import { snowmanBytes, snowmanString } from "../test-utils.ts";
 
-import { AuthorKeypair } from "../../util/doc-types.ts";
-import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import {
+  AuthorKeypair,
+  ICryptoDriver,
+  ShareKeypair,
+} from "../../crypto/crypto-types.ts";
 import { isErr, ValidationError } from "../../util/errors.ts";
 
 import { stringToBytes } from "../../util/bytes.ts";
 import {
-  decodeAuthorKeypairToBytes,
+  decodeKeypairToBytes,
   encodeAuthorKeypairToStrings,
 } from "../../crypto/keypair.ts";
 import { Crypto } from "../../crypto/crypto.ts";
@@ -27,13 +30,13 @@ import { Scenario } from "../scenarios/types.ts";
 
 export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
   const { item: driver, name } = scenario;
-  let TEST_NAME = "crypto shared tests";
-  let SUBTEST_NAME = name;
+  const TEST_NAME = "crypto shared tests";
+  const SUBTEST_NAME = name;
 
   Deno.test(SUBTEST_NAME + ": sha256 of strings", async () => {
     setGlobalCryptoDriver(driver);
 
-    let vectors: [string, string][] = [
+    const vectors: [string, string][] = [
       // input, output
       ["", "b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq"],
       ["abc", "bxj4bnp4pahh6uqkbidpf3lrceoyagyndsylxvhfucd7wd4qacwwq"],
@@ -43,7 +46,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
       ],
     ];
 
-    for (let [input, output] of vectors) {
+    for (const [input, output] of vectors) {
       assertStrictEquals(
         await Crypto.sha256base32(input),
         output,
@@ -62,7 +65,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
   Deno.test(SUBTEST_NAME + ": sha256 of bytes", async () => {
     setGlobalCryptoDriver(driver);
 
-    let vectors: [Uint8Array, string][] = [
+    const vectors: [Uint8Array, string][] = [
       // input, output
       [
         stringToBytes(""),
@@ -86,7 +89,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
         "bkfsdgyoht3fo6jni32ac3yspk4f2exm4fxy5elmu7lpbdnhum3ga",
       ],
     ];
-    for (let [input, output] of vectors) {
+    for (const [input, output] of vectors) {
       assertStrictEquals(
         await Crypto.sha256base32(input),
         output,
@@ -138,7 +141,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
       "error when author shortname is empty",
     );
 
-    let keypair = await Crypto.generateAuthorKeypair("ok99");
+    const keypair = await Crypto.generateAuthorKeypair("ok99");
     if (isErr(keypair)) {
       assert(
         false,
@@ -167,7 +170,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
       );
     }
 
-    let keypair2 = await Crypto.generateAuthorKeypair("ok99");
+    const keypair2 = await Crypto.generateAuthorKeypair("ok99");
     if (isErr(keypair2)) {
       assert(
         false,
@@ -195,11 +198,94 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
     );
   });
 
-  Deno.test(SUBTEST_NAME + ": authorKeypairIsValid", async () => {
+  Deno.test(SUBTEST_NAME + ": generateShareKeypair", async () => {
     setGlobalCryptoDriver(driver);
 
-    let keypair1 = await Crypto.generateAuthorKeypair("onee");
-    let keypair2 = await Crypto.generateAuthorKeypair("twoo");
+    assert(
+      isErr(await Crypto.generateShareKeypair("TEST")),
+      "error when author shortname is uppercase",
+    );
+    assert(
+      isErr(await Crypto.generateShareKeypair("1abc")),
+      "error when author shortname starts with a number",
+    );
+    assert(
+      isErr(await Crypto.generateShareKeypair("abc-")),
+      "error when author shortname has dashes",
+    );
+    assert(
+      isErr(await Crypto.generateShareKeypair("abc.")),
+      "error when author shortname has a dot",
+    );
+    assert(
+      isErr(await Crypto.generateShareKeypair("abc ")),
+      "error when author shortname has a space",
+    );
+    assert(
+      isErr(await Crypto.generateShareKeypair("")),
+      "error when author shortname is empty",
+    );
+
+    const keypair = await Crypto.generateShareKeypair("ok99");
+    if (isErr(keypair)) {
+      assert(
+        false,
+        "should have succeeded but instead was an error: " + keypair,
+      );
+    } else {
+      assertStrictEquals(
+        typeof keypair.shareAddress,
+        "string",
+        "keypair has address",
+      );
+      assertStrictEquals(
+        typeof keypair.secret,
+        "string",
+        "keypair has secret",
+      );
+      assert(
+        keypair.shareAddress.startsWith("+ok99."),
+        "keypair.address starts with +ok99.",
+      );
+      assert(
+        keypair.secret.startsWith("b"),
+        'keypair.secret starts with "b"',
+      );
+    }
+
+    const keypair2 = await Crypto.generateShareKeypair("ok99");
+    if (isErr(keypair2)) {
+      assert(
+        false,
+        "should have succeeded but instead was an error: " + keypair2,
+      );
+    } else {
+      assertNotEquals(
+        keypair.shareAddress,
+        keypair2.shareAddress,
+        "keypair crypto.generation is not deterministic (pubkeys differ)",
+      );
+      assertNotEquals(
+        keypair.secret,
+        keypair2.secret,
+        "keypair crypto.generation is not deterministic (secrets differ)",
+      );
+    }
+
+    assertEquals(
+      driver,
+      GlobalCryptoDriver,
+      `GlobalCryptoDriver has not changed unexpectedly.  should be ${
+        (driver as any).name
+      }, was ${(GlobalCryptoDriver as any).name}`,
+    );
+  });
+
+  Deno.test(SUBTEST_NAME + ": keypairIsValid", async () => {
+    setGlobalCryptoDriver(driver);
+
+    const keypair1 = await Crypto.generateAuthorKeypair("onee");
+    const keypair2 = await Crypto.generateAuthorKeypair("twoo");
     if (isErr(keypair1)) {
       assert(false, "keypair1 was not generated successfully");
 
@@ -212,7 +298,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
     }
 
     assertStrictEquals(
-      await Crypto.checkAuthorKeypairIsValid(keypair1),
+      await Crypto.checkKeypairIsValid(keypair1),
       true,
       "keypair1 is valid",
     );
@@ -224,7 +310,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: "",
           secret: keypair1.secret,
         }),
@@ -234,7 +320,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address,
           secret: "",
         }),
@@ -244,7 +330,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address + "a",
           secret: keypair1.secret,
         }),
@@ -254,7 +340,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address,
           secret: keypair1.secret + "a",
         }),
@@ -264,7 +350,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address.slice(0, -8) + "aaaaaaaa",
           secret: keypair1.secret,
         }),
@@ -274,7 +360,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address,
           secret: keypair1.secret.slice(0, -8) + "aaaaaaaa",
         }),
@@ -284,7 +370,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address,
           secret: keypair2.secret,
         }),
@@ -294,7 +380,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address,
           secret: keypair1.secret.slice(0, -1) + "1", // 1 is not a valid b32 character
         }),
@@ -304,7 +390,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address,
           secret: keypair1.secret.slice(0, -1) + "1", // 1 is not a valid b32 character
         }),
@@ -314,7 +400,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           secret: keypair1.secret,
         } as any),
       ),
@@ -323,7 +409,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
 
     assert(
       isErr(
-        await Crypto.checkAuthorKeypairIsValid({
+        await Crypto.checkKeypairIsValid({
           address: keypair1.address,
         } as any),
       ),
@@ -345,33 +431,25 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
     async () => {
       setGlobalCryptoDriver(driver);
 
-      let shortname = "test";
-      let keypair = await Crypto.generateAuthorKeypair(shortname);
+      const shortname = "test";
+      const keypair = await Crypto.generateAuthorKeypair(shortname);
       if (isErr(keypair)) {
         assert(false, "keypair 1 is an error");
-
-        return;
       }
-      let keypairBytes = decodeAuthorKeypairToBytes(keypair);
+      const keypairBytes = decodeKeypairToBytes(keypair);
       if (isErr(keypairBytes)) {
         assert(false, "keypairBytes is an error");
-
-        return;
       }
-      let keypair2 = encodeAuthorKeypairToStrings(
+      const keypair2 = encodeAuthorKeypairToStrings(
         shortname,
         keypairBytes,
       );
       if (isErr(keypair2)) {
         assert(false, "keypair 2 is an error");
-
-        return;
       }
-      let keypairBytes2 = decodeAuthorKeypairToBytes(keypair);
+      const keypairBytes2 = decodeKeypairToBytes(keypair);
       if (isErr(keypairBytes2)) {
         assert(false, "keypairBytes2 is an error");
-
-        return;
       }
 
       assertEquals(
@@ -386,14 +464,14 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
       );
 
       keypair.secret = "x";
-      let err1 = decodeAuthorKeypairToBytes(keypair);
+      const err1 = decodeKeypairToBytes(keypair);
       assert(
         isErr(err1),
         'decodeAuthorKeypairToBytes returns an error if the secret is bad base32 (no leading "b")',
       );
 
       keypair.secret = "b1";
-      let err2 = decodeAuthorKeypairToBytes(keypair);
+      const err2 = decodeKeypairToBytes(keypair);
       assert(
         isErr(err2),
         "decodeAuthorKeypairToBytes returns an error if the secret is bad base32 (invalid base32 character)",
@@ -411,31 +489,28 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
     },
   );
 
-  Deno.test(SUBTEST_NAME + ": signatures", async () => {
+  Deno.test(SUBTEST_NAME + ": author signatures", async () => {
     setGlobalCryptoDriver(driver);
 
-    let input = "abc";
+    const input = "abc";
 
-    let keypair = await Crypto.generateAuthorKeypair(
+    const keypair = await Crypto.generateAuthorKeypair(
       "test",
     ) as AuthorKeypair;
-    let keypair2 = await Crypto.generateAuthorKeypair(
+    const keypair2 = await Crypto.generateAuthorKeypair(
       "fooo",
     ) as AuthorKeypair;
     if (isErr(keypair) || isErr(keypair2)) {
       assert(false, "keypair generation error");
-      return;
     }
 
-    let sig = await Crypto.sign(keypair, input);
-    let sig2 = await Crypto.sign(keypair2, input);
+    const sig = await Crypto.sign(keypair, input);
+    const sig2 = await Crypto.sign(keypair2, input);
     if (isErr(sig)) {
       assert(false, "signature error " + sig);
-      return;
     }
     if (isErr(sig2)) {
       assert(false, "signature error " + sig2);
-      return;
     }
 
     assert(
@@ -485,8 +560,8 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
     );
 
     // encoding of input msg
-    let snowmanStringSig = await Crypto.sign(keypair, snowmanString);
-    let snowmanBytesSig = await Crypto.sign(keypair, snowmanBytes);
+    const snowmanStringSig = await Crypto.sign(keypair, snowmanString);
+    const snowmanBytesSig = await Crypto.sign(keypair, snowmanBytes);
     if (isErr(snowmanStringSig)) {
       assert(false, "signature error " + snowmanStringSig);
     }
@@ -515,6 +590,107 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
     );
   });
 
+  Deno.test(SUBTEST_NAME + ": share signatures", async () => {
+    setGlobalCryptoDriver(driver);
+
+    const input = "abc";
+
+    const keypair = await Crypto.generateShareKeypair(
+      "test",
+    ) as ShareKeypair;
+    const keypair2 = await Crypto.generateShareKeypair(
+      "fooo",
+    ) as ShareKeypair;
+    if (isErr(keypair) || isErr(keypair2)) {
+      assert(false, "keypair generation error");
+    }
+
+    const sig = await Crypto.sign(keypair, input);
+    const sig2 = await Crypto.sign(keypair2, input);
+    if (isErr(sig)) {
+      assert(false, "signature error " + sig);
+    }
+    if (isErr(sig2)) {
+      assert(false, "signature error " + sig2);
+    }
+
+    assert(
+      await Crypto.verify(keypair.shareAddress, sig, input),
+      "real signature is valid",
+    );
+
+    // ways a signature should fail
+    assertEquals(
+      await Crypto.verify(keypair.shareAddress, "bad sig", input),
+      false,
+      "garbage signature is not valid",
+    );
+    assertEquals(
+      await Crypto.verify(keypair.shareAddress, sig2, input),
+      false,
+      "signature from another key is not valid",
+    );
+    assertEquals(
+      await Crypto.verify(keypair.shareAddress, sig, "different input"),
+      false,
+      "signature is not valid with different input",
+    );
+    assertEquals(
+      await Crypto.verify("@bad.address", sig, input),
+      false,
+      "invalid author address = invalid signature, return false",
+    );
+
+    // determinism
+    assertStrictEquals(
+      await Crypto.sign(keypair, "aaa"),
+      await Crypto.sign(keypair, "aaa"),
+      "signatures should be deterministic",
+    );
+
+    // changing input should change signature
+    assertNotEquals(
+      await Crypto.sign(keypair, "aaa"),
+      await Crypto.sign(keypair, "xxx"),
+      "different inputs should make different signature",
+    );
+    assertNotEquals(
+      await Crypto.sign(keypair, "aaa"),
+      await Crypto.sign(keypair2, "aaa"),
+      "different keys should make different signature",
+    );
+
+    // encoding of input msg
+    const snowmanStringSig = await Crypto.sign(keypair, snowmanString);
+    const snowmanBytesSig = await Crypto.sign(keypair, snowmanBytes);
+    if (isErr(snowmanStringSig)) {
+      assert(false, "signature error " + snowmanStringSig);
+    }
+    if (isErr(snowmanBytesSig)) {
+      assert(false, "signature error " + snowmanBytesSig);
+    }
+    assert(
+      await Crypto.verify(
+        keypair.shareAddress,
+        snowmanStringSig,
+        snowmanString,
+      ),
+      "signature roundtrip works on snowman utf-8 string",
+    );
+    assert(
+      await Crypto.verify(keypair.shareAddress, snowmanBytesSig, snowmanBytes),
+      "signature roundtrip works on snowman Uint8Array",
+    );
+
+    assertEquals(
+      driver,
+      GlobalCryptoDriver,
+      `GlobalCryptoDriver has not changed unexpectedly.  should be ${
+        (driver as any).name
+      }, was ${(GlobalCryptoDriver as any).name}`,
+    );
+  });
+
   Deno.test(
     SUBTEST_NAME + ": decodeAuthorKeypairToBytes checks Uint8Array length",
     () => {
@@ -524,7 +700,7 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
         valid: Boolean;
         keypair: AuthorKeypair;
       }
-      let vectors: Vector[] = [
+      const vectors: Vector[] = [
         {
           valid: true,
           keypair: {
@@ -596,8 +772,8 @@ export function runCryptoTests(scenario: Scenario<ICryptoDriver>) {
         },
       ];
 
-      for (let { valid, keypair } of vectors) {
-        let keypairBytesOrErr = decodeAuthorKeypairToBytes(keypair);
+      for (const { valid, keypair } of vectors) {
+        const keypairBytesOrErr = decodeKeypairToBytes(keypair);
         if (valid) {
           assertEquals(
             keypairBytesOrErr instanceof ValidationError,

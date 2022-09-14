@@ -12,9 +12,8 @@ import {
 } from "https://deno.land/std@0.154.0/path/mod.ts";
 
 import { ensureDir } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
-import { AuthorKeypair } from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { DocEs5 } from "../formats/format_es5.ts";
+import { DocEs5, Es5Credentials } from "../formats/format_es5.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
 
 export function isAbsenceEntry(
@@ -247,7 +246,7 @@ export async function removeEmptyDir(dir: string, rootDir: string) {
 export async function writeEntryToReplica(
   entry: FileInfoEntry | AbsenceEntry,
   replica: Replica,
-  keypair: AuthorKeypair,
+  credentials: Es5Credentials,
   rootDir: string,
 ) {
   const correspondingDoc = await replica.getLatestDocAtPath(entry.path);
@@ -260,7 +259,7 @@ export async function writeEntryToReplica(
       return;
     }
 
-    return replica.wipeDocAtPath(keypair, entry.path);
+    return replica.wipeDocAtPath(credentials, entry.path);
   }
 
   const extension = extname(entry.path);
@@ -276,7 +275,7 @@ export async function writeEntryToReplica(
     const text = await Deno.readTextFile(entry.abspath);
     const timestamp = entry.mtimeMs ? entry.mtimeMs * 1000 : undefined;
 
-    return replica.set(keypair, {
+    return replica.set(credentials, {
       path: entry.path,
       text,
       timestamp,
@@ -298,7 +297,7 @@ export async function writeEntryToReplica(
 
   const timestamp = entry.mtimeMs ? entry.mtimeMs * 1000 : undefined;
 
-  return replica.set(keypair, {
+  return replica.set(credentials, {
     text,
     path: entry.path,
     deleteAfter,

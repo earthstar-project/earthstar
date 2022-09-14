@@ -1,7 +1,7 @@
 import {
   AuthorAddress,
-  AuthorKeypair,
   Base32String,
+  ShareAddress,
 } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { UpdatableHash } from "./updatable_hash.ts";
@@ -10,6 +10,18 @@ export interface KeypairBytes {
   pubkey: Uint8Array;
   secret: Uint8Array;
 }
+
+/** A keypair used by individual entities to sign documents. */
+export interface AuthorKeypair {
+  address: AuthorAddress;
+  secret: string;
+}
+
+/** A keypair used to write to a specific share */
+export type ShareKeypair = {
+  shareAddress: ShareAddress;
+  secret: string;
+};
 
 /** Higher-level crypto functions. Not used directly for the most part, but useful for generating new keypairs. */
 // These all handle base32-encoded strings.
@@ -21,17 +33,20 @@ export interface ICrypto {
   generateAuthorKeypair(
     name: string,
   ): Promise<AuthorKeypair | ValidationError>;
+  generateShareKeypair(
+    name: string,
+  ): Promise<ShareKeypair | ValidationError>;
   sign(
-    keypair: AuthorKeypair,
+    keypair: AuthorKeypair | ShareKeypair,
     msg: string | Uint8Array,
   ): Promise<Base32String | ValidationError>;
   verify(
-    authorAddress: AuthorAddress,
+    address: AuthorAddress | ShareAddress,
     sig: Base32String,
     msg: string | Uint8Array,
   ): Promise<boolean>;
-  checkAuthorKeypairIsValid(
-    keypair: AuthorKeypair,
+  checkKeypairIsValid(
+    keypair: AuthorKeypair | ShareKeypair,
   ): Promise<true | ValidationError>;
 }
 

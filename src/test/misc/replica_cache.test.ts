@@ -7,7 +7,6 @@ import {
   assertThrows,
 } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaCache } from "../../replica/replica_cache.ts";
@@ -16,6 +15,7 @@ import { throws } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 
 //setLogLevel("replica-cache", LogLevel.Debug);
 
@@ -24,10 +24,19 @@ import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.
 const SHARE_ADDR = "+test.a123";
 
 Deno.test("ReplicaCache", async () => {
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "test",
+  ) as ShareKeypair;
+
+  const SHARE_ADDR = shareKeypair.shareAddress;
+
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
-  const keypairB = await Crypto.generateAuthorKeypair(
-    "suzy",
-  ) as AuthorKeypair;
+  const keypairB = await Crypto.generateAuthorKeypair("tost") as AuthorKeypair;
+
+  const credentials = {
+    shareSecret: shareKeypair.secret,
+    authorKeypair: keypair,
+  };
 
   const replica = new Replica(
     {
@@ -155,7 +164,7 @@ Deno.test("ReplicaCache", async () => {
   }, ReplicaCacheIsClosedError);
 
   assertThrows(() => {
-    cache.overwriteAllDocsByAuthor(keypair);
+    cache.overwriteAllDocsByAuthor(keypair, FormatEs4);
   }, ReplicaCacheIsClosedError);
 
   assertThrows(() => {
@@ -195,7 +204,7 @@ Deno.test("ReplicaCache", async () => {
 
   const attachmentsCache = new ReplicaCache(replica);
 
-  const res = await replica.set(keypair, {
+  const res = await replica.set(credentials, {
     text: "A test attachment",
     path: "/attachment.txt",
     attachment: new TextEncoder().encode("Hello"),
@@ -215,7 +224,7 @@ Deno.test("ReplicaCache", async () => {
   assert(secondResult);
 
   // Cache updates when doc is set again
-  const res2 = await replica.set(keypair, {
+  const res2 = await replica.set(credentials, {
     path: "/attachment.txt",
     attachment: new TextEncoder().encode("Greetings"),
   });
@@ -234,7 +243,7 @@ Deno.test("ReplicaCache", async () => {
   );
 
   // Cache updates when doc is wiped
-  await replica.wipeDocAtPath(keypair, "/attachment.txt");
+  await replica.wipeDocAtPath(credentials, "/attachment.txt");
 
   await sleep(10);
 
@@ -244,7 +253,7 @@ Deno.test("ReplicaCache", async () => {
 
   // Attachment disappears when doc expires.
 
-  const expiredRes = await replica.set(keypair, {
+  const expiredRes = await replica.set(credentials, {
     path: "/!attachment.txt",
     text: "An ephemeral attachment",
     attachment: new TextEncoder().encode("See you soon!"),
@@ -275,13 +284,13 @@ Deno.test("ReplicaCache", async () => {
   assert(isErr(addAttachmentsFstRes[0].attachment));
   assert(isErr(addAttachmentsFstRes[1].attachment));
 
-  const res3 = await replica.set(keypair, {
+  const res3 = await replica.set(credentials, {
     path: "/attachment.txt",
     text: "A new greeting",
     attachment: new TextEncoder().encode("Yo!"),
   });
 
-  const res4 = await replica.set(keypair, {
+  const res4 = await replica.set(credentials, {
     path: "/attachment2.txt",
     text: "A new farewell",
     attachment: new TextEncoder().encode("Cya!"),

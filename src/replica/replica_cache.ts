@@ -5,7 +5,6 @@ import {
 } from "../../deps.ts";
 import {
   AuthorAddress,
-  AuthorKeypair,
   DocAttachment,
   DocBase,
   DocWithAttachment,
@@ -39,6 +38,7 @@ import {
   DefaultFormat,
   DefaultFormats,
   FormatArg,
+  FormatCredentialsType,
   FormatDocType,
   FormatInputType,
   FormatsArg,
@@ -563,7 +563,7 @@ export class ReplicaCache {
 
   /** Add a new document directly to the backing replica. */
   set<F = DefaultFormat>(
-    keypair: AuthorKeypair,
+    credentials: FormatCredentialsType<F>,
     docToSet: Omit<FormatInputType<F>, "format">,
     format?: FormatArg<F>,
   ): Promise<
@@ -571,7 +571,7 @@ export class ReplicaCache {
   > {
     if (this.closed) throw new ReplicaCacheIsClosedError();
 
-    return this.replica.set(keypair, docToSet, format);
+    return this.replica.set(credentials, docToSet, format);
   }
 
   // OVERWRITE
@@ -582,25 +582,28 @@ export class ReplicaCache {
   // so we don't do a quick and dirty version in the cache here.
 
   /** Call this method on the backing replica. */
-  overwriteAllDocsByAuthor<F = DefaultFormats>(
-    keypair: AuthorKeypair,
-    formats?: FormatsArg<F>,
+  overwriteAllDocsByAuthor<F = DefaultFormat>(
+    credentials: FormatCredentialsType<F>,
+    format?: FormatArg<F>,
   ) {
     if (this.closed) throw new ReplicaCacheIsClosedError();
     if (this.replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
-    return this.replica.overwriteAllDocsByAuthor(keypair, formats);
+    return this.replica.overwriteAllDocsByAuthor(
+      credentials,
+      format,
+    );
   }
 
   wipeDocAtPath<F = DefaultFormat>(
-    keypair: AuthorKeypair,
+    credentials: FormatCredentialsType<F>,
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<IngestEvent<FormatDocType<F>> | ValidationError> {
     if (this.closed) throw new ReplicaCacheIsClosedError();
 
-    return this.replica.wipeDocAtPath(keypair, path, format);
+    return this.replica.wipeDocAtPath(credentials, path, format);
   }
 
   // ATTACHMENTS
