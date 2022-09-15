@@ -23,11 +23,7 @@ function makeReplica(address: string, shareSecret: string) {
       docDriver: driver,
       attachmentDriver: new AttachmentDriverMemory(),
     },
-    config: {
-      "es.5": {
-        shareSecret,
-      },
-    },
+    shareSecret,
   });
 }
 

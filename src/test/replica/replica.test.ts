@@ -67,9 +67,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           variant,
         ),
       },
-      config: {
-        "es.5": { shareSecret },
-      },
+      shareSecret,
     });
   }
 

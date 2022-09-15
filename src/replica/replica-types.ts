@@ -229,7 +229,7 @@ export interface IReplicaDocDriver extends IReplicaConfig {
  * - `validators`: Validators for the kinds of documents this replica will replicate, e.g. FormatValidatorEs4.
  * - `driver`: A driver the replica will use to read and persist documents.
  */
-export interface ReplicaOpts<F = DefaultFormats> {
+export interface MultiFormatReplicaOpts<F = DefaultFormats> {
   driver: IReplicaDriver;
   config: FormatsConfigRecord<F>;
 }

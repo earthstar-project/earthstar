@@ -44,9 +44,6 @@ let runQueryHelpersTests = async (
         docDriver: driver,
         attachmentDriver: new AttachmentDriverMemory(),
       },
-      config: {
-        "es.5": { shareSecret: "" },
-      },
     });
   }
 

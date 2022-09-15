@@ -37,11 +37,7 @@ Deno.test("ReplicaCache", async () => {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
-      config: {
-        "es.5": {
-          shareSecret: shareKeypair.secret,
-        },
-      },
+      shareSecret: shareKeypair.secret,
     },
   );
 

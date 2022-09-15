@@ -51,9 +51,7 @@ function runPeerTests(
         docDriver: scenario.subscenarios.replicaDriver.makeDriver(share),
         attachmentDriver: new AttachmentDriverMemory(),
       },
-      config: {
-        "es.5": { shareSecret },
-      },
+      shareSecret,
     });
     return storage;
   }

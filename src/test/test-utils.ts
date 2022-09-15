@@ -43,9 +43,7 @@ export function makeReplica(addr: string, shareSecret: string) {
       docDriver: new DocDriverMemory(addr),
       attachmentDriver: new AttachmentDriverMemory(),
     },
-    config: {
-      "es.5": { shareSecret },
-    },
+    shareSecret,
   });
 }
 

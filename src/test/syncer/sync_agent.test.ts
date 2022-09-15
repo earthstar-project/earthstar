@@ -85,9 +85,6 @@ class SyncAgentTestHelper {
         ),
         attachmentDriver: new AttachmentDriverMemory(),
       },
-      config: {
-        "es.5": { shareSecret: "" },
-      },
     });
 
     this.sourceReplica = new Replica({
@@ -97,9 +94,6 @@ class SyncAgentTestHelper {
           "sync_b",
         ),
         attachmentDriver: new AttachmentDriverMemory(),
-      },
-      config: {
-        "es.5": { shareSecret: "" },
       },
     });
 

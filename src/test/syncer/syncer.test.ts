@@ -67,14 +67,14 @@ class SyncerTestHelper {
             docDriver: this.makeDocDriver(addr, "sync-a"),
             attachmentDriver: new AttachmentDriverMemory(),
           },
-          config: { "es.5": { shareSecret } },
+          shareSecret,
         }),
         new Replica({
           driver: {
             docDriver: this.makeDocDriver(addr, "sync-b"),
             attachmentDriver: new AttachmentDriverMemory(),
           },
-          config: { "es.5": { shareSecret } },
+          shareSecret,
         }),
       ] as [Replica, Replica];
     };
