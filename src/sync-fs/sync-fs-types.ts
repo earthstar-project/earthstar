@@ -1,4 +1,4 @@
-import { Es5Credentials } from "../formats/format_es5.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 import { Replica } from "../replica/replica.ts";
 
 /**
@@ -11,7 +11,7 @@ import { Replica } from "../replica/replica.ts";
 export type SyncFsOptions = {
   dirPath: string;
   replica: Replica;
-  credentials: Es5Credentials;
+  keypair: AuthorKeypair;
   allowDirtyDirWithoutManifest: boolean;
   overwriteFilesAtOwnedPaths?: boolean;
 };

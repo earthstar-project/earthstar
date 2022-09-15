@@ -1,3 +1,4 @@
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 import {
   AuthorAddress,
   Base32String,
@@ -14,9 +15,10 @@ export interface FormatterGenerateOpts<
   FormatType extends string,
   DocInput extends DocInputBase<FormatType>,
   DocType extends DocBase<FormatType>,
-  CredentialsType,
+  ConfigType,
 > {
-  credentials: CredentialsType;
+  keypair: AuthorKeypair;
+  config: ConfigType;
   input: DocInput;
   share: ShareAddress;
   timestamp: Timestamp;
@@ -32,7 +34,7 @@ export interface IFormat<
   FormatType extends FormatName,
   DocInputType extends DocInputBase<FormatType>,
   DocType extends DocBase<FormatType>,
-  CredentialsType,
+  ConfigType extends Record<string, unknown> | undefined,
 > {
   /** The string name of the format, like "es.4" */
   id: FormatType;
@@ -48,7 +50,7 @@ export interface IFormat<
       FormatType,
       DocInputType,
       DocType,
-      CredentialsType
+      ConfigType
     >,
   ): Promise<
     | { doc: DocType; attachment?: ReadableStream<Uint8Array> | Uint8Array }
@@ -59,16 +61,18 @@ export interface IFormat<
    * Sign an unsigned document.
    */
   signDocument(
-    credentials: CredentialsType,
+    keypair: AuthorKeypair,
     doc: DocType,
+    config: ConfigType,
   ): Promise<DocType | ValidationError>;
 
   /**
    * Overwrite the user-written contents of a document, wipes any associated attachments, and signs the document.
    */
   wipeDocument(
-    credentials: CredentialsType,
+    keypair: AuthorKeypair,
     docToWipe: DocType,
+    config: ConfigType,
   ): Promise<DocType | ValidationError>;
 
   /**
@@ -102,14 +106,12 @@ export interface IFormat<
    * Some information can only be known once an attachment (especially if it comes in the form of a stream) has been consumed. For this reason, a Formatter's `generateDocument` method may not be able to generate a valid document for a attachment, even if it already knows it has one.
    */
   updateAttachmentFields(
-    credentials: CredentialsType,
+    keypair: AuthorKeypair,
     doc: DocType,
     size: number,
     hash: string,
+    config: ConfigType,
   ): Promise<DocType | ValidationError>;
-
-  /** Extracts the author address from a credentials item this format expects. */
-  authorFromCredentials(credentials: CredentialsType): AuthorAddress;
 }
 
 /** Extracts a IFormat's input type, used to generate a new document. */
@@ -117,7 +119,7 @@ export type FormatInputType<FormatterType> = FormatterType extends IFormat<
   infer _FormatType,
   infer DocInputType,
   infer _DocType,
-  infer _CredentialsType
+  infer _ConfigType
 > ? DocInputType
   : never;
 
@@ -126,13 +128,13 @@ export type FormatDocType<FormatterType> = FormatterType extends IFormat<
   infer _FormatType,
   infer _DocInputType,
   infer DocType,
-  infer _CredentialsType
+  infer _ConfigType
 > ? DocType
   : FormatterType extends IFormat<
     infer _FormatType,
     infer _DocInputType,
     infer DocType,
-    infer _CredentialsType
+    infer _ConfigType
   >[] ? DocType
   : never;
 
@@ -141,23 +143,45 @@ export type FormatNameType<FormatterType> = FormatterType extends IFormat<
   infer FormatType,
   infer _DocType,
   infer _DocInputType,
-  infer _CredentialsType
+  infer _ConfigType
 > ? FormatType
   : never;
 
-/** Extracts a IFormat's credentials type, e.g. a keypair */
-export type FormatCredentialsType<FormatterType> = FormatterType extends
-  IFormat<
+/** Extracts a IFormat's config type */
+export type FormatConfigType<FormatterType> = FormatterType extends IFormat<
+  infer _FormatType,
+  infer _DocInputType,
+  infer _DocType,
+  infer ConfigType
+> ? ConfigType
+  : FormatterType extends IFormat<
     infer _FormatType,
-    infer _DocType,
     infer _DocInputType,
-    infer CredentialsType
-  > ? CredentialsType
+    infer _DocType,
+    infer ConfigType
+  >[] ? ConfigType
   : never;
+
+export type FormatsConfigRecord<FormatterType> = [FormatterType] extends
+  [IFormat<
+    infer _F,
+    infer _I,
+    infer _D,
+    infer _C
+  >[]] ? {
+    [NameType in FormatterType[number]["id"]]: FormatConfigType<
+      Extract<
+        FormatterType[number],
+        { id: NameType }
+      >
+    >;
+  }
+  : undefined;
 
 /** Verifies a given type is an array of `IFormat` */
 export type FormatsArg<Init> = Init extends
-  Array<IFormat<infer _N, infer _I, infer _O, infer _C>> ? Init : never;
+  Array<IFormat<infer _N, infer _I, infer _O, infer _C>> ? Init
+  : never;
 
 /** Verifies a given type is of type `IFormat` */
 export type FormatArg<Init> = Init extends

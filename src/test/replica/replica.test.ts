@@ -53,7 +53,11 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
   setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
-  function makeReplica(ws: ShareAddress, variant?: string) {
+  function makeReplica(
+    ws: ShareAddress,
+    shareSecret: string,
+    variant?: string,
+  ) {
     const driver = scenario.subscenarios.docDriver.makeDriver(ws, variant);
     return new Replica({
       driver: {
@@ -62,6 +66,9 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           ws,
           variant,
         ),
+      },
+      config: {
+        "es.5": { shareSecret },
       },
     });
   }
@@ -72,7 +79,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       const initialCryptoDriver = GlobalCryptoDriver;
 
       const share = "+gardening.abcde";
-      const storage = makeReplica(share);
+      const storage = makeReplica(share, "");
       const events: string[] = [];
       const streamEvents: string[] = [];
       const channelledStreamEvents: string[] = [];
@@ -275,17 +282,15 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       assert(!isErr(keypair));
       assert(!isErr(shareKeypair));
 
-      const replica = makeReplica(shareKeypair.shareAddress);
-
-      const credentials = {
-        authorKeypair: keypair,
-        shareSecret: shareKeypair.secret,
-      };
+      const replica = makeReplica(
+        shareKeypair.shareAddress,
+        shareKeypair.secret,
+      );
 
       // setting a doc with attachment ingests doc and attachment (bytes)
 
       await test.step("sets doc with bytes attachment", async () => {
-        const res = await replica.set(credentials, {
+        const res = await replica.set(keypair, {
           path: "/bytes_test.txt",
           text: "A text file",
           attachment: new TextEncoder().encode(
@@ -315,7 +320,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
         const stream = bytesToStream(bytes);
 
-        const res = await replica.set(credentials, {
+        const res = await replica.set(keypair, {
           path: "/stream_test.txt",
           text: "A text file",
           attachment: stream,
@@ -337,7 +342,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       // setting a previously existing doc which we know doesn't generate a new attachment KEEPs the old attachment
       await test.step("setting doc without attachment where there is one already retains the attachment", async () => {
-        const res = await replica.set(credentials, {
+        const res = await replica.set(keypair, {
           path: "/stream_test.txt",
           text: "A text file. With updated text.",
         });
@@ -364,7 +369,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
     SUBTEST_NAME + ": queryAuthors + queryPaths",
     async (tester) => {
       const share = "+gardening.abcde";
-      const replica = makeReplica(share);
+      const replica = makeReplica(share, "");
 
       const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
       const keypair2 = await Crypto.generateAuthorKeypair("bbbb");
@@ -451,7 +456,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       const initialCryptoDriver = GlobalCryptoDriver;
 
       const share = "+gardening.abcde";
-      const storage = makeReplica(share);
+      const storage = makeReplica(share, "");
 
       const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
       const keypair2 = await Crypto.generateAuthorKeypair("bbbb");
@@ -635,10 +640,10 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       const invalidShare = "PEANUTS.123";
 
       assertThrows(() => {
-        makeReplica(invalidShare);
+        makeReplica(invalidShare, "");
       });
 
-      const storage = makeReplica(validShare);
+      const storage = makeReplica(validShare, "");
       assert(storage);
 
       await storage.close(true);
@@ -655,13 +660,16 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       assert(!isErr(keypair));
       assert(!isErr(shareKeypair));
 
-      const replica = makeReplica(shareKeypair.shareAddress, "a");
-      const replica2 = makeReplica(shareKeypair.shareAddress, "b");
-
-      const credentials = {
-        authorKeypair: keypair,
-        shareSecret: shareKeypair.secret,
-      };
+      const replica = makeReplica(
+        shareKeypair.shareAddress,
+        shareKeypair.secret,
+        "a",
+      );
+      const replica2 = makeReplica(
+        shareKeypair.shareAddress,
+        shareKeypair.secret,
+        "b",
+      );
 
       const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
 
@@ -671,7 +679,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       const bytes1 = new TextEncoder().encode("Hi!");
 
-      await replica.set(credentials, {
+      await replica.set(keypair, {
         text: "Hello",
         path: "/attachment.txt",
         attachment: bytes1,
@@ -732,16 +740,14 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
       assert(!isErr(keypair));
       assert(!isErr(shareKeypair));
 
-      const replica = makeReplica(shareKeypair.shareAddress);
-
-      const credentials = {
-        authorKeypair: keypair,
-        shareSecret: shareKeypair.secret,
-      };
+      const replica = makeReplica(
+        shareKeypair.shareAddress,
+        shareKeypair.secret,
+      );
 
       const bytes1 = new TextEncoder().encode("Hi!");
 
-      const res = await replica.set(credentials, {
+      const res = await replica.set(keypair, {
         text: "Hello",
         path: "/to_wipe.txt",
         attachment: bytes1,
@@ -749,7 +755,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       assert(!isErr(res));
 
-      const wipeRes = await replica.wipeDocAtPath(credentials, "/to_wipe.txt");
+      const wipeRes = await replica.wipeDocAtPath(keypair, "/to_wipe.txt");
 
       assert(!isErr(wipeRes));
 
@@ -781,17 +787,15 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           assert(!isErr(keypair));
           assert(!isErr(shareKeypair));
 
-          const replica = makeReplica(shareKeypair.shareAddress);
-
-          const credentials = {
-            authorKeypair: keypair,
-            shareSecret: shareKeypair.secret,
-          };
+          const replica = makeReplica(
+            shareKeypair.shareAddress,
+            shareKeypair.secret,
+          );
 
           const now = microsecondNow();
 
           // Create an expired document
-          await replica.set(credentials, {
+          await replica.set(keypair, {
             text: "byeee",
             path: "/expire!",
             deleteAfter: now + 500,
@@ -802,7 +806,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           const bytes1 = new TextEncoder().encode("Hi!");
           const bytes2 = new TextEncoder().encode("Yo!");
 
-          await replica.set(credentials, {
+          await replica.set(keypair, {
             text: "A greeting",
             path: "/greeting.txt",
             attachment: bytes1,
@@ -814,7 +818,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
           assert(attachmentDoc1);
 
-          await replica.set(credentials, {
+          await replica.set(keypair, {
             path: "/greeting.txt",
             attachment: bytes2,
           });
@@ -828,7 +832,10 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
           // close the replica,
           await replica.close(false);
 
-          const replica2 = makeReplica(shareKeypair.shareAddress);
+          const replica2 = makeReplica(
+            shareKeypair.shareAddress,
+            shareKeypair.secret,
+          );
 
           await test.step({
             name: "check expired doc is erased",

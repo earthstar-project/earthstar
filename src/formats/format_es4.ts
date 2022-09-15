@@ -134,7 +134,7 @@ const ES4_CORE_SCHEMA: CheckObjOpts = {
  * @link https://earthstar-project.org/specs/data-spec
  */
 
-export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4, AuthorKeypair> =
+export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4, undefined> =
   class {
     static id: "es.4" = "es.4";
 
@@ -186,16 +186,16 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4, AuthorKeypair> =
      * Generate a signed document from the input format the validator expects.
      */
     static async generateDocument(
-      { input, credentials, share, timestamp }: FormatterGenerateOpts<
+      { input, keypair, share, timestamp }: FormatterGenerateOpts<
         "es.4",
         DocInputEs4,
         DocEs4,
-        AuthorKeypair
+        undefined
       >,
     ): Promise<{ doc: DocEs4 } | ValidationError> {
       const doc: DocEs4 = {
         format: "es.4",
-        author: credentials.address,
+        author: keypair.address,
         content: input.content,
         contentHash: await Crypto.sha256base32(input.content),
         deleteAfter: input.deleteAfter ?? null,
@@ -206,7 +206,7 @@ export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4, AuthorKeypair> =
         // _localIndex will be added during upsert.  it's not needed for the signature.
       };
 
-      const signedDoc = await this.signDocument(credentials, doc);
+      const signedDoc = await this.signDocument(keypair, doc);
 
       if (isErr(signedDoc)) {
         return signedDoc;

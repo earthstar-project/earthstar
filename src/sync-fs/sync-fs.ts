@@ -28,7 +28,7 @@ import {
   zipByPath,
 } from "./util.ts";
 import { AttachmentStreamInfo } from "../util/attachment_stream_info.ts";
-import { DocEs5, FormatEs5 } from "../formats/format_es5.ts";
+import { ConfigEs5, DocEs5, FormatEs5 } from "../formats/format_es5.ts";
 
 const textEncoder = new TextEncoder();
 
@@ -240,9 +240,8 @@ export async function syncReplicaAndFsDir(
     if (isAbsenceEntry(entry)) {
       const isAttachmentPath = extname(entry.path) !== "";
 
-      // New change is valid
       const result = await FormatEs5.generateDocument({
-        credentials: opts.credentials,
+        keypair: opts.keypair,
         share: opts.replica.share,
         timestamp: Date.now() * 1000,
         input: {
@@ -250,6 +249,7 @@ export async function syncReplicaAndFsDir(
           text: "",
           format: "es.5",
         },
+        config: opts.replica.formatsConfig["es.5"] as ConfigEs5,
       });
 
       if (isErr(result)) {
@@ -258,10 +258,11 @@ export async function syncReplicaAndFsDir(
         let docToValidate = result.doc;
         if (isAttachmentPath) {
           docToValidate = await FormatEs5.updateAttachmentFields(
-            opts.credentials,
+            opts.keypair,
             result.doc,
             0,
             "b4oymiquy7qobjgx36tejs35zeqt24qpemsnzgtfeswmrw6csxbkq",
+            opts.replica.formatsConfig["es.5"] as ConfigEs5,
           ) as DocEs5;
         }
 
@@ -289,7 +290,7 @@ export async function syncReplicaAndFsDir(
       // New change is valid
 
       const result = await FormatEs5.generateDocument({
-        credentials: opts.credentials,
+        keypair: opts.keypair,
         share: opts.replica.share,
         timestamp: Date.now() * 1000,
         input: {
@@ -297,6 +298,7 @@ export async function syncReplicaAndFsDir(
           text: "fake",
           format: "es.5",
         },
+        config: opts.replica.formatsConfig["es.5"] as ConfigEs5,
       });
 
       if (isErr(result)) {
@@ -306,10 +308,11 @@ export async function syncReplicaAndFsDir(
 
         if (isAttachmentPath) {
           docToValidate = await FormatEs5.updateAttachmentFields(
-            opts.credentials,
+            opts.keypair,
             result.doc,
             1,
             "bwxkuyopgmzy4s4y3t5dr4wc5qjrm2t2usy7qzeyifwg46m2njr4a",
+            opts.replica.formatsConfig["es.5"] as ConfigEs5,
           ) as DocEs5;
         }
 
@@ -379,7 +382,7 @@ export async function syncReplicaAndFsDir(
     await writeEntryToReplica(
       entry,
       opts.replica,
-      opts.credentials,
+      opts.keypair,
       opts.dirPath,
     );
   }

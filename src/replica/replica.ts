@@ -40,7 +40,6 @@ import {
   DefaultFormat,
   DefaultFormats,
   FormatArg,
-  FormatCredentialsType,
   FormatDocType,
   FormatInputType,
   FormatsArg,
@@ -55,6 +54,7 @@ import {
 
 import { docMatchesFilter } from "../query/query.ts";
 import { deferred } from "../../deps.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 
 const J = JSON.stringify;
 const logger = new Logger("replica", "gold");
@@ -92,6 +92,7 @@ export class Replica {
   share: ShareAddress;
   /** The validator used to validate ingested documents. */
   replicaDriver: IReplicaDriver;
+  formatsConfig: Record<string, unknown>;
 
   private _isClosed = false;
   private ingestLockStream = new LockStream();
@@ -109,7 +110,7 @@ export class Replica {
   private eraseInterval: number;
   private expireEventTimeouts = new Map<string, number>();
 
-  constructor({ driver }: ReplicaOpts) {
+  constructor({ driver, config }: ReplicaOpts) {
     const addressIsValidResult = checkShareIsValid(driver.docDriver.share);
 
     if (isErr(addressIsValidResult)) {
@@ -123,6 +124,7 @@ export class Replica {
     this.replicaId = "replica-" + randomId();
     this.share = driver.docDriver.share;
     this.replicaDriver = driver;
+    this.formatsConfig = config || {};
 
     this.eventWriter = this.eventMultiStream.getWritableStream().getWriter();
 
@@ -324,7 +326,7 @@ export class Replica {
   // The Input type should match the formatter.
   // The default format should be es5
   async set<F = DefaultFormat>(
-    credentials: FormatCredentialsType<F>,
+    keypair: AuthorKeypair,
     docToSet: Omit<FormatInputType<F>, "format">,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<
@@ -368,11 +370,12 @@ export class Replica {
     }
 
     const result = await format.generateDocument({
-      credentials,
+      keypair,
       input: { ...docToSet, format: format.id },
       share: this.share,
       timestamp,
       prevLatestDoc: cleanedDoc,
+      config: this.formatsConfig[format.id] as Record<string, unknown>,
     });
 
     if (isErr(result)) {
@@ -405,10 +408,11 @@ export class Replica {
 
       // Update the document's attachment fields using the results derived from staging.
       const updatedDocRes = await format.updateAttachmentFields(
-        credentials,
+        keypair,
         result.doc,
         stageResult.size,
         stageResult.hash,
+        this.formatsConfig[format.id] as Record<string, unknown>,
       );
 
       if (isErr(updatedDocRes)) {
@@ -634,18 +638,16 @@ export class Replica {
     @returns The number of documents changed, or -1 if there was an error.
    */
   async overwriteAllDocsByAuthor<F = DefaultFormat>(
-    credentials: FormatCredentialsType<F>,
+    keypair: AuthorKeypair,
     format?: FormatArg<F>,
   ): Promise<number | ValidationError> {
     const f = getFormatWithFallback(format);
 
-    const authorAddress = f.authorFromCredentials(credentials);
-
-    logger.debug(`overwriteAllDocsByAuthor("${authorAddress}")`);
+    logger.debug(`overwriteAllDocsByAuthor("${keypair.address}")`);
     if (this._isClosed) throw new ReplicaIsClosedError();
     // TODO: stream the docs out, overwrite them.
     const docsToOverwrite = await this.queryDocs({
-      filter: { author: authorAddress },
+      filter: { author: keypair.address },
       historyMode: "all",
     }, [f]);
     logger.debug(
@@ -656,7 +658,7 @@ export class Replica {
 
     for (const doc of docsToOverwrite as FormatDocType<F>[]) {
       const didWipe = await this.wipeDocument(
-        credentials,
+        keypair,
         doc,
         getFormatWithFallback(format),
       );
@@ -676,7 +678,7 @@ export class Replica {
 
   /** Wipe all content from a document at a given path, and erase its attachment (if it has one). */
   async wipeDocAtPath<F = DefaultFormat>(
-    credentials: FormatCredentialsType<F>,
+    keypair: AuthorKeypair,
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<IngestEvent<FormatDocType<F>> | ValidationError> {
@@ -687,26 +689,28 @@ export class Replica {
     }
 
     return this.wipeDocument(
-      credentials,
+      keypair,
       latestDocAtPath as FormatDocType<F>,
       format,
     );
   }
 
   private async wipeDocument<F>(
-    credentials: FormatCredentialsType<F>,
+    keypair: AuthorKeypair,
     doc: FormatDocType<F>,
     format: FormatArg<F>,
   ): Promise<IngestEvent<FormatDocType<F>>> {
-    const author = format.authorFromCredentials(credentials);
-
     const docToWipe: FormatDocType<F> = {
       ...doc,
       timestamp: Math.max(doc.timestamp + 1, Date.now() * 1000),
-      author,
+      author: keypair.address,
     };
 
-    const wipedDoc = await format.wipeDocument(credentials, docToWipe);
+    const wipedDoc = await format.wipeDocument(
+      keypair,
+      docToWipe,
+      this.formatsConfig[format.id] as Record<string, unknown>,
+    );
 
     if (isErr(wipedDoc)) {
       return {

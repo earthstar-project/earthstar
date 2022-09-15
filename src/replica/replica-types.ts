@@ -7,7 +7,12 @@ import {
 import { Query } from "../query/query-types.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Replica } from "./replica.ts";
-import { FormatsArg } from "../formats/format_types.ts";
+import {
+  DefaultFormats,
+  FormatConfigType,
+  FormatsArg,
+  FormatsConfigRecord,
+} from "../formats/format_types.ts";
 
 //================================================================================
 // TYPES AND EVENTS
@@ -224,8 +229,9 @@ export interface IReplicaDocDriver extends IReplicaConfig {
  * - `validators`: Validators for the kinds of documents this replica will replicate, e.g. FormatValidatorEs4.
  * - `driver`: A driver the replica will use to read and persist documents.
  */
-export interface ReplicaOpts {
+export interface ReplicaOpts<F = DefaultFormats> {
   driver: IReplicaDriver;
+  config: FormatsConfigRecord<F>;
 }
 
 /**

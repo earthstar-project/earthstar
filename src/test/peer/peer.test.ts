@@ -45,11 +45,14 @@ function runPeerTests(
 
   setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
 
-  function makeStorage(share: ShareAddress): Replica {
+  function makeStorage(share: ShareAddress, shareSecret: string): Replica {
     const storage = new Replica({
       driver: {
         docDriver: scenario.subscenarios.replicaDriver.makeDriver(share),
         attachmentDriver: new AttachmentDriverMemory(),
+      },
+      config: {
+        "es.5": { shareSecret },
       },
     });
     return storage;
@@ -63,7 +66,7 @@ function runPeerTests(
       "+two.ws",
       "+three.ws",
     ];
-    const storages = shares.map((ws) => makeStorage(ws));
+    const storages = shares.map((ws) => makeStorage(ws, ""));
 
     const sortedShares = sortedInPlace([...shares]);
     const sortedStorages = [...storages];

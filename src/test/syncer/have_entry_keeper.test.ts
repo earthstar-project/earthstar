@@ -26,41 +26,34 @@ Deno.test("HaveEntryKeeper", async () => {
     "suzy",
   ) as AuthorKeypair;
 
-  const credentialsA = {
-    shareSecret: shareKeypair.secret,
-    authorKeypair: keypairA,
-  };
-
-  const credentialsB = {
-    shareSecret: shareKeypair.secret,
-    authorKeypair: keypairB,
-  };
-
   const replica = new Replica(
     {
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      config: {
+        "es.5": { shareSecret: shareKeypair.secret },
+      },
     },
   );
 
-  await replica.set(credentialsA, {
+  await replica.set(keypairA, {
     path: "/shared_path",
     text: "Hello",
   });
 
-  await replica.set(credentialsB, {
+  await replica.set(keypairB, {
     path: "/shared_path",
     text: "Howdy",
   });
 
-  await replica.set(credentialsB, {
+  await replica.set(keypairB, {
     path: "/another_path",
     text: "Greetings",
   });
 
-  await replica.set(credentialsB, {
+  await replica.set(keypairB, {
     path: "/yet_another_path",
     text: "Yo.",
   });
@@ -120,12 +113,12 @@ Deno.test("HaveEntryKeeper", async () => {
 
   const liveEntryStream = liveHaveKeeper.readable;
 
-  await replica.set(credentialsB, {
+  await replica.set(keypairB, {
     path: "/more_paths",
     text: "Hiiiii",
   });
 
-  await replica.set(credentialsB, {
+  await replica.set(keypairB, {
     path: "/another_path",
     text: "Hiiiii",
   });
@@ -185,11 +178,6 @@ Deno.test({
       "test",
     ) as AuthorKeypair;
 
-    const credentialsA = {
-      shareSecret: shareKeypair.secret,
-      authorKeypair: keypairA,
-    };
-
     // Set up two replicas to have the same docs.
 
     const replica = new Replica({
@@ -197,14 +185,24 @@ Deno.test({
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      config: {
+        "es.5": {
+          shareSecret: shareKeypair.secret,
+        },
+      },
     });
 
-    await writeRandomDocs(credentialsA, replica, 1000);
+    await writeRandomDocs(keypairA, replica, 1000);
 
     const otherReplica = new Replica({
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
+      },
+      config: {
+        "es.5": {
+          shareSecret: shareKeypair.secret,
+        },
       },
     });
 

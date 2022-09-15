@@ -16,12 +16,17 @@ import { AuthorKeypair } from "../../crypto/crypto-types.ts";
 
 const TEST_DIR = "src/test/fs-sync/dirs/sync_share_dir";
 
-function makeReplica(address: string) {
+function makeReplica(address: string, shareSecret: string) {
   const driver = new DocDriverMemory(address);
   return new Replica({
     driver: {
       docDriver: driver,
       attachmentDriver: new AttachmentDriverMemory(),
+    },
+    config: {
+      "es.5": {
+        shareSecret,
+      },
     },
   });
 }
@@ -42,16 +47,6 @@ Deno.test("syncShareAndDir", async (test) => {
   assert(!isErr(shareKeypair));
   assert(!isErr(otherShareKeypair));
 
-  const credentialsA = {
-    authorKeypair: keypairA,
-    shareSecret: shareKeypair.secret,
-  };
-
-  const credentialsB = {
-    authorKeypair: keypairB,
-    shareSecret: shareKeypair.secret,
-  };
-
   // Throws if the dir is dirty and there is no manifest + the option is on.
 
   await ensureDir(TEST_DIR);
@@ -62,14 +57,14 @@ Deno.test("syncShareAndDir", async (test) => {
   const OTHER_TEST_SHARE = otherShareKeypair.shareAddress;
 
   await test.step("can't sync a dirty folder without a manifest", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await assertRejects(
       () => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: false,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica: replica,
         });
       },
@@ -82,7 +77,7 @@ Deno.test("syncShareAndDir", async (test) => {
       await syncReplicaAndFsDir({
         allowDirtyDirWithoutManifest: true,
         dirPath: TEST_DIR,
-        credentials: credentialsA,
+        keypair: keypairA,
         replica: replica,
       }),
       undefined,
@@ -97,13 +92,13 @@ Deno.test("syncShareAndDir", async (test) => {
   // Throws if the replica address does not match the manifest address
 
   await test.step("can't sync a directory which was synced with another share", async () => {
-    const replica = makeReplica(TEST_SHARE);
-    const otherReplica = makeReplica(OTHER_TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, "");
+    const otherReplica = makeReplica(OTHER_TEST_SHARE, "");
 
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: false,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica: replica,
     });
 
@@ -112,7 +107,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: false,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica: otherReplica,
         });
       },
@@ -129,11 +124,11 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Throws if you try to change a file at an owned path
   await test.step("throws when you try to change a file at someone else's owned path", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       path: `/~${keypairB.address}/mine`,
       text: "Only Keypair B can change this",
     });
@@ -142,7 +137,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica: replica,
     });
 
@@ -150,7 +145,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica: replica,
     });
 
@@ -164,7 +159,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica: replica,
         });
       },
@@ -177,13 +172,13 @@ Deno.test("syncShareAndDir", async (test) => {
 
     await emptyDir(TEST_DIR);
 
-    const replica2 = makeReplica(TEST_SHARE);
+    const replica2 = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     // Want to guard against a specific sequence of events.
     // Which is...
 
     // Replica sets a doc
-    await replica2.set(credentialsB, {
+    await replica2.set(keypairB, {
       path: `/~${keypairB.address}/special-case`,
       text: "A",
     });
@@ -192,12 +187,12 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica: replica2,
     });
 
     //  Replica sets again
-    await replica2.set(credentialsB, {
+    await replica2.set(keypairB, {
       path: `/~${keypairB.address}/special-case`,
       text: "B",
     });
@@ -218,7 +213,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica: replica2,
     });
 
@@ -236,7 +231,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
     // Test attachments
 
-    const replica3 = makeReplica(TEST_SHARE);
+    const replica3 = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await ensureDir(ownedPath);
 
@@ -250,7 +245,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica: replica3,
         });
       },
@@ -270,7 +265,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
     await ensureDir(join(TEST_DIR, `~${keypairB.address}`));
 
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await Deno.writeTextFile(
       ownedPath,
@@ -282,7 +277,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica,
         });
       },
@@ -291,7 +286,7 @@ Deno.test("syncShareAndDir", async (test) => {
       "trying to modify a file at someone's else's owned path",
     );
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "Okay",
       path: `/~${keypairB.address}/doc`,
     });
@@ -299,7 +294,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
       overwriteFilesAtOwnedPaths: true,
     });
@@ -319,7 +314,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica,
         });
       },
@@ -331,7 +326,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
       overwriteFilesAtOwnedPaths: true,
     });
@@ -351,7 +346,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Throws if you try to delete a file at an owned path
   await test.step("throws when you try to delete a file at someone else's owned path", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
 
@@ -377,7 +372,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: false,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica,
         });
       },
@@ -388,7 +383,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
     // Test attachments
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A short message",
       path: `/~${keypairB.address}/message.txt`,
       attachment: new TextEncoder().encode("Hello"),
@@ -397,7 +392,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
       overwriteFilesAtOwnedPaths: true,
     });
@@ -409,7 +404,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica,
         });
       },
@@ -425,7 +420,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Throws if a file has an invalid path
   await test.step("throws when you write a file at an invalid path", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     const invalidPath = join(TEST_DIR, `/@invalid`);
 
@@ -439,7 +434,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica,
         });
       },
@@ -464,7 +459,7 @@ Deno.test("syncShareAndDir", async (test) => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica,
         });
       },
@@ -485,14 +480,14 @@ Deno.test("syncShareAndDir", async (test) => {
       BIG_LOREM_IPSUM,
     );
 
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await assertRejects(
       () => {
         return syncReplicaAndFsDir({
           dirPath: TEST_DIR,
           allowDirtyDirWithoutManifest: true,
-          credentials: credentialsA,
+          keypair: keypairA,
           replica,
         });
       },
@@ -520,12 +515,12 @@ Deno.test("syncShareAndDir", async (test) => {
       "B",
     );
 
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -553,7 +548,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -579,19 +574,19 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Writes docs from replica -> fs
   await test.step("writes files from the replica -> fs", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A",
       path: "/text",
     });
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "B",
       path: "/sub/text",
     });
 
-    await replica.set(credentialsA, {
+    await replica.set(keypairA, {
       text: "A short message",
       path: "/message.txt",
       attachment: new TextEncoder().encode("Greetings from abroad."),
@@ -600,7 +595,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -633,35 +628,35 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Deletes files from the FS we'd expect it to.
   await test.step("wiped docs on replica -> deleted file on the fs", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A",
       path: "/to-delete",
     });
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A",
       path: "/sub/to-delete",
     });
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A",
       path: "/sub2/to-delete",
     });
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A",
       path: "/sub2/dont-delete",
     });
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A farewell message",
       path: "/delete.txt",
       attachment: new TextEncoder().encode("Goodbye."),
     });
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A message to keep",
       path: "/keep.txt",
       attachment: new TextEncoder().encode("Here's my number."),
@@ -670,22 +665,22 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
-    await replica.wipeDocAtPath(credentialsB, "/to-delete");
+    await replica.wipeDocAtPath(keypairB, "/to-delete");
 
     await Deno.remove(join(TEST_DIR, "sub", "to-delete"));
 
-    await replica.wipeDocAtPath(credentialsB, "/sub2/to-delete");
+    await replica.wipeDocAtPath(keypairB, "/sub2/to-delete");
 
-    await replica.wipeDocAtPath(credentialsB, "/delete.txt");
+    await replica.wipeDocAtPath(keypairB, "/delete.txt");
 
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -743,14 +738,14 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Wipes docs from the replica we'd expect it to.
   await test.step("deleted files on the fs -> wiped doc on replica", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A",
       path: "/to-delete",
     });
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "Something to delete",
       path: "/message.txt",
       attachment: new TextEncoder().encode("Something surprising."),
@@ -759,7 +754,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -787,7 +782,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -802,7 +797,7 @@ Deno.test("syncShareAndDir", async (test) => {
     assertEquals(toDeleteAttachmentDoc?.text, "", "/message.txt was wiped");
 
     // Does not delete a doc which was written to replica-side since last sync
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "A",
       path: "/will-return",
     });
@@ -810,13 +805,13 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
     await Deno.remove(join(TEST_DIR, "will-return"));
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "B",
       path: "/will-return",
     });
@@ -824,7 +819,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -836,7 +831,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
     // Deletes docs which have expired replica-side
 
-    await replica.set(credentialsB, {
+    await replica.set(keypairB, {
       text: "!!!",
       path: "/!ephemeral",
       deleteAfter: (Date.now() * 1000) + (1000 * 1000),
@@ -845,7 +840,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -860,7 +855,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -880,7 +875,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
       allowDirtyDirWithoutManifest: true,
-      credentials: credentialsA,
+      keypair: keypairA,
       replica,
     });
 
@@ -906,14 +901,14 @@ Deno.test("syncShareAndDir", async (test) => {
   await emptyDir(TEST_DIR);
 
   await test.step("stores older versions of docs from the fs", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await Deno.writeTextFile(
       join(TEST_DIR, "wiki"),
       "B",
     );
 
-    await replica.set(credentialsA, {
+    await replica.set(keypairA, {
       text: "A",
       path: "/wiki",
     });
@@ -921,7 +916,7 @@ Deno.test("syncShareAndDir", async (test) => {
     await syncReplicaAndFsDir({
       allowDirtyDirWithoutManifest: true,
       dirPath: TEST_DIR,
-      credentials: credentialsB,
+      keypair: keypairB,
       replica: replica,
     });
 

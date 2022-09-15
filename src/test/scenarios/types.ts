@@ -56,7 +56,7 @@ export type FormatScenario<
   N extends FormatName,
   I extends DocInputBase<N>,
   O extends DocBase<N>,
-  C,
+  C extends Record<string, unknown>,
   F extends IFormat<N, I, O, C>,
 > = {
   format: F;

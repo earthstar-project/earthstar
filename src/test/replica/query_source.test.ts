@@ -22,41 +22,36 @@ Deno.test("QuerySource", async () => {
     "suzy",
   ) as AuthorKeypair;
 
-  const credentialsA = {
-    shareSecret: shareKeypair.secret,
-    authorKeypair: keypairA,
-  };
-
-  const credentialsB = {
-    shareSecret: shareKeypair.secret,
-    authorKeypair: keypairB,
-  };
-
   const replica = new Replica(
     {
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      config: {
+        "es.5": {
+          shareSecret: shareKeypair.secret,
+        },
+      },
     },
   );
 
-  await replica.set(credentialsA, {
+  await replica.set(keypairA, {
     text: "a",
     path: "/wanted/1",
   });
 
-  await replica.set(credentialsA, {
+  await replica.set(keypairA, {
     text: "b",
     path: "/wanted/2",
   });
 
-  await replica.set(credentialsB, {
+  await replica.set(keypairB, {
     text: "c",
     path: "/wanted/1",
   });
 
-  await replica.set(credentialsA, {
+  await replica.set(keypairA, {
     text: "🐸",
     path: "/unwanted/1",
   });
@@ -109,7 +104,7 @@ Deno.test("QuerySource", async () => {
     "new",
   );
 
-  await replica.set(credentialsA, {
+  await replica.set(keypairA, {
     text: "d",
     path: "/wanted/3",
   });

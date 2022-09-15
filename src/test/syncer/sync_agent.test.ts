@@ -85,6 +85,9 @@ class SyncAgentTestHelper {
         ),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      config: {
+        "es.5": { shareSecret: "" },
+      },
     });
 
     this.sourceReplica = new Replica({
@@ -94,6 +97,9 @@ class SyncAgentTestHelper {
           "sync_b",
         ),
         attachmentDriver: new AttachmentDriverMemory(),
+      },
+      config: {
+        "es.5": { shareSecret: "" },
       },
     });
 
@@ -215,12 +221,12 @@ class SyncAgentTestHelper {
   }
 }
 
-function generateDoc(credentials: AuthorKeypair, input: {
+function generateDoc(keypair: AuthorKeypair, input: {
   path: string;
   content: string;
 }) {
   return FormatEs4.generateDocument({
-    credentials,
+    keypair,
     share: SHARE_ADDR,
     input: {
       format: "es.4",
@@ -228,6 +234,7 @@ function generateDoc(credentials: AuthorKeypair, input: {
       content: input.content,
     },
     timestamp: Date.now() * 1000,
+    config: undefined,
   });
 }
 
@@ -281,7 +288,7 @@ for (const scenario of scenarios) {
     const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
     const { doc: commonDoc } = await FormatEs4.generateDocument({
-      credentials: keypair,
+      keypair,
       share: SHARE_ADDR,
       input: {
         format: "es.4",
@@ -289,6 +296,7 @@ for (const scenario of scenarios) {
         content: "hello",
       },
       timestamp: Date.now() * 1000,
+      config: undefined,
     }) as { doc: DocEs4 };
 
     const testHelper = new SyncAgentTestHelper({

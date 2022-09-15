@@ -38,11 +38,11 @@ import {
   DefaultFormat,
   DefaultFormats,
   FormatArg,
-  FormatCredentialsType,
   FormatDocType,
   FormatInputType,
   FormatsArg,
 } from "../formats/format_types.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 
 const logger = new Logger("replica-cache", "green");
 
@@ -563,7 +563,7 @@ export class ReplicaCache {
 
   /** Add a new document directly to the backing replica. */
   set<F = DefaultFormat>(
-    credentials: FormatCredentialsType<F>,
+    keypair: AuthorKeypair,
     docToSet: Omit<FormatInputType<F>, "format">,
     format?: FormatArg<F>,
   ): Promise<
@@ -571,7 +571,7 @@ export class ReplicaCache {
   > {
     if (this.closed) throw new ReplicaCacheIsClosedError();
 
-    return this.replica.set(credentials, docToSet, format);
+    return this.replica.set(keypair, docToSet, format);
   }
 
   // OVERWRITE
@@ -583,7 +583,7 @@ export class ReplicaCache {
 
   /** Call this method on the backing replica. */
   overwriteAllDocsByAuthor<F = DefaultFormat>(
-    credentials: FormatCredentialsType<F>,
+    keypair: AuthorKeypair,
     format?: FormatArg<F>,
   ) {
     if (this.closed) throw new ReplicaCacheIsClosedError();
@@ -591,19 +591,19 @@ export class ReplicaCache {
       throw new ReplicaIsClosedError();
     }
     return this.replica.overwriteAllDocsByAuthor(
-      credentials,
+      keypair,
       format,
     );
   }
 
   wipeDocAtPath<F = DefaultFormat>(
-    credentials: FormatCredentialsType<F>,
+    keypair: AuthorKeypair,
     path: string,
     format: FormatArg<F> = DEFAULT_FORMAT as unknown as FormatArg<F>,
   ): Promise<IngestEvent<FormatDocType<F>> | ValidationError> {
     if (this.closed) throw new ReplicaCacheIsClosedError();
 
-    return this.replica.wipeDocAtPath(credentials, path, format);
+    return this.replica.wipeDocAtPath(keypair, path, format);
   }
 
   // ATTACHMENTS
