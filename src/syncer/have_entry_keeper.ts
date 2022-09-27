@@ -244,10 +244,12 @@ export class HaveEntryKeeper {
         return aId < bId ? -1 : 1;
       },
     ).map(([id, entry]) => {
-      const versionStrings = [];
+      const versionStrings: string[] = [];
 
       for (const key in entry.versions) {
-        versionStrings.push(key);
+        const v = entry.versions[key];
+
+        versionStrings.push(`${v.author}_${v.timestamp}`);
       }
 
       return `${id}:${versionStrings.join(",")}`;
