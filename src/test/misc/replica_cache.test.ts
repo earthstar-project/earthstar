@@ -7,7 +7,6 @@ import {
   assertThrows,
 } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { Replica } from "../../replica/replica.ts";
 import { ReplicaCache } from "../../replica/replica_cache.ts";
@@ -16,18 +15,21 @@ import { throws } from "../test-utils.ts";
 import { sleep } from "../../util/misc.ts";
 import { FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 
 //setLogLevel("replica-cache", LogLevel.Debug);
 
 //================================================================================
 
-const SHARE_ADDR = "+test.a123";
-
 Deno.test("ReplicaCache", async () => {
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "test",
+  ) as ShareKeypair;
+
+  const SHARE_ADDR = shareKeypair.shareAddress;
+
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
-  const keypairB = await Crypto.generateAuthorKeypair(
-    "suzy",
-  ) as AuthorKeypair;
+  const keypairB = await Crypto.generateAuthorKeypair("tost") as AuthorKeypair;
 
   const replica = new Replica(
     {
@@ -35,6 +37,7 @@ Deno.test("ReplicaCache", async () => {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      shareSecret: shareKeypair.secret,
     },
   );
 
@@ -155,7 +158,7 @@ Deno.test("ReplicaCache", async () => {
   }, ReplicaCacheIsClosedError);
 
   assertThrows(() => {
-    cache.overwriteAllDocsByAuthor(keypair);
+    cache.overwriteAllDocsByAuthor(keypair, FormatEs4);
   }, ReplicaCacheIsClosedError);
 
   assertThrows(() => {
@@ -261,7 +264,7 @@ Deno.test("ReplicaCache", async () => {
 
   assert(expiredResFst);
 
-  await sleep(500);
+  await sleep(1500);
 
   const expiredResSnd = attachmentsCache.getAttachment(expiredRes.doc);
 

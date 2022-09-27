@@ -4,7 +4,6 @@ import { Crypto } from "../../crypto/crypto.ts";
 import { Peer } from "../../peer/peer.ts";
 import { Replica } from "../../replica/replica.ts";
 
-import { AuthorKeypair } from "../../util/doc-types.ts";
 import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
 import {
@@ -29,46 +28,61 @@ import { multiplyScenarios } from "../scenarios/utils.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { FormatEs5 } from "../../formats/format_es5.ts";
 import { isErr } from "../../util/errors.ts";
+import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 
 class SyncerTestHelper {
   private scenario: PartnerScenario<[typeof FormatEs5]>;
-  private aDuo: [Replica, Replica];
-  private bDuo: [Replica, Replica];
-  private cDuo: [Replica, Replica];
+  private aDuo: Replica[] = [];
+  private bDuo: Replica[] = [];
+  private cDuo: Replica[] = [];
+  private makeDocDriver: (addr: string, variant?: string) => IReplicaDocDriver;
 
   constructor(
     scenario: PartnerScenario<[typeof FormatEs5]>,
     makeDocDriver: (addr: string, variant?: string) => IReplicaDocDriver,
   ) {
     this.scenario = scenario;
+    this.makeDocDriver = makeDocDriver;
+  }
 
-    const ADDRESS_A = "+apples.a123";
-    const ADDRESS_B = "+bananas.b234";
-    const ADDRESS_C = "+coconuts.c345";
+  async setup() {
+    const shareKeypairA = await Crypto.generateShareKeypair(
+      "apples",
+    ) as ShareKeypair;
+    const shareKeypairB = await Crypto.generateShareKeypair(
+      "bananas",
+    ) as ShareKeypair;
+    const shareKeypairC = await Crypto.generateShareKeypair(
+      "coconuts",
+    ) as ShareKeypair;
 
-    const makeReplicaDuo = (addr: string) => {
+    const ADDRESS_A = shareKeypairA.shareAddress;
+    const ADDRESS_B = shareKeypairB.shareAddress;
+    const ADDRESS_C = shareKeypairC.shareAddress;
+
+    const makeReplicaDuo = (addr: string, shareSecret: string) => {
       return [
         new Replica({
           driver: {
-            docDriver: makeDocDriver(addr, "sync-a"),
+            docDriver: this.makeDocDriver(addr, "sync-a"),
             attachmentDriver: new AttachmentDriverMemory(),
           },
+          shareSecret,
         }),
         new Replica({
           driver: {
-            docDriver: makeDocDriver(addr, "sync-b"),
+            docDriver: this.makeDocDriver(addr, "sync-b"),
             attachmentDriver: new AttachmentDriverMemory(),
           },
+          shareSecret,
         }),
       ] as [Replica, Replica];
     };
 
-    this.aDuo = makeReplicaDuo(ADDRESS_A);
-    this.bDuo = makeReplicaDuo(ADDRESS_B);
-    this.cDuo = makeReplicaDuo(ADDRESS_C);
-  }
+    this.aDuo = makeReplicaDuo(ADDRESS_A, shareKeypairA.secret);
+    this.bDuo = makeReplicaDuo(ADDRESS_B, shareKeypairB.secret);
+    this.cDuo = makeReplicaDuo(ADDRESS_C, shareKeypairC.secret);
 
-  async setup() {
     const peerA = new Peer();
     const peerB = new Peer();
 
@@ -76,15 +90,23 @@ class SyncerTestHelper {
       "suzy",
     ) as AuthorKeypair;
 
-    const allStorages = [
-      ...this.aDuo,
-      ...this.bDuo,
-      ...this.cDuo,
+    const keypairReplicaTuples: Replica[][] = [
+      this.aDuo,
+      this.bDuo,
+      this.cDuo,
     ];
 
-    const writes = await Promise.all(allStorages.map((replica) => {
-      return writeRandomDocs(keypairA, replica, 10);
-    }));
+    const writes = await Promise.all(
+      keypairReplicaTuples.map((duo) => {
+        return Promise.all(duo.map((replica) => {
+          return writeRandomDocs(
+            keypairA,
+            replica,
+            10,
+          );
+        }));
+      }),
+    );
 
     assert(
       writes.every((replicaWrites) => {

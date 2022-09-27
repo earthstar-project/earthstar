@@ -5,7 +5,6 @@ import {
 } from "../../deps.ts";
 import {
   AuthorAddress,
-  AuthorKeypair,
   DocAttachment,
   DocBase,
   DocWithAttachment,
@@ -43,6 +42,7 @@ import {
   FormatInputType,
   FormatsArg,
 } from "../formats/format_types.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 
 const logger = new Logger("replica-cache", "green");
 
@@ -582,15 +582,18 @@ export class ReplicaCache {
   // so we don't do a quick and dirty version in the cache here.
 
   /** Call this method on the backing replica. */
-  overwriteAllDocsByAuthor<F = DefaultFormats>(
+  overwriteAllDocsByAuthor<F = DefaultFormat>(
     keypair: AuthorKeypair,
-    formats?: FormatsArg<F>,
+    format?: FormatArg<F>,
   ) {
     if (this.closed) throw new ReplicaCacheIsClosedError();
     if (this.replica.isClosed()) {
       throw new ReplicaIsClosedError();
     }
-    return this.replica.overwriteAllDocsByAuthor(keypair, formats);
+    return this.replica.overwriteAllDocsByAuthor(
+      keypair,
+      format,
+    );
   }
 
   wipeDocAtPath<F = DefaultFormat>(

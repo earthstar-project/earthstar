@@ -1,6 +1,5 @@
 import {
   AuthorAddress,
-  AuthorKeypair,
   Base32String,
   DocBase,
   DocInputBase,
@@ -10,7 +9,7 @@ import {
   Signature,
   Timestamp,
 } from "../util/doc-types.ts";
-import { isErr, ValidationError } from "../util/errors.ts";
+import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
 import { FormatterGenerateOpts, IFormat } from "./format_types.ts";
 import { Crypto } from "../crypto/crypto.ts";
 
@@ -36,6 +35,7 @@ import {
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 let logger = new Logger("validator es.5", "red");
 
 //================================================================================
@@ -52,6 +52,8 @@ export interface DocEs5 extends DocBase<"es.5"> {
   path: Path;
   /** Used to verify the authorship of the document. */
   signature: Signature;
+  /** Used to verify the author knows the share's secret */
+  shareSignature: Signature;
   /** When the document was written, as a UNIX timestamp in microseconds (millionths of a second, e.g. `Date.now() * 1000`).*/
   timestamp: Timestamp;
   /** The share this document is from. */
@@ -132,6 +134,7 @@ const ES5_CORE_SCHEMA: CheckObjOpts = {
     }),
     path: checkString({ allowedChars: pathChars, minLen: 2, maxLen: 512 }),
     signature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
+    shareSignature: checkString({ allowedChars: b32chars, len: SIG_STR_LEN }),
     timestamp: checkInt({ min: MIN_TIMESTAMP, max: MAX_TIMESTAMP }),
     share: checkString({ allowedChars: workspaceAddressChars }),
     attachmentSize: checkInt({
@@ -149,11 +152,20 @@ const ES5_CORE_SCHEMA: CheckObjOpts = {
   allowExtraKeys: false,
 };
 
+export type ConfigEs5 = {
+  shareSecret: string | undefined;
+};
+
 /**
  * Format for 'es.5' documents. Supports attachments.
  * @link https://earthstar-project.org/specs/data-spec
  */
-export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
+export const FormatEs5: IFormat<
+  "es.5",
+  DocInputEs5,
+  DocEs5,
+  ConfigEs5
+> = class {
   static id: "es.5" = "es.5";
 
   /** Deterministic hash of this version of the document */
@@ -176,6 +188,8 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       ...doc,
       signature:
         "bthisisafakesignatureusedtofillintheobjectwhenvalidatingitforhashingaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      shareSignature:
+        "bthisisafakesignatureusedtofillintheobjectwhenvalidatingitforhashingaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     };
     const err = this._checkBasicDocumentValidity(docWithFakeSig);
     if (isErr(err)) return Promise.resolve(err);
@@ -183,7 +197,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     // Sort fields in lexicographic order by field name.
     // let result = ''
     // For each field,
-    //     skip "content" and "signature" fields.
+    //     skip "text" and "signature" and "shareSignature" fields.
     //     skip fields with value === null.
     //     result += fieldname + "\t" + convertToString(value) + "\n"
     // return base32encode(sha256(result).binaryDigest())
@@ -210,11 +224,13 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
    * Generate a signed document from the input format the validator expects.
    */
   static async generateDocument(
-    { input, keypair, share, timestamp, prevLatestDoc }: FormatterGenerateOpts<
-      "es.5",
-      DocInputEs5,
-      DocEs5
-    >,
+    { input, keypair, share, timestamp, prevLatestDoc, config }:
+      FormatterGenerateOpts<
+        "es.5",
+        DocInputEs5,
+        DocEs5,
+        ConfigEs5
+      >,
   ): Promise<
     | { doc: DocEs5; attachment?: ReadableStream<Uint8Array> | Uint8Array }
     | ValidationError
@@ -239,6 +255,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       timestamp,
       share,
       signature: "?", // signature will be added in just a moment
+      shareSignature: "?", // ditto
       // _localIndex will be added during upsert.  it's not needed for the signature.
     };
 
@@ -246,7 +263,7 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       doc["deleteAfter"] = input.deleteAfter;
     }
 
-    const signed = await this.signDocument(keypair, doc);
+    const signed = await this.signDocument(keypair, doc, config);
 
     if (isErr(signed)) {
       return signed;
@@ -263,24 +280,39 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
    * Generate a signed document from the input format the validator expects.
    */
   static async signDocument(
-    keypair: AuthorKeypair,
+    credentials: AuthorKeypair,
     doc: DocEs5,
+    config: ConfigEs5,
   ): Promise<DocEs5 | ValidationError> {
     const hash = await this.hashDocument(doc);
     if (isErr(hash)) return hash;
 
-    const sig = await Crypto.sign(keypair, hash);
-    if (isErr(sig)) return sig;
+    const sig = await Crypto.sign(credentials, hash);
 
-    return { ...doc, signature: sig };
+    if (config.shareSecret === undefined) {
+      return new EarthstarError(
+        `Tried to write a document to ${doc.share} without the secret.`,
+      );
+    }
+
+    const shareSig = await Crypto.sign({
+      shareAddress: doc.share,
+      secret: config.shareSecret,
+    }, hash);
+
+    if (isErr(sig)) return sig;
+    if (isErr(shareSig)) return shareSig;
+
+    return { ...doc, signature: sig, shareSignature: shareSig };
   }
 
   /**
    * Overwrite the user-written contents of a document, wipe any associated data, and return the signed document.
    */
   static async wipeDocument(
-    keypair: AuthorKeypair,
+    credentials: AuthorKeypair,
     doc: DocEs5,
+    config: ConfigEs5,
   ): Promise<DocEs5 | ValidationError> {
     if (doc.text.length === 0) {
       return doc;
@@ -296,11 +328,12 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
         text: "",
         textHash: await Crypto.sha256base32(""),
         signature: "?",
+        shareSignature: "?",
         attachmentHash: await Crypto.sha256base32(""),
         attachmentSize: 0,
       };
 
-      return this.signDocument(keypair, emptyDoc);
+      return this.signDocument(credentials, emptyDoc, config);
     }
 
     // make new doc which is empty and just barely newer than the original
@@ -309,9 +342,10 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       text: "",
       textHash: await Crypto.sha256base32(""),
       signature: "?",
+      shareSignature: "?",
     };
 
-    return this.signDocument(keypair, emptyDoc);
+    return this.signDocument(credentials, emptyDoc, config);
   }
 
   /**
@@ -355,10 +389,10 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
    * Normally `now` should be omitted so that it defaults to the current time,
    * or you can override it for testing purposes.
    */
-  static checkDocumentIsValid(
+  static async checkDocumentIsValid(
     doc: DocEs5,
     now?: number,
-  ): true | ValidationError {
+  ): Promise<true | ValidationError> {
     if (now === undefined) now = Date.now() * 1000;
     // do this first to ensure we have all the right datatypes in the right fields
 
@@ -396,10 +430,14 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
 
     // do this after validating that the author address is well-formed
     // so we don't pass garbage into the crypto signature code
-    const errS = this._checkAuthorSignatureIsValid(doc);
+
+    const errS = await this._checkAuthorSignatureIsValid(doc);
     if (isErr(errS)) return errS;
 
-    const errCH = this._checkContentMatchesHash(doc.text, doc.textHash);
+    const errSS = await this._checkShareSignatureIsValid(doc);
+    if (isErr(errSS)) return errSS;
+
+    const errCH = await this._checkContentMatchesHash(doc.text, doc.textHash);
     if (isErr(errCH)) return errCH;
     return true;
   }
@@ -414,14 +452,20 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     return true; // TODO: is there more to check?
   }
 
-  static _checkAttachmentFieldsConsistent(doc: DocEs5): true | ValidationError {
-    if (doc.text.length === 0 && doc.attachmentSize && doc.attachmentSize > 0) {
+  static _checkAttachmentFieldsConsistent(
+    doc: DocEs5,
+  ): true | ValidationError {
+    if (
+      doc.text.length === 0 && doc.attachmentSize && doc.attachmentSize > 0
+    ) {
       return new ValidationError(
         "Documents with attachments must have text.",
       );
     }
 
-    if (doc.text.length > 0 && doc.attachmentSize && doc.attachmentSize === 0) {
+    if (
+      doc.text.length > 0 && doc.attachmentSize && doc.attachmentSize === 0
+    ) {
       "Documents with deleted attachments must have no text.";
     }
 
@@ -577,6 +621,31 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
       );
     }
   }
+
+  static async _checkShareSignatureIsValid(
+    doc: DocEs5,
+  ): Promise<true | ValidationError> {
+    // Check if the signature is good.
+    // return a ValidationError, or return true on success.
+    try {
+      const hash = await this.hashDocument(doc);
+      if (isErr(hash)) return hash;
+      const verified = await Crypto.verify(
+        doc.share,
+        doc.shareSignature,
+        hash,
+      );
+      if (verified !== true) {
+        return new ValidationError("share signature is invalid");
+      }
+      return true;
+    } catch {
+      return new ValidationError(
+        "share signature is invalid (unexpected exception)",
+      );
+    }
+  }
+
   static async _checkContentMatchesHash(
     content: string,
     contentHash: Base32String,
@@ -595,7 +664,9 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
     doc: DocEs5,
   ): { size: number; hash: string } | ValidationError {
     if (doc.attachmentHash && doc.attachmentSize === 0) {
-      return new ValidationError("This document has had its attachment wiped");
+      return new ValidationError(
+        "This document has had its attachment wiped",
+      );
     }
 
     if (!doc.attachmentHash || !doc.attachmentSize) {
@@ -609,15 +680,23 @@ export const FormatEs5: IFormat<"es.5", DocInputEs5, DocEs5> = class {
   }
 
   static updateAttachmentFields(
+    credentials: AuthorKeypair,
     doc: DocEs5,
     size: number,
     hash: string,
-  ): DocEs5 {
-    return {
+    config: ConfigEs5,
+  ): Promise<DocEs5 | ValidationError> {
+    const updatedDoc = {
       ...doc,
       attachmentHash: hash,
       attachmentSize: size,
     };
+
+    return this.signDocument(credentials, updatedDoc, config);
+  }
+
+  static authorFromCredentials(credentials: AuthorKeypair): AuthorAddress {
+    return credentials.address;
   }
 };
 

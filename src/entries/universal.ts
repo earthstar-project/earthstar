@@ -30,6 +30,7 @@ export * from "../replica/compare.ts";
 export * from "../replica/replica.ts";
 export * from "../replica/replica_cache.ts";
 export * from "../replica/replica-types.ts";
+export * from "../replica/multiformat_replica.ts";
 export * from "../replica/util-types.ts";
 export * from "../replica/doc_drivers/memory.ts";
 export * from "../replica/attachment_drivers/memory.ts";

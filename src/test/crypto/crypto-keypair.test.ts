@@ -1,10 +1,9 @@
 import { assert, assertEquals } from "../asserts.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
-import { ICryptoDriver } from "../../crypto/crypto-types.ts";
+import { AuthorKeypair, ICryptoDriver } from "../../crypto/crypto-types.ts";
 import { isErr, ValidationError } from "../../util/errors.ts";
 
 import {
-  decodeAuthorKeypairToBytes,
+  decodeKeypairToBytes,
   encodeAuthorKeypairToStrings,
 } from "../../crypto/keypair.ts";
 import { Crypto } from "../../crypto/crypto.ts";
@@ -29,20 +28,20 @@ export function runCryptoKeypairTests(scenario: Scenario<ICryptoDriver>) {
     async () => {
       setGlobalCryptoDriver(driver);
 
-      let shortname = "test";
-      let keypair = await Crypto.generateAuthorKeypair(shortname);
+      const shortname = "test";
+      const keypair = await Crypto.generateAuthorKeypair(shortname);
       if (isErr(keypair)) {
         assert(false, "keypair 1 is an error");
 
         return;
       }
-      let keypairBytes = decodeAuthorKeypairToBytes(keypair);
+      const keypairBytes = decodeKeypairToBytes(keypair);
       if (isErr(keypairBytes)) {
         assert(false, "keypairBytes is an error");
 
         return;
       }
-      let keypair2 = encodeAuthorKeypairToStrings(
+      const keypair2 = encodeAuthorKeypairToStrings(
         shortname,
         keypairBytes,
       );
@@ -51,7 +50,7 @@ export function runCryptoKeypairTests(scenario: Scenario<ICryptoDriver>) {
 
         return;
       }
-      let keypairBytes2 = decodeAuthorKeypairToBytes(keypair);
+      const keypairBytes2 = decodeKeypairToBytes(keypair);
       if (isErr(keypairBytes2)) {
         assert(false, "keypairBytes2 is an error");
 
@@ -70,17 +69,17 @@ export function runCryptoKeypairTests(scenario: Scenario<ICryptoDriver>) {
       );
 
       keypair.secret = "x";
-      let err1 = decodeAuthorKeypairToBytes(keypair);
+      const err1 = decodeKeypairToBytes(keypair);
       assert(
         isErr(err1),
-        'decodeAuthorKeypairToBytes returns an error if the secret is bad base32 (no leading "b")',
+        'decodeKeypairToBytes returns an error if the secret is bad base32 (no leading "b")',
       );
 
       keypair.secret = "b1";
-      let err2 = decodeAuthorKeypairToBytes(keypair);
+      const err2 = decodeKeypairToBytes(keypair);
       assert(
         isErr(err2),
-        "decodeAuthorKeypairToBytes returns an error if the secret is bad base32 (invalid base32 character)",
+        "decodeKeypairToBytes returns an error if the secret is bad base32 (invalid base32 character)",
       );
 
       // we test for base32-too-short later in another test
@@ -96,7 +95,7 @@ export function runCryptoKeypairTests(scenario: Scenario<ICryptoDriver>) {
   );
 
   Deno.test(
-    SUBTEST_NAME + ": decodeAuthorKeypairToBytes checks Uint8Array length",
+    SUBTEST_NAME + ": decodeKeypairToBytes checks Uint8Array length",
     () => {
       setGlobalCryptoDriver(driver);
 
@@ -104,7 +103,7 @@ export function runCryptoKeypairTests(scenario: Scenario<ICryptoDriver>) {
         valid: Boolean;
         keypair: AuthorKeypair;
       }
-      let vectors: Vector[] = [
+      const vectors: Vector[] = [
         {
           valid: true,
           keypair: {
@@ -176,8 +175,8 @@ export function runCryptoKeypairTests(scenario: Scenario<ICryptoDriver>) {
         },
       ];
 
-      for (let { valid, keypair } of vectors) {
-        let keypairBytesOrErr = decodeAuthorKeypairToBytes(keypair);
+      for (const { valid, keypair } of vectors) {
+        const keypairBytesOrErr = decodeKeypairToBytes(keypair);
         if (valid) {
           assertEquals(
             keypairBytesOrErr instanceof ValidationError,

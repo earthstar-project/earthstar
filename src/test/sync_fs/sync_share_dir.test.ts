@@ -6,24 +6,24 @@ import { syncReplicaAndFsDir } from "../../sync-fs/sync-fs.ts";
 import { SyncFsManifest } from "../../sync-fs/sync-fs-types.ts";
 
 import { Crypto } from "../../crypto/crypto.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
 import { Replica } from "../../replica/replica.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { sleep } from "../../util/misc.ts";
 import { EarthstarError, isErr } from "../../util/errors.ts";
 import { assert, assertEquals, assertRejects } from "../asserts.ts";
+import { AuthorKeypair } from "../../crypto/crypto-types.ts";
 
 const TEST_DIR = "src/test/fs-sync/dirs/sync_share_dir";
-const TEST_SHARE = "+test.a123";
 
-function makeReplica(address: string) {
+function makeReplica(address: string, shareSecret: string) {
   const driver = new DocDriverMemory(address);
   return new Replica({
     driver: {
       docDriver: driver,
       attachmentDriver: new AttachmentDriverMemory(),
     },
+    shareSecret,
   });
 }
 
@@ -35,14 +35,25 @@ Deno.test("syncShareAndDir", async (test) => {
     "bbbb",
   ) as AuthorKeypair;
 
+  const shareKeypair = await Crypto.generateShareKeypair("syncfstest");
+  const otherShareKeypair = await Crypto.generateShareKeypair(
+    "syncfstestother",
+  );
+
+  assert(!isErr(shareKeypair));
+  assert(!isErr(otherShareKeypair));
+
   // Throws if the dir is dirty and there is no manifest + the option is on.
 
   await ensureDir(TEST_DIR);
   await emptyDir(TEST_DIR);
   await Deno.writeTextFile(join(TEST_DIR, "dirty"), "heh");
 
+  const TEST_SHARE = shareKeypair.shareAddress;
+  const OTHER_TEST_SHARE = otherShareKeypair.shareAddress;
+
   await test.step("can't sync a dirty folder without a manifest", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await assertRejects(
       () => {
@@ -77,8 +88,8 @@ Deno.test("syncShareAndDir", async (test) => {
   // Throws if the replica address does not match the manifest address
 
   await test.step("can't sync a directory which was synced with another share", async () => {
-    const replica = makeReplica(TEST_SHARE);
-    const otherReplica = makeReplica("+other.b123");
+    const replica = makeReplica(TEST_SHARE, "");
+    const otherReplica = makeReplica(OTHER_TEST_SHARE, "");
 
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
@@ -109,7 +120,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Throws if you try to change a file at an owned path
   await test.step("throws when you try to change a file at someone else's owned path", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
 
@@ -157,7 +168,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
     await emptyDir(TEST_DIR);
 
-    const replica2 = makeReplica(TEST_SHARE);
+    const replica2 = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     // Want to guard against a specific sequence of events.
     // Which is...
@@ -216,7 +227,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
     // Test attachments
 
-    const replica3 = makeReplica(TEST_SHARE);
+    const replica3 = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await ensureDir(ownedPath);
 
@@ -250,7 +261,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
     await ensureDir(join(TEST_DIR, `~${keypairB.address}`));
 
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await Deno.writeTextFile(
       ownedPath,
@@ -331,7 +342,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Throws if you try to delete a file at an owned path
   await test.step("throws when you try to delete a file at someone else's owned path", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
 
@@ -405,7 +416,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Throws if a file has an invalid path
   await test.step("throws when you write a file at an invalid path", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     const invalidPath = join(TEST_DIR, `/@invalid`);
 
@@ -465,7 +476,7 @@ Deno.test("syncShareAndDir", async (test) => {
       BIG_LOREM_IPSUM,
     );
 
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await assertRejects(
       () => {
@@ -500,7 +511,7 @@ Deno.test("syncShareAndDir", async (test) => {
       "B",
     );
 
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await syncReplicaAndFsDir({
       dirPath: TEST_DIR,
@@ -559,7 +570,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Writes docs from replica -> fs
   await test.step("writes files from the replica -> fs", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await replica.set(keypairB, {
       text: "A",
@@ -613,7 +624,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Deletes files from the FS we'd expect it to.
   await test.step("wiped docs on replica -> deleted file on the fs", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await replica.set(keypairB, {
       text: "A",
@@ -723,7 +734,7 @@ Deno.test("syncShareAndDir", async (test) => {
 
   // Wipes docs from the replica we'd expect it to.
   await test.step("deleted files on the fs -> wiped doc on replica", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await replica.set(keypairB, {
       text: "A",
@@ -886,7 +897,7 @@ Deno.test("syncShareAndDir", async (test) => {
   await emptyDir(TEST_DIR);
 
   await test.step("stores older versions of docs from the fs", async () => {
-    const replica = makeReplica(TEST_SHARE);
+    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
 
     await Deno.writeTextFile(
       join(TEST_DIR, "wiki"),

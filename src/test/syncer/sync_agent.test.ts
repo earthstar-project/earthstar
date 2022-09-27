@@ -1,4 +1,5 @@
 import { deferred } from "../../../deps.ts";
+import { AuthorKeypair } from "../../crypto/crypto-types.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { DocEs4, FormatEs4 } from "../../formats/format_es4.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
@@ -11,7 +12,7 @@ import {
 } from "../../syncer/syncer_types.ts";
 import { SyncAgent } from "../../syncer/sync_agent.ts";
 import { TransferManager } from "../../syncer/transfer_manager.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
+
 import { sleep } from "../../util/misc.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { docDriverScenarios } from "../scenarios/scenarios.ts";
@@ -227,6 +228,7 @@ function generateDoc(keypair: AuthorKeypair, input: {
       content: input.content,
     },
     timestamp: Date.now() * 1000,
+    config: undefined,
   });
 }
 
@@ -288,6 +290,7 @@ for (const scenario of scenarios) {
         content: "hello",
       },
       timestamp: Date.now() * 1000,
+      config: undefined,
     }) as { doc: DocEs4 };
 
     const testHelper = new SyncAgentTestHelper({

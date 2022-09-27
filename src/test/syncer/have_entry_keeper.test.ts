@@ -6,17 +6,22 @@ import { Replica } from "../../replica/replica.ts";
 
 import { HaveEntryKeeper } from "../../syncer/have_entry_keeper.ts";
 import { HaveEntry } from "../../syncer/syncer_types.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
+
 import { sleep } from "../../util/misc.ts";
 import { readStream } from "../../util/streams.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { writeRandomDocs } from "../test-utils.ts";
 import { DocEs5, FormatEs5 } from "../../formats/format_es5.ts";
+import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 
 Deno.test("HaveEntryKeeper", async () => {
-  const SHARE_ADDR = "+test.a123";
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "test",
+  ) as ShareKeypair;
 
-  const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+  const SHARE_ADDR = shareKeypair.shareAddress;
+
+  const keypairA = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair(
     "suzy",
   ) as AuthorKeypair;
@@ -27,10 +32,11 @@ Deno.test("HaveEntryKeeper", async () => {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      shareSecret: shareKeypair.secret,
     },
   );
 
-  await replica.set(keypair, {
+  await replica.set(keypairA, {
     path: "/shared_path",
     text: "Hello",
   });
@@ -40,7 +46,7 @@ Deno.test("HaveEntryKeeper", async () => {
     text: "Howdy",
   });
 
-  await replica.set(keypair, {
+  await replica.set(keypairB, {
     path: "/another_path",
     text: "Greetings",
   });
@@ -160,26 +166,34 @@ Deno.test("HaveEntryKeeper", async () => {
 Deno.test({
   name: "HaveEntryKeeper hashes",
   fn: async () => {
-    const SHARE_ADDR = "+test.a123";
+    const shareKeypair = await Crypto.generateShareKeypair(
+      "test",
+    ) as ShareKeypair;
+
+    const SHARE_ADDR = shareKeypair.shareAddress;
+
+    const keypairA = await Crypto.generateAuthorKeypair(
+      "test",
+    ) as AuthorKeypair;
 
     // Set up two replicas to have the same docs.
-
-    const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
     const replica = new Replica({
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      shareSecret: shareKeypair.secret,
     });
 
-    await writeRandomDocs(keypair, replica, 1000);
+    await writeRandomDocs(keypairA, replica, 1000);
 
     const otherReplica = new Replica({
       driver: {
         docDriver: new DocDriverMemory(SHARE_ADDR),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      shareSecret: shareKeypair.secret,
     });
 
     const ingestWritable = new WritableStream<QuerySourceEvent<DocEs5>>({

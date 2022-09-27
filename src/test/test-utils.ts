@@ -1,10 +1,6 @@
 import { assert, equal } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
-import {
-  AuthorKeypair,
-  DocBase,
-  DocWithAttachment,
-} from "../util/doc-types.ts";
+import { DocBase, DocWithAttachment } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 
@@ -14,12 +10,13 @@ import { isErr } from "../util/errors.ts";
 
 import { equals as bytesEqual } from "https://deno.land/std@0.154.0/bytes/mod.ts";
 import { shallowEqualObjects } from "../../deps.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 
 // for testing unicode
-export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
-export let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
+export const snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+export const snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 
-export let throws = async (fn: () => Promise<any>, msg: string) => {
+export const throws = async (fn: () => Promise<any>, msg: string) => {
   try {
     await fn();
     assert(false, "failed to throw: " + msg);
@@ -28,7 +25,7 @@ export let throws = async (fn: () => Promise<any>, msg: string) => {
   }
 };
 
-export let doesNotThrow = async (
+export const doesNotThrow = async (
   fn: () => Promise<any>,
   msg: string,
 ) => {
@@ -40,17 +37,18 @@ export let doesNotThrow = async (
   }
 };
 
-export function makeReplica(addr: string) {
+export function makeReplica(addr: string, shareSecret: string) {
   return new Replica({
     driver: {
       docDriver: new DocDriverMemory(addr),
       attachmentDriver: new AttachmentDriverMemory(),
     },
+    shareSecret,
   });
 }
 
-export function makeNReplicas(addr: string, number: number) {
-  return Array.from({ length: number }, () => makeReplica(addr));
+export function makeNReplicas(addr: string, secret: string, number: number) {
+  return Array.from({ length: number }, () => makeReplica(addr, secret));
 }
 
 function stripLocalIndexFromDoc(

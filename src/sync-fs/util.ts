@@ -12,10 +12,10 @@ import {
 } from "https://deno.land/std@0.154.0/path/mod.ts";
 
 import { ensureDir } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
-import { AuthorKeypair } from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { DocEs5 } from "../formats/format_es5.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 
 export function isAbsenceEntry(
   o: AbsenceEntry | FileInfoEntry | DocEs5,

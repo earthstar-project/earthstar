@@ -1,5 +1,5 @@
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair } from "../util/doc-types.ts";
 
 /**
  * Options for syncing a replica with a filesystem directory.

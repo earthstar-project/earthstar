@@ -230,6 +230,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         timestamp: 1619627796035000,
         share: "+gardening.abc",
         signature: "whatever0", // upsert does not check signature or validate doc
+        shareSignature: "whatever1",
       };
       // same author, newer
       const doc1 = {
