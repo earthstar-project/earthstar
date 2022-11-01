@@ -192,6 +192,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private addShare(
     address: string,
     formats: FormatsArg<FormatsType>,
+    initiateMessaging: boolean,
   ) {
     // Bail if we already have a sync agent for this share.
     if (this.syncAgents.has(address)) {
@@ -212,6 +213,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       mode: this.mode === "once" ? "only_existing" : "live",
       formats,
       transferManager: this.transferManager,
+      initiateMessaging: initiateMessaging,
     });
 
     agent.onStatusUpdate(() => {
@@ -262,7 +264,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         },
       }),
     ).pipeTo(agent.writable).catch((err) => {
-      this.cancel(err);
+      //this.cancel(err);
+      // hmmm...
     });
 
     this.transferManager.registerSyncAgent(agent);
@@ -294,8 +297,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           }
         }
 
+        const initiateMessaging = this.id > event.syncerId;
+
         for (const share of commonShareSet) {
-          this.addShare(share, intersectingFormats);
+          this.addShare(share, intersectingFormats, initiateMessaging);
         }
 
         this.transferManager.registerOtherSyncerId(event.syncerId);

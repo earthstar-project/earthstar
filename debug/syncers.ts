@@ -1,4 +1,4 @@
-import { AuthorKeypair, Crypto, Peer, Replica } from "../mod.ts";
+import { AuthorKeypair, Crypto, Peer, Replica, ShareKeypair } from "../mod.ts";
 import { AttachmentDriverMemory } from "../src/replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../src/replica/doc_drivers/memory.ts";
 import {
@@ -9,30 +9,42 @@ import {
 const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
 
 // create three replicas x 2.
-const ADDRESS_A = "+apples.a123";
-const ADDRESS_B = "+bananas.b234";
-const ADDRESS_C = "+coconuts.c345";
+const shareKeypairA = await Crypto.generateShareKeypair(
+  "apples",
+) as ShareKeypair;
+const shareKeypairB = await Crypto.generateShareKeypair(
+  "bananas",
+) as ShareKeypair;
+const shareKeypairC = await Crypto.generateShareKeypair(
+  "coconuts",
+) as ShareKeypair;
 
-const makeReplicaDuo = (addr: string) => {
+const ADDRESS_A = shareKeypairA.shareAddress;
+const ADDRESS_B = shareKeypairB.shareAddress;
+const ADDRESS_C = shareKeypairC.shareAddress;
+
+const makeReplicaDuo = (addr: string, shareSecret: string) => {
   return [
     new Replica({
       driver: {
         docDriver: new DocDriverMemory(addr),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      shareSecret,
     }),
     new Replica({
       driver: {
         docDriver: new DocDriverMemory(addr),
         attachmentDriver: new AttachmentDriverMemory(),
       },
+      shareSecret,
     }),
   ] as [Replica, Replica];
 };
 
-const [a1, a2] = makeReplicaDuo(ADDRESS_A);
-const [b1, b2] = makeReplicaDuo(ADDRESS_B);
-const [c1, c2] = makeReplicaDuo(ADDRESS_C);
+const [a1, a2] = makeReplicaDuo(ADDRESS_A, shareKeypairA.secret);
+const [b1, b2] = makeReplicaDuo(ADDRESS_B, shareKeypairB.secret);
+const [c1, c2] = makeReplicaDuo(ADDRESS_C, shareKeypairC.secret);
 
 await writeRandomDocs(keypair, a1, 10);
 await writeRandomDocs(keypair, a2, 10);
@@ -90,4 +102,7 @@ for (const [x, y] of pairs) {
     console.log(`Attachments did not sync...`);
   }
   console.groupEnd();
+
+  await x.close(true);
+  await y.close(true);
 }

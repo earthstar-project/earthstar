@@ -72,7 +72,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     const { formatsLookup } = this;
     const handleDownload = this.handleDownload.bind(this);
 
-    const pipePromise = existingDocsStream.pipeTo(
+    const pipedExistingDocsToManager = existingDocsStream.pipeTo(
       new WritableStream<
         QuerySourceEvent<FormatDocType<FormatsType>>
       >({
@@ -94,7 +94,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       }),
     );
 
-    this.madeAllAttachmentRequestsEnroller.enrol(pipePromise);
+    this.madeAllAttachmentRequestsEnroller.enrol(pipedExistingDocsToManager);
     this.madeAllAttachmentRequestsEnroller.enrol(agent.isDone());
   }
 

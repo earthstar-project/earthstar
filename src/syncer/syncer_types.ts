@@ -1,4 +1,4 @@
-import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
+import { DocBase, ShareAddress } from "../util/doc-types.ts";
 import { IPeer } from "../peer/peer-types.ts";
 import { Replica } from "../replica/replica.ts";
 import {
@@ -8,36 +8,48 @@ import {
 } from "../formats/format_types.ts";
 import { TransferManager } from "./transfer_manager.ts";
 
-/** Describes a group of docs under a common path which a syncing replica possesses. */
-export type HaveEntry = {
-  id: string;
-  versions: Record<string, Timestamp>;
+/** A short string describing the timestamp, author, and path of a document. */
+export type DocThumbnail = string;
+
+export type RangeMessage =
+  | {
+    type: "LOWER_BOUND";
+    value: DocThumbnail;
+  }
+  | {
+    type: "PAYLOAD";
+    payload: DocThumbnail;
+    end?: { canRespond: boolean; upperBound: DocThumbnail };
+  }
+  | {
+    type: "EMPTY_PAYLOAD";
+    upperBound: DocThumbnail;
+  }
+  | {
+    type: "FINGERPRINT";
+    /** Base64 encoded version of the fingeprint. */
+    fingerprint: string;
+    upperBound: DocThumbnail;
+  }
+  | { type: "DONE"; upperBound: DocThumbnail }
+  | { type: "TERMINAL" };
+
+/** An event to be passed on to a RangeMessenger */
+export type SyncAgentRangeMessageEvent = {
+  kind: "RANGE_MSG";
+  /** A JSON encoded message. */
+  message: RangeMessage;
 };
-
-/** A mode describing whether the HaveEntryKeeper should process only existing docs, or also live ones. */
-export type HaveEntryKeeperMode = "existing" | "everything";
-
-/** A hash of a replica's entire store of documents, used to quickly check equivalence. */
-export type SyncAgentHashEvent = {
-  kind: "HASH";
-  hash: string;
-};
-
-/** A compressed description of a group of docs a sync agent possesses */
-export interface SyncAgentHaveEvent extends HaveEntry {
-  kind: "HAVE";
-}
 
 /** Signals that a SyncAgent wants a document/documents from another SyncAgent */
 export type SyncAgentWantEvent = {
   kind: "WANT";
-  id: string;
+  thumbnail: string;
 };
 
 /** An event with an Earthstar document and corresponding ID. */
 export type SyncAgentDocEvent = {
   kind: "DOC";
-  id: string;
   doc: DocBase<string>;
 };
 
@@ -46,11 +58,6 @@ export type SyncAgentWantAttachmentEvent = {
   doc: DocBase<string>;
   shareAddress: string;
   attachmentHash: string;
-};
-
-/* An event sent when a sync agent has offered all docs it knows of. */
-export type SyncAgentExhaustedHavesEvent = {
-  kind: "EXHAUSTED_HAVES";
 };
 
 /** An event sent when a SyncAgent doesn't want anything anymore, though it'll still serve HAVE requests. */
@@ -64,13 +71,11 @@ export type SyncAgentAbortEvent = {
 
 /** A type of message one SyncAgent can send to another. */
 export type SyncAgentEvent =
-  | SyncAgentHashEvent
-  | SyncAgentHaveEvent
+  | SyncAgentRangeMessageEvent
   | SyncAgentWantEvent
   | SyncAgentDocEvent
   | SyncAgentWantAttachmentEvent
   | SyncAgentAbortEvent
-  | SyncAgentExhaustedHavesEvent
   | SyncAgentFulfilledEvent;
 
 /** The current status of a SyncAgent
@@ -94,6 +99,7 @@ export type SyncAgentOpts<F> = {
   formats?: FormatsArg<F>;
   mode: "only_existing" | "live";
   transferManager: TransferManager<F, unknown>;
+  initiateMessaging: boolean;
 };
 
 // ===================
