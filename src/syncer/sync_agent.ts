@@ -8,19 +8,13 @@ import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
 import { Replica } from "../replica/replica.ts";
-import { deferred } from "../../deps.ts";
+import { AsyncQueue, deferred } from "../../deps.ts";
 import { DocThumbnailTree } from "./doc_thumbnail_tree.ts";
 import { EarthstarRangeMessenger } from "./range_messenger.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
 export class SyncAgent<F> {
-  /** A bus to send events to, and which our readable streams subcribe to. */
-  private outboundEventBus = new BlockingBus<
-    // Add a special internal kind to signal to the stream that it should close. This is never sent to the other peers.
-    SyncAgentEvent | { kind: "CMD_FINISHED" }
-  >();
-
   /** A map of all the `HAVE` ids we've `WANT`ed and whether we received them or not. */
   private fulfilledMap: Map<string, boolean> = new Map();
   /** An integer representing the number of requests were fulfilled. Quicker than calculating this every time from the `fulfilledMap`. */
@@ -40,10 +34,16 @@ export class SyncAgent<F> {
   /** A multi deferred describing if th the SyncAgent has finished or not. */
   private isDoneMultiDeferred = new MultiDeferred<void>();
 
-  /** A writable stream which takes incoming messages from another SyncAgent. */
-  writable: WritableStream<SyncAgentEvent>;
-  /** A readable stream of outbound events intended for a `SyncAgent` partner. */
-  readable: ReadableStream<SyncAgentEvent>;
+  private inboundEventQueue = new AsyncQueue<SyncAgentEvent>();
+  private outboundEventQueue = new AsyncQueue<SyncAgentEvent>();
+
+  sendEvent(event: SyncAgentEvent): void {
+    return this.inboundEventQueue.push(event);
+  }
+
+  events(): AsyncIterable<SyncAgentEvent> {
+    return this.outboundEventQueue;
+  }
 
   replica: Replica;
 
@@ -99,12 +99,10 @@ export class SyncAgent<F> {
   ) {
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
     const {
-      outboundEventBus,
       statusBus,
       isPartnerFulfilled,
       fulfilledMap,
       isDoneMultiDeferred,
-      isFulfilled,
       treeIsReady,
     } = this;
 
@@ -113,7 +111,6 @@ export class SyncAgent<F> {
     // If the replica closes, we need to abort
     replica.onEvent((event) => {
       if (event.kind === "willClose") {
-        console.log("here?");
         this.cancel();
       }
     });
@@ -160,7 +157,7 @@ export class SyncAgent<F> {
     if (initiateMessaging) {
       treeIsReady.then(() => {
         for (const msg of rangeMessenger.initialMessages()) {
-          outboundEventBus.send({
+          this.outboundEventQueue.push({
             "kind": "RANGE_MSG",
             message: msg,
           });
@@ -183,7 +180,7 @@ export class SyncAgent<F> {
       if (docs.length === 0) {
         // Nothing with this path, definitely want.
         registerWant(thumbnail);
-        await this.outboundEventBus.send({ kind: "WANT", thumbnail });
+        this.outboundEventQueue.push({ kind: "WANT", thumbnail });
         return;
       }
 
@@ -192,7 +189,7 @@ export class SyncAgent<F> {
       if (indexOfDocbyAuthor === -1) {
         // Don't have this author, definitely want.
         registerWant(thumbnail);
-        await this.outboundEventBus.send({ kind: "WANT", thumbnail });
+        this.outboundEventQueue.push({ kind: "WANT", thumbnail });
         return;
       }
 
@@ -201,14 +198,14 @@ export class SyncAgent<F> {
       if (doc.timestamp < parseInt(timestamp)) {
         // This one has a newer timestamp, we want that.
         registerWant(thumbnail);
-        await this.outboundEventBus.send({ kind: "WANT", thumbnail });
+        this.outboundEventQueue.push({ kind: "WANT", thumbnail });
       }
     });
 
-    // This writable takes events from the other SyncAgent
+    // Read events from the other SyncAgent
     // And we handle them here.
-    this.writable = new WritableStream<SyncAgentEvent>({
-      async write(event) {
+    (async () => {
+      for await (const event of this.inboundEventQueue) {
         if (isDoneMultiDeferred.state === "rejected") {
           return;
         }
@@ -222,7 +219,7 @@ export class SyncAgent<F> {
             const responses = rangeMessenger.respond(event.message);
 
             for (const response of responses) {
-              await outboundEventBus.send({
+              this.outboundEventQueue.push({
                 kind: "RANGE_MSG",
                 message: response,
               });
@@ -246,7 +243,7 @@ export class SyncAgent<F> {
             const doc = allVersions.find((doc) => doc.author === author);
 
             if (doc) {
-              await outboundEventBus.send({
+              this.outboundEventQueue.push({
                 kind: "DOC",
                 doc,
               });
@@ -296,7 +293,7 @@ export class SyncAgent<F> {
                     attachmentInfo.hash,
                   );
 
-                  await outboundEventBus.send({
+                  this.outboundEventQueue.push({
                     kind: "WANT_ATTACHMENT",
                     attachmentHash: attachmentInfo.hash,
                     doc: event.doc,
@@ -327,37 +324,8 @@ export class SyncAgent<F> {
           case "ABORT":
             await cancel();
         }
-      },
-    });
-
-    // This is the stream of all outbound events destined for the partner SyncAgent.
-    this.readable = new ReadableStream<SyncAgentEvent>({
-      start(controller) {
-        // Subscribe to the bus for events, and enqueue them.
-        const unsub = outboundEventBus.on((event) => {
-          if (
-            isDoneMultiDeferred.state !== "rejected" &&
-            event.kind !== "CMD_FINISHED"
-          ) {
-            controller.enqueue(event);
-          }
-
-          if (event.kind === "ABORT") {
-            isDoneMultiDeferred.reject("Aborted");
-          }
-
-          if (event.kind === "ABORT" || event.kind === "CMD_FINISHED") {
-            controller.close();
-            statusBus.send(getStatus());
-            unsub();
-          }
-
-          if (event.kind === "CMD_FINISHED") {
-            isDoneMultiDeferred.resolve();
-          }
-        });
-      },
-    });
+      }
+    })();
 
     rangeMessenger.isDone().then(() => {
       const status = this.getStatus();
@@ -375,13 +343,14 @@ export class SyncAgent<F> {
     });
 
     this.isFulfilled.then(() => {
-      this.outboundEventBus.send({ kind: "FULFILLED" });
+      this.outboundEventQueue.push({ kind: "FULFILLED" });
     });
 
     this.isPartnerFulfilled.then(async () => {
       await this.isFulfilled;
 
-      await outboundEventBus.send({ kind: "CMD_FINISHED" });
+      this.isDoneMultiDeferred.resolve();
+      this.outboundEventQueue.close();
     });
 
     this.isDoneMultiDeferred.getPromise().then(() => {
@@ -406,7 +375,8 @@ export class SyncAgent<F> {
       return;
     }
 
-    await this.outboundEventBus.send({ kind: "ABORT" });
+    this.outboundEventQueue.push({ kind: "ABORT" });
+    this.outboundEventQueue.close();
   }
 
   isDone() {

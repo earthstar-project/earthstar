@@ -13,6 +13,7 @@ export type {
   LiftingMonoid,
   RangeMessengerConfig,
 } from "../range-reconcile/mod.ts";
+export { AsyncQueue } from "https://deno.land/x/for_awaitable_queue@1.0.0/mod.ts";
 
 // Deno std lib
 

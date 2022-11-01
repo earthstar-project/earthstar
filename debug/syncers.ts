@@ -102,7 +102,4 @@ for (const [x, y] of pairs) {
     console.log(`Attachments did not sync...`);
   }
   console.groupEnd();
-
-  await x.close(true);
-  await y.close(true);
 }

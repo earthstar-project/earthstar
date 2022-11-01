@@ -135,14 +135,14 @@ export type SyncerEvent =
 
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */
 export interface ISyncPartner<IncomingAttachmentSourceType> {
-  /** A stream of inbound syncer events from the partner. */
-  readable: ReadableStream<SyncerEvent>;
-
-  /** A stream of outbound syncer events to the partner */
-  writable: WritableStream<SyncerEvent>;
-
   /** The number of permitted concurrent attachment transfers */
   concurrentTransfers: number;
+
+  /** An async iterable of events from the partner. */
+  getEvents(): AsyncIterable<SyncerEvent>;
+
+  /** Sends a syncer event to the partner. */
+  sendEvent(event: SyncerEvent): Promise<void>;
 
   /** Attempt to download an attachment directly from the partner.
    * @returns A `ReadableStream<Uint8Array>` to read data from, a `ValidationError` if something went wrong, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
