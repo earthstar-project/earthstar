@@ -8,8 +8,7 @@ import { DocEs5 } from "../formats/format_es5.ts";
 import { AttachmentDriverMemory } from "../replica/attachment_drivers/memory.ts";
 import { isErr } from "../util/errors.ts";
 
-import { equals as bytesEqual } from "https://deno.land/std@0.154.0/bytes/mod.ts";
-import { shallowEqualObjects } from "../../deps.ts";
+import { bytesEquals, shallowEqualObjects } from "../../deps.ts";
 import { AuthorKeypair } from "../crypto/crypto-types.ts";
 
 // for testing unicode
@@ -129,7 +128,7 @@ export async function docAttachmentsAreEquivalent(
       const aBytes = await a.attachment.bytes();
       const bBytes = await b.attachment.bytes();
 
-      if (bytesEqual(aBytes, bBytes) === false) {
+      if (bytesEquals(aBytes, bBytes) === false) {
         return false;
       }
     }

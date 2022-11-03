@@ -1,18 +1,23 @@
 import {
   base64Decode,
   base64Encode,
+  bytesEquals,
   RangeMessenger,
   RangeMessengerConfig,
 } from "../../deps.ts";
 import { DocThumbnailTree } from "./doc_thumbnail_tree.ts";
 import { DocThumbnail, RangeMessage } from "./syncer_types.ts";
 
-const messengerConfig: RangeMessengerConfig<
+const encoding: RangeMessengerConfig<
   RangeMessage,
   DocThumbnail,
   Uint8Array
 > = {
   encode: {
+    emptySet: (canRespond) => ({
+      type: "EMPTY_SET",
+      canRespond,
+    }),
     lowerBound: (x) => ({
       type: "LOWER_BOUND",
       value: x,
@@ -40,14 +45,18 @@ const messengerConfig: RangeMessengerConfig<
     }),
   },
   decode: {
+    emptySet: (obj) => {
+      if (obj.type === "EMPTY_SET") {
+        return obj.canRespond;
+      }
+      throw "Can't decode";
+    },
     lowerBound: (obj) => {
       if (obj.type === "LOWER_BOUND") {
         return obj.value;
       }
-
-      return false;
+      throw "Can't decode";
     },
-
     payload: (obj) => {
       if (obj.type === "PAYLOAD") {
         return {
@@ -55,24 +64,19 @@ const messengerConfig: RangeMessengerConfig<
           ...(obj.end ? { end: obj.end } : {}),
         };
       }
-
-      return false;
+      throw "Can't decode";
     },
-
     emptyPayload: (obj) => {
       if (obj.type === "EMPTY_PAYLOAD") {
         return obj.upperBound;
       }
-
-      return false;
+      throw "Can't decode";
     },
-
     done: (obj) => {
       if (obj.type === "DONE") {
         return obj.upperBound;
       }
-
-      return false;
+      throw "Can't decode";
     },
     fingerprint: (obj) => {
       if (obj.type === "FINGERPRINT") {
@@ -81,22 +85,30 @@ const messengerConfig: RangeMessengerConfig<
           upperBound: obj.upperBound,
         };
       }
-
-      return false;
+      throw "Can't decode";
     },
     terminal: (obj) => {
       if (obj.type === "TERMINAL") {
         return true;
       }
-
-      return false;
+      throw "Can't decode";
     },
   },
 };
 
 export class EarthstarRangeMessenger
   extends RangeMessenger<RangeMessage, DocThumbnail, Uint8Array> {
-  constructor(tree: DocThumbnailTree) {
-    super(tree, messengerConfig);
+  constructor(
+    tree: DocThumbnailTree,
+    payloadThreshold: number,
+    rangeDivision: number,
+  ) {
+    super({
+      tree,
+      encoding,
+      fingerprintEquals: bytesEquals,
+      payloadThreshold,
+      rangeDivision,
+    });
   }
 }

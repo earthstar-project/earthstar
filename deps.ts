@@ -25,6 +25,7 @@ export {
   decode as base64Decode,
   encode as base64Encode,
 } from "https://deno.land/std@0.154.0/encoding/base64.ts";
+export { equals as bytesEquals } from "https://deno.land/std@0.154.0/bytes/equals.ts";
 
 // fs
 // path

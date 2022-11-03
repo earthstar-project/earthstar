@@ -13,6 +13,10 @@ export type DocThumbnail = string;
 
 export type RangeMessage =
   | {
+    type: "EMPTY_SET";
+    canRespond: boolean;
+  }
+  | {
     type: "LOWER_BOUND";
     value: DocThumbnail;
   }
@@ -100,6 +104,8 @@ export type SyncAgentOpts<F> = {
   mode: "only_existing" | "live";
   transferManager: TransferManager<F, unknown>;
   initiateMessaging: boolean;
+  payloadThreshold: number;
+  rangeDivision: number;
 };
 
 // ===================
@@ -137,6 +143,15 @@ export type SyncerEvent =
 export interface ISyncPartner<IncomingAttachmentSourceType> {
   /** The number of permitted concurrent attachment transfers */
   concurrentTransfers: number;
+
+  /** The size at which a subdivided reconciliation range should send a fingerprint instead of items. **Must be at least 1**.
+   *
+   * A lower number mean fewer messages transmitted.
+   */
+  payloadThreshold: number;
+
+  /** The number of subdivisions to make when splitting a mismatched range. **Must be at least 2**. */
+  rangeDivision: number;
 
   /** An async iterable of events from the partner. */
   getEvents(): AsyncIterable<SyncerEvent>;

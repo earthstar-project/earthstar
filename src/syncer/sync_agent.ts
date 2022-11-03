@@ -94,8 +94,15 @@ export class SyncAgent<F> {
   }
 
   constructor(
-    { replica, mode, formats, transferManager, initiateMessaging }:
-      SyncAgentOpts<F>,
+    {
+      replica,
+      mode,
+      formats,
+      transferManager,
+      initiateMessaging,
+      payloadThreshold,
+      rangeDivision,
+    }: SyncAgentOpts<F>,
   ) {
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
     const {
@@ -165,7 +172,11 @@ export class SyncAgent<F> {
       });
     }
 
-    const rangeMessenger = new EarthstarRangeMessenger(docThumbnailTree);
+    const rangeMessenger = new EarthstarRangeMessenger(
+      docThumbnailTree,
+      payloadThreshold,
+      rangeDivision,
+    );
 
     rangeMessenger.onInsertion(async (thumbnail) => {
       // Analyse...

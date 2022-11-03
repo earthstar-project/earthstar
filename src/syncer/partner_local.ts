@@ -19,6 +19,8 @@ export class PartnerLocal<
   IncomingTransferSourceType extends undefined,
 > implements ISyncPartner<undefined> {
   concurrentTransfers = 1024;
+  payloadThreshold = 32;
+  rangeDivision = 32;
 
   private outgoingQueue = new AsyncQueue<SyncerEvent>();
   private incomingQueue = new AsyncQueue<SyncerEvent>();
@@ -62,6 +64,8 @@ export class PartnerLocal<
           return Promise.resolve();
         },
         concurrentTransfers: 1024,
+        payloadThreshold: 32,
+        rangeDivision: 32,
         async getDownload(
           opts: GetTransferOpts,
         ): Promise<ReadableStream<Uint8Array> | undefined> {

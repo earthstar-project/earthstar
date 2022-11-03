@@ -148,6 +148,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       formats,
       transferManager: this.transferManager,
       initiateMessaging: initiateMessaging,
+      payloadThreshold: this.partner.payloadThreshold,
+      rangeDivision: this.partner.rangeDivision,
     });
 
     agent.onStatusUpdate(() => {
