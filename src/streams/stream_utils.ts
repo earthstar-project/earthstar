@@ -428,8 +428,6 @@ export function websocketWritable<
     }
   };
 
-  let heartbeatInterval: number;
-
   return new WritableStream<T>({
     async write(chunk, controller) {
       setUpSocket();
@@ -446,7 +444,6 @@ export function websocketWritable<
       }
 
       socket.onclose = () => {
-        clearInterval(heartbeatInterval);
         controller.error("Socket closed before we were done");
       };
     },

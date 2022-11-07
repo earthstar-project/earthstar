@@ -12,6 +12,7 @@ import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import {
   ISyncPartner,
+  SyncAgentEvent,
   SyncerEvent,
   SyncerMode,
   SyncerOpts,
@@ -20,7 +21,7 @@ import {
 import { SyncAgent } from "./sync_agent.ts";
 import { TransferManager } from "./transfer_manager.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
-import { deferred } from "../../deps.ts";
+import { AsyncQueue, deferred } from "../../deps.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
@@ -28,6 +29,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   id = randomId();
   private partner: ISyncPartner<IncomingTransferSourceType>;
   private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
+  private syncAgentQueues = new Map<ShareAddress, AsyncQueue<SyncAgentEvent>>();
   private mode: SyncerMode;
 
   private statusBus = new BlockingBus<SyncerStatus>();
@@ -91,12 +93,12 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       await this.partner.sendEvent({
         kind: "SYNCER_FULFILLED",
       });
-    });
 
-    this.partnerIsFulfilled.then(async () => {
-      await this.transferManager.transfersRequestedByUsFinished();
+      await this.partnerIsFulfilled;
 
       clearInterval(this.heartbeatInterval);
+
+      await this.partner.closeConnection();
 
       this.isDoneMultiDeferred.resolve();
     });
@@ -159,6 +161,23 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     this.syncAgents.set(address, agent);
     this.transferManager.registerSyncAgent(agent);
 
+    const existingQueue = this.syncAgentQueues.get(address);
+    let queueToUse: AsyncQueue<SyncAgentEvent>;
+
+    if (!existingQueue) {
+      const queue = new AsyncQueue<SyncAgentEvent>();
+      queueToUse = queue;
+      this.syncAgentQueues.set(address, queue);
+    } else {
+      queueToUse = existingQueue;
+    }
+
+    (async () => {
+      for await (const incomingEvent of queueToUse) {
+        agent.sendEvent(incomingEvent);
+      }
+    })();
+
     (async () => {
       for await (const event of agent.events()) {
         this.partner.sendEvent({
@@ -171,8 +190,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
   /** Handle inbound events from the other peer. */
   private async handleIncomingEvent(event: SyncerEvent) {
-    // Handle an incoming salted handsake
     switch (event.kind) {
+      // Handle an incoming salted handsake
       case "DISCLOSE": {
         const intersectingFormats = getFormatIntersection(
           event.formats,
@@ -226,14 +245,17 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         // Get the share address;
         const { to } = event;
 
-        const agent = this.syncAgents.get(to);
+        const agentQueue = this.syncAgentQueues.get(to);
 
         // That's no good...
-        if (!agent) {
+        if (!agentQueue) {
+          const queue = new AsyncQueue<SyncAgentEvent>();
+          queue.push(event);
+          this.syncAgentQueues.set(to, queue);
           break;
         }
 
-        agent.sendEvent(event);
+        agentQueue.push(event);
       }
     }
   }

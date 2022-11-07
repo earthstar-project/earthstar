@@ -29,6 +29,8 @@ import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.
 import { FormatEs5 } from "../../formats/format_es5.ts";
 import { isErr } from "../../util/errors.ts";
 import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
+import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
+import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 
 class SyncerTestHelper {
   private scenario: PartnerScenario<[typeof FormatEs5]>;
@@ -145,7 +147,7 @@ class SyncerTestHelper {
 
     assert(
       docCounts.every((count) => count === 20),
-      "all replicas have the right number of docs",
+      `all replicas have the right number of docs, instead it was ${docCounts}`,
     );
 
     assert(await storagesAreSynced(this.aDuo), `+a docs are in sync`);
@@ -195,6 +197,8 @@ const scenarios: MultiplyScenarioOutput<{
   description: "partner",
   scenarios: partnerScenarios,
 });
+
+setGlobalCryptoDriver(CryptoDriverSodium);
 
 for (const scenario of scenarios) {
   Deno.test(`Syncer (${scenario.name})`, async (test) => {

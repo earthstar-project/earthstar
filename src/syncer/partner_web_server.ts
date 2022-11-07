@@ -1,8 +1,9 @@
+import { AsyncQueue, deferred } from "../../deps.ts";
 import {
   websocketReadable,
   websocketWritable,
 } from "../streams/stream_utils.ts";
-import { ValidationError } from "../util/errors.ts";
+import { EarthstarError } from "../util/errors.ts";
 import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
 
 type SyncerDriverWebServerOpts = {
@@ -16,24 +17,62 @@ type SyncerDriverWebServerOpts = {
 export class PartnerWebServer<
   IncomingTransferSourceType extends WebSocket,
 > implements ISyncPartner<IncomingTransferSourceType> {
-  readable: ReadableStream<SyncerEvent>;
-  writable: WritableStream<SyncerEvent>;
-
   concurrentTransfers = 16;
+  payloadThreshold = 1;
+  rangeDivision = 2;
+
+  private socket: WebSocket;
+  private incomingQueue = new AsyncQueue<SyncerEvent>();
+  private socketIsReady = deferred();
 
   constructor({ socket }: SyncerDriverWebServerOpts) {
-    this.writable = websocketWritable(
-      socket,
-      (outgoing: SyncerEvent) => {
-        return JSON.stringify(outgoing);
-      },
-    );
-    this.readable = websocketReadable(
-      socket,
-      (incoming) => {
-        return JSON.parse(incoming.data.toString());
-      },
-    );
+    if (socket.readyState === socket.OPEN) {
+      this.socketIsReady.resolve();
+    }
+
+    socket.onopen = () => {
+      this.socketIsReady.resolve();
+    };
+
+    this.socket = socket;
+
+    this.socket.binaryType = "arraybuffer";
+
+    this.socket.onmessage = (event) => {
+      this.incomingQueue.push(JSON.parse(event.data));
+    };
+
+    this.socket.onclose = () => {
+      this.incomingQueue.close();
+    };
+
+    this.socket.onerror = (err) => {
+      console.error(err);
+
+      this.incomingQueue.close({
+        withError: new EarthstarError("Websocket error."),
+      });
+    };
+  }
+
+  async sendEvent(event: SyncerEvent): Promise<void> {
+    await this.socketIsReady;
+
+    if (this.socket.readyState !== this.socket.OPEN) {
+      return;
+    }
+
+    return this.socket.send(JSON.stringify(event));
+  }
+
+  getEvents(): AsyncIterable<SyncerEvent> {
+    return this.incomingQueue;
+  }
+
+  closeConnection(): Promise<void> {
+    this.socket.close();
+
+    return Promise.resolve();
   }
 
   getDownload(

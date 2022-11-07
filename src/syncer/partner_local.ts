@@ -19,8 +19,8 @@ export class PartnerLocal<
   IncomingTransferSourceType extends undefined,
 > implements ISyncPartner<undefined> {
   concurrentTransfers = 1024;
-  payloadThreshold = 32;
-  rangeDivision = 32;
+  payloadThreshold = 1;
+  rangeDivision = 2;
 
   private outgoingQueue = new AsyncQueue<SyncerEvent>();
   private incomingQueue = new AsyncQueue<SyncerEvent>();
@@ -93,6 +93,11 @@ export class PartnerLocal<
 
           return await attachment.stream();
         },
+        closeConnection() {
+          outgoingQueue.close();
+
+          return Promise.resolve();
+        },
         handleUploadRequest(
           _opts: GetTransferOpts,
         ): Promise<WritableStream<Uint8Array> | undefined> {
@@ -121,6 +126,12 @@ export class PartnerLocal<
 
   sendEvent(event: SyncerEvent): Promise<void> {
     this.incomingQueue.push(event);
+
+    return Promise.resolve();
+  }
+
+  closeConnection(): Promise<void> {
+    this.incomingQueue.close();
 
     return Promise.resolve();
   }

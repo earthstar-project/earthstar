@@ -3,6 +3,7 @@ import { AttachmentDriverMemory } from "../src/replica/attachment_drivers/memory
 import { DocDriverMemory } from "../src/replica/doc_drivers/memory.ts";
 import {
   docAttachmentsAreEquivalent,
+  docsAreEquivalent,
   writeRandomDocs,
 } from "../src/test/test-utils.ts";
 
@@ -46,8 +47,8 @@ const [a1, a2] = makeReplicaDuo(ADDRESS_A, shareKeypairA.secret);
 const [b1, b2] = makeReplicaDuo(ADDRESS_B, shareKeypairB.secret);
 const [c1, c2] = makeReplicaDuo(ADDRESS_C, shareKeypairC.secret);
 
-await writeRandomDocs(keypair, a1, 10);
-await writeRandomDocs(keypair, a2, 10);
+await writeRandomDocs(keypair, a1, 6);
+await writeRandomDocs(keypair, a2, 6);
 await writeRandomDocs(keypair, b1, 10);
 await writeRandomDocs(keypair, b2, 10);
 await writeRandomDocs(keypair, c1, 10);
@@ -57,12 +58,12 @@ const peer1 = new Peer();
 const peer2 = new Peer();
 
 peer1.addReplica(a1);
-peer1.addReplica(b1);
-peer1.addReplica(c1);
+//peer1.addReplica(b1);
+//peer1.addReplica(c1);
 
 peer2.addReplica(a2);
-peer2.addReplica(b2);
-peer2.addReplica(c2);
+//peer2.addReplica(b2);
+//peer2.addReplica(c2);
 
 const syncer = peer1.sync(peer2, false);
 
@@ -70,10 +71,6 @@ const syncer = peer1.sync(peer2, false);
 
 // attach all attachments.
 console.log("syncing...");
-
-syncer.onStatusChange((status) => {
-  //console.log(status);
-});
 
 await syncer.isDone();
 
@@ -89,7 +86,17 @@ for (const [x, y] of pairs) {
   const fstWithAttachments = await a1.addAttachments(fstDocs);
   const sndWithAttachments = await a2.addAttachments(sndDocs);
 
+  console.log(fstDocs.length, sndDocs.length);
+
   console.group(x.share);
+
+  const docsSynced = docsAreEquivalent(fstDocs, sndDocs);
+
+  if (docsSynced) {
+    console.log(`Docs synced!`);
+  } else {
+    console.log(`Docs did not sync...`);
+  }
 
   const res = await docAttachmentsAreEquivalent(
     fstWithAttachments,

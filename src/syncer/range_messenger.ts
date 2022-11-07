@@ -1,17 +1,12 @@
-import {
-  base64Decode,
-  base64Encode,
-  bytesEquals,
-  RangeMessenger,
-  RangeMessengerConfig,
-} from "../../deps.ts";
+import { RangeMessenger, RangeMessengerConfig } from "../../deps.ts";
+import { bigIntFromHex, bigIntToHex } from "../util/bigint.ts";
 import { DocThumbnailTree } from "./doc_thumbnail_tree.ts";
 import { DocThumbnail, RangeMessage } from "./syncer_types.ts";
 
 const encoding: RangeMessengerConfig<
   RangeMessage,
   DocThumbnail,
-  Uint8Array
+  bigint
 > = {
   encode: {
     emptySet: (canRespond) => ({
@@ -37,7 +32,7 @@ const encoding: RangeMessengerConfig<
     }),
     fingerprint: (fp, y) => ({
       type: "FINGERPRINT",
-      fingerprint: base64Encode(fp),
+      fingerprint: bigIntToHex(fp),
       upperBound: y,
     }),
     terminal: () => ({
@@ -81,7 +76,7 @@ const encoding: RangeMessengerConfig<
     fingerprint: (obj) => {
       if (obj.type === "FINGERPRINT") {
         return {
-          fingerprint: base64Decode(obj.fingerprint),
+          fingerprint: bigIntFromHex(obj.fingerprint),
           upperBound: obj.upperBound,
         };
       }
@@ -97,7 +92,7 @@ const encoding: RangeMessengerConfig<
 };
 
 export class EarthstarRangeMessenger
-  extends RangeMessenger<RangeMessage, DocThumbnail, Uint8Array> {
+  extends RangeMessenger<RangeMessage, DocThumbnail, bigint> {
   constructor(
     tree: DocThumbnailTree,
     payloadThreshold: number,
@@ -106,7 +101,7 @@ export class EarthstarRangeMessenger
     super({
       tree,
       encoding,
-      fingerprintEquals: bytesEquals,
+      fingerprintEquals: (a, b) => a === b,
       payloadThreshold,
       rangeDivision,
     });

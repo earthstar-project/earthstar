@@ -8,7 +8,7 @@ import {
 } from "../formats/format_types.ts";
 import { TransferManager } from "./transfer_manager.ts";
 
-/** A short string describing the timestamp, author, and path of a document. */
+/** A short string with a timestamp and hash of the document's path and author. */
 export type DocThumbnail = string;
 
 export type RangeMessage =
@@ -48,12 +48,13 @@ export type SyncAgentRangeMessageEvent = {
 /** Signals that a SyncAgent wants a document/documents from another SyncAgent */
 export type SyncAgentWantEvent = {
   kind: "WANT";
-  thumbnail: string;
+  thumbnail: DocThumbnail;
 };
 
 /** An event with an Earthstar document and corresponding ID. */
 export type SyncAgentDocEvent = {
   kind: "DOC";
+  thumbnail: DocThumbnail;
   doc: DocBase<string>;
 };
 
@@ -158,6 +159,8 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
 
   /** Sends a syncer event to the partner. */
   sendEvent(event: SyncerEvent): Promise<void>;
+
+  closeConnection(): Promise<void>;
 
   /** Attempt to download an attachment directly from the partner.
    * @returns A `ReadableStream<Uint8Array>` to read data from, a `ValidationError` if something went wrong, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).

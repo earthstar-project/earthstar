@@ -1,5 +1,6 @@
 import { BlockingBus } from "../streams/stream_utils.ts";
 import {
+  DocThumbnail,
   SyncAgentEvent,
   SyncAgentOpts,
   SyncAgentStatus,
@@ -8,9 +9,11 @@ import { getFormatLookup } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
 import { Replica } from "../replica/replica.ts";
-import { AsyncQueue, deferred } from "../../deps.ts";
+import { AsyncQueue, deferred, XXH64 } from "../../deps.ts";
 import { DocThumbnailTree } from "./doc_thumbnail_tree.ts";
 import { EarthstarRangeMessenger } from "./range_messenger.ts";
+import { AuthorAddress, Path, Timestamp } from "../util/doc-types.ts";
+import { randomId } from "../util/misc.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -36,6 +39,8 @@ export class SyncAgent<F> {
 
   private inboundEventQueue = new AsyncQueue<SyncAgentEvent>();
   private outboundEventQueue = new AsyncQueue<SyncAgentEvent>();
+
+  private hashToDocInfo: Record<string, [Timestamp, Path, AuthorAddress]> = {};
 
   sendEvent(event: SyncAgentEvent): void {
     return this.inboundEventQueue.push(event);
@@ -67,9 +72,9 @@ export class SyncAgent<F> {
         : "idling",
     };
   }
-  /** Note down a `HAVE` ID we `WANT`ed */
-  private registerWant(versionId: string) {
-    this.fulfilledMap.set(versionId, false);
+  /** Note down a doc thumbnail we `WANT`ed */
+  private registerWant(thumbnail: string) {
+    this.fulfilledMap.set(thumbnail, false);
     this.statusBus.send(this.getStatus());
   }
 
@@ -111,6 +116,7 @@ export class SyncAgent<F> {
       fulfilledMap,
       isDoneMultiDeferred,
       treeIsReady,
+      hashToDocInfo,
     } = this;
 
     this.replica = replica;
@@ -143,19 +149,35 @@ export class SyncAgent<F> {
     const docThumbnailTree = new DocThumbnailTree();
 
     // Send the replica's query stream to the HaveEntryKeeper so it can build the HAVE entries.
+    const hasher = new XXH64();
+
     queryStream.pipeTo(
       new WritableStream({
         write(event) {
+          if (event.kind === "processed_all_existing") {
+            treeIsReady.resolve();
+            return;
+          }
+
+          hasher.reset();
+          hasher.update(`${event.doc.path} ${event.doc.author}`);
+
+          const pathAuthorHash = hasher.digest().toString(16);
+
+          const thumbnail = `${event.doc.timestamp} ${pathAuthorHash}`;
+
           if (event.kind === "existing" || event.kind === "success") {
-            docThumbnailTree.insertDoc(event.doc);
+            hashToDocInfo[pathAuthorHash] = [
+              event.doc.timestamp,
+              event.doc.path,
+              event.doc.author,
+            ];
+            docThumbnailTree.insert(thumbnail);
           }
 
           if (event.kind === "expire") {
-            docThumbnailTree.removeDoc(event.doc);
-          }
-
-          if (event.kind === "processed_all_existing") {
-            treeIsReady.resolve();
+            delete hashToDocInfo[pathAuthorHash];
+            docThumbnailTree.remove(thumbnail);
           }
         },
       }),
@@ -178,39 +200,22 @@ export class SyncAgent<F> {
       rangeDivision,
     );
 
-    rangeMessenger.onInsertion(async (thumbnail) => {
+    rangeMessenger.onInsertion((thumbnail) => {
       // Analyse...
 
-      const [timestamp, path, author] = thumbnail.split(" ");
+      const [timestamp, hash] = thumbnail.split(" ");
 
-      // TODO: This information is already in the tree, and the tree can get things synchronously.
-      // But the thumbnails are all ordered by timestamp...
-      // But maybe this okay...?
-      const docs = await replica.getAllDocsAtPath(path);
+      const entry = this.hashToDocInfo[hash];
 
-      if (docs.length === 0) {
-        // Nothing with this path, definitely want.
-        registerWant(thumbnail);
-        this.outboundEventQueue.push({ kind: "WANT", thumbnail });
+      // If we have an entry and our entry's timestamp is higher we don't care about this.
+      if (entry && entry[0] >= parseInt(timestamp)) {
         return;
       }
 
-      const indexOfDocbyAuthor = docs.findIndex((doc) => doc.author === author);
-
-      if (indexOfDocbyAuthor === -1) {
-        // Don't have this author, definitely want.
-        registerWant(thumbnail);
-        this.outboundEventQueue.push({ kind: "WANT", thumbnail });
-        return;
-      }
-
-      const doc = docs[indexOfDocbyAuthor];
-
-      if (doc.timestamp < parseInt(timestamp)) {
-        // This one has a newer timestamp, we want that.
-        registerWant(thumbnail);
-        this.outboundEventQueue.push({ kind: "WANT", thumbnail });
-      }
+      // Otherwise we want this!
+      registerWant(thumbnail);
+      this.outboundEventQueue.push({ kind: "WANT", thumbnail });
+      return;
     });
 
     // Read events from the other SyncAgent
@@ -242,7 +247,15 @@ export class SyncAgent<F> {
           case "WANT": {
             // Check if we have this thumbnail.
             // Fetch the path + authors associated with it and send them off.
-            const [, path, author] = event.thumbnail.split(" ");
+            const [, hash] = event.thumbnail.split(" ");
+
+            const entry = this.hashToDocInfo[hash];
+
+            if (!entry) {
+              return;
+            }
+
+            const [, path, author] = entry;
 
             const allVersions = await replica.getAllDocsAtPath(
               path,
@@ -256,6 +269,7 @@ export class SyncAgent<F> {
             if (doc) {
               this.outboundEventQueue.push({
                 kind: "DOC",
+                thumbnail: event.thumbnail,
                 doc,
               });
             } else {
@@ -269,10 +283,7 @@ export class SyncAgent<F> {
             // Ingest a document.
             // Check if we ever asked for this.
 
-            const thumbnail =
-              `${event.doc.timestamp} ${event.doc.path} ${event.doc.author}`;
-
-            if (fulfilledMap.has(thumbnail)) {
+            if (fulfilledMap.has(event.thumbnail)) {
               const format = formatLookup[event.doc.format];
 
               if (!format) {
@@ -315,7 +326,7 @@ export class SyncAgent<F> {
 
               await replica.ingest(format, event.doc as FormatDocType<F>);
 
-              fulfilWant(thumbnail);
+              fulfilWant(event.thumbnail);
 
               break;
             } else {
@@ -353,12 +364,10 @@ export class SyncAgent<F> {
       }
     });
 
-    this.isFulfilled.then(() => {
+    this.isFulfilled.then(async () => {
       this.outboundEventQueue.push({ kind: "FULFILLED" });
-    });
 
-    this.isPartnerFulfilled.then(async () => {
-      await this.isFulfilled;
+      await this.isPartnerFulfilled;
 
       this.isDoneMultiDeferred.resolve();
       this.outboundEventQueue.close();

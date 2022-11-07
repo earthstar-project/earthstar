@@ -7,7 +7,7 @@ export { default as fast_json_stable_stringify } from "https://esm.sh/fast-json-
 export * as rfc4648 from "https://esm.sh/rfc4648@1.5.0";
 export * as sha256_uint8array from "https://esm.sh/sha256-uint8array@0.10.3";
 export * as ed from "https://raw.githubusercontent.com/sgwilym/noble-ed25519/153f9e7e9952ad22885f5abb3f6abf777bef4a4c/mod.ts";
-export { xxHash32 } from "https://raw.githubusercontent.com/gnlow/deno-xxhash/master/mod.ts";
+export { hash as xxhash64, XXH64 } from "https://esm.sh/@intrnl/xxhash64@0.1.2";
 export { FingerprintTree, RangeMessenger } from "../range-reconcile/mod.ts";
 export type {
   LiftingMonoid,
@@ -21,10 +21,6 @@ export {
   type Deferred,
   deferred,
 } from "https://deno.land/std@0.154.0/async/deferred.ts";
-export {
-  decode as base64Decode,
-  encode as base64Encode,
-} from "https://deno.land/std@0.154.0/encoding/base64.ts";
 export { equals as bytesEquals } from "https://deno.land/std@0.154.0/bytes/equals.ts";
 
 // fs
