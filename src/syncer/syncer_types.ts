@@ -7,6 +7,7 @@ import {
   FormatsArg,
 } from "../formats/format_types.ts";
 import { TransferManager } from "./transfer_manager.ts";
+import { SyncerManager } from "./syncer_manager.ts";
 
 /** A short string with a timestamp and hash of the document's path and author. */
 export type DocThumbnail = string;
@@ -102,8 +103,8 @@ export type SyncAgentStatus = {
 export type SyncAgentOpts<F> = {
   replica: Replica;
   formats?: FormatsArg<F>;
-  mode: "only_existing" | "live";
   transferManager: TransferManager<F, unknown>;
+  syncerManager: SyncerManager;
   initiateMessaging: boolean;
   payloadThreshold: number;
   rangeDivision: number;
@@ -142,6 +143,9 @@ export type SyncerEvent =
 
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */
 export interface ISyncPartner<IncomingAttachmentSourceType> {
+  /** */
+  syncMode: SyncerMode;
+
   /** The number of permitted concurrent attachment transfers */
   concurrentTransfers: number;
 
@@ -211,9 +215,8 @@ export type SyncerMode = "once" | "live";
  * - `formats` - An optional array of formats to sync. Defaults to just `es.5`.
  */
 export interface SyncerOpts<F, I> {
-  peer: IPeer;
+  manager: SyncerManager;
   partner: ISyncPartner<I>;
-  mode: SyncerMode;
   formats?: FormatsArg<F>;
 }
 

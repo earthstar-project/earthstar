@@ -4,6 +4,7 @@ import { IPeer } from "../peer/peer-types.ts";
 import { isErr } from "../util/errors.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Syncer } from "./syncer.ts";
+import { SyncerManager } from "./syncer_manager.ts";
 import {
   GetTransferOpts,
   ISyncPartner,
@@ -21,6 +22,7 @@ export class PartnerLocal<
   concurrentTransfers = 1024;
   payloadThreshold = 1;
   rangeDivision = 2;
+  syncMode: SyncerMode;
 
   private outgoingQueue = new AsyncQueue<SyncerEvent>();
   private incomingQueue = new AsyncQueue<SyncerEvent>();
@@ -37,9 +39,10 @@ export class PartnerLocal<
   constructor(
     peer: IPeer,
     peerSelf: IPeer,
-    mode: SyncerMode,
+    syncMode: SyncerMode,
     formats?: FormatsArg<FormatsType>,
   ) {
+    this.syncMode = syncMode;
     this.partnerPeer = peer;
 
     const { incomingQueue, outgoingQueue } = this;
@@ -53,9 +56,10 @@ export class PartnerLocal<
     // We'll give it one that proxies to the readable / writable pair we defined above.
 
     this.partnerSyncer = new Syncer<IncomingTransferSourceType, FormatsType>({
-      peer,
+      manager: new SyncerManager(peer),
       formats,
       partner: {
+        syncMode,
         getEvents() {
           return incomingQueue;
         },
@@ -116,7 +120,6 @@ export class PartnerLocal<
           return Promise.resolve(undefined);
         },
       },
-      mode,
     });
   }
 

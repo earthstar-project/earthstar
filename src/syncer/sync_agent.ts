@@ -1,19 +1,15 @@
 import { BlockingBus } from "../streams/stream_utils.ts";
 import {
-  DocThumbnail,
   SyncAgentEvent,
   SyncAgentOpts,
   SyncAgentStatus,
 } from "./syncer_types.ts";
-import { getFormatLookup } from "../formats/util.ts";
+import { getFormatLookup, getFormatsWithFallback } from "../formats/util.ts";
 import { FormatDocType } from "../formats/format_types.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
 import { Replica } from "../replica/replica.ts";
-import { AsyncQueue, deferred, XXH64 } from "../../deps.ts";
-import { DocThumbnailTree } from "./doc_thumbnail_tree.ts";
+import { AsyncQueue, deferred } from "../../deps.ts";
 import { EarthstarRangeMessenger } from "./range_messenger.ts";
-import { AuthorAddress, Path, Timestamp } from "../util/doc-types.ts";
-import { randomId } from "../util/misc.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
  */
@@ -39,8 +35,6 @@ export class SyncAgent<F> {
 
   private inboundEventQueue = new AsyncQueue<SyncAgentEvent>();
   private outboundEventQueue = new AsyncQueue<SyncAgentEvent>();
-
-  private hashToDocInfo: Record<string, [Timestamp, Path, AuthorAddress]> = {};
 
   sendEvent(event: SyncAgentEvent): void {
     return this.inboundEventQueue.push(event);
@@ -101,8 +95,8 @@ export class SyncAgent<F> {
   constructor(
     {
       replica,
-      mode,
       formats,
+      syncerManager,
       transferManager,
       initiateMessaging,
       payloadThreshold,
@@ -115,8 +109,6 @@ export class SyncAgent<F> {
       isPartnerFulfilled,
       fulfilledMap,
       isDoneMultiDeferred,
-      treeIsReady,
-      hashToDocInfo,
     } = this;
 
     this.replica = replica;
@@ -128,15 +120,6 @@ export class SyncAgent<F> {
       }
     });
 
-    const queryStream = replica.getQueryStream(
-      {
-        historyMode: "all",
-        orderBy: "localIndex ASC",
-      },
-      mode === "live" ? "everything" : "existing",
-      formats,
-    );
-
     // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
     const registerWant = this.registerWant.bind(this);
     const fulfilWant = this.fulfilWant.bind(this);
@@ -146,45 +129,16 @@ export class SyncAgent<F> {
     // A little object we can look up formats by format name. In a type-safe-ish way.
     const formatLookup = getFormatLookup(formats);
 
-    const docThumbnailTree = new DocThumbnailTree();
-
-    // Send the replica's query stream to the HaveEntryKeeper so it can build the HAVE entries.
-    const hasher = new XXH64();
-
-    queryStream.pipeTo(
-      new WritableStream({
-        write(event) {
-          if (event.kind === "processed_all_existing") {
-            treeIsReady.resolve();
-            return;
-          }
-
-          hasher.reset();
-          hasher.update(`${event.doc.path} ${event.doc.author}`);
-
-          const pathAuthorHash = hasher.digest().toString(16);
-
-          const thumbnail = `${event.doc.timestamp} ${pathAuthorHash}`;
-
-          if (event.kind === "existing" || event.kind === "success") {
-            hashToDocInfo[pathAuthorHash] = [
-              event.doc.timestamp,
-              event.doc.path,
-              event.doc.author,
-            ];
-            docThumbnailTree.insert(thumbnail);
-          }
-
-          if (event.kind === "expire") {
-            delete hashToDocInfo[pathAuthorHash];
-            docThumbnailTree.remove(thumbnail);
-          }
-        },
-      }),
-    );
+    const { tree, lookup, treeIsReady } = syncerManager
+      .getDocThumbnailTreeAndDocLookup(
+        replica.share,
+        getFormatsWithFallback(formats),
+      );
 
     if (initiateMessaging) {
       treeIsReady.then(() => {
+        this.treeIsReady.resolve();
+
         for (const msg of rangeMessenger.initialMessages()) {
           this.outboundEventQueue.push({
             "kind": "RANGE_MSG",
@@ -195,7 +149,7 @@ export class SyncAgent<F> {
     }
 
     const rangeMessenger = new EarthstarRangeMessenger(
-      docThumbnailTree,
+      tree,
       payloadThreshold,
       rangeDivision,
     );
@@ -205,7 +159,7 @@ export class SyncAgent<F> {
 
       const [timestamp, hash] = thumbnail.split(" ");
 
-      const entry = this.hashToDocInfo[hash];
+      const entry = lookup[hash];
 
       // If we have an entry and our entry's timestamp is higher we don't care about this.
       if (entry && entry[0] >= parseInt(timestamp)) {
@@ -249,7 +203,7 @@ export class SyncAgent<F> {
             // Fetch the path + authors associated with it and send them off.
             const [, hash] = event.thumbnail.split(" ");
 
-            const entry = this.hashToDocInfo[hash];
+            const entry = lookup[hash];
 
             if (!entry) {
               return;

@@ -12,6 +12,7 @@ import { BlockingBus } from "../streams/stream_utils.ts";
 import { PartnerWebClient } from "../syncer/partner_web_client.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
 import { FormatsArg } from "../formats/format_types.ts";
+import { SyncerManager } from "../syncer/syncer_manager.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
@@ -21,12 +22,15 @@ const J = JSON.stringify;
 /** Holds many shares' replicas and manages their synchronisation with other peers. Recommended as the point of contact between your application and Earthstar shares. */
 export class Peer implements IPeer {
   private replicaEventBus = new BlockingBus<Map<ShareAddress, Replica>>();
+  private syncerManager: SyncerManager;
 
   /** A subscribable map of the replicas stored in this peer. */
   replicaMap: Map<ShareAddress, Replica> = new Map();
 
   constructor() {
     logger.debug("constructor");
+
+    this.syncerManager = new SyncerManager(this);
   }
 
   //--------------------------------------------------
@@ -111,29 +115,17 @@ export class Peer implements IPeer {
         mode: live ? "live" : "once",
       });
 
-      const syncer = new Syncer({
-        partner,
-        mode: live ? "live" : "once",
-        peer: this,
-        formats,
-      });
-
-      return syncer;
+      return this.syncerManager.addPartner(partner, formats);
     } catch {
       if (target instanceof Peer) {
-        const syncer = new Syncer({
-          peer: this,
-          partner: new PartnerLocal(
-            target as IPeer,
-            this,
-            live ? "live" : "once",
-            formats,
-          ),
-          mode: live ? "live" : "once",
+        const partner = new PartnerLocal(
+          target as IPeer,
+          this,
+          live ? "live" : "once",
           formats,
-        });
+        );
 
-        return syncer;
+        return this.syncerManager.addPartner(partner, formats);
       }
 
       // This shouldn't happen.

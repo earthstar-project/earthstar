@@ -23,6 +23,7 @@ type SyncerDriverWebClientOpts = {
 export class PartnerWebClient<
   IncomingTransferSourceType extends undefined,
 > implements ISyncPartner<undefined> {
+  syncMode: SyncerMode;
   concurrentTransfers = 16;
   payloadThreshold = 1;
   rangeDivision = 2;
@@ -35,6 +36,8 @@ export class PartnerWebClient<
   private socketIsReady = deferred();
 
   constructor(opts: SyncerDriverWebClientOpts) {
+    this.syncMode = opts.mode;
+
     // Check if it's a URL of some kind.
     const url = new URL(opts.url);
 

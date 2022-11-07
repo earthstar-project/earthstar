@@ -22,11 +22,13 @@ import { SyncAgent } from "./sync_agent.ts";
 import { TransferManager } from "./transfer_manager.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
 import { AsyncQueue, deferred } from "../../deps.ts";
+import { SyncerManager } from "./syncer_manager.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   peer: IPeer;
   id = randomId();
+  private manager: SyncerManager;
   private partner: ISyncPartner<IncomingTransferSourceType>;
   private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
   private syncAgentQueues = new Map<ShareAddress, AsyncQueue<SyncAgentEvent>>();
@@ -46,9 +48,9 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   constructor(opts: SyncerOpts<FormatsType, IncomingTransferSourceType>) {
     // Have to do this because we'll be using these values in a context where 'this' is different
     // (the streams below)
-    this.peer = opts.peer;
-
-    this.mode = opts.mode;
+    this.manager = opts.manager;
+    this.peer = opts.manager.peer;
+    this.mode = opts.partner.syncMode;
     this.formats = getFormatsWithFallback(opts.formats);
     this.partner = opts.partner;
 
@@ -146,8 +148,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     const agent = new SyncAgent({
       replica,
-      mode: this.mode === "once" ? "only_existing" : "live",
       formats,
+      syncerManager: this.manager,
       transferManager: this.transferManager,
       initiateMessaging: initiateMessaging,
       payloadThreshold: this.partner.payloadThreshold,
