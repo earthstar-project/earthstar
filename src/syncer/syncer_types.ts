@@ -154,7 +154,7 @@ export type SyncerEvent =
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */
 export interface ISyncPartner<IncomingAttachmentSourceType> {
   /** */
-  syncMode: SyncerMode;
+  syncAppetite: SyncAppetite;
 
   /** The number of permitted concurrent attachment transfers */
   concurrentTransfers: number;
@@ -216,7 +216,7 @@ export type GetTransferOpts = {
  * - `once` - The syncer will only attempt to sync existing docs and then stop.
  * - `live` - Indefinite syncing, including existing docs and new ones as they are ingested into the replica.
  */
-export type SyncerMode = "once" | "live";
+export type SyncAppetite = "once" | "continuous";
 
 /** Options to initialise a Syncer with.
  * - `peer` - The peer to synchronise.

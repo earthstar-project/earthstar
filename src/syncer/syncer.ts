@@ -13,8 +13,8 @@ import { randomId } from "../util/misc.ts";
 import {
   ISyncPartner,
   SyncAgentEvent,
+  SyncAppetite,
   SyncerEvent,
-  SyncerMode,
   SyncerOpts,
   SyncerStatus,
 } from "./syncer_types.ts";
@@ -32,7 +32,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private partner: ISyncPartner<IncomingTransferSourceType>;
   private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
   private syncAgentQueues = new Map<ShareAddress, AsyncQueue<SyncAgentEvent>>();
-  private mode: SyncerMode;
+  private appetite: SyncAppetite;
   private statusBus = new BlockingBus<SyncerStatus>();
   private formats: FormatsArg<FormatsType>;
   private transferManager: TransferManager<
@@ -49,7 +49,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     // (the streams below)
     this.manager = opts.manager;
     this.peer = opts.manager.peer;
-    this.mode = opts.partner.syncMode;
+    this.appetite = opts.partner.syncAppetite;
     this.formats = getFormatsWithFallback(opts.formats);
     this.partner = opts.partner;
 
@@ -153,7 +153,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       initiateMessaging: initiateMessaging,
       payloadThreshold: this.partner.payloadThreshold,
       rangeDivision: this.partner.rangeDivision,
-      syncMode: this.mode,
+      syncMode: this.appetite,
     });
 
     agent.onStatusUpdate(() => {
@@ -225,7 +225,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         this.transferManager.registerOtherSyncerId(event.syncerId);
         this.transferManager.allSyncAgentsKnown();
 
-        if (commonShareSet.size === 0 && this.mode === "once") {
+        if (commonShareSet.size === 0 && this.appetite === "once") {
           this.partner.sendEvent({
             "kind": "SYNCER_FULFILLED",
           });

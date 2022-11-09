@@ -8,8 +8,8 @@ import { SyncerManager } from "./syncer_manager.ts";
 import {
   GetTransferOpts,
   ISyncPartner,
+  SyncAppetite,
   SyncerEvent,
-  SyncerMode,
 } from "./syncer_types.ts";
 
 /** A syncing partner to be used with local instances of `IPeer`.
@@ -22,7 +22,7 @@ export class PartnerLocal<
   concurrentTransfers = 1024;
   payloadThreshold = 1;
   rangeDivision = 2;
-  syncMode: SyncerMode;
+  syncAppetite: SyncAppetite;
 
   private outgoingQueue = new AsyncQueue<SyncerEvent>();
   private incomingQueue = new AsyncQueue<SyncerEvent>();
@@ -39,10 +39,10 @@ export class PartnerLocal<
   constructor(
     peer: IPeer,
     peerSelf: IPeer,
-    syncMode: SyncerMode,
+    appetite: SyncAppetite,
     formats?: FormatsArg<FormatsType>,
   ) {
-    this.syncMode = syncMode;
+    this.syncAppetite = appetite;
     this.partnerPeer = peer;
 
     const { incomingQueue, outgoingQueue } = this;
@@ -59,7 +59,7 @@ export class PartnerLocal<
       manager: new SyncerManager(peer),
       formats,
       partner: {
-        syncMode,
+        syncAppetite: appetite,
         getEvents() {
           return incomingQueue;
         },

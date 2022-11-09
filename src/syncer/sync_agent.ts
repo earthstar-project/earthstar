@@ -5,7 +5,7 @@ import {
   SyncAgentEvent,
   SyncAgentOpts,
   SyncAgentStatus,
-  SyncerMode,
+  SyncAppetite,
 } from "./syncer_types.ts";
 import { getFormatLookup, getFormatsWithFallback } from "../formats/util.ts";
 import { FormatDocType, FormatsArg } from "../formats/format_types.ts";
@@ -32,18 +32,11 @@ export class SyncAgent<F> {
   /** Messages generated from us destined for the other peer. */
   private outboundEventQueue = new AsyncQueue<SyncAgentEvent>();
 
-  private gossiperInboundQueue = new AsyncQueue<SyncAgentEvent>();
-  private reconcilerInboundQueue = new AsyncQueue<RangeMessage>();
-
   private hasPrepared = deferred();
   private hasReconciled = deferred();
 
-  private wantTracker = new WantTracker();
-
   private sentDocsCount = 0;
   private receivedDocsCount = 0;
-  /** An internal ID we use to distinguish messages from the agent we're syncing with from other messages and docs. */
-  private counterpartId = randomId();
 
   sendEvent(event: SyncAgentEvent): void {
     return this.inboundEventQueue.push(event);
@@ -94,45 +87,56 @@ export class SyncAgent<F> {
       this.hasPrepared.resolve();
     });
 
+    const gossiperInboundQueue = new AsyncQueue<SyncAgentEvent>();
+    const reconcilerInboundQueue = new AsyncQueue<RangeMessage>();
+
     (async () => {
       for await (const event of this.inboundEventQueue) {
         switch (event.kind) {
           case "RANGE_MSG": {
-            this.reconcilerInboundQueue.push(event.message);
+            reconcilerInboundQueue.push(event.message);
 
             break;
           }
           default: {
-            this.gossiperInboundQueue.push(event);
+            gossiperInboundQueue.push(event);
           }
         }
       }
     })();
 
+    const wantTracker = new WantTracker();
+    /** An internal ID we use to distinguish messages from the agent we're syncing with from other messages and docs. */
+    const counterpartId = randomId();
+
     const reconciler = new SyncAgentReconciler({
-      inboundEventQueue: this.reconcilerInboundQueue,
+      inboundEventQueue: reconcilerInboundQueue,
       outboundEventQueue: this.outboundEventQueue,
       syncerManager: opts.syncerManager,
       formats: opts.formats,
       replica: opts.replica,
       initiateMessaging: opts.initiateMessaging,
-      wantTracker: this.wantTracker,
+      wantTracker: wantTracker,
       payloadThreshold: opts.payloadThreshold,
       rangeDivision: opts.rangeDivision,
     });
 
+    reconciler.isDone.then(() => {
+      this.hasReconciled.resolve();
+    });
+
     // Perform first round of reconciliation
     const gossiper = new SyncAgentGossiper({
-      inboundEventQueue: this.gossiperInboundQueue,
+      inboundEventQueue: gossiperInboundQueue,
       outboundEventQueue: this.outboundEventQueue,
       syncerManager: opts.syncerManager,
       formats: opts.formats,
       replica: opts.replica,
-      counterpartId: this.counterpartId,
+      counterpartId: counterpartId,
       transferManager: opts.transferManager,
       cancel: this.cancel.bind(this),
       reconciliationIsDone: reconciler.isDone,
-      wantTracker: this.wantTracker,
+      wantTracker: wantTracker,
       syncAppetite: opts.syncMode,
       onDocReceived: async () => {
         this.receivedDocsCount++;
@@ -183,7 +187,7 @@ type GossiperOpts<F> = {
   transferManager: TransferManager<F, unknown>;
   wantTracker: WantTracker;
   reconciliationIsDone: Promise<number>;
-  syncAppetite: SyncerMode;
+  syncAppetite: SyncAppetite;
   cancel: () => Promise<void>;
   onDocReceived: () => Promise<void>;
   onDocSent: () => Promise<void>;
