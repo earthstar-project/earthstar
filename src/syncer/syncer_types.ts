@@ -1,5 +1,4 @@
 import { DocBase, ShareAddress } from "../util/doc-types.ts";
-import { IPeer } from "../peer/peer-types.ts";
 import { Replica } from "../replica/replica.ts";
 import {
   FormatArg,
@@ -46,6 +45,11 @@ export type SyncAgentRangeMessageEvent = {
   message: RangeMessage;
 };
 
+export type SyncAgentHaveEvent = {
+  kind: "HAVE";
+  thumbnail: DocThumbnail;
+};
+
 /** Signals that a SyncAgent wants a document/documents from another SyncAgent */
 export type SyncAgentWantEvent = {
   kind: "WANT";
@@ -75,6 +79,11 @@ export type SyncAgentAbortEvent = {
   kind: "ABORT";
 };
 
+/** A special event for the implementation of a PlumTree. Asks the recipient to begin lazily messaging us. */
+export type SyncAgentPruneEvent = {
+  kind: "PRUNE";
+};
+
 /** A type of message one SyncAgent can send to another. */
 export type SyncAgentEvent =
   | SyncAgentRangeMessageEvent
@@ -82,17 +91,17 @@ export type SyncAgentEvent =
   | SyncAgentDocEvent
   | SyncAgentWantAttachmentEvent
   | SyncAgentAbortEvent
+  | SyncAgentHaveEvent
+  | SyncAgentPruneEvent
   | SyncAgentFulfilledEvent;
 
-/** The current status of a SyncAgent
- * - `requested`: The number of documents requested
- * - `received`: The number of requests responded to
- * - `status`: An overall status of the agent. `preparing` is when it is calculating its HAVE entries, `syncing` when it has unfulfilled requests, `idling` when there are no active requests, and `done` when it has been closed, or received all documents it was interested in.
- */
+/** The current status of a SyncAgent. */
 export type SyncAgentStatus = {
-  requested: number;
-  received: number;
-  status: "preparing" | "syncing" | "idling" | "done" | "aborted";
+  /** The number of documents received by this agent */
+  receivedCount: number;
+  /** The number of documents sent by this agent */
+  sentCount: number;
+  status: "preparing" | "reconciling" | "gossiping" | "done" | "aborted";
   // TODO: Add if partner is done yet.
 };
 
@@ -105,6 +114,7 @@ export type SyncAgentOpts<F> = {
   formats?: FormatsArg<F>;
   transferManager: TransferManager<F, unknown>;
   syncerManager: SyncerManager;
+  syncMode: SyncerMode;
   initiateMessaging: boolean;
   payloadThreshold: number;
   rangeDivision: number;

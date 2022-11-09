@@ -41,14 +41,19 @@ export interface IngestEventSuccess<
   maxLocalIndex: number;
   doc: DocType; // the just-written doc, frozen, with updated extra properties like _localIndex
 
-  docIsLatest: boolean; // is it the latest at this path (for any author)?
+  /** Whether the doc is the latest at this path for any author. */
+  docIsLatest: boolean;
 
-  // the most recent doc from the same author, at this path, before the new doc was written.
+  /** The most recent doc from the same author, at this path, before the new doc was written. */
   prevDocFromSameAuthor: DocType | null;
 
-  // the latest doc from any author at this path, before the new doc was written.
-  // note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
+  /** the latest doc from any author at this path, before the new doc was written.
+   * note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
+   */
   prevLatestDoc: DocType | null;
+
+  /** An ID representing the source of this ingestion. 'local' means the doc was created locally. */
+  sourceId: "local" | string;
 }
 export interface DocAlreadyExists<
   DocType extends DocBase<string>,

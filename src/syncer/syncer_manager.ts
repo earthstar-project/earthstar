@@ -9,6 +9,7 @@ import {
 } from "../util/doc-types.ts";
 import { EarthstarError } from "../util/errors.ts";
 import { DocThumbnailTree } from "./doc_thumbnail_tree.ts";
+import { PlumTree } from "./plum_tree.ts";
 import { Syncer } from "./syncer.ts";
 import { ISyncPartner } from "./syncer_types.ts";
 
@@ -22,12 +23,8 @@ type DocThumbnailHashToDocLookup = Record<
 >;
 
 export class SyncerManager {
-  private hasher = new XXH64();
+  /** A map of syncer IDs to syncers  */
   private syncers = new Map<string, Syncer<unknown, unknown>>();
-  private docThumbnailTreeAndLookup = new Map<
-    DocThumbnailTreeKey,
-    [DocThumbnailTree, DocThumbnailHashToDocLookup]
-  >();
 
   peer: IPeer;
 
@@ -51,6 +48,17 @@ export class SyncerManager {
     return syncer;
   }
 
+  // INITIAL SYNC (range-based set reconciliation)
+
+  /** DocThumbnail  */
+  private docThumbnailTreeAndLookup = new Map<
+    DocThumbnailTreeKey,
+    [DocThumbnailTree, DocThumbnailHashToDocLookup]
+  >();
+  /** We use this for creating doc thumbnails during tree generation. */
+  private hasher = new XXH64();
+
+  /** Create or retrieve an existing DocThumbnailTree for use with range-based reconciliation. */
   getDocThumbnailTreeAndDocLookup<F>(
     share: ShareAddress,
     formats: FormatsArg<F>,
@@ -143,5 +151,21 @@ export class SyncerManager {
     );
 
     return { tree, lookup, treeIsReady };
+  }
+
+  // CONTINUOUS SYNC
+
+  private plumTrees = new Map<ShareAddress, PlumTree>();
+
+  getPlumTree(address: ShareAddress): PlumTree {
+    const maybePlumTree = this.plumTrees.get(address);
+
+    if (maybePlumTree) {
+      return maybePlumTree;
+    }
+
+    const plumTree = new PlumTree();
+    this.plumTrees.set(address, plumTree);
+    return plumTree;
   }
 }

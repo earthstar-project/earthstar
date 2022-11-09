@@ -1,40 +1,49 @@
 import { BlockingBus } from "../streams/stream_utils.ts";
 import {
+  DocThumbnail,
+  RangeMessage,
   SyncAgentEvent,
   SyncAgentOpts,
   SyncAgentStatus,
+  SyncerMode,
 } from "./syncer_types.ts";
 import { getFormatLookup, getFormatsWithFallback } from "../formats/util.ts";
-import { FormatDocType } from "../formats/format_types.ts";
+import { FormatDocType, FormatsArg } from "../formats/format_types.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
 import { Replica } from "../replica/replica.ts";
-import { AsyncQueue, deferred } from "../../deps.ts";
+import { AsyncQueue, Deferred, deferred, XXH64 } from "../../deps.ts";
 import { EarthstarRangeMessenger } from "./range_messenger.ts";
+import { PromiseEnroller } from "./promise_enroller.ts";
+import { randomId } from "../util/misc.ts";
+import { SyncerManager } from "./syncer_manager.ts";
+import { TransferManager } from "./transfer_manager.ts";
 
-/** Mediates synchronisation on behalf of a `Replica`. Tells other SyncAgents what the Replica posseses, what it wants from them, and fulfils requests from other SyncAgents.
+/** Mediates synchronisation on behalf of a `Replica`.
  */
 export class SyncAgent<F> {
-  /** A map of all the `HAVE` ids we've `WANT`ed and whether we received them or not. */
-  private fulfilledMap: Map<string, boolean> = new Map();
-  /** An integer representing the number of requests were fulfilled. Quicker than calculating this every time from the `fulfilledMap`. */
-  private fulfilledCount = 0;
-
   /** A bus we can update the SyncAgent's status from, and which others can subscribe to. */
   private statusBus = new BlockingBus<SyncAgentStatus>();
-
-  /** A promise for when the internal FingerprintTree is ready */
-  private treeIsReady = deferred<true>();
-
-  /** A promise for whether our partner SyncAgent has signalled its `DONE` or not. */
-  private isPartnerFulfilled = deferred<true>();
-
-  private isFulfilled = deferred<true>();
 
   /** A multi deferred describing if th the SyncAgent has finished or not. */
   private isDoneMultiDeferred = new MultiDeferred<void>();
 
+  /** Messages coming in from the other peer */
   private inboundEventQueue = new AsyncQueue<SyncAgentEvent>();
+  /** Messages generated from us destined for the other peer. */
   private outboundEventQueue = new AsyncQueue<SyncAgentEvent>();
+
+  private gossiperInboundQueue = new AsyncQueue<SyncAgentEvent>();
+  private reconcilerInboundQueue = new AsyncQueue<RangeMessage>();
+
+  private hasPrepared = deferred();
+  private hasReconciled = deferred();
+
+  private wantTracker = new WantTracker();
+
+  private sentDocsCount = 0;
+  private receivedDocsCount = 0;
+  /** An internal ID we use to distinguish messages from the agent we're syncing with from other messages and docs. */
+  private counterpartId = randomId();
 
   sendEvent(event: SyncAgentEvent): void {
     return this.inboundEventQueue.push(event);
@@ -49,288 +58,94 @@ export class SyncAgent<F> {
   /** The current status of this SyncAgent */
   getStatus(): SyncAgentStatus {
     return {
-      requested: this.fulfilledMap.size,
-      received: this.fulfilledCount,
+      receivedCount: this.receivedDocsCount,
+      sentCount: this.sentDocsCount,
       status: this.isDoneMultiDeferred.state === "rejected"
         ? "aborted"
-        : this.treeIsReady.state === "pending"
-        // Hasn't calculated initial hash yet
+        : this.hasPrepared.state === "pending"
         ? "preparing"
-        : this.fulfilledCount < this.fulfilledMap.size
-        // Waiting on unfulfilled WANTs
-        ? "syncing"
+        : this.hasReconciled.state === "pending"
+        ? "reconciling"
         : this.isDoneMultiDeferred.state === "fulfilled"
-        // Partner is finished, no open requests.
         ? "done"
-        // Connection held open for new docs.
-        : "idling",
+        : "gossiping",
     };
-  }
-  /** Note down a doc thumbnail we `WANT`ed */
-  private registerWant(thumbnail: string) {
-    this.fulfilledMap.set(thumbnail, false);
-    this.statusBus.send(this.getStatus());
-  }
-
-  /** Note down that a `WANT` was fulfilled by the other side. */
-  private fulfilWant(versionId: string) {
-    const unfulfilledWant = this.fulfilledMap.get(versionId);
-
-    // We didn't want this to begin with. Shouldn't happen.
-    if (unfulfilledWant === undefined) {
-      return false;
-    }
-
-    // This was already fulfilled. Shouldn't happen either.
-    if (unfulfilledWant === true) {
-      return true;
-    }
-
-    this.fulfilledMap.set(versionId, true);
-    this.fulfilledCount++;
-    this.statusBus.send(this.getStatus());
-    return true;
   }
 
   constructor(
-    {
-      replica,
-      formats,
-      syncerManager,
-      transferManager,
-      initiateMessaging,
-      payloadThreshold,
-      rangeDivision,
-    }: SyncAgentOpts<F>,
+    opts: SyncAgentOpts<F>,
   ) {
-    // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
-    const {
-      statusBus,
-      isPartnerFulfilled,
-      fulfilledMap,
-      isDoneMultiDeferred,
-    } = this;
-
-    this.replica = replica;
+    this.replica = opts.replica;
 
     // If the replica closes, we need to abort
-    replica.onEvent((event) => {
+    opts.replica.onEvent((event) => {
       if (event.kind === "willClose") {
         this.cancel();
       }
     });
 
-    // This is annoying, but we have to do this because of the identity of `this` changing when we define the streams below.
-    const registerWant = this.registerWant.bind(this);
-    const fulfilWant = this.fulfilWant.bind(this);
-    const getStatus = this.getStatus.bind(this);
-    const cancel = this.cancel.bind(this);
-
-    // A little object we can look up formats by format name. In a type-safe-ish way.
-    const formatLookup = getFormatLookup(formats);
-
-    const { tree, lookup, treeIsReady } = syncerManager
+    const { treeIsReady } = opts.syncerManager
       .getDocThumbnailTreeAndDocLookup(
-        replica.share,
-        getFormatsWithFallback(formats),
+        opts.replica.share,
+        getFormatsWithFallback(opts.formats),
       );
 
-    if (initiateMessaging) {
-      treeIsReady.then(() => {
-        this.treeIsReady.resolve();
-
-        for (const msg of rangeMessenger.initialMessages()) {
-          this.outboundEventQueue.push({
-            "kind": "RANGE_MSG",
-            message: msg,
-          });
-        }
-      });
-    }
-
-    const rangeMessenger = new EarthstarRangeMessenger(
-      tree,
-      payloadThreshold,
-      rangeDivision,
-    );
-
-    rangeMessenger.onInsertion((thumbnail) => {
-      // Analyse...
-
-      const [timestamp, hash] = thumbnail.split(" ");
-
-      const entry = lookup[hash];
-
-      // If we have an entry and our entry's timestamp is higher we don't care about this.
-      if (entry && entry[0] >= parseInt(timestamp)) {
-        return;
-      }
-
-      // Otherwise we want this!
-      registerWant(thumbnail);
-      this.outboundEventQueue.push({ kind: "WANT", thumbnail });
-      return;
+    treeIsReady.then(() => {
+      this.hasPrepared.resolve();
     });
 
-    // Read events from the other SyncAgent
-    // And we handle them here.
     (async () => {
       for await (const event of this.inboundEventQueue) {
-        if (isDoneMultiDeferred.state === "rejected") {
-          return;
-        }
-
         switch (event.kind) {
           case "RANGE_MSG": {
-            if (rangeMessenger.isDone().state === "fulfilled") {
-              return;
-            }
-
-            const responses = rangeMessenger.respond(event.message);
-
-            for (const response of responses) {
-              this.outboundEventQueue.push({
-                kind: "RANGE_MSG",
-                message: response,
-              });
-            }
+            this.reconcilerInboundQueue.push(event.message);
 
             break;
           }
-
-          case "WANT": {
-            // Check if we have this thumbnail.
-            // Fetch the path + authors associated with it and send them off.
-            const [, hash] = event.thumbnail.split(" ");
-
-            const entry = lookup[hash];
-
-            if (!entry) {
-              return;
-            }
-
-            const [, path, author] = entry;
-
-            const allVersions = await replica.getAllDocsAtPath(
-              path,
-            );
-
-            // Iterate through each version we got back (which might just be one)
-
-            // If the doc author matches this author...
-            const doc = allVersions.find((doc) => doc.author === author);
-
-            if (doc) {
-              this.outboundEventQueue.push({
-                kind: "DOC",
-                thumbnail: event.thumbnail,
-                doc,
-              });
-            } else {
-              console.error("Got a WANT event for a document not on record.");
-            }
-
-            break;
+          default: {
+            this.gossiperInboundQueue.push(event);
           }
-
-          case "DOC": {
-            // Ingest a document.
-            // Check if we ever asked for this.
-
-            if (fulfilledMap.has(event.thumbnail)) {
-              const format = formatLookup[event.doc.format];
-
-              if (!format) {
-                console.error(
-                  `Was sent a doc with a format we don't know about (${event.doc.format})`,
-                );
-                break;
-              }
-
-              const attachment = await replica.getAttachment(
-                event.doc as FormatDocType<F>,
-                formatLookup[event.doc.format],
-              );
-
-              // if attachment is undefined, request.
-              if (attachment === undefined) {
-                const canDownload = await transferManager.handleDownload(
-                  event.doc as FormatDocType<F>,
-                  replica,
-                );
-
-                if (!canDownload) {
-                  const attachmentInfo = format.getAttachmentInfo(
-                    event.doc,
-                  ) as { size: number; hash: string };
-
-                  transferManager.registerExpectedTransfer(
-                    replica.share,
-                    attachmentInfo.hash,
-                  );
-
-                  this.outboundEventQueue.push({
-                    kind: "WANT_ATTACHMENT",
-                    attachmentHash: attachmentInfo.hash,
-                    doc: event.doc,
-                    shareAddress: replica.share,
-                  });
-                }
-              }
-
-              await replica.ingest(format, event.doc as FormatDocType<F>);
-
-              fulfilWant(event.thumbnail);
-
-              break;
-            } else {
-              console.error("Was sent a doc we never asked for");
-            }
-
-            break;
-          }
-          case "FULFILLED":
-            isPartnerFulfilled.resolve(true);
-            break;
-
-          case "WANT_ATTACHMENT":
-            transferManager.handleUpload(event, replica);
-            break;
-
-          case "ABORT":
-            await cancel();
         }
       }
     })();
 
-    rangeMessenger.isDone().then(() => {
-      const status = this.getStatus();
-
-      if (status.received === status.requested) {
-        this.isFulfilled.resolve(true);
-      } else {
-        const unsub = this.onStatusUpdate((statusUpdate) => {
-          if (statusUpdate.received === statusUpdate.requested) {
-            unsub();
-            this.isFulfilled.resolve(true);
-          }
-        });
-      }
+    const reconciler = new SyncAgentReconciler({
+      inboundEventQueue: this.reconcilerInboundQueue,
+      outboundEventQueue: this.outboundEventQueue,
+      syncerManager: opts.syncerManager,
+      formats: opts.formats,
+      replica: opts.replica,
+      initiateMessaging: opts.initiateMessaging,
+      wantTracker: this.wantTracker,
+      payloadThreshold: opts.payloadThreshold,
+      rangeDivision: opts.rangeDivision,
     });
 
-    this.isFulfilled.then(async () => {
-      this.outboundEventQueue.push({ kind: "FULFILLED" });
+    // Perform first round of reconciliation
+    const gossiper = new SyncAgentGossiper({
+      inboundEventQueue: this.gossiperInboundQueue,
+      outboundEventQueue: this.outboundEventQueue,
+      syncerManager: opts.syncerManager,
+      formats: opts.formats,
+      replica: opts.replica,
+      counterpartId: this.counterpartId,
+      transferManager: opts.transferManager,
+      cancel: this.cancel.bind(this),
+      reconciliationIsDone: reconciler.isDone,
+      wantTracker: this.wantTracker,
+      syncAppetite: opts.syncMode,
+      onDocReceived: async () => {
+        this.receivedDocsCount++;
+        await this.statusBus.send(this.getStatus());
+      },
+      onDocSent: async () => {
+        this.sentDocsCount++;
+        await this.statusBus.send(this.getStatus());
+      },
+    });
 
-      await this.isPartnerFulfilled;
-
+    gossiper.isDone.then(() => {
       this.isDoneMultiDeferred.resolve();
-      this.outboundEventQueue.close();
-    });
-
-    this.isDoneMultiDeferred.getPromise().then(() => {
-      this.statusBus.send(this.getStatus());
-    }).catch(() => {
-      statusBus.send(getStatus());
     });
   }
 
@@ -355,5 +170,378 @@ export class SyncAgent<F> {
 
   isDone() {
     return this.isDoneMultiDeferred.getPromise();
+  }
+}
+
+type GossiperOpts<F> = {
+  inboundEventQueue: AsyncQueue<SyncAgentEvent>;
+  outboundEventQueue: AsyncQueue<SyncAgentEvent>;
+  syncerManager: SyncerManager;
+  formats: FormatsArg<F> | undefined;
+  replica: Replica;
+  counterpartId: string;
+  transferManager: TransferManager<F, unknown>;
+  wantTracker: WantTracker;
+  reconciliationIsDone: Promise<number>;
+  syncAppetite: SyncerMode;
+  cancel: () => Promise<void>;
+  onDocReceived: () => Promise<void>;
+  onDocSent: () => Promise<void>;
+};
+
+export class SyncAgentGossiper<F> {
+  private id = randomId();
+  private isPartnerFulfilled = deferred();
+  private isFulfilled = deferred();
+
+  constructor(opts: GossiperOpts<F>) {
+    // Create a query stream for new events.
+    const queryStream = opts.replica.getQueryStream({}, "new", opts.formats);
+
+    const plumTree = opts.syncerManager.getPlumTree(opts.replica.share);
+    const hasher = new XXH64();
+
+    const id = this.id;
+
+    // Send new messages from self / other peers eagerly or lazily depending on plum tree.
+    queryStream.pipeTo(
+      new WritableStream({
+        write(event) {
+          if (
+            event.kind === "success" && event.sourceId !== opts.counterpartId
+          ) {
+            const mode = plumTree.getMode(id);
+
+            // Create the doc thumbnail.
+            // First create a hash of the path and author.
+            hasher.reset();
+            hasher.update(`${event.doc.path} ${event.doc.author}`);
+            const pathAuthorHash = hasher.digest().toString(16);
+
+            // Compbine with doc timestamp
+            // e.g. "104342348 a83dfac89ac"
+            const thumbnail = `${event.doc.timestamp} ${pathAuthorHash}`;
+
+            if (mode === "EAGER") {
+              opts.outboundEventQueue.push({
+                kind: "DOC",
+                thumbnail: thumbnail,
+                doc: event.doc,
+              });
+            } else {
+              opts.outboundEventQueue.push({
+                kind: "HAVE",
+                thumbnail: thumbnail,
+              });
+            }
+          }
+        },
+      }),
+    );
+
+    // A little object we can look up formats by format name. In a type-safe-ish way.
+    const formatLookup = getFormatLookup(opts.formats);
+
+    const { lookup: thumbnailHashLookup } = opts.syncerManager
+      .getDocThumbnailTreeAndDocLookup(
+        opts.replica.share,
+        getFormatsWithFallback(opts.formats),
+      );
+
+    // Read events from the other SyncAgent
+    // And we handle them here.
+    (async () => {
+      for await (const event of opts.inboundEventQueue) {
+        switch (event.kind) {
+          case "PRUNE": {
+            plumTree.onPrune(this.id);
+            break;
+          }
+
+          case "HAVE": {
+            plumTree.onLazyMessage(event, (thumbnail) => {
+              opts.outboundEventQueue.push({
+                kind: "WANT",
+                thumbnail,
+              });
+            });
+
+            break;
+          }
+
+          case "WANT": {
+            plumTree.onGraftMessage(this.id);
+
+            // Check if we have this thumbnail.
+            // Fetch the path + authors associated with it and send them off.
+            const [, hash] = event.thumbnail.split(" ");
+
+            const entry = thumbnailHashLookup[hash];
+
+            if (!entry) {
+              return;
+            }
+
+            const [, path, author] = entry;
+
+            const allVersions = await opts.replica.getAllDocsAtPath(
+              path,
+            );
+
+            // Iterate through each version we got back (which might just be one)
+
+            // If the doc author matches this author...
+            const doc = allVersions.find((doc) => doc.author === author);
+
+            if (doc) {
+              opts.outboundEventQueue.push({
+                kind: "DOC",
+                thumbnail: event.thumbnail,
+                doc,
+              });
+
+              await opts.onDocSent();
+            } else {
+              console.error("Got a WANT event for a document not on record.");
+            }
+
+            break;
+          }
+
+          case "DOC": {
+            // Ingest a document.
+            // Check if we ever asked for this.
+            const shouldPrune = plumTree.onEagerMessage(this.id, event);
+
+            if (shouldPrune) {
+              opts.outboundEventQueue.push({ kind: "PRUNE" });
+            }
+
+            if (opts.wantTracker.isRequested(event.thumbnail)) {
+              const format = formatLookup[event.doc.format];
+
+              if (!format) {
+                console.error(
+                  `Was sent a doc with a format we don't know about (${event.doc.format})`,
+                );
+                break;
+              }
+
+              const attachment = await opts.replica.getAttachment(
+                event.doc as FormatDocType<F>,
+                formatLookup[event.doc.format],
+              );
+
+              // if attachment is undefined, request.
+              if (attachment === undefined) {
+                const canDownload = await opts.transferManager.handleDownload(
+                  event.doc as FormatDocType<F>,
+                  opts.replica,
+                );
+
+                if (!canDownload) {
+                  const attachmentInfo = format.getAttachmentInfo(
+                    event.doc,
+                  ) as { size: number; hash: string };
+
+                  opts.transferManager.registerExpectedTransfer(
+                    opts.replica.share,
+                    attachmentInfo.hash,
+                  );
+
+                  opts.outboundEventQueue.push({
+                    kind: "WANT_ATTACHMENT",
+                    attachmentHash: attachmentInfo.hash,
+                    doc: event.doc,
+                    shareAddress: opts.replica.share,
+                  });
+                }
+              }
+
+              await opts.replica.ingest(
+                format,
+                event.doc as FormatDocType<F>,
+                opts.counterpartId,
+              );
+
+              opts.wantTracker.receivedWantedThumbnail(event.thumbnail);
+
+              await opts.onDocReceived();
+
+              break;
+            } else {
+              console.error("Was sent a doc we never asked for");
+            }
+
+            break;
+          }
+
+          case "FULFILLED":
+            this.isPartnerFulfilled.resolve(true);
+            break;
+
+          case "WANT_ATTACHMENT":
+            opts.transferManager.handleUpload(event, opts.replica);
+            break;
+
+          case "ABORT":
+            await opts.cancel();
+        }
+      }
+    })();
+
+    opts.reconciliationIsDone.then(async () => {
+      if (opts.syncAppetite === "once") {
+        opts.wantTracker.seal();
+
+        await opts.wantTracker.isDone();
+        opts.outboundEventQueue.push({ kind: "FULFILLED" });
+        this.isFulfilled.resolve();
+      }
+    });
+  }
+
+  /** A promise which completes when this gossiper has gotten everything it has asked for and its counterpart is fulfilled.
+   *
+   * Will never resolve if sync appetite is 'continuous'.
+   */
+  get isDone() {
+    return Promise.all([this.isPartnerFulfilled, this.isFulfilled]);
+  }
+}
+
+type ReconcilerOpts<F> = {
+  inboundEventQueue: AsyncQueue<RangeMessage>;
+  outboundEventQueue: AsyncQueue<SyncAgentEvent>;
+  wantTracker: WantTracker;
+  replica: Replica;
+  syncerManager: SyncerManager;
+  initiateMessaging: boolean;
+  formats: FormatsArg<F> | undefined;
+  payloadThreshold: number;
+  rangeDivision: number;
+};
+
+class SyncAgentReconciler<F> {
+  private communicationRoundsCount = 0;
+
+  /** A promise returning a number representing the number of communication rounds which were needed to complete reconciliation.*/
+  isDone = deferred<number>();
+
+  constructor(opts: ReconcilerOpts<F>) {
+    const { tree, lookup, treeIsReady } = opts.syncerManager
+      .getDocThumbnailTreeAndDocLookup(
+        opts.replica.share,
+        getFormatsWithFallback(opts.formats),
+      );
+
+    if (opts.initiateMessaging) {
+      treeIsReady.then(() => {
+        for (const msg of rangeMessenger.initialMessages()) {
+          opts.outboundEventQueue.push({
+            "kind": "RANGE_MSG",
+            message: msg,
+          });
+        }
+      });
+    }
+
+    const rangeMessenger = new EarthstarRangeMessenger(
+      tree,
+      opts.payloadThreshold,
+      opts.rangeDivision,
+    );
+
+    rangeMessenger.onInsertion((thumbnail) => {
+      // Analyse...
+
+      const [timestamp, hash] = thumbnail.split(" ");
+
+      const entry = lookup[hash];
+
+      // If we have an entry AND our entry's timestamp is higher we don't care about this.
+      if (entry && entry[0] >= parseInt(timestamp)) {
+        return;
+      }
+
+      // Otherwise we want this!
+      opts.wantTracker.addWantedThumbnail(thumbnail);
+      opts.outboundEventQueue.push({ kind: "WANT", thumbnail });
+    });
+
+    // Read events from the other SyncAgent
+    // And we handle them here.
+    (async () => {
+      await treeIsReady;
+
+      for await (const message of opts.inboundEventQueue) {
+        if (this.isDone.state === "fulfilled") {
+          return;
+        }
+
+        if (message.type === "TERMINAL") {
+          this.communicationRoundsCount++;
+        }
+
+        const responses = rangeMessenger.respond(message);
+
+        for (const response of responses) {
+          opts.outboundEventQueue.push({
+            kind: "RANGE_MSG",
+            message: response,
+          });
+        }
+      }
+    })();
+
+    rangeMessenger.isDone().then(() => {
+      this.isDone.resolve(this.communicationRoundsCount);
+    });
+  }
+}
+
+/** Tracks which documents a SyncAgent has sent WANT messages for and how many have actually been received. */
+class WantTracker {
+  private isSealed = false;
+  private wantedThumbnails = new Map<DocThumbnail, Deferred<true>>();
+
+  private enroller = new PromiseEnroller();
+  private received = 0;
+
+  addWantedThumbnail(thumbnail: DocThumbnail) {
+    if (!this.isSealed && !this.wantedThumbnails.has(thumbnail)) {
+      const wantedDeferred = deferred<true>();
+      this.wantedThumbnails.set(thumbnail, wantedDeferred);
+      this.enroller.enrol(wantedDeferred);
+    }
+  }
+
+  receivedWantedThumbnail(thumbnail: DocThumbnail) {
+    const maybeDeferred = this.wantedThumbnails.get(thumbnail);
+
+    if (maybeDeferred) {
+      maybeDeferred.resolve();
+      this.received++;
+    }
+  }
+
+  isRequested(thumbnail: DocThumbnail) {
+    return this.wantedThumbnails.has(thumbnail);
+  }
+
+  seal() {
+    this.enroller.seal();
+  }
+
+  isDone() {
+    return this.enroller.isDone();
+  }
+
+  get requestedCount() {
+    return this.wantedThumbnails.size;
+  }
+
+  get receivedCount() {
+    return this.received;
   }
 }

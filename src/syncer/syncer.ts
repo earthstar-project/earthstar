@@ -33,7 +33,6 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
   private syncAgentQueues = new Map<ShareAddress, AsyncQueue<SyncAgentEvent>>();
   private mode: SyncerMode;
-
   private statusBus = new BlockingBus<SyncerStatus>();
   private formats: FormatsArg<FormatsType>;
   private transferManager: TransferManager<
@@ -154,6 +153,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       initiateMessaging: initiateMessaging,
       payloadThreshold: this.partner.payloadThreshold,
       rangeDivision: this.partner.rangeDivision,
+      syncMode: this.mode,
     });
 
     agent.onStatusUpdate(() => {
@@ -249,7 +249,6 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
         const agentQueue = this.syncAgentQueues.get(to);
 
-        // That's no good...
         if (!agentQueue) {
           const queue = new AsyncQueue<SyncAgentEvent>();
           queue.push(event);

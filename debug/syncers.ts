@@ -1,4 +1,12 @@
-import { AuthorKeypair, Crypto, Peer, Replica, ShareKeypair } from "../mod.ts";
+import {
+  AuthorKeypair,
+  Crypto,
+  CryptoDriverSodium,
+  Peer,
+  Replica,
+  setGlobalCryptoDriver,
+  ShareKeypair,
+} from "../mod.ts";
 import { AttachmentDriverMemory } from "../src/replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../src/replica/doc_drivers/memory.ts";
 import {
@@ -8,6 +16,8 @@ import {
 } from "../src/test/test-utils.ts";
 
 const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
+
+setGlobalCryptoDriver(CryptoDriverSodium);
 
 // create three replicas x 2.
 const shareKeypairA = await Crypto.generateShareKeypair(
@@ -47,23 +57,26 @@ const [a1, a2] = makeReplicaDuo(ADDRESS_A, shareKeypairA.secret);
 const [b1, b2] = makeReplicaDuo(ADDRESS_B, shareKeypairB.secret);
 const [c1, c2] = makeReplicaDuo(ADDRESS_C, shareKeypairC.secret);
 
-await writeRandomDocs(keypair, a1, 6);
-await writeRandomDocs(keypair, a2, 6);
-await writeRandomDocs(keypair, b1, 10);
-await writeRandomDocs(keypair, b2, 10);
-await writeRandomDocs(keypair, c1, 10);
-await writeRandomDocs(keypair, c2, 10);
+const docCount = 100;
+
+await writeRandomDocs(keypair, a1, docCount);
+await writeRandomDocs(keypair, a2, docCount);
+
+await writeRandomDocs(keypair, b1, docCount);
+await writeRandomDocs(keypair, b2, docCount);
+await writeRandomDocs(keypair, c1, docCount);
+await writeRandomDocs(keypair, c2, docCount);
 
 const peer1 = new Peer();
 const peer2 = new Peer();
 
 peer1.addReplica(a1);
-//peer1.addReplica(b1);
-//peer1.addReplica(c1);
+peer1.addReplica(b1);
+peer1.addReplica(c1);
 
 peer2.addReplica(a2);
-//peer2.addReplica(b2);
-//peer2.addReplica(c2);
+peer2.addReplica(b2);
+peer2.addReplica(c2);
 
 const syncer = peer1.sync(peer2, false);
 
@@ -95,7 +108,7 @@ for (const [x, y] of pairs) {
   if (docsSynced) {
     console.log(`Docs synced!`);
   } else {
-    console.log(`Docs did not sync...`);
+    console.log(`%c Docs did not sync...`, "color: red");
   }
 
   const res = await docAttachmentsAreEquivalent(
@@ -106,7 +119,9 @@ for (const [x, y] of pairs) {
   if (res) {
     console.log(`Attachments synced!`);
   } else {
-    console.log(`Attachments did not sync...`);
+    console.log(`%c Attachments did not sync...`, "color: red");
   }
   console.groupEnd();
 }
+
+Deno.exit(0);
