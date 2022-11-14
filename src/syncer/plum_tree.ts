@@ -3,7 +3,6 @@ import {
   SyncAgentDocEvent,
   SyncAgentHaveEvent,
 } from "./syncer_types.ts";
-import { SyncAgent, SyncAgentGossiper } from "./sync_agent.ts";
 
 /** A push-lazy-push-multicast tree, or 'PlumTree'. Organises a network of interconnected peers into a spanning tree where messaging resiliency, latency, and bandwidth are optimised.
  *
@@ -52,6 +51,7 @@ export class PlumTree {
     if (this.eagerMessageThumbnails.has(event.thumbnail)) {
       // If already present, switch to lazy messaging this peer.
       this.messagingModes.set(id, "LAZY");
+
       // ask syncagent to tell partner to make become lazy (PRUNE).
       return true;
     } else {
@@ -72,7 +72,7 @@ export class PlumTree {
       const timeout = setTimeout(() => {
         // When the timer expires, get the syncagent to send a WANT for this thumbnail.
         dispatchGraft(event.thumbnail);
-      }, 100);
+      }, 5);
       // TODO: What should the timeout be?
 
       this.haveTimeouts.set(event.thumbnail, timeout);

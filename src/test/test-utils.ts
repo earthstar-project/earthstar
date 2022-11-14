@@ -160,17 +160,26 @@ export function writeRandomDocs(
 ) {
   const fstRand = randomId();
 
+  const hasAttachment = Math.random() >= 0.8;
+
   const setPromises = Array.from({ length: n }, () => {
     const rand = randomId();
 
-    const bytes = crypto.getRandomValues(
-      new Uint8Array((Math.random() + 0.1) * 32 * 32 * 32),
-    );
+    if (hasAttachment) {
+      const bytes = crypto.getRandomValues(
+        new Uint8Array((Math.random() + 0.1) * 32 * 32 * 32),
+      );
+
+      return storage.set(keypair, {
+        text: `${rand}`,
+        path: `/${fstRand}/${rand}.txt`,
+        attachment: bytes,
+      });
+    }
 
     return storage.set(keypair, {
       text: `${rand}`,
-      path: `/${fstRand}/${rand}.txt`,
-      attachment: bytes,
+      path: `/${fstRand}/${rand}`,
     });
   });
 

@@ -17,6 +17,8 @@ import { PromiseEnroller } from "./promise_enroller.ts";
 import { randomId } from "../util/misc.ts";
 import { SyncerManager } from "./syncer_manager.ts";
 import { TransferManager } from "./transfer_manager.ts";
+import { isErr } from "../util/errors.ts";
+import { MultiformatReplica } from "../replica/multiformat_replica.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`.
  */
@@ -137,7 +139,7 @@ export class SyncAgent<F> {
       cancel: this.cancel.bind(this),
       reconciliationIsDone: reconciler.isDone,
       wantTracker: wantTracker,
-      syncAppetite: opts.syncMode,
+      syncAppetite: opts.syncAppetite,
       onDocReceived: async () => {
         this.receivedDocsCount++;
         await this.statusBus.send(this.getStatus());
@@ -182,11 +184,11 @@ type GossiperOpts<F> = {
   outboundEventQueue: AsyncQueue<SyncAgentEvent>;
   syncerManager: SyncerManager;
   formats: FormatsArg<F> | undefined;
-  replica: Replica;
+  replica: MultiformatReplica;
   counterpartId: string;
   transferManager: TransferManager<F, unknown>;
   wantTracker: WantTracker;
-  reconciliationIsDone: Promise<number>;
+  reconciliationIsDone: Deferred<number>;
   syncAppetite: SyncAppetite;
   cancel: () => Promise<void>;
   onDocReceived: () => Promise<void>;
@@ -194,54 +196,73 @@ type GossiperOpts<F> = {
 };
 
 export class SyncAgentGossiper<F> {
-  private id = randomId();
   private isPartnerFulfilled = deferred();
   private isFulfilled = deferred();
 
   constructor(opts: GossiperOpts<F>) {
-    // Create a query stream for new events.
-    const queryStream = opts.replica.getQueryStream({}, "new", opts.formats);
-
     const plumTree = opts.syncerManager.getPlumTree(opts.replica.share);
-    const hasher = new XXH64();
 
-    const id = this.id;
+    // Create a query stream for new events.
+    if (opts.syncAppetite === "continuous") {
+      const queryStream = opts.replica.getQueryStream(
+        undefined,
+        "new",
+        opts.formats,
+      );
 
-    // Send new messages from self / other peers eagerly or lazily depending on plum tree.
-    queryStream.pipeTo(
-      new WritableStream({
-        write(event) {
-          if (
-            event.kind === "success" && event.sourceId !== opts.counterpartId
-          ) {
-            const mode = plumTree.getMode(id);
+      const hasher = new XXH64();
 
-            // Create the doc thumbnail.
-            // First create a hash of the path and author.
-            hasher.reset();
-            hasher.update(`${event.doc.path} ${event.doc.author}`);
-            const pathAuthorHash = hasher.digest().toString(16);
+      // Send new messages from self / other peers eagerly or lazily depending on plum tree.
+      queryStream.pipeTo(
+        new WritableStream({
+          write(event) {
+            if (
+              event.kind === "success" && event.sourceId !== opts.counterpartId
+            ) {
+              const mode = plumTree.getMode(event.sourceId);
 
-            // Compbine with doc timestamp
-            // e.g. "104342348 a83dfac89ac"
-            const thumbnail = `${event.doc.timestamp} ${pathAuthorHash}`;
+              // Create the doc thumbnail.
+              // First create a hash of the path and author.
+              hasher.reset();
+              hasher.update(`${event.doc.path} ${event.doc.author}`);
+              const pathAuthorHash = hasher.digest().toString(16);
 
-            if (mode === "EAGER") {
-              opts.outboundEventQueue.push({
-                kind: "DOC",
-                thumbnail: thumbnail,
-                doc: event.doc,
-              });
-            } else {
-              opts.outboundEventQueue.push({
-                kind: "HAVE",
-                thumbnail: thumbnail,
-              });
+              // Compbine with doc timestamp
+              // e.g. "104342348 a83dfac89ac"
+              const thumbnail = `${event.doc.timestamp} ${pathAuthorHash}`;
+
+              if (mode === "EAGER") {
+                opts.outboundEventQueue.push({
+                  kind: "DOC",
+                  thumbnail: thumbnail,
+                  doc: event.doc,
+                });
+              } else {
+                opts.outboundEventQueue.push({
+                  kind: "HAVE",
+                  thumbnail: thumbnail,
+                });
+              }
             }
-          }
-        },
-      }),
-    );
+          },
+        }),
+      );
+    }
+
+    const unsubAttachmentIngestEvents = opts.replica.onEvent((event) => {
+      if (
+        event.kind === "attachment_ingest" &&
+        event.sourceId !== opts.counterpartId
+      ) {
+        opts.outboundEventQueue.push({
+          kind: "NEW_ATTACHMENT",
+          path: event.doc.path,
+          author: event.doc.author,
+          format: event.doc.format,
+          hash: event.hash,
+        });
+      }
+    });
 
     // A little object we can look up formats by format name. In a type-safe-ish way.
     const formatLookup = getFormatLookup(opts.formats);
@@ -258,11 +279,21 @@ export class SyncAgentGossiper<F> {
       for await (const event of opts.inboundEventQueue) {
         switch (event.kind) {
           case "PRUNE": {
-            plumTree.onPrune(this.id);
+            plumTree.onPrune(opts.counterpartId);
             break;
           }
 
           case "HAVE": {
+            // Ignore HAVE messages if reconciliation finished and we are only syncing once.
+            if (
+              opts.reconciliationIsDone.state === "fulfilled" &&
+              opts.syncAppetite === "once"
+            ) {
+              break;
+            }
+
+            opts.wantTracker.addWantedThumbnail(event.thumbnail);
+
             plumTree.onLazyMessage(event, (thumbnail) => {
               opts.outboundEventQueue.push({
                 kind: "WANT",
@@ -274,7 +305,7 @@ export class SyncAgentGossiper<F> {
           }
 
           case "WANT": {
-            plumTree.onGraftMessage(this.id);
+            plumTree.onGraftMessage(opts.counterpartId);
 
             // Check if we have this thumbnail.
             // Fetch the path + authors associated with it and send them off.
@@ -313,68 +344,132 @@ export class SyncAgentGossiper<F> {
           }
 
           case "DOC": {
+            // Ignore DOC messages if we fulfilled our and we are only syncing once.
+            if (
+              this.isFulfilled.state === "fulfilled" &&
+              opts.syncAppetite === "once"
+            ) {
+              break;
+            }
+
             // Ingest a document.
-            // Check if we ever asked for this.
-            const shouldPrune = plumTree.onEagerMessage(this.id, event);
+            const shouldPrune = plumTree.onEagerMessage(
+              opts.counterpartId,
+              event,
+            );
 
             if (shouldPrune) {
               opts.outboundEventQueue.push({ kind: "PRUNE" });
             }
 
-            if (opts.wantTracker.isRequested(event.thumbnail)) {
-              const format = formatLookup[event.doc.format];
-
-              if (!format) {
-                console.error(
-                  `Was sent a doc with a format we don't know about (${event.doc.format})`,
-                );
-                break;
-              }
-
-              const attachment = await opts.replica.getAttachment(
-                event.doc as FormatDocType<F>,
-                formatLookup[event.doc.format],
-              );
-
-              // if attachment is undefined, request.
-              if (attachment === undefined) {
-                const canDownload = await opts.transferManager.handleDownload(
-                  event.doc as FormatDocType<F>,
-                  opts.replica,
-                );
-
-                if (!canDownload) {
-                  const attachmentInfo = format.getAttachmentInfo(
-                    event.doc,
-                  ) as { size: number; hash: string };
-
-                  opts.transferManager.registerExpectedTransfer(
-                    opts.replica.share,
-                    attachmentInfo.hash,
-                  );
-
-                  opts.outboundEventQueue.push({
-                    kind: "WANT_ATTACHMENT",
-                    attachmentHash: attachmentInfo.hash,
-                    doc: event.doc,
-                    shareAddress: opts.replica.share,
-                  });
-                }
-              }
-
-              await opts.replica.ingest(
-                format,
-                event.doc as FormatDocType<F>,
-                opts.counterpartId,
-              );
-
-              opts.wantTracker.receivedWantedThumbnail(event.thumbnail);
-
-              await opts.onDocReceived();
-
+            if (opts.wantTracker.isReceived(event.thumbnail)) {
               break;
-            } else {
-              console.error("Was sent a doc we never asked for");
+            }
+
+            const format = formatLookup[event.doc.format];
+
+            if (!format) {
+              console.error(
+                `Was sent a doc with a format we don't know about (${event.doc.format})`,
+              );
+              break;
+            }
+
+            const attachment = await opts.replica.getAttachment(
+              event.doc as FormatDocType<F>,
+              formatLookup[event.doc.format],
+            );
+
+            // if attachment is undefined, request.
+            if (attachment === undefined) {
+              const result = await opts.transferManager.handleDownload(
+                event.doc as FormatDocType<F>,
+                opts.replica,
+              );
+
+              // Direct download not supported, send an upload request instead.
+              if (isErr(result)) {
+                const attachmentInfo = format.getAttachmentInfo(
+                  event.doc,
+                ) as { size: number; hash: string };
+
+                opts.transferManager.registerExpectedTransfer(
+                  opts.replica.share,
+                  attachmentInfo.hash,
+                );
+
+                opts.outboundEventQueue.push({
+                  kind: "WANT_ATTACHMENT",
+                  attachmentHash: attachmentInfo.hash,
+                  doc: event.doc,
+                  shareAddress: opts.replica.share,
+                });
+              }
+            }
+
+            await opts.replica.ingest(
+              format,
+              event.doc as FormatDocType<F>,
+              opts.counterpartId,
+            );
+
+            opts.wantTracker.receivedWantedThumbnail(event.thumbnail);
+
+            await opts.onDocReceived();
+
+            break;
+          }
+
+          case "NEW_ATTACHMENT": {
+            if (opts.transferManager.isAlreadyQueued(event.hash, "download")) {
+              break;
+            }
+
+            const format = formatLookup[event.format];
+
+            const pathDocs = await opts.replica.getAllDocsAtPath(event.path, [
+              format,
+            ]);
+
+            const docForAuthor = pathDocs.find((doc) =>
+              event.author === doc.author
+            );
+
+            if (!docForAuthor) {
+              // weird. you'd hope we'd have this document.
+              break;
+            }
+
+            const attachment = await opts.replica.getAttachment(
+              docForAuthor as FormatDocType<F>,
+              formatLookup[docForAuthor.format],
+            );
+
+            // if attachment is undefined, request.
+            if (attachment === undefined) {
+              const result = await opts.transferManager.handleDownload(
+                docForAuthor as FormatDocType<F>,
+                opts.replica,
+              );
+
+              // Direct download not supported, send an upload request instead.
+              if (isErr(result)) {
+                const attachmentInfo = format.getAttachmentInfo(
+                  docForAuthor,
+                ) as { size: number; hash: string };
+
+                opts.transferManager.registerExpectedTransfer(
+                  opts.replica.share,
+                  attachmentInfo.hash,
+                );
+
+                opts.outboundEventQueue.push({
+                  kind: "WANT_ATTACHMENT",
+                  attachmentHash: attachmentInfo.hash,
+                  doc: docForAuthor,
+                  shareAddress: opts.replica.share,
+                });
+              }
             }
 
             break;
@@ -396,10 +491,14 @@ export class SyncAgentGossiper<F> {
 
     opts.reconciliationIsDone.then(async () => {
       if (opts.syncAppetite === "once") {
+        unsubAttachmentIngestEvents();
+
         opts.wantTracker.seal();
 
         await opts.wantTracker.isDone();
+
         opts.outboundEventQueue.push({ kind: "FULFILLED" });
+
         this.isFulfilled.resolve();
       }
     });
@@ -531,6 +630,16 @@ class WantTracker {
 
   isRequested(thumbnail: DocThumbnail) {
     return this.wantedThumbnails.has(thumbnail);
+  }
+
+  isReceived(thumbnail: DocThumbnail) {
+    const maybeDeferred = this.wantedThumbnails.get(thumbnail);
+
+    if (!maybeDeferred) {
+      return false;
+    }
+
+    return maybeDeferred.state === "fulfilled";
   }
 
   seal() {

@@ -100,20 +100,83 @@ peer3.addReplica(a3);
 peer3.addReplica(b3);
 peer3.addReplica(c3);
 
-const syncer = peer1.sync(peer2, false);
-await syncer.isDone();
+const syncer = peer1.sync(peer2, true);
+const syncer2 = peer2.sync(peer3, true);
+const syncer3 = peer3.sync(peer1, true);
 
-console.log("Sync 1 <> 2 done");
+// set up a syncer with a local partner.
 
-const syncer2 = peer2.sync(peer3, false);
-await syncer2.isDone();
-console.log("Sync 2 <> 3 done");
+// attach all attachments.
+console.log("syncing...");
 
-const syncer3 = peer3.sync(peer1, false);
-await syncer3.isDone();
-console.log("Sync 3 <> 1 done");
+await new Promise((res) => {
+  setTimeout(res, docCount * 40);
+});
 
 const trios = [[a1, a2, a3], [b1, b2, b3], [c1, c2, c3]];
+
+for (const [x, y, z] of trios) {
+  // get all docs.
+  const fstDocs = await x.getAllDocs();
+  const sndDocs = await y.getAllDocs();
+  const thdDocs = await z.getAllDocs();
+
+  const fstWithAttachments = await x.addAttachments(fstDocs);
+  const sndWithAttachments = await y.addAttachments(sndDocs);
+  const thdWithAttachments = await z.addAttachments(sndDocs);
+
+  console.log(fstDocs.length, sndDocs.length, thdDocs.length);
+
+  console.group(x.share);
+
+  const docsSynced = docsAreEquivalent(fstDocs, sndDocs);
+  const docsSynced2 = docsAreEquivalent(sndDocs, thdDocs);
+
+  if (docsSynced && docsSynced2) {
+    console.log(`Docs synced!`);
+  } else {
+    console.log(`%c Docs did not sync...`, "color: red");
+  }
+
+  const res = await docAttachmentsAreEquivalent(
+    fstWithAttachments,
+    sndWithAttachments,
+  );
+
+  const res2 = await docAttachmentsAreEquivalent(
+    sndWithAttachments,
+    thdWithAttachments,
+  );
+
+  if (res && res2) {
+    console.log(`Attachments synced!`);
+  } else {
+    console.log(`%c Attachments did not sync...`, "color: red");
+  }
+  console.groupEnd();
+}
+
+console.log("writing docs");
+
+await Promise.all([
+  writeRandomDocs(keypair, a1, docCount),
+  writeRandomDocs(keypair, a2, docCount),
+  writeRandomDocs(keypair, a3, docCount),
+
+  writeRandomDocs(keypair, b1, docCount),
+  writeRandomDocs(keypair, b2, docCount),
+  writeRandomDocs(keypair, b3, docCount),
+
+  writeRandomDocs(keypair, c1, docCount),
+  writeRandomDocs(keypair, c2, docCount),
+  writeRandomDocs(keypair, c3, docCount),
+]);
+
+console.log("wrote docs (again)");
+
+await new Promise((res) => {
+  setTimeout(res, docCount * 40);
+});
 
 for (const [x, y, z] of trios) {
   // get all docs.

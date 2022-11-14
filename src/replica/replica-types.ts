@@ -90,6 +90,7 @@ export interface AttachmentIngestEvent<DocType extends DocBase<string>> {
   doc: DocType;
   hash: string;
   size: number;
+  sourceId: "local" | string;
 }
 
 export interface AttachmentPruneEvent {

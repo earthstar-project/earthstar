@@ -1,4 +1,9 @@
-import { DocBase, ShareAddress } from "../util/doc-types.ts";
+import {
+  AuthorAddress,
+  DocBase,
+  Path,
+  ShareAddress,
+} from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
 import {
   FormatArg,
@@ -7,6 +12,7 @@ import {
 } from "../formats/format_types.ts";
 import { TransferManager } from "./transfer_manager.ts";
 import { SyncerManager } from "./syncer_manager.ts";
+import { NotSupportedError } from "../util/errors.ts";
 
 /** A short string with a timestamp and hash of the document's path and author. */
 export type DocThumbnail = string;
@@ -84,6 +90,14 @@ export type SyncAgentPruneEvent = {
   kind: "PRUNE";
 };
 
+export type SynceAgentNewAttachmentEvent = {
+  kind: "NEW_ATTACHMENT";
+  path: Path;
+  author: AuthorAddress;
+  format: string;
+  hash: string;
+};
+
 /** A type of message one SyncAgent can send to another. */
 export type SyncAgentEvent =
   | SyncAgentRangeMessageEvent
@@ -93,6 +107,7 @@ export type SyncAgentEvent =
   | SyncAgentAbortEvent
   | SyncAgentHaveEvent
   | SyncAgentPruneEvent
+  | SynceAgentNewAttachmentEvent
   | SyncAgentFulfilledEvent;
 
 /** The current status of a SyncAgent. */
@@ -114,7 +129,7 @@ export type SyncAgentOpts<F> = {
   formats?: FormatsArg<F>;
   transferManager: TransferManager<F, unknown>;
   syncerManager: SyncerManager;
-  syncMode: SyncerMode;
+  syncAppetite: SyncAppetite;
   initiateMessaging: boolean;
   payloadThreshold: number;
   rangeDivision: number;
@@ -177,21 +192,21 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
   closeConnection(): Promise<void>;
 
   /** Attempt to download an attachment directly from the partner.
-   * @returns A `ReadableStream<Uint8Array>` to read data from, a `ValidationError` if something went wrong, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
+   * @returns A `ReadableStream<Uint8Array>` to read data from, `undefined` if this peer does not have the attachment, or `NotSupportedError` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
    */
   getDownload(
     opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | undefined>;
+  ): Promise<ReadableStream<Uint8Array> | undefined | NotSupportedError>;
 
   /** Handles (usually in-band) request from the other peer to upload an attachment.
    * @returns A `WritableStream<Uint8Array>` to write data to, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
    */
   handleUploadRequest(
     opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | undefined>;
+  ): Promise<WritableStream<Uint8Array> | NotSupportedError>;
 
   /** Handles an out-of-band request from the other peer to start a transfer.
-   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, or `undefined` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
+   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, `undefined` if a download request was made an we have no attachment to serve, or `NotSupportedError` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
    */
   handleTransferRequest(
     source: IncomingAttachmentSourceType,
@@ -200,6 +215,7 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
     | undefined
+    | NotSupportedError
   >;
 }
 

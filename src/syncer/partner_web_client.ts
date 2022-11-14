@@ -3,18 +3,18 @@ import {
   websocketReadable,
   websocketWritable,
 } from "../streams/stream_utils.ts";
-import { EarthstarError } from "../util/errors.ts";
+import { EarthstarError, NotSupportedError } from "../util/errors.ts";
 import {
   GetTransferOpts,
   ISyncPartner,
+  SyncAppetite,
   SyncerEvent,
-  SyncerMode,
 } from "./syncer_types.ts";
 
 type SyncerDriverWebClientOpts = {
   /** The URL of the replica server to sync with. */
   url: string;
-  mode: SyncerMode;
+  appetite: SyncAppetite;
 };
 
 /** A syncing partner to be used with replica servers reachable via the internet.
@@ -23,7 +23,7 @@ type SyncerDriverWebClientOpts = {
 export class PartnerWebClient<
   IncomingTransferSourceType extends undefined,
 > implements ISyncPartner<undefined> {
-  syncMode: SyncerMode;
+  syncAppetite: SyncAppetite;
   concurrentTransfers = 16;
   payloadThreshold = 1;
   rangeDivision = 2;
@@ -36,7 +36,7 @@ export class PartnerWebClient<
   private socketIsReady = deferred();
 
   constructor(opts: SyncerDriverWebClientOpts) {
-    this.syncMode = opts.mode;
+    this.syncAppetite = opts.appetite;
 
     // Check if it's a URL of some kind.
     const url = new URL(opts.url);
@@ -51,7 +51,7 @@ export class PartnerWebClient<
 
     this.wsUrl = `${this.isSecure ? "wss://" : "ws://"}${hostAndPath}/'`;
 
-    const urlWithMode = new URL(opts.mode, this.wsUrl);
+    const urlWithMode = new URL(opts.appetite, this.wsUrl);
 
     this.socket = new WebSocket(
       urlWithMode.toString(),
@@ -124,7 +124,7 @@ export class PartnerWebClient<
 
   handleUploadRequest(
     opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | undefined> {
+  ): Promise<WritableStream<Uint8Array> | NotSupportedError> {
     const url = new URL(
       `${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`,
       this.wsUrl,
@@ -145,8 +145,13 @@ export class PartnerWebClient<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
     | undefined
+    | NotSupportedError
   > {
     // We don't expect any external requests.
-    return Promise.resolve(undefined);
+    return Promise.resolve(
+      new NotSupportedError(
+        "SyncDriverWebClient does not support external transfer requests.",
+      ),
+    );
   }
 }

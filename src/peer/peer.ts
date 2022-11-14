@@ -13,6 +13,7 @@ import { PartnerWebClient } from "../syncer/partner_web_client.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
 import { FormatsArg } from "../formats/format_types.ts";
 import { SyncerManager } from "../syncer/syncer_manager.ts";
+import { ISyncPartner } from "../syncer/syncer_types.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
@@ -101,18 +102,18 @@ export class Peer implements IPeer {
   /**
    * Begin synchronising with a remote or local peer.
    * @param target - A HTTP URL or `Peer` instance.
-   * @param live - Whether the connection should be kept open for newly written docs, or stop after an initial sync.
+   * @param continuous - Whether the connection should be kept open for newly written docs, or stop after an initial sync.
    * @param formats - Optional. Which document formats to sync. Defaults to `es.5`.
    */
   sync<F>(
     target: IPeer | string,
-    live = false,
+    continuous = false,
     formats?: FormatsArg<F>,
   ): Syncer<undefined, F> {
     try {
       const partner = new PartnerWebClient({
         url: target as string,
-        mode: live ? "live" : "once",
+        appetite: continuous ? "continuous" : "once",
       });
 
       return this.syncerManager.addPartner(partner, formats);
@@ -121,7 +122,7 @@ export class Peer implements IPeer {
         const partner = new PartnerLocal(
           target as IPeer,
           this,
-          live ? "live" : "once",
+          continuous ? "continuous" : "once",
           formats,
         );
 
@@ -135,6 +136,10 @@ export class Peer implements IPeer {
       );
       return undefined as never;
     }
+  }
+
+  addSyncPartner<I, F>(partner: ISyncPartner<I>, formats?: FormatsArg<F>) {
+    return this.syncerManager.addPartner(partner, formats);
   }
 
   //----------------------------------------------

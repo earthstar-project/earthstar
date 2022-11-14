@@ -9,7 +9,7 @@ import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
-import { EarthstarError, isErr } from "../util/errors.ts";
+import { EarthstarError, isErr, NotSupportedError } from "../util/errors.ts";
 import { AttachmentTransfer } from "./attachment_transfer.ts";
 import { PromiseEnroller } from "./promise_enroller.ts";
 import {
@@ -99,6 +99,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   }
 
   // call this when all the sync agents have been constructed
+  // and seal the enroller with all the piped existing docs.
   allSyncAgentsKnown() {
     this.madeAllAttachmentRequestsEnroller.seal();
   }
@@ -107,11 +108,8 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     const promise = deferred<void>();
     const key = `${share}_${hash}`;
     this.expectedTransferPromises.set(key, promise);
-    this.receivedAllExpectedTransfersEnroller.enrol(promise);
-  }
 
-  allTransfersRequested() {
-    this.receivedAllExpectedTransfersEnroller.seal();
+    this.receivedAllExpectedTransfersEnroller.enrol(promise);
   }
 
   private async queueTransfer(transfer: AttachmentTransfer<unknown>) {
@@ -124,11 +122,12 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     await this.queue.addTransfer(transfer);
   }
 
-  // This will be called by the sync agent
+  // This will be called by the sync agent.
+
   async handleDownload(
     doc: FormatDocType<FormatsType>,
     replica: Replica,
-  ): Promise<boolean> {
+  ): Promise<NotSupportedError | "no_attachment" | "queued"> {
     const format = this.formatsLookup[doc.format];
     const attachmentInfo = format.getAttachmentInfo(doc);
 
@@ -146,8 +145,18 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     });
 
     if (result === undefined) {
+      const key = `${replica.share}_${attachmentInfo.hash}`;
+      const promise = deferred<void>();
+      this.expectedTransferPromises.set(key, promise);
+
+      promise.resolve();
+
       // The sync agent will send a blob req.
-      return false;
+      return "no_attachment";
+    }
+
+    if (isErr(result)) {
+      return result;
     }
 
     const transfer = new AttachmentTransfer({
@@ -160,8 +169,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
 
     await this.queueTransfer(transfer);
 
-    // The sync agent will be happy...
-    return true;
+    return "queued";
   }
 
   async handleUpload(
@@ -175,7 +183,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       attachmentHash: transferOpts.attachmentHash,
     });
 
-    if (result === undefined) {
+    if (isErr(result)) {
       return false;
     }
 
@@ -211,7 +219,8 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   ) {
     const stream = await this.partner.handleTransferRequest(source, kind);
 
-    if (stream === undefined) {
+    // This method is not supported or we just don't have the requested attachment.
+    if (stream === undefined || isErr(stream)) {
       return;
     }
 
@@ -267,5 +276,9 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
 
   registerOtherSyncerId(id: string) {
     this.otherSyncerId.resolve(id);
+  }
+
+  isAlreadyQueued(hash: string, kind: "upload" | "download") {
+    return this.queue.hasQueuedTransfer(hash, kind);
   }
 }

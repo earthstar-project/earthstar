@@ -434,6 +434,7 @@ export class MultiformatReplica {
         doc: updatedDocRes,
         hash: stageResult.hash,
         size: stageResult.size,
+        sourceId: "local",
       });
 
       loggerSet.debug("...done ingesting attachment");
@@ -903,6 +904,7 @@ export class MultiformatReplica {
     format: FormatArg<F>,
     doc: FormatDocType<F>,
     attachment: Uint8Array | ReadableStream<Uint8Array>,
+    sourceId: "local" | string,
   ): Promise<
     true | false | ValidationError
   > {
@@ -970,6 +972,7 @@ export class MultiformatReplica {
       doc,
       hash: stageRes.hash,
       size: stageRes.size,
+      sourceId,
     });
 
     return true;

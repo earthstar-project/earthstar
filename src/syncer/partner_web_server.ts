@@ -3,12 +3,18 @@ import {
   websocketReadable,
   websocketWritable,
 } from "../streams/stream_utils.ts";
-import { EarthstarError } from "../util/errors.ts";
-import { GetTransferOpts, ISyncPartner, SyncerEvent } from "./syncer_types.ts";
+import { EarthstarError, NotSupportedError } from "../util/errors.ts";
+import {
+  GetTransferOpts,
+  ISyncPartner,
+  SyncAppetite,
+  SyncerEvent,
+} from "./syncer_types.ts";
 
 type SyncerDriverWebServerOpts = {
   /** A websocket created from the initial sync request. */
   socket: WebSocket;
+  appetite: SyncAppetite;
 };
 
 /** A syncing partner created from an inbound HTTP connection.
@@ -20,12 +26,15 @@ export class PartnerWebServer<
   concurrentTransfers = 16;
   payloadThreshold = 1;
   rangeDivision = 2;
+  syncAppetite: SyncAppetite;
 
   private socket: WebSocket;
   private incomingQueue = new AsyncQueue<SyncerEvent>();
   private socketIsReady = deferred();
 
-  constructor({ socket }: SyncerDriverWebServerOpts) {
+  constructor({ socket, appetite }: SyncerDriverWebServerOpts) {
+    this.syncAppetite = appetite;
+
     if (socket.readyState === socket.OPEN) {
       this.socketIsReady.resolve();
     }
@@ -77,16 +86,24 @@ export class PartnerWebServer<
 
   getDownload(
     _opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | undefined> {
+  ): Promise<ReadableStream<Uint8Array> | NotSupportedError> {
     // Server can't initiate a request with a client.
-    return Promise.resolve(undefined);
+    return Promise.resolve(
+      new NotSupportedError(
+        "SyncDriverWebServer does not support download requests.",
+      ),
+    );
   }
 
   handleUploadRequest(
     _opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | undefined> {
+  ): Promise<WritableStream<Uint8Array> | NotSupportedError> {
     // Server won't get in-band BLOB_REQ messages
-    return Promise.resolve(undefined);
+    return Promise.resolve(
+      new NotSupportedError(
+        "SyncDriverWebServer does not support upload requests.",
+      ),
+    );
   }
 
   handleTransferRequest(

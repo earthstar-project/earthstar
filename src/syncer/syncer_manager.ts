@@ -16,7 +16,7 @@ import { ISyncPartner } from "./syncer_types.ts";
 /** A string starting with a share address, followed by formats separated by commas */
 type DocThumbnailTreeKey = string;
 
-/**  */
+/** A thumbnail pointing to a timestamp, path, and author address. */
 type DocThumbnailHashToDocLookup = Record<
   string,
   [Timestamp, Path, AuthorAddress]

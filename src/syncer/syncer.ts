@@ -50,6 +50,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     this.manager = opts.manager;
     this.peer = opts.manager.peer;
     this.appetite = opts.partner.syncAppetite;
+
     this.formats = getFormatsWithFallback(opts.formats);
     this.partner = opts.partner;
 
@@ -91,6 +92,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     });
 
     this.transferManager.transfersRequestedByUsFinished().then(async () => {
+      if (opts.partner.syncAppetite === "continuous") {
+        return;
+      }
+
       await this.partner.sendEvent({
         kind: "SYNCER_FULFILLED",
       });
@@ -104,7 +109,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       this.isDoneMultiDeferred.resolve();
     });
 
-    // TODO: What do we do when transfers change?
+    // TODO: What do we do when held replicas change?
     // This should not be permitted during 'once' mode...
     /*
     this.peer.onReplicasChange(() => {
@@ -153,7 +158,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       initiateMessaging: initiateMessaging,
       payloadThreshold: this.partner.payloadThreshold,
       rangeDivision: this.partner.rangeDivision,
-      syncMode: this.appetite,
+      syncAppetite: this.appetite,
     });
 
     agent.onStatusUpdate(() => {

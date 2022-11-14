@@ -1,7 +1,7 @@
 import { AsyncQueue } from "../../deps.ts";
 import { FormatsArg } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
-import { isErr } from "../util/errors.ts";
+import { isErr, NotSupportedError } from "../util/errors.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Syncer } from "./syncer.ts";
 import { SyncerManager } from "./syncer_manager.ts";
@@ -56,7 +56,7 @@ export class PartnerLocal<
     // We'll give it one that proxies to the readable / writable pair we defined above.
 
     this.partnerSyncer = new Syncer<IncomingTransferSourceType, FormatsType>({
-      manager: new SyncerManager(peer),
+      manager: (peer as any).syncerManager,
       formats,
       partner: {
         syncAppetite: appetite,
@@ -104,9 +104,10 @@ export class PartnerLocal<
         },
         handleUploadRequest(
           _opts: GetTransferOpts,
-        ): Promise<WritableStream<Uint8Array> | undefined> {
-          // Just return undefined here because we know how to directly get a transfer from this partner.
-          return Promise.resolve(undefined);
+        ): Promise<WritableStream<Uint8Array> | NotSupportedError> {
+          return Promise.resolve(
+            new NotSupportedError("PartnerLocal does not support uploads."),
+          );
         },
         handleTransferRequest(
           _source: IncomingTransferSourceType,
@@ -115,9 +116,14 @@ export class PartnerLocal<
           | ReadableStream<Uint8Array>
           | WritableStream<Uint8Array>
           | undefined
+          | NotSupportedError
         > {
           // Don't need to implement this either.
-          return Promise.resolve(undefined);
+          return Promise.resolve(
+            new NotSupportedError(
+              "PartnerLocal does not support transfer requests.",
+            ),
+          );
         },
       },
     });
@@ -169,9 +175,11 @@ export class PartnerLocal<
 
   handleUploadRequest(
     _opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | undefined> {
+  ): Promise<WritableStream<Uint8Array> | NotSupportedError> {
     // Just return undefined here because we know how to directly get a transfer from this partner.
-    return Promise.resolve(undefined);
+    return Promise.resolve(
+      new NotSupportedError("PartnerLocal does not support uploads."),
+    );
   }
 
   handleTransferRequest(
@@ -181,8 +189,11 @@ export class PartnerLocal<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
     | undefined
+    | NotSupportedError
   > {
     // Don't need to implement this either.
-    return Promise.resolve(undefined);
+    return Promise.resolve(
+      new NotSupportedError("PartnerLocal does not support transfer requests."),
+    );
   }
 }
