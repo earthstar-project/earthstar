@@ -83,10 +83,6 @@ export class PartnerWebClient<
   async sendEvent(event: SyncerEvent): Promise<void> {
     await this.socketIsReady;
 
-    if (this.socket.readyState !== this.socket.OPEN) {
-      return;
-    }
-
     return this.socket.send(JSON.stringify(event));
   }
 

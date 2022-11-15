@@ -270,6 +270,7 @@ export type AttachmentTransferOpts<F> = {
   doc: FormatDocType<F>;
   format: FormatArg<F>;
   requester: "us" | "them";
+  counterpartId: "local" | string;
 };
 
 export type AttachmentTransferReport = {

@@ -4,12 +4,13 @@ import { DocBase, DocWithAttachment } from "../util/doc-types.ts";
 import { randomId } from "../util/misc.ts";
 import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
 
-import { DocEs5 } from "../formats/format_es5.ts";
+import { DocEs5, DocInputEs5, FormatEs5 } from "../formats/format_es5.ts";
 import { AttachmentDriverMemory } from "../replica/attachment_drivers/memory.ts";
 import { isErr } from "../util/errors.ts";
 
 import { bytesEquals, shallowEqualObjects } from "../../deps.ts";
-import { AuthorKeypair } from "../crypto/crypto-types.ts";
+import { AuthorKeypair, ShareKeypair } from "../crypto/crypto-types.ts";
+import { Crypto } from "../crypto/crypto.ts";
 
 // for testing unicode
 export const snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -186,28 +187,81 @@ export function writeRandomDocs(
   return Promise.all(setPromises);
 }
 
-/*
-export function writeRandomDocsEs4(
-  keypair: AuthorKeypair,
-  storage: Replica,
-  n: number,
+export async function overlappingDocSets(
+  authorKeypair: AuthorKeypair,
+  shareKeypair: ShareKeypair,
+  /** The amount of overlap between the two replicas, represented as a percentage. */
+  overlapPercentage: number,
+  totalSize: number,
 ) {
-  const fstRand = randomId();
+  const docs: {
+    doc: DocEs5;
+    attachment?: Uint8Array | ReadableStream<Uint8Array> | undefined;
+  }[] = [];
 
-  const setPromises = Array.from({ length: n }, () => {
+  const overlap = Math.round((overlapPercentage / 100) * totalSize);
+  const docsToGenerate = (totalSize * 2) - overlap;
+
+  for (let i = 0; i < docsToGenerate; i++) {
     const rand = randomId();
 
-    return storage.set(keypair, {
-      content: `${rand}`,
-      path: `/${fstRand}/${rand}`,
-    }, FormatEs4);
-  });
+    const input: DocInputEs5 = {
+      text: `${rand}`,
+      path: `/${rand}`,
+      format: "es.5",
+    };
 
-  return Promise.all(setPromises);
+    const hasAttachment = Math.random() >= 0.8;
+
+    if (hasAttachment) {
+      const bytes = crypto.getRandomValues(
+        new Uint8Array((Math.random() + 0.1) * 32 * 32 * 32),
+      );
+
+      input.path = `/${rand}.txt`;
+      input.attachment = bytes;
+    }
+
+    const result = await FormatEs5.generateDocument({
+      input,
+      keypair: authorKeypair,
+      share: shareKeypair.shareAddress,
+      timestamp: Date.now() * 1000,
+      config: { shareSecret: shareKeypair.secret },
+    });
+
+    if (!isErr(result)) {
+      if (result.attachment) {
+        const updatedDoc = await FormatEs5.updateAttachmentFields(
+          authorKeypair,
+          result.doc,
+          (result.attachment as Uint8Array).byteLength,
+          await Crypto.sha256base32(result.attachment as Uint8Array),
+          { shareSecret: shareKeypair.secret },
+        );
+
+        if (!isErr(updatedDoc)) {
+          result.doc = updatedDoc;
+        }
+      }
+
+      docs.push(result);
+    }
+  }
+
+  const overlappingDocs = docs.slice(0, overlap);
+  const fstUnique = docs.slice(overlap, totalSize);
+  const sndUnique = docs.slice(totalSize);
+
+  const setA = [...overlappingDocs, ...fstUnique];
+  const setB = [...overlappingDocs, ...sndUnique];
+
+  return [setA, setB];
 }
-*/
 
-export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
+export async function replicaDocsAreSynced(
+  storages: Replica[],
+): Promise<boolean> {
   const allDocsSets: DocBase<string>[][] = [];
 
   // Create an array where each element is a collection of all the docs from a storage.
@@ -234,7 +288,7 @@ export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
   return allDocsSynced;
 }
 
-export async function storagesAttachmentsAreSynced(
+export async function replicaAttachmentsAreSynced(
   storages: Replica[],
 ): Promise<boolean> {
   const allDocsSets: DocWithAttachment<DocEs5>[][] = [];

@@ -3,9 +3,9 @@ import { IPeer } from "../../peer/peer-types.ts";
 import {
   IReplicaAttachmentDriver,
   IReplicaDocDriver,
-  IReplicaDriver,
 } from "../../replica/replica-types.ts";
 import { Syncer } from "../../syncer/syncer.ts";
+import { ISyncPartner, SyncAppetite } from "../../syncer/syncer_types.ts";
 import {
   DocBase,
   DocInputBase,
@@ -26,18 +26,19 @@ export type Scenarios<DescType extends string, ScenarioType> = {
   scenarios: Scenario<ScenarioType>[];
 };
 
-export type MultiplyScenarioOutput<RecordType extends Record<string, any>> = {
-  name: string;
-  subscenarios: RecordType;
-}[];
+export type MultiplyScenarioOutput<RecordType extends Record<string, unknown>> =
+  {
+    name: string;
+    subscenarios: RecordType;
+  }[];
 
-export interface PartnerScenario<F> {
+export interface SyncDriverScenario<F> {
   formats: FormatsArg<F>;
-
+  appetite: SyncAppetite;
   setup(
     peerA: IPeer,
     peerB: IPeer,
-  ): Promise<[Syncer<any, F>, Syncer<any, F>]>;
+  ): Promise<[Promise<void>, Promise<void>]>;
   teardown(): Promise<void>;
 }
 

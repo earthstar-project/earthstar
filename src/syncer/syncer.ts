@@ -315,6 +315,18 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       return;
     }
 
+    let counterpartId = "unused";
+
+    if (kind === "upload") {
+      // Someone is uploading to us...
+      // Get their counterpart Id.
+      const agent = this.syncAgents.get(shareAddress);
+
+      if (agent) {
+        counterpartId = agent.counterpartId;
+      }
+    }
+
     return this.transferManager.handleTransferRequest(
       {
         replica,
@@ -323,6 +335,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         kind,
         path,
         source,
+        counterpartId,
       },
     );
   }

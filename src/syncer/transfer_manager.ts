@@ -87,7 +87,11 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
               // This doc can't have a attachment attached. Do nothing.
               return;
             } else if (res === undefined) {
-              await handleDownload(event.doc, agent.replica);
+              await handleDownload(
+                event.doc,
+                agent.replica,
+                agent.counterpartId,
+              );
             }
           }
         },
@@ -127,6 +131,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   async handleDownload(
     doc: FormatDocType<FormatsType>,
     replica: Replica,
+    counterpartId: string,
   ): Promise<NotSupportedError | "no_attachment" | "queued"> {
     const format = this.formatsLookup[doc.format];
     const attachmentInfo = format.getAttachmentInfo(doc);
@@ -165,6 +170,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       format,
       stream: result,
       requester: "us",
+      counterpartId,
     });
 
     await this.queueTransfer(transfer);
@@ -196,6 +202,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
         replica,
         stream: result,
         requester: "them",
+        counterpartId: "unused", // Doesn't matter
       });
 
       await this.queueTransfer(transfer);
@@ -208,13 +215,14 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   }
 
   async handleTransferRequest(
-    { replica, path, author, source, kind, formatName }: {
+    { replica, path, author, source, kind, formatName, counterpartId }: {
       replica: Replica;
       formatName: string;
       path: Path;
       author: AuthorAddress;
       source: IncomingAttachmentSourceType;
       kind: "upload" | "download";
+      counterpartId: string;
     },
   ) {
     const stream = await this.partner.handleTransferRequest(source, kind);
@@ -244,6 +252,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       replica,
       stream,
       requester: kind === "upload" ? "us" : "them",
+      counterpartId,
     });
 
     if (transfer.requester === "us") {

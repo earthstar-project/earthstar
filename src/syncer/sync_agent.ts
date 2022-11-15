@@ -40,6 +40,9 @@ export class SyncAgent<F> {
   private sentDocsCount = 0;
   private receivedDocsCount = 0;
 
+  /** An internal ID we use to distinguish messages from the agent we're syncing with from other messages and docs. */
+  counterpartId = randomId();
+
   sendEvent(event: SyncAgentEvent): void {
     return this.inboundEventQueue.push(event);
   }
@@ -97,7 +100,6 @@ export class SyncAgent<F> {
         switch (event.kind) {
           case "RANGE_MSG": {
             reconcilerInboundQueue.push(event.message);
-
             break;
           }
           default: {
@@ -108,8 +110,6 @@ export class SyncAgent<F> {
     })();
 
     const wantTracker = new WantTracker();
-    /** An internal ID we use to distinguish messages from the agent we're syncing with from other messages and docs. */
-    const counterpartId = randomId();
 
     const reconciler = new SyncAgentReconciler({
       inboundEventQueue: reconcilerInboundQueue,
@@ -134,7 +134,7 @@ export class SyncAgent<F> {
       syncerManager: opts.syncerManager,
       formats: opts.formats,
       replica: opts.replica,
-      counterpartId: counterpartId,
+      counterpartId: this.counterpartId,
       transferManager: opts.transferManager,
       cancel: this.cancel.bind(this),
       reconciliationIsDone: reconciler.isDone,
@@ -385,6 +385,7 @@ export class SyncAgentGossiper<F> {
               const result = await opts.transferManager.handleDownload(
                 event.doc as FormatDocType<F>,
                 opts.replica,
+                opts.counterpartId,
               );
 
               // Direct download not supported, send an upload request instead.
@@ -450,6 +451,7 @@ export class SyncAgentGossiper<F> {
               const result = await opts.transferManager.handleDownload(
                 docForAuthor as FormatDocType<F>,
                 opts.replica,
+                opts.counterpartId,
               );
 
               // Direct download not supported, send an upload request instead.
@@ -569,11 +571,13 @@ class SyncAgentReconciler<F> {
 
       // Otherwise we want this!
       opts.wantTracker.addWantedThumbnail(thumbnail);
+
       opts.outboundEventQueue.push({ kind: "WANT", thumbnail });
     });
 
     // Read events from the other SyncAgent
     // And we handle them here.
+
     (async () => {
       await treeIsReady;
 
@@ -611,10 +615,13 @@ class WantTracker {
   private enroller = new PromiseEnroller();
   private received = 0;
 
+  id = randomId();
+
   addWantedThumbnail(thumbnail: DocThumbnail) {
     if (!this.isSealed && !this.wantedThumbnails.has(thumbnail)) {
       const wantedDeferred = deferred<true>();
       this.wantedThumbnails.set(thumbnail, wantedDeferred);
+
       this.enroller.enrol(wantedDeferred);
     }
   }

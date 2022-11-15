@@ -5,8 +5,8 @@ import { DocDriverSqliteFfi } from "../../replica/doc_drivers/sqlite_ffi.ts";
 import {
   AttachmentDriverScenario,
   DocDriverScenario,
-  PartnerScenario,
   Scenario,
+  SyncDriverScenario,
 } from "./types.ts";
 import {
   universalCryptoDrivers,
@@ -27,6 +27,7 @@ import "https://deno.land/x/indexeddb@1.3.5/polyfill_memory.ts";
 import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/indexeddb.ts";
 import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
 import { deferred } from "../../../deps.ts";
+import { SyncAppetite } from "../../syncer/syncer_types.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -106,14 +107,16 @@ export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   },
 ];
 
-export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
+export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
   private serve: Promise<void> | undefined;
   private abortController: AbortController;
 
   formats: FormatsArg<F>;
+  appetite: SyncAppetite;
 
-  constructor(formats: FormatsArg<F>) {
+  constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
     this.formats = formats;
+    this.appetite = appetite;
     this.abortController = new AbortController();
   }
 
@@ -149,16 +152,11 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
 
       const { socket, response } = Deno.upgradeWebSocket(req);
 
-      const partner = new PartnerWebServer({ socket });
+      const partner = new PartnerWebServer({ socket, appetite: this.appetite });
 
-      serverSyncerPromise.resolve(
-        new Syncer({
-          partner,
-          mode: "once",
-          peer: peerB,
-          formats: this.formats,
-        }),
-      );
+      const serverSyncer = peerB.addSyncPartner(partner);
+
+      serverSyncerPromise.resolve(serverSyncer as Syncer<WebSocket, F>);
 
       return response;
     };
@@ -171,22 +169,19 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
       signal: this.abortController.signal,
     });
 
-    const clientSyncer = new Syncer({
-      partner: new PartnerWebClient({
-        url: "ws://localhost:8083",
-        mode: "once",
-      }),
-      mode: "once",
-      peer: peerA,
-      formats: this.formats,
+    const clientPartner = new PartnerWebClient({
+      url: "ws://localhost:8083",
+      appetite: this.appetite,
     });
 
     const serverSyncer = await serverSyncerPromise;
 
+    const clientSyncer = peerA.addSyncPartner(clientPartner);
+
     return Promise.resolve(
-      [clientSyncer, serverSyncer] as [
-        Syncer<undefined, F>,
-        Syncer<WebSocket, F>,
+      [clientSyncer.isDone(), serverSyncer.isDone()] as [
+        Promise<void>,
+        Promise<void>,
       ],
     );
   }
@@ -198,11 +193,12 @@ export class PartnerScenarioWeb<F> implements PartnerScenario<F> {
   }
 }
 
-export const partnerScenarios: Scenario<
+export const syncDriverScenarios: Scenario<
   <F>(
     formats: FormatsArg<F>,
-  ) => PartnerScenario<F>
+    appetite: SyncAppetite,
+  ) => SyncDriverScenario<F>
 >[] = [...universalPartners, {
   name: "Web",
-  item: (formats) => new PartnerScenarioWeb(formats),
+  item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
 }];

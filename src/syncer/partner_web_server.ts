@@ -48,6 +48,8 @@ export class PartnerWebServer<
     this.socket.binaryType = "arraybuffer";
 
     this.socket.onmessage = (event) => {
+      const parsed: SyncerEvent = JSON.parse(event.data);
+
       this.incomingQueue.push(JSON.parse(event.data));
     };
 
@@ -66,10 +68,6 @@ export class PartnerWebServer<
 
   async sendEvent(event: SyncerEvent): Promise<void> {
     await this.socketIsReady;
-
-    if (this.socket.readyState !== this.socket.OPEN) {
-      return;
-    }
 
     return this.socket.send(JSON.stringify(event));
   }

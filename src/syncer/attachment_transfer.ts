@@ -30,7 +30,8 @@ export class AttachmentTransfer<F> {
   private abortController = new AbortController();
 
   constructor(
-    { stream, replica, doc, format, requester }: AttachmentTransferOpts<F>,
+    { stream, replica, doc, format, requester, counterpartId }:
+      AttachmentTransferOpts<F>,
   ) {
     this.sourceDoc = doc;
     this.share = replica.share;
@@ -77,24 +78,25 @@ export class AttachmentTransfer<F> {
       this.transferOp.resolve(() => {
         const promise = deferred<void>();
 
-        replica.ingestAttachment(format, doc, counterStream).then(
-          (result) => {
-            if (isErr(result) && this.loaded === 0) {
-              // The other peer didn't have this attachment.
-              this.changeStatus("missing_attachment");
-              return;
-            }
+        replica.ingestAttachment(format, doc, counterStream, counterpartId)
+          .then(
+            (result) => {
+              if (isErr(result) && this.loaded === 0) {
+                // The other peer didn't have this attachment.
+                this.changeStatus("missing_attachment");
+                return;
+              }
 
-            if (isErr(result)) {
-              promise.reject(result);
-              return;
-            }
+              if (isErr(result)) {
+                promise.reject(result);
+                return;
+              }
 
-            promise.resolve();
-          },
-        ).catch((err) => {
-          promise.reject(err);
-        });
+              promise.resolve();
+            },
+          ).catch((err) => {
+            promise.reject(err);
+          });
 
         return promise;
       });
