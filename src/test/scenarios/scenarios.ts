@@ -28,6 +28,8 @@ import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/inde
 import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
 import { deferred } from "../../../deps.ts";
 import { SyncAppetite } from "../../syncer/syncer_types.ts";
+import { randomId } from "../../util/misc.ts";
+import { getFreePort } from "https://deno.land/x/free_port@v1.2.0/mod.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -163,14 +165,16 @@ export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
 
     this.abortController = new AbortController();
 
+    const port = await getFreePort(8087);
+
     this.serve = serve(handler, {
       hostname: "0.0.0.0",
-      port: 8083,
+      port: port,
       signal: this.abortController.signal,
     });
 
     const clientPartner = new PartnerWebClient({
-      url: "ws://localhost:8083",
+      url: `ws://localhost:${port}`,
       appetite: this.appetite,
     });
 
@@ -179,9 +183,9 @@ export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
     const clientSyncer = peerA.addSyncPartner(clientPartner);
 
     return Promise.resolve(
-      [clientSyncer.isDone(), serverSyncer.isDone()] as [
-        Promise<void>,
-        Promise<void>,
+      [clientSyncer, serverSyncer] as [
+        Syncer<unknown, F>,
+        Syncer<unknown, F>,
       ],
     );
   }

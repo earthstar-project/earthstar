@@ -38,7 +38,7 @@ export interface SyncDriverScenario<F> {
   setup(
     peerA: IPeer,
     peerB: IPeer,
-  ): Promise<[Promise<void>, Promise<void>]>;
+  ): Promise<[Syncer<unknown, F>, Syncer<unknown, F>]>;
   teardown(): Promise<void>;
 }
 

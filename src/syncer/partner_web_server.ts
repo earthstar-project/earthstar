@@ -24,8 +24,8 @@ export class PartnerWebServer<
   IncomingTransferSourceType extends WebSocket,
 > implements ISyncPartner<IncomingTransferSourceType> {
   concurrentTransfers = 16;
-  payloadThreshold = 1;
-  rangeDivision = 2;
+  payloadThreshold = 8;
+  rangeDivision = 8;
   syncAppetite: SyncAppetite;
 
   private socket: WebSocket;
@@ -48,8 +48,6 @@ export class PartnerWebServer<
     this.socket.binaryType = "arraybuffer";
 
     this.socket.onmessage = (event) => {
-      const parsed: SyncerEvent = JSON.parse(event.data);
-
       this.incomingQueue.push(JSON.parse(event.data));
     };
 
@@ -68,6 +66,10 @@ export class PartnerWebServer<
 
   async sendEvent(event: SyncerEvent): Promise<void> {
     await this.socketIsReady;
+
+    if (this.socket.readyState !== this.socket.OPEN) {
+      return;
+    }
 
     return this.socket.send(JSON.stringify(event));
   }

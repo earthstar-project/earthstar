@@ -25,8 +25,8 @@ export class PartnerWebClient<
 > implements ISyncPartner<undefined> {
   syncAppetite: SyncAppetite;
   concurrentTransfers = 16;
-  payloadThreshold = 1;
-  rangeDivision = 2;
+  payloadThreshold = 8;
+  rangeDivision = 8;
 
   private isSecure: boolean;
   private wsUrl: string;
@@ -71,9 +71,7 @@ export class PartnerWebClient<
       this.incomingQueue.close();
     };
 
-    this.socket.onerror = (err) => {
-      console.error(err);
-
+    this.socket.onerror = () => {
       this.incomingQueue.close({
         withError: new EarthstarError("Websocket error."),
       });
@@ -82,6 +80,13 @@ export class PartnerWebClient<
 
   async sendEvent(event: SyncerEvent): Promise<void> {
     await this.socketIsReady;
+
+    if (
+      this.socket.readyState === this.socket.CLOSED ||
+      this.socket.readyState === this.socket.CLOSING
+    ) {
+      return;
+    }
 
     return this.socket.send(JSON.stringify(event));
   }

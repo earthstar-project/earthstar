@@ -70,8 +70,12 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     }, 1000);
 
     (async () => {
-      for await (const event of opts.partner.getEvents()) {
-        this.handleIncomingEvent(event);
+      try {
+        for await (const event of opts.partner.getEvents()) {
+          this.handleIncomingEvent(event);
+        }
+      } catch {
+        this.cancel("Partner disconnected");
       }
     })();
 
@@ -296,6 +300,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     clearInterval(this.heartbeatInterval);
 
     this.transferManager.cancel();
+
+    await this.partner.closeConnection();
   }
 
   // externally callable... to get a readable...
@@ -309,6 +315,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       kind: "upload" | "download";
     },
   ) {
+    if (this.isDoneMultiDeferred.state === "rejected") {
+      return;
+    }
+
     const replica = this.peer.getReplica(shareAddress);
 
     if (!replica) {
@@ -340,7 +350,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     );
   }
 
-  /** If the syncer was configured with the `mode: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
+  /** If the syncer was configured with the `appetite: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
   isDone() {
     return this.isDoneMultiDeferred.getPromise();
   }

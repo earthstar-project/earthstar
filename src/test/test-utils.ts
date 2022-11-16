@@ -99,6 +99,10 @@ export function docsAreEquivalent(
     sortByPathThenAuthor,
   );
 
+  if (!equal(aStripped, bStripped)) {
+    console.log(aStripped, bStripped);
+  }
+
   return equal(aStripped, bStripped);
 }
 
@@ -130,6 +134,7 @@ export async function docAttachmentsAreEquivalent(
       const bBytes = await b.attachment.bytes();
 
       if (bytesEquals(aBytes, bBytes) === false) {
+        console.log("A");
         return false;
       }
     }
@@ -193,6 +198,7 @@ export async function overlappingDocSets(
   /** The amount of overlap between the two replicas, represented as a percentage. */
   overlapPercentage: number,
   totalSize: number,
+  numberOfSets: number,
 ) {
   const docs: {
     doc: DocEs5;
@@ -200,7 +206,7 @@ export async function overlappingDocSets(
   }[] = [];
 
   const overlap = Math.round((overlapPercentage / 100) * totalSize);
-  const docsToGenerate = (totalSize * 2) - overlap;
+  const docsToGenerate = (totalSize * numberOfSets) - overlap;
 
   for (let i = 0; i < docsToGenerate; i++) {
     const rand = randomId();
@@ -250,23 +256,31 @@ export async function overlappingDocSets(
   }
 
   const overlappingDocs = docs.slice(0, overlap);
-  const fstUnique = docs.slice(overlap, totalSize);
-  const sndUnique = docs.slice(totalSize);
 
-  const setA = [...overlappingDocs, ...fstUnique];
-  const setB = [...overlappingDocs, ...sndUnique];
+  const sets = [];
 
-  return [setA, setB];
+  for (let i = 0; i < numberOfSets; i++) {
+    const start = i === 0 ? overlap : ((totalSize - overlap) * i);
+    const end = i === 0 ? totalSize : (totalSize - overlap) * (i + 1);
+
+    const uniqueDocs = docs.slice(start, end);
+
+    const set = [...overlappingDocs, ...uniqueDocs];
+
+    sets.push(set);
+  }
+
+  return sets;
 }
 
 export async function replicaDocsAreSynced(
-  storages: Replica[],
+  replicas: Replica[],
 ): Promise<boolean> {
   const allDocsSets: DocBase<string>[][] = [];
 
   // Create an array where each element is a collection of all the docs from a storage.
-  for await (const storage of storages) {
-    const allDocs = await storage.getAllDocs();
+  for await (const replica of replicas) {
+    const allDocs = await replica.getAllDocs();
     allDocsSets.push(allDocs);
   }
 

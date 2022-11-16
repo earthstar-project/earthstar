@@ -64,7 +64,7 @@ const [a1, a2, a3] = makeReplicaTrio(ADDRESS_A, shareKeypairA.secret);
 const [b1, b2, b3] = makeReplicaTrio(ADDRESS_B, shareKeypairB.secret);
 const [c1, c2, c3] = makeReplicaTrio(ADDRESS_C, shareKeypairC.secret);
 
-const docCount = 1000;
+const docCount = 10;
 
 console.log("writing docs");
 
@@ -104,6 +104,10 @@ const syncer = peer1.sync(peer2, true);
 const syncer2 = peer2.sync(peer3, true);
 const syncer3 = peer3.sync(peer1, true);
 
+syncer.onStatusChange((status) => {
+  // console.log(status);
+});
+
 // set up a syncer with a local partner.
 
 // attach all attachments.
@@ -124,8 +128,6 @@ for (const [x, y, z] of trios) {
   const fstWithAttachments = await x.addAttachments(fstDocs);
   const sndWithAttachments = await y.addAttachments(sndDocs);
   const thdWithAttachments = await z.addAttachments(sndDocs);
-
-  console.log(fstDocs.length, sndDocs.length, thdDocs.length);
 
   console.group(x.share);
 
@@ -188,8 +190,6 @@ for (const [x, y, z] of trios) {
   const sndWithAttachments = await y.addAttachments(sndDocs);
   const thdWithAttachments = await z.addAttachments(sndDocs);
 
-  console.log(fstDocs.length, sndDocs.length, thdDocs.length);
-
   console.group(x.share);
 
   const docsSynced = docsAreEquivalent(fstDocs, sndDocs);
@@ -217,6 +217,17 @@ for (const [x, y, z] of trios) {
     console.log(`%c Attachments did not sync...`, "color: red");
   }
   console.groupEnd();
+}
+
+await syncer.cancel("1 cancelled");
+await syncer2.cancel("2 cancelled");
+await syncer3.cancel("3 cancelled");
+
+// Deno.exit(0);
+for (const [x, y, z] of trios) {
+  await x.close(true);
+  await y.close(true);
+  await z.close(true);
 }
 
 Deno.exit(0);

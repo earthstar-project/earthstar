@@ -5,6 +5,7 @@ import { IPeer } from "../../peer/peer-types.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
+import { Syncer } from "../../syncer/syncer.ts";
 
 import { SyncAppetite } from "../../syncer/syncer_types.ts";
 import {
@@ -54,9 +55,9 @@ export class SyncScenarioLocal<F> implements SyncDriverScenario<F> {
     const syncerA = peerA.addSyncPartner(partner);
 
     return Promise.resolve(
-      [syncerA.isDone(), partner.partnerSyncer.isDone()] as [
-        Promise<void>,
-        Promise<void>,
+      [syncerA, partner.partnerSyncer] as [
+        Syncer<unknown, F>,
+        Syncer<unknown, F>,
       ],
     );
   }

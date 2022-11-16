@@ -31,7 +31,8 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   private formats: FormatsArg<FormatsType>;
   private otherSyncerId = deferred<string>();
   private receivedAllExpectedTransfersEnroller = new PromiseEnroller();
-  private madeAllAttachmentRequestsEnroller = new PromiseEnroller();
+  /** A kind of promise which resolves when all attachment requests have been made. */
+  private madeAllAttachmentRequestsEnroller = new PromiseEnroller(true);
   private formatsLookup: Record<string, FormatArg<FormatsType>>;
   private reportDidUpdateBus = new BlockingBus<
     Record<string, AttachmentTransferReport[]>
@@ -182,6 +183,17 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     transferOpts: Omit<GetTransferOpts, "syncerId">,
     replica: Replica,
   ): Promise<boolean> {
+    const format = this.formatsLookup[transferOpts.doc.format];
+
+    const attachment = await replica.getAttachment(
+      transferOpts.doc as FormatDocType<FormatsType>,
+      format,
+    );
+
+    if (!attachment) {
+      return false;
+    }
+
     const result = await this.partner.handleUploadRequest({
       shareAddress: transferOpts.shareAddress,
       syncerId: await this.otherSyncerId,
@@ -192,8 +204,6 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     if (isErr(result)) {
       return false;
     }
-
-    const format = this.formatsLookup[transferOpts.doc.format];
 
     try {
       const transfer = new AttachmentTransfer({

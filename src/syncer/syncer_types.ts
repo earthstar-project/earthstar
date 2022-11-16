@@ -67,6 +67,7 @@ export type SyncAgentDocEvent = {
   kind: "DOC";
   thumbnail: DocThumbnail;
   doc: DocBase<string>;
+  attachmentHeld: boolean;
 };
 
 export type SyncAgentWantAttachmentEvent = {
@@ -112,6 +113,8 @@ export type SyncAgentEvent =
 
 /** The current status of a SyncAgent. */
 export type SyncAgentStatus = {
+  /** The number of documents requested by this agent */
+  requestedCount: number;
   /** The number of documents received by this agent */
   receivedCount: number;
   /** The number of documents sent by this agent */

@@ -34,9 +34,13 @@ export class SyncAgent<F> {
   /** Messages generated from us destined for the other peer. */
   private outboundEventQueue = new AsyncQueue<SyncAgentEvent>();
 
+  private gossiperInboundQueue = new AsyncQueue<SyncAgentEvent>();
+  private reconcilerInboundQueue = new AsyncQueue<RangeMessage>();
+
   private hasPrepared = deferred();
   private hasReconciled = deferred();
 
+  private requestedCount = 0;
   private sentDocsCount = 0;
   private receivedDocsCount = 0;
 
@@ -56,6 +60,7 @@ export class SyncAgent<F> {
   /** The current status of this SyncAgent */
   getStatus(): SyncAgentStatus {
     return {
+      requestedCount: this.requestedCount,
       receivedCount: this.receivedDocsCount,
       sentCount: this.sentDocsCount,
       status: this.isDoneMultiDeferred.state === "rejected"
@@ -92,18 +97,15 @@ export class SyncAgent<F> {
       this.hasPrepared.resolve();
     });
 
-    const gossiperInboundQueue = new AsyncQueue<SyncAgentEvent>();
-    const reconcilerInboundQueue = new AsyncQueue<RangeMessage>();
-
     (async () => {
       for await (const event of this.inboundEventQueue) {
         switch (event.kind) {
           case "RANGE_MSG": {
-            reconcilerInboundQueue.push(event.message);
+            this.reconcilerInboundQueue.push(event.message);
             break;
           }
           default: {
-            gossiperInboundQueue.push(event);
+            this.gossiperInboundQueue.push(event);
           }
         }
       }
@@ -112,7 +114,7 @@ export class SyncAgent<F> {
     const wantTracker = new WantTracker();
 
     const reconciler = new SyncAgentReconciler({
-      inboundEventQueue: reconcilerInboundQueue,
+      inboundEventQueue: this.reconcilerInboundQueue,
       outboundEventQueue: this.outboundEventQueue,
       syncerManager: opts.syncerManager,
       formats: opts.formats,
@@ -121,6 +123,10 @@ export class SyncAgent<F> {
       wantTracker: wantTracker,
       payloadThreshold: opts.payloadThreshold,
       rangeDivision: opts.rangeDivision,
+      onDocRequested: async () => {
+        this.requestedCount++;
+        await this.statusBus.send(this.getStatus());
+      },
     });
 
     reconciler.isDone.then(() => {
@@ -129,7 +135,7 @@ export class SyncAgent<F> {
 
     // Perform first round of reconciliation
     const gossiper = new SyncAgentGossiper({
-      inboundEventQueue: gossiperInboundQueue,
+      inboundEventQueue: this.gossiperInboundQueue,
       outboundEventQueue: this.outboundEventQueue,
       syncerManager: opts.syncerManager,
       formats: opts.formats,
@@ -146,6 +152,10 @@ export class SyncAgent<F> {
       },
       onDocSent: async () => {
         this.sentDocsCount++;
+        await this.statusBus.send(this.getStatus());
+      },
+      onDocRequested: async () => {
+        this.requestedCount++;
         await this.statusBus.send(this.getStatus());
       },
     });
@@ -170,8 +180,15 @@ export class SyncAgent<F> {
       return;
     }
 
+    this.isDoneMultiDeferred.reject();
+
+    this.statusBus.send(this.getStatus());
+
     this.outboundEventQueue.push({ kind: "ABORT" });
     this.outboundEventQueue.close();
+    this.inboundEventQueue.close({ immediately: true });
+    this.gossiperInboundQueue.close({ immediately: true });
+    this.reconcilerInboundQueue.close({ immediately: true });
   }
 
   isDone() {
@@ -193,6 +210,7 @@ type GossiperOpts<F> = {
   cancel: () => Promise<void>;
   onDocReceived: () => Promise<void>;
   onDocSent: () => Promise<void>;
+  onDocRequested: () => Promise<void>;
 };
 
 export class SyncAgentGossiper<F> {
@@ -200,6 +218,9 @@ export class SyncAgentGossiper<F> {
   private isFulfilled = deferred();
 
   constructor(opts: GossiperOpts<F>) {
+    // A little object we can look up formats by format name. In a type-safe-ish way.
+    const formatLookup = getFormatLookup(opts.formats);
+
     const plumTree = opts.syncerManager.getPlumTree(opts.replica.share);
 
     // Create a query stream for new events.
@@ -215,7 +236,7 @@ export class SyncAgentGossiper<F> {
       // Send new messages from self / other peers eagerly or lazily depending on plum tree.
       queryStream.pipeTo(
         new WritableStream({
-          write(event) {
+          async write(event) {
             if (
               event.kind === "success" && event.sourceId !== opts.counterpartId
             ) {
@@ -232,11 +253,31 @@ export class SyncAgentGossiper<F> {
               const thumbnail = `${event.doc.timestamp} ${pathAuthorHash}`;
 
               if (mode === "EAGER") {
+                const format = formatLookup[event.doc.format];
+                const attachmentRes = format.getAttachmentInfo(event.doc);
+                const canHaveAttachment = isErr(attachmentRes) ? false : true;
+
+                let attachmentHeld = false;
+
+                if (canHaveAttachment) {
+                  const attachment = await opts.replica.getAttachment(
+                    event.doc,
+                    format,
+                  );
+
+                  if (attachment) {
+                    attachmentHeld = true;
+                  }
+                }
+
                 opts.outboundEventQueue.push({
                   kind: "DOC",
                   thumbnail: thumbnail,
                   doc: event.doc,
+                  attachmentHeld,
                 });
+
+                opts.onDocSent();
               } else {
                 opts.outboundEventQueue.push({
                   kind: "HAVE",
@@ -246,7 +287,9 @@ export class SyncAgentGossiper<F> {
             }
           },
         }),
-      );
+      ).catch(() => {
+        // The query stream was cancelled.
+      });
     }
 
     const unsubAttachmentIngestEvents = opts.replica.onEvent((event) => {
@@ -263,9 +306,6 @@ export class SyncAgentGossiper<F> {
         });
       }
     });
-
-    // A little object we can look up formats by format name. In a type-safe-ish way.
-    const formatLookup = getFormatLookup(opts.formats);
 
     const { lookup: thumbnailHashLookup } = opts.syncerManager
       .getDocThumbnailTreeAndDocLookup(
@@ -301,6 +341,8 @@ export class SyncAgentGossiper<F> {
               });
             });
 
+            opts.onDocRequested();
+
             break;
           }
 
@@ -321,6 +363,7 @@ export class SyncAgentGossiper<F> {
 
             const allVersions = await opts.replica.getAllDocsAtPath(
               path,
+              opts.formats,
             );
 
             // Iterate through each version we got back (which might just be one)
@@ -329,10 +372,28 @@ export class SyncAgentGossiper<F> {
             const doc = allVersions.find((doc) => doc.author === author);
 
             if (doc) {
+              const format = formatLookup[doc.format];
+              const attachmentRes = format.getAttachmentInfo(doc);
+              const canHaveAttachment = isErr(attachmentRes) ? false : true;
+
+              let attachmentHeld = false;
+
+              if (canHaveAttachment) {
+                const attachment = await opts.replica.getAttachment(
+                  doc,
+                  format,
+                );
+
+                if (attachment) {
+                  attachmentHeld = true;
+                }
+              }
+
               opts.outboundEventQueue.push({
                 kind: "DOC",
                 thumbnail: event.thumbnail,
                 doc,
+                attachmentHeld,
               });
 
               await opts.onDocSent();
@@ -375,36 +436,38 @@ export class SyncAgentGossiper<F> {
               break;
             }
 
-            const attachment = await opts.replica.getAttachment(
-              event.doc as FormatDocType<F>,
-              formatLookup[event.doc.format],
-            );
-
-            // if attachment is undefined, request.
-            if (attachment === undefined) {
-              const result = await opts.transferManager.handleDownload(
+            if (event.attachmentHeld) {
+              const attachment = await opts.replica.getAttachment(
                 event.doc as FormatDocType<F>,
-                opts.replica,
-                opts.counterpartId,
+                formatLookup[event.doc.format],
               );
 
-              // Direct download not supported, send an upload request instead.
-              if (isErr(result)) {
-                const attachmentInfo = format.getAttachmentInfo(
-                  event.doc,
-                ) as { size: number; hash: string };
-
-                opts.transferManager.registerExpectedTransfer(
-                  opts.replica.share,
-                  attachmentInfo.hash,
+              // if attachment is undefined, request.
+              if (attachment === undefined) {
+                const result = await opts.transferManager.handleDownload(
+                  event.doc as FormatDocType<F>,
+                  opts.replica,
+                  opts.counterpartId,
                 );
 
-                opts.outboundEventQueue.push({
-                  kind: "WANT_ATTACHMENT",
-                  attachmentHash: attachmentInfo.hash,
-                  doc: event.doc,
-                  shareAddress: opts.replica.share,
-                });
+                // Direct download not supported, send an upload request instead.
+                if (isErr(result)) {
+                  const attachmentInfo = format.getAttachmentInfo(
+                    event.doc,
+                  ) as { size: number; hash: string };
+
+                  opts.transferManager.registerExpectedTransfer(
+                    opts.replica.share,
+                    attachmentInfo.hash,
+                  );
+
+                  opts.outboundEventQueue.push({
+                    kind: "WANT_ATTACHMENT",
+                    attachmentHash: attachmentInfo.hash,
+                    doc: event.doc,
+                    shareAddress: opts.replica.share,
+                  });
+                }
               }
             }
 
@@ -525,6 +588,7 @@ type ReconcilerOpts<F> = {
   formats: FormatsArg<F> | undefined;
   payloadThreshold: number;
   rangeDivision: number;
+  onDocRequested: () => void;
 };
 
 class SyncAgentReconciler<F> {
@@ -573,6 +637,8 @@ class SyncAgentReconciler<F> {
       opts.wantTracker.addWantedThumbnail(thumbnail);
 
       opts.outboundEventQueue.push({ kind: "WANT", thumbnail });
+
+      opts.onDocRequested();
     });
 
     // Read events from the other SyncAgent
