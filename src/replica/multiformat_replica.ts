@@ -158,6 +158,10 @@ export class MultiformatReplica {
     logger.debug("closing...");
     if (this._isClosed) throw new ReplicaIsClosedError();
     // TODO: do this all in a lock?
+
+    // Make sure writing lock is clear
+    await this.ingestLockStream.close();
+
     for (const timeout of this.expireEventTimeouts.values()) {
       clearTimeout(timeout);
     }
