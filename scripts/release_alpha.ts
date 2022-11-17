@@ -44,10 +44,20 @@ console.log(`Next tag: ${nextTag}`);
 
 console.groupEnd();
 
+console.group("Creating web bundle...");
+await run(["deno", "task", "bundle", nextTag]);
+console.log("... done.");
+console.groupEnd();
+
 // Call NPM with new version
 console.group("Creating NPM distribution...");
 await run(["deno", "task", "npm", nextTag]);
 
+console.log("... done.");
+console.groupEnd();
+
+console.group("Creating web bundle...");
+await run(["deno", "task", "bundle", nextTag]);
 console.log("... done.");
 console.groupEnd();
 
