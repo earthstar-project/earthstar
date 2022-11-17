@@ -264,7 +264,7 @@ Deno.test("ReplicaCache", async () => {
 
   assert(expiredResFst);
 
-  await sleep(1500);
+  await sleep(1000);
 
   const expiredResSnd = attachmentsCache.getAttachment(expiredRes.doc);
 
