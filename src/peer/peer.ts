@@ -9,7 +9,7 @@ import { Replica } from "../replica/replica.ts";
 import { Syncer } from "../syncer/syncer.ts";
 
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { PartnerWebClient } from "../syncer/partner_web_client.ts";
+import { PartnerWebServer } from "../syncer/partner_web_server.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
 import { FormatsArg } from "../formats/format_types.ts";
 import { SyncerManager } from "../syncer/syncer_manager.ts";
@@ -25,7 +25,7 @@ export class Peer implements IPeer {
   private replicaEventBus = new BlockingBus<Map<ShareAddress, Replica>>();
   private syncerManager: SyncerManager;
 
-  /** A subscribable map of the replicas stored in this peer. */
+  /** A map of the replicas stored in this peer. */
   replicaMap: Map<ShareAddress, Replica> = new Map();
 
   constructor() {
@@ -111,7 +111,7 @@ export class Peer implements IPeer {
     formats?: FormatsArg<F>,
   ): Syncer<undefined, F> {
     try {
-      const partner = new PartnerWebClient({
+      const partner = new PartnerWebServer({
         url: target as string,
         appetite: continuous ? "continuous" : "once",
       });
@@ -138,6 +138,7 @@ export class Peer implements IPeer {
     }
   }
 
+  /** Begin syncing using an instance implementing `ISyncPartner`. Use this if you don't want to sync with a local peer or a replica server. */
   addSyncPartner<I, F>(partner: ISyncPartner<I>, formats?: FormatsArg<F>) {
     return this.syncerManager.addPartner(partner, formats);
   }

@@ -121,7 +121,7 @@ export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
         return;
       }
 
-      const partner = new PartnerWebServer({
+      const partner = new PartnerWebClient({
         socket,
         appetite: this.appetite,
       });
@@ -131,7 +131,7 @@ export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
       serverSyncerPromise.resolve(serverSyncer as Syncer<WebSocket, F>);
     });
 
-    const clientPartner = new PartnerWebClient({
+    const clientPartner = new PartnerWebServer({
       url: `ws://localhost:${port}`,
       appetite: this.appetite,
     });

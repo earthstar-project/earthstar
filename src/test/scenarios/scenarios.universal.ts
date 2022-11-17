@@ -12,7 +12,7 @@ import {
   AttachmentDriverScenario,
   DocDriverScenario,
   Scenario,
-  SyncDriverScenario,
+  SyncPartnerScenario,
 } from "./types.ts";
 
 export const universalCryptoDrivers: Scenario<ICryptoDriver>[] = [{
@@ -40,7 +40,7 @@ export const universalReplicaAttachmentDrivers: Scenario<
   },
 ];
 
-export class SyncScenarioLocal<F> implements SyncDriverScenario<F> {
+export class SyncScenarioLocal<F> implements SyncPartnerScenario<F> {
   formats: FormatsArg<F>;
   appetite: SyncAppetite;
 
@@ -68,7 +68,7 @@ export class SyncScenarioLocal<F> implements SyncDriverScenario<F> {
 }
 
 export const universalPartners: Scenario<
-  <F>(formats: FormatsArg<F>, appetite: SyncAppetite) => SyncDriverScenario<F>
+  <F>(formats: FormatsArg<F>, appetite: SyncAppetite) => SyncPartnerScenario<F>
 >[] = [{
   name: "Local",
   item: (formats, appetite) => new SyncScenarioLocal(formats, appetite),

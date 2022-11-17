@@ -6,7 +6,7 @@ import {
   AttachmentDriverScenario,
   DocDriverScenario,
   Scenario,
-  SyncDriverScenario,
+  SyncPartnerScenario,
 } from "./types.ts";
 import {
   universalCryptoDrivers,
@@ -109,7 +109,7 @@ export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   },
 ];
 
-export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
+export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
   private serve: Promise<void> | undefined;
   private abortController: AbortController;
 
@@ -154,7 +154,7 @@ export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
 
       const { socket, response } = Deno.upgradeWebSocket(req);
 
-      const partner = new PartnerWebServer({ socket, appetite: this.appetite });
+      const partner = new PartnerWebClient({ socket, appetite: this.appetite });
 
       const serverSyncer = peerB.addSyncPartner(partner);
 
@@ -173,7 +173,7 @@ export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
       signal: this.abortController.signal,
     });
 
-    const clientPartner = new PartnerWebClient({
+    const clientPartner = new PartnerWebServer({
       url: `ws://localhost:${port}`,
       appetite: this.appetite,
     });
@@ -201,7 +201,7 @@ export const syncDriverScenarios: Scenario<
   <F>(
     formats: FormatsArg<F>,
     appetite: SyncAppetite,
-  ) => SyncDriverScenario<F>
+  ) => SyncPartnerScenario<F>
 >[] = [...universalPartners, {
   name: "Web",
   item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),

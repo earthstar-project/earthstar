@@ -11,44 +11,60 @@ import {
   SyncerEvent,
 } from "./syncer_types.ts";
 
-type SyncerDriverWebServerOpts = {
-  /** A websocket created from the initial sync request. */
-  socket: WebSocket;
+type SyncerDriverWebClientOpts = {
+  /** The URL of the replica server to sync with. */
+  url: string;
   appetite: SyncAppetite;
 };
 
-/** A syncing partner created from an inbound HTTP connection.
- * Works everywhere, but is really meant for Deno and Node.
+/** A syncing partner to be used with replica servers reachable via the internet.
+ * Works everywhere.
  */
 export class PartnerWebServer<
-  IncomingTransferSourceType extends WebSocket,
-> implements ISyncPartner<IncomingTransferSourceType> {
+  IncomingTransferSourceType extends undefined,
+> implements ISyncPartner<undefined> {
+  syncAppetite: SyncAppetite;
   concurrentTransfers = 16;
   payloadThreshold = 8;
   rangeDivision = 8;
-  syncAppetite: SyncAppetite;
+
+  private isSecure: boolean;
+  private wsUrl: string;
 
   private socket: WebSocket;
   private incomingQueue = new AsyncQueue<SyncerEvent>();
   private socketIsReady = deferred();
 
-  constructor({ socket, appetite }: SyncerDriverWebServerOpts) {
-    this.syncAppetite = appetite;
+  constructor(opts: SyncerDriverWebClientOpts) {
+    this.syncAppetite = opts.appetite;
 
-    if (socket.readyState === socket.OPEN) {
-      this.socketIsReady.resolve();
-    }
+    // Check if it's a URL of some kind.
+    const url = new URL(opts.url);
 
-    socket.onopen = () => {
+    // Check if it's a web syncer
+    const hostAndPath = `${url.host}${
+      url.pathname === "/" ? "" : url.pathname
+    }`;
+
+    this.isSecure = url.protocol === "https:" ||
+      url.protocol === "wss:";
+
+    this.wsUrl = `${this.isSecure ? "wss://" : "ws://"}${hostAndPath}/'`;
+
+    const urlWithMode = new URL(opts.appetite, this.wsUrl);
+
+    this.socket = new WebSocket(
+      urlWithMode.toString(),
+    );
+
+    this.socket.onopen = () => {
       this.socketIsReady.resolve();
     };
-
-    this.socket = socket;
 
     this.socket.binaryType = "arraybuffer";
 
     this.socket.onmessage = (event) => {
-      // Casting as string for Node's incorrect WebSocket types.
+      // Casting to string due to Node's incorrect websocket types
       this.incomingQueue.push(JSON.parse(event.data as string));
     };
 
@@ -56,9 +72,7 @@ export class PartnerWebServer<
       this.incomingQueue.close();
     };
 
-    this.socket.onerror = (err) => {
-      console.error(err);
-
+    this.socket.onerror = () => {
       this.incomingQueue.close({
         withError: new EarthstarError("Websocket error."),
       });
@@ -68,7 +82,10 @@ export class PartnerWebServer<
   async sendEvent(event: SyncerEvent): Promise<void> {
     await this.socketIsReady;
 
-    if (this.socket.readyState !== this.socket.OPEN) {
+    if (
+      this.socket.readyState === this.socket.CLOSED ||
+      this.socket.readyState === this.socket.CLOSING
+    ) {
       return;
     }
 
@@ -86,56 +103,57 @@ export class PartnerWebServer<
   }
 
   getDownload(
-    _opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | NotSupportedError> {
-    // Server can't initiate a request with a client.
-    return Promise.resolve(
-      new NotSupportedError(
-        "SyncDriverWebServer does not support download requests.",
-      ),
+    opts: GetTransferOpts,
+  ): Promise<ReadableStream<Uint8Array> | undefined> {
+    // create a new url with the share, path, and syncer ID embedded
+
+    const url = new URL(
+      `${opts.syncerId}/download/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`,
+      this.wsUrl,
     );
+
+    const readable = websocketReadable(url.toString(), (event) => {
+      if (event.data instanceof ArrayBuffer) {
+        const bytes = new Uint8Array(event.data);
+        return bytes;
+      }
+
+      return null as never;
+    });
+
+    return Promise.resolve(readable);
   }
 
   handleUploadRequest(
-    _opts: GetTransferOpts,
+    opts: GetTransferOpts,
   ): Promise<WritableStream<Uint8Array> | NotSupportedError> {
-    // Server won't get in-band BLOB_REQ messages
-    return Promise.resolve(
-      new NotSupportedError(
-        "SyncDriverWebServer does not support upload requests.",
-      ),
+    const url = new URL(
+      `${opts.syncerId}/upload/${opts.shareAddress}/${opts.doc.format}/${opts.doc.author}${opts.doc.path}`,
+      this.wsUrl,
     );
+
+    const writable = websocketWritable(
+      url.toString(),
+      (outgoing: Uint8Array) => outgoing,
+    );
+
+    return Promise.resolve(writable);
   }
 
   handleTransferRequest(
-    socket: IncomingTransferSourceType,
-    kind: "upload" | "download",
+    _source: IncomingTransferSourceType,
+    _kind: "upload" | "download",
   ): Promise<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
     | undefined
+    | NotSupportedError
   > {
-    // Return a stream which writes to the socket. nice.
-    //  They want to download data from us
-    if (kind === "download") {
-      const writable = websocketWritable(
-        socket,
-        (outgoing: Uint8Array) => outgoing,
-      );
-
-      return Promise.resolve(writable);
-    } else {
-      // they want to upload data to us.
-      const readable = websocketReadable(socket, (event) => {
-        if (event.data instanceof ArrayBuffer) {
-          const bytes = new Uint8Array(event.data);
-          return bytes;
-        }
-
-        return null as never;
-      });
-
-      return Promise.resolve(readable);
-    }
+    // We don't expect any external requests.
+    return Promise.resolve(
+      new NotSupportedError(
+        "SyncDriverWebClient does not support external transfer requests.",
+      ),
+    );
   }
 }

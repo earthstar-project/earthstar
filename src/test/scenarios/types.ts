@@ -32,7 +32,7 @@ export type MultiplyScenarioOutput<RecordType extends Record<string, unknown>> =
     subscenarios: RecordType;
   }[];
 
-export interface SyncDriverScenario<F> {
+export interface SyncPartnerScenario<F> {
   formats: FormatsArg<F>;
   appetite: SyncAppetite;
   setup(
