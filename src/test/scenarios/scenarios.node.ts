@@ -5,7 +5,7 @@ import {
   AttachmentDriverScenario,
   DocDriverScenario,
   Scenario,
-  SyncDriverScenario,
+  SyncPartnerScenario,
 } from "./types.ts";
 import {
   universalCryptoDrivers,
@@ -154,7 +154,7 @@ export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
 }
 
 export const syncDriverScenarios: Scenario<
-  <F>(formats: FormatsArg<F>, appetite: SyncAppetite) => SyncDriverScenario<F>
+  <F>(formats: FormatsArg<F>, appetite: SyncAppetite) => SyncPartnerScenario<F>
 >[] = [
   ...universalPartners,
   {
