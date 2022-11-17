@@ -284,7 +284,7 @@ export class LockStream {
 
     this.writer.releaseLock();
 
-    await this.writable.close();
+    await this.writable.abort();
 
     this.closed = true;
   }

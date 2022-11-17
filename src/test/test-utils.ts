@@ -134,7 +134,6 @@ export async function docAttachmentsAreEquivalent(
       const bBytes = await b.attachment.bytes();
 
       if (bytesEquals(aBytes, bBytes) === false) {
-        console.log("A");
         return false;
       }
     }

@@ -1,4 +1,4 @@
-import { build } from "https://deno.land/x/dnt@0.30.0/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.31.0/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
@@ -78,6 +78,8 @@ await build({
       version: "2.4.1",
     },
 
+    "./src/crypto/default_driver.ts": "./src/crypto/default_driver.node.ts",
+
     "./src/replica/driver_fs.ts": "./src/replica/driver_fs.node.ts",
     "https://esm.sh/better-sqlite3?dts": {
       name: "better-sqlite3",
@@ -88,7 +90,6 @@ await build({
         name: "@noble/ed25519",
         version: "1.6.0",
       },
-
     "https://esm.sh/path-to-regexp@6.2.1": {
       name: "path-to-regexp",
       version: "6.2.1",

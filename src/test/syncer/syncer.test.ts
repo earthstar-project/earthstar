@@ -1,6 +1,5 @@
 // Testing syncing with appetite 'once'
 
-import { CryptoDriverSodium } from "../../crypto/crypto-driver-sodium.ts";
 import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
@@ -19,8 +18,9 @@ import {
   replicaDocsAreSynced,
   writeRandomDocs,
 } from "../test-utils.ts";
+import DefaultCryptoDriver from "../../crypto/default_driver.ts";
 
-setGlobalCryptoDriver(CryptoDriverSodium);
+setGlobalCryptoDriver(DefaultCryptoDriver);
 
 // Multiply driver x set scenarios.
 const setOverlap = [
@@ -29,16 +29,8 @@ const setOverlap = [
     item: 0,
   },
   {
-    name: "A little data in common",
-    item: 10,
-  },
-  {
-    name: "Half data in common",
+    name: "Some data in common",
     item: 50,
-  },
-  {
-    name: "Nearly all data in common",
-    item: 90,
   },
   {
     name: "All data in common",
@@ -105,22 +97,22 @@ async function makeOverlappingReplicaTuple(
   return replicas;
 }
 
-const authorKeypair = await Crypto.generateAuthorKeypair(
-  "test",
-) as AuthorKeypair;
-
-// Create three shares
-const shareKeypairA = await Crypto.generateShareKeypair(
-  "apples",
-) as ShareKeypair;
-const shareKeypairB = await Crypto.generateShareKeypair(
-  "bananas",
-) as ShareKeypair;
-const shareKeypairC = await Crypto.generateShareKeypair(
-  "coconuts",
-) as ShareKeypair;
-
 Deno.test("Syncing (appetite 'once')", async (test) => {
+  const authorKeypair = await Crypto.generateAuthorKeypair(
+    "test",
+  ) as AuthorKeypair;
+
+  // Create three shares
+  const shareKeypairA = await Crypto.generateShareKeypair(
+    "apples",
+  ) as ShareKeypair;
+  const shareKeypairB = await Crypto.generateShareKeypair(
+    "bananas",
+  ) as ShareKeypair;
+  const shareKeypairC = await Crypto.generateShareKeypair(
+    "coconuts",
+  ) as ShareKeypair;
+
   for (const scenario of scenarios) {
     await test.step({
       name: `Finishes and syncs (${scenario.name})`,
@@ -332,11 +324,26 @@ Deno.test("Syncing (appetite 'once')", async (test) => {
 // Testing syncing with appetite 'continuous'
 
 Deno.test({
-  name: "Syncing (appetite continuous, multiple peers')",
+  name: "Syncing (appetite continuous, multiple peers)",
   // Not sanitising ops / resources because these fail due to Deno not cleaning up websockets as fast as they should be.
   sanitizeOps: false,
   sanitizeResources: false,
   fn: async (test) => {
+    const authorKeypair = await Crypto.generateAuthorKeypair(
+      "test",
+    ) as AuthorKeypair;
+
+    // Create three shares
+    const shareKeypairA = await Crypto.generateShareKeypair(
+      "apples",
+    ) as ShareKeypair;
+    const shareKeypairB = await Crypto.generateShareKeypair(
+      "bananas",
+    ) as ShareKeypair;
+    const shareKeypairC = await Crypto.generateShareKeypair(
+      "coconuts",
+    ) as ShareKeypair;
+
     for (const scenario of scenarios) {
       await test.step({
         name: `Syncs over time (${scenario.name})`,

@@ -64,7 +64,8 @@ export class PartnerWebClient<
     this.socket.binaryType = "arraybuffer";
 
     this.socket.onmessage = (event) => {
-      this.incomingQueue.push(JSON.parse(event.data));
+      // Casting to string due to Node's incorrect websocket types
+      this.incomingQueue.push(JSON.parse(event.data as string));
     };
 
     this.socket.onclose = () => {
