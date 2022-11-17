@@ -66,7 +66,7 @@ export const attachmentDriverScenarios: Scenario<AttachmentDriverScenario>[] = [
   },
 ];
 
-export class PartnerScenarioWeb<F> implements SyncDriverScenario<F> {
+export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
   private server = deferred<WebSocketServer>();
   private port = deferred<number>();
 
