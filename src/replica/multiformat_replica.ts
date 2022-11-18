@@ -879,6 +879,10 @@ export class MultiformatReplica {
             controller.enqueue(event as QuerySourceEvent<FormatDocType<F>>);
             continue;
           }
+
+          if (event.kind === "didClose") {
+            controller.close();
+          }
         }
       },
     }) as ReadableStream<
