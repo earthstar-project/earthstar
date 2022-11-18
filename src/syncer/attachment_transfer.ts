@@ -66,10 +66,13 @@ export class AttachmentTransfer<F> {
 
       const counterStream = new ReadableStream<Uint8Array>({
         async start(controller) {
-          reader = stream.getReader();
+          const newReader = stream.getReader();
+
+          // @ts-ignore Node's ReadableStream types does not like this for some reason.
+          reader = newReader;
 
           while (true) {
-            const { done, value } = await reader.read();
+            const { done, value } = await newReader.read();
 
             if (done) {
               break;
