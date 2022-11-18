@@ -30,6 +30,7 @@ function makeReplica(address: string, shareSecret: string) {
 Deno.test({
   name: "syncShareAndDir",
   sanitizeOps: false,
+  sanitizeResources: false,
   fn: async (test) => {
     const keypairA = await Crypto.generateAuthorKeypair(
       "aaaa",
