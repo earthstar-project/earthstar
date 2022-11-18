@@ -19,6 +19,7 @@ import {
   writeRandomDocs,
 } from "../test-utils.ts";
 import DefaultCryptoDriver from "../../crypto/default_driver.ts";
+import { sleep } from "../../util/misc.ts";
 
 setGlobalCryptoDriver(DefaultCryptoDriver);
 
@@ -326,8 +327,6 @@ Deno.test("Syncing (appetite 'once')", async (test) => {
 Deno.test({
   name: "Syncing (appetite continuous, multiple peers)",
   // Not sanitising ops / resources because these fail due to Deno not cleaning up websockets as fast as they should be.
-  sanitizeOps: false,
-  sanitizeResources: false,
   fn: async (test) => {
     const authorKeypair = await Crypto.generateAuthorKeypair(
       "test",
@@ -417,9 +416,7 @@ Deno.test({
           ]);
 
           // Check that that things have synced... eventually.
-          await new Promise((res) => {
-            setTimeout(res, 800);
-          });
+          await sleep(800);
 
           try {
             syncerA.cancel("Test finished");
