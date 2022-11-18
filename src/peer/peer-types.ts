@@ -2,6 +2,7 @@ import { ShareAddress } from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { Syncer } from "../syncer/syncer.ts";
 import { FormatsArg } from "../formats/format_types.ts";
+import { ISyncPartner } from "../syncer/syncer_types.ts";
 
 //================================================================================
 // PEER
@@ -26,9 +27,14 @@ export interface IPeer {
 
   sync<F>(
     target: IPeer | string,
-    live?: boolean,
+    continuous?: boolean,
     formats?: FormatsArg<F>,
-  ): Syncer<undefined, F>;
+  ): Syncer<unknown, F>;
+
+  addSyncPartner<I, F>(
+    partner: ISyncPartner<I>,
+    formats?: FormatsArg<F>,
+  ): Syncer<unknown, F>;
 
   onReplicasChange(
     callback: (map: Map<ShareAddress, Replica>) => void | Promise<void>,

@@ -6,11 +6,13 @@ import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.
 import { DocDriverMemory } from "../../replica/doc_drivers/memory.ts";
 import { PartnerLocal } from "../../syncer/partner_local.ts";
 import { Syncer } from "../../syncer/syncer.ts";
+
+import { SyncAppetite } from "../../syncer/syncer_types.ts";
 import {
   AttachmentDriverScenario,
   DocDriverScenario,
-  PartnerScenario,
   Scenario,
+  SyncPartnerScenario,
 } from "./types.ts";
 
 export const universalCryptoDrivers: Scenario<ICryptoDriver>[] = [{
@@ -38,25 +40,25 @@ export const universalReplicaAttachmentDrivers: Scenario<
   },
 ];
 
-export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
+export class SyncScenarioLocal<F> implements SyncPartnerScenario<F> {
   formats: FormatsArg<F>;
+  appetite: SyncAppetite;
 
-  constructor(formats: FormatsArg<F>) {
+  constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
     this.formats = formats;
+    this.appetite = appetite;
   }
 
   setup(peerA: IPeer, peerB: IPeer) {
-    const partner = new PartnerLocal(peerB, peerA, "once", this.formats);
+    const partner = new PartnerLocal(peerB, peerA, this.appetite, this.formats);
 
-    const syncerA = new Syncer({
-      peer: peerA,
-      partner,
-      mode: "once",
-      formats: this.formats,
-    });
+    const syncerA = peerA.addSyncPartner(partner);
 
     return Promise.resolve(
-      [syncerA, partner.partnerSyncer] as [Syncer<any, F>, Syncer<any, F>],
+      [syncerA, partner.partnerSyncer] as [
+        Syncer<unknown, F>,
+        Syncer<unknown, F>,
+      ],
     );
   }
 
@@ -66,8 +68,8 @@ export class PartnerScenarioLocal<F> implements PartnerScenario<F> {
 }
 
 export const universalPartners: Scenario<
-  <F>(formats: FormatsArg<F>) => PartnerScenario<F>
+  <F>(formats: FormatsArg<F>, appetite: SyncAppetite) => SyncPartnerScenario<F>
 >[] = [{
   name: "Local",
-  item: (formats) => new PartnerScenarioLocal(formats),
+  item: (formats, appetite) => new SyncScenarioLocal(formats, appetite),
 }];

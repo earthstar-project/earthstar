@@ -223,7 +223,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         "throws after closed",
       );
       await throws(
-        async () => await storage.ingest({} as any, {} as any),
+        async () => await storage.ingest({} as any, {} as any, ""),
         "throws after closed",
       );
       await throws(
@@ -687,7 +687,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
 
       assert(doc);
 
-      await replica2.ingest(FormatEs5, doc);
+      await replica2.ingest(FormatEs5, doc, "local");
 
       // Test that mismatching doc + attachment are rejected
 
@@ -697,13 +697,19 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         FormatEs5,
         doc,
         mismatchedBytes,
+        "local",
       );
 
       assert(isErr(mismatchedRes));
 
       // Test that attachment can really be ingested and fetched back again
 
-      const ingestRes = await replica2.ingestAttachment(FormatEs5, doc, bytes1);
+      const ingestRes = await replica2.ingestAttachment(
+        FormatEs5,
+        doc,
+        bytes1,
+        "local",
+      );
 
       assert(!isErr(ingestRes));
 
@@ -720,6 +726,7 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
         FormatEs5,
         doc,
         bytes1,
+        "local",
       );
 
       assertEquals(repeatIngestRes, false);

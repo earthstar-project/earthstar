@@ -1,51 +1,338 @@
-// Make a test helper.
+// Testing syncing with appetite 'once'
 
+import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 import { Crypto } from "../../crypto/crypto.ts";
+import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
+import { FormatEs5 } from "../../formats/format_es5.ts";
 import { Peer } from "../../peer/peer.ts";
+import { ReplicaDriverMemory } from "../../replica/driver_memory.ts";
 import { Replica } from "../../replica/replica.ts";
 
-import { sleep } from "../../util/misc.ts";
 import { assert } from "../asserts.ts";
+import { syncDriverScenarios } from "../scenarios/scenarios.ts";
+import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
+import { multiplyScenarios } from "../scenarios/utils.ts";
 import {
-  storagesAreSynced,
-  storagesAttachmentsAreSynced,
+  overlappingDocSets,
+  replicaAttachmentsAreSynced,
+  replicaDocsAreSynced,
   writeRandomDocs,
 } from "../test-utils.ts";
-import { isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
+import DefaultCryptoDriver from "../../crypto/default_driver.ts";
+import { sleep } from "../../util/misc.ts";
 
-import {
-  docDriverScenarios,
-  partnerScenarios,
-} from "../scenarios/scenarios.ts";
-import { IReplicaDocDriver } from "../../replica/replica-types.ts";
-import {
-  MultiplyScenarioOutput,
-  PartnerScenario,
-  ScenarioItem,
-} from "../scenarios/types.ts";
-import { multiplyScenarios } from "../scenarios/utils.ts";
+setGlobalCryptoDriver(DefaultCryptoDriver);
 
-import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
-import { FormatEs5 } from "../../formats/format_es5.ts";
-import { isErr } from "../../util/errors.ts";
-import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
+// Multiply driver x set scenarios.
+const setOverlap = [
+  {
+    name: "No data in common",
+    item: 0,
+  },
+  {
+    name: "Some data in common",
+    item: 50,
+  },
+  {
+    name: "All data in common",
+    item: 100,
+  },
+];
 
-class SyncerTestHelper {
-  private scenario: PartnerScenario<[typeof FormatEs5]>;
-  private aDuo: Replica[] = [];
-  private bDuo: Replica[] = [];
-  private cDuo: Replica[] = [];
-  private makeDocDriver: (addr: string, variant?: string) => IReplicaDocDriver;
+const scenarios: MultiplyScenarioOutput<{
+  "syncDriver": ScenarioItem<typeof syncDriverScenarios>;
+  "overlap": ScenarioItem<typeof setOverlap>;
+}> = multiplyScenarios({
+  description: "syncDriver",
+  scenarios: syncDriverScenarios,
+}, {
+  description: "overlap",
+  scenarios: setOverlap,
+});
 
-  constructor(
-    scenario: PartnerScenario<[typeof FormatEs5]>,
-    makeDocDriver: (addr: string, variant?: string) => IReplicaDocDriver,
-  ) {
-    this.scenario = scenario;
-    this.makeDocDriver = makeDocDriver;
+function makeReplicasForShare(keypair: ShareKeypair, count: number) {
+  const replicas = [];
+
+  for (let i = 0; i < count; i++) {
+    const replica = new Replica({
+      driver: new ReplicaDriverMemory(keypair.shareAddress),
+      shareSecret: keypair.secret,
+    });
+
+    replicas.push(replica);
   }
 
-  async setup() {
+  return replicas;
+}
+
+async function makeOverlappingReplicaTuple(
+  authorKeypair: AuthorKeypair,
+  shareKeypair: ShareKeypair,
+  overlap: number,
+  tupleSize: number,
+  docSetSize: number,
+) {
+  const replicas = makeReplicasForShare(shareKeypair, tupleSize);
+
+  const docSets = await overlappingDocSets(
+    authorKeypair,
+    shareKeypair,
+    overlap,
+    docSetSize,
+    tupleSize,
+  );
+
+  for (let i = 0; i < tupleSize; i++) {
+    const replica = replicas[i];
+    const set = docSets[i];
+
+    for (const { doc, attachment } of set) {
+      await replica.ingest(FormatEs5, doc, "local");
+
+      if (attachment) {
+        await replica.ingestAttachment(FormatEs5, doc, attachment, "local");
+      }
+    }
+  }
+
+  return replicas;
+}
+
+Deno.test("Syncing (appetite 'once')", async (test) => {
+  const authorKeypair = await Crypto.generateAuthorKeypair(
+    "test",
+  ) as AuthorKeypair;
+
+  // Create three shares
+  const shareKeypairA = await Crypto.generateShareKeypair(
+    "apples",
+  ) as ShareKeypair;
+  const shareKeypairB = await Crypto.generateShareKeypair(
+    "bananas",
+  ) as ShareKeypair;
+  const shareKeypairC = await Crypto.generateShareKeypair(
+    "coconuts",
+  ) as ShareKeypair;
+
+  for (const scenario of scenarios) {
+    await test.step({
+      name: `Finishes and syncs (${scenario.name})`,
+      fn: async () => {
+        // For each share, create two replicas with specified overlap.
+        const [ra1, ra2] = await makeOverlappingReplicaTuple(
+          authorKeypair,
+          shareKeypairA,
+          scenario.subscenarios.overlap,
+          2,
+          100,
+        );
+        const [rb1, rb2] = await makeOverlappingReplicaTuple(
+          authorKeypair,
+          shareKeypairB,
+          scenario.subscenarios.overlap,
+          2,
+          100,
+        );
+        const [rc1, rc2] = await makeOverlappingReplicaTuple(
+          authorKeypair,
+          shareKeypairC,
+          scenario.subscenarios.overlap,
+          2,
+          100,
+        );
+
+        // Create two peers, add one to each.
+
+        const peerA = new Peer();
+        peerA.addReplica(ra1);
+        peerA.addReplica(rb1);
+        peerA.addReplica(rc1);
+
+        const peerB = new Peer();
+        peerB.addReplica(ra2);
+        peerB.addReplica(rb2);
+        peerB.addReplica(rc2);
+
+        const syncDriverScenario = scenario.subscenarios.syncDriver(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        await Promise.all([syncerA.isDone(), syncerB.isDone()]);
+
+        // Check that all replicas fully synced.
+
+        await syncDriverScenario.teardown();
+
+        assert(await replicaDocsAreSynced([ra1, ra2]), `+a docs are in sync`);
+        assert(await replicaDocsAreSynced([rb1, rb2]), `+b docs are in sync`);
+        assert(await replicaDocsAreSynced([rc2, rc2]), `+c docs are in sync`);
+
+        assert(
+          await replicaAttachmentsAreSynced([ra1, ra2]),
+          `+a attachments are in sync`,
+        );
+
+        assert(
+          await replicaAttachmentsAreSynced([rb1, rb2]),
+          `+b attachments are in sync`,
+        );
+        assert(
+          await replicaAttachmentsAreSynced([rc2, rc2]),
+          `+c attachments are in sync`,
+        );
+
+        await ra1.close(true);
+        await ra2.close(true);
+        await rb1.close(true);
+        await rb2.close(true);
+        await rc1.close(true);
+        await rc2.close(true);
+      },
+    });
+  }
+
+  for (const scenario of syncDriverScenarios) {
+    await test.step({
+      name: `Finishes (both sides have nothing)`,
+      fn: async () => {
+        const ra1 = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypairA.shareAddress),
+          shareSecret: shareKeypairA.secret,
+        });
+
+        const ra2 = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypairA.shareAddress),
+          shareSecret: shareKeypairA.secret,
+        });
+
+        const peerA = new Peer();
+        peerA.addReplica(ra1);
+
+        const peerB = new Peer();
+        peerB.addReplica(ra2);
+
+        const syncDriverScenario = scenario.item(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        await Promise.all([syncerA.isDone(), syncerB.isDone()]);
+
+        await syncDriverScenario.teardown();
+
+        await ra1.close(true);
+        await ra2.close(true);
+      },
+    });
+
+    await test.step({
+      name: `Finishes (one side has nothing)`,
+      fn: async () => {
+        const ra1 = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypairA.shareAddress),
+          shareSecret: shareKeypairA.secret,
+        });
+
+        const ra2 = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypairA.shareAddress),
+          shareSecret: shareKeypairA.secret,
+        });
+
+        await writeRandomDocs(authorKeypair, ra1, 10);
+
+        const peerA = new Peer();
+        peerA.addReplica(ra1);
+
+        const peerB = new Peer();
+        peerB.addReplica(ra2);
+
+        const syncDriverScenario = scenario.item(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        await Promise.all([syncerA.isDone(), syncerB.isDone()]);
+
+        await syncDriverScenario.teardown();
+
+        await ra1.close(true);
+        await ra2.close(true);
+      },
+    });
+
+    await test.step({
+      name: `Cancels gracefully (${scenario.name})`,
+      fn: async () => {
+        // For each share, create two replicas with specified overlap.
+        const [ra1, ra2] = await makeOverlappingReplicaTuple(
+          authorKeypair,
+          shareKeypairA,
+          100,
+          2,
+          100,
+        );
+
+        // Create two peers, add one to each.
+
+        const peerA = new Peer();
+        peerA.addReplica(ra1);
+
+        const peerB = new Peer();
+        peerB.addReplica(ra2);
+
+        const syncDriverScenario = scenario.item(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        try {
+          await syncerA.cancel("Testing cancellation");
+          await syncerB.cancel("Testing cancellation");
+        } catch {
+          assert(false, "Cancellation happens without throwing an error");
+        }
+
+        // Check that all replicas fully synced.
+
+        await syncDriverScenario.teardown();
+
+        await ra1.close(true);
+        await ra2.close(true);
+      },
+    });
+  }
+});
+
+// ==========================================
+
+// Testing syncing with appetite 'continuous'
+
+Deno.test({
+  name: "Syncing (appetite continuous, multiple peers)",
+  // Not sanitising ops / resources because these fail due to Deno not cleaning up websockets as fast as they should be.
+  fn: async (test) => {
+    const authorKeypair = await Crypto.generateAuthorKeypair(
+      "test",
+    ) as AuthorKeypair;
+
+    // Create three shares
     const shareKeypairA = await Crypto.generateShareKeypair(
       "apples",
     ) as ShareKeypair;
@@ -56,166 +343,133 @@ class SyncerTestHelper {
       "coconuts",
     ) as ShareKeypair;
 
-    const ADDRESS_A = shareKeypairA.shareAddress;
-    const ADDRESS_B = shareKeypairB.shareAddress;
-    const ADDRESS_C = shareKeypairC.shareAddress;
-
-    const makeReplicaDuo = (addr: string, shareSecret: string) => {
-      return [
-        new Replica({
-          driver: {
-            docDriver: this.makeDocDriver(addr, "sync-a"),
-            attachmentDriver: new AttachmentDriverMemory(),
-          },
-          shareSecret,
-        }),
-        new Replica({
-          driver: {
-            docDriver: this.makeDocDriver(addr, "sync-b"),
-            attachmentDriver: new AttachmentDriverMemory(),
-          },
-          shareSecret,
-        }),
-      ] as [Replica, Replica];
-    };
-
-    this.aDuo = makeReplicaDuo(ADDRESS_A, shareKeypairA.secret);
-    this.bDuo = makeReplicaDuo(ADDRESS_B, shareKeypairB.secret);
-    this.cDuo = makeReplicaDuo(ADDRESS_C, shareKeypairC.secret);
-
-    const peerA = new Peer();
-    const peerB = new Peer();
-
-    const keypairA = await Crypto.generateAuthorKeypair(
-      "suzy",
-    ) as AuthorKeypair;
-
-    const keypairReplicaTuples: Replica[][] = [
-      this.aDuo,
-      this.bDuo,
-      this.cDuo,
-    ];
-
-    const writes = await Promise.all(
-      keypairReplicaTuples.map((duo) => {
-        return Promise.all(duo.map((replica) => {
-          return writeRandomDocs(
-            keypairA,
-            replica,
+    for (const scenario of scenarios) {
+      await test.step({
+        name: `Syncs over time (${scenario.name})`,
+        fn: async () => {
+          // Create three peers, add one to each.
+          const [ra1, ra2, ra3] = await makeOverlappingReplicaTuple(
+            authorKeypair,
+            shareKeypairA,
+            scenario.subscenarios.overlap,
+            3,
             10,
           );
-        }));
-      }),
-    );
+          const [rb1, rb2, rb3] = await makeOverlappingReplicaTuple(
+            authorKeypair,
+            shareKeypairB,
+            scenario.subscenarios.overlap,
+            3,
+            10,
+          );
+          const [rc1, rc2, rc3] = await makeOverlappingReplicaTuple(
+            authorKeypair,
+            shareKeypairC,
+            scenario.subscenarios.overlap,
+            3,
+            10,
+          );
 
-    assert(
-      writes.every((replicaWrites) => {
-        return replicaWrites.every((write) => isErr(write) === false);
-      }),
-      "Test docs were written successfully to replicas",
-    );
+          const peerA = new Peer();
+          peerA.addReplica(ra1);
+          peerA.addReplica(rb1);
+          peerA.addReplica(rc1);
 
-    const [a1, a2] = this.aDuo;
-    const [b1, b2] = this.bDuo;
-    const [c1] = this.cDuo;
+          const peerB = new Peer();
+          peerB.addReplica(ra2);
+          peerB.addReplica(rb2);
+          peerB.addReplica(rc2);
 
-    peerA.addReplica(a1);
-    peerA.addReplica(b1);
-    peerA.addReplica(c1);
-    peerB.addReplica(a2);
-    peerB.addReplica(b2);
+          const peerC = new Peer();
+          peerC.addReplica(ra3);
+          peerC.addReplica(rb3);
+          peerC.addReplica(rc3);
 
-    const [syncerA, syncerB] = await this.scenario.setup(peerA, peerB);
+          const syncDriverScenario1 = scenario.subscenarios.syncDriver(
+            [FormatEs5],
+            "continuous",
+          );
 
-    return Promise.all([syncerA.isDone(), syncerB.isDone()]);
-  }
+          const syncDriverScenario2 = scenario.subscenarios.syncDriver(
+            [FormatEs5],
+            "continuous",
+          );
 
-  async commonSharesInSync() {
-    // Without this, tests for the Node distribution fail for some reason.
-    if (isNode) {
-      await sleep(5);
+          // Initiate sync for each peer using the driver.
+          const [syncerA, syncerB] = await syncDriverScenario1.setup(
+            peerA,
+            peerB,
+          );
+
+          const [syncerC, syncerD] = await syncDriverScenario2.setup(
+            peerB,
+            peerC,
+          );
+
+          // Writing docs after sync has commenced. This verifies that gossiping works.
+
+          await Promise.all([
+            writeRandomDocs(authorKeypair, ra1, 1),
+            writeRandomDocs(authorKeypair, rb2, 1),
+            writeRandomDocs(authorKeypair, rc1, 1),
+            writeRandomDocs(authorKeypair, rb3, 1),
+          ]);
+
+          // Check that that things have synced... eventually.
+          await sleep(800);
+
+          try {
+            syncerA.cancel("Test finished");
+            syncerB.cancel("Test finished");
+            syncerC.cancel("Test finished");
+            syncerD.cancel("Test finished");
+          } catch {
+            assert(false, "Cancellation happens without throwing an error");
+          }
+
+          // Check that all replicas fully synced.
+
+          await syncDriverScenario1.teardown();
+          await syncDriverScenario2.teardown();
+
+          assert(
+            await replicaDocsAreSynced([ra1, ra2, ra3]),
+            `+a docs are in sync`,
+          );
+          assert(
+            await replicaDocsAreSynced([rb1, rb2, rb3]),
+            `+b docs are in sync`,
+          );
+          assert(
+            await replicaDocsAreSynced([rc1, rc2, rc3]),
+            `+c docs are in sync`,
+          );
+
+          assert(
+            await replicaAttachmentsAreSynced([ra1, ra2, ra3]),
+            `+a attachments are in sync`,
+          );
+
+          assert(
+            await replicaAttachmentsAreSynced([rb1, rb2, rb3]),
+            `+b attachments are in sync`,
+          );
+          assert(
+            await replicaAttachmentsAreSynced([rc1, rc2, rc3]),
+            `+c attachments are in sync`,
+          );
+
+          await ra1.close(true);
+          await ra2.close(true);
+          await rb1.close(true);
+          await rb2.close(true);
+          await rc1.close(true);
+          await rc2.close(true);
+          await ra3.close(true);
+          await rb3.close(true);
+          await rc3.close(true);
+        },
+      });
     }
-
-    const docCounts = [];
-
-    for (const r of [...this.aDuo, ...this.bDuo]) {
-      const docs = await r.getAllDocs();
-      docCounts.push(docs.length);
-    }
-
-    assert(
-      docCounts.every((count) => count === 20),
-      "all replicas have the right number of docs",
-    );
-
-    assert(await storagesAreSynced(this.aDuo), `+a docs are in sync`);
-    assert(await storagesAreSynced(this.bDuo), `+b docs are in sync`);
-    assert(
-      await storagesAreSynced(this.cDuo) === false,
-      `+c docs are not in sync`,
-    );
-
-    assert(
-      await storagesAttachmentsAreSynced(this.aDuo),
-      `+a attachments are in sync`,
-    );
-    assert(
-      await storagesAttachmentsAreSynced(this.bDuo),
-      `+b attachments are in sync`,
-    );
-    assert(
-      await storagesAttachmentsAreSynced(this.cDuo) === false,
-      `+c attachments are not in sync`,
-    );
-  }
-
-  testAbort() {}
-
-  async teardown() {
-    await this.scenario.teardown();
-
-    const allStorages = [
-      ...this.aDuo,
-      ...this.bDuo,
-      ...this.cDuo,
-    ];
-
-    await Promise.all(allStorages.map((replica) => replica.close(true)));
-  }
-}
-// Check that replicas are synced at the end.
-
-const scenarios: MultiplyScenarioOutput<{
-  "replicaDriver": ScenarioItem<typeof docDriverScenarios>;
-  "partner": ScenarioItem<typeof partnerScenarios>;
-}> = multiplyScenarios({
-  description: "replicaDriver",
-  scenarios: docDriverScenarios,
-}, {
-  description: "partner",
-  scenarios: partnerScenarios,
+  },
 });
-
-for (const scenario of scenarios) {
-  Deno.test(`Syncer (${scenario.name})`, async (test) => {
-    const helper = new SyncerTestHelper(
-      scenario.subscenarios.partner([FormatEs5]),
-      scenario.subscenarios.replicaDriver.makeDriver,
-    );
-
-    await helper.setup();
-
-    await test.step({
-      name: "is in sync",
-      fn: () => helper.commonSharesInSync(),
-      sanitizeOps: false,
-      sanitizeResources: false,
-    });
-
-    await helper.teardown();
-
-    // Have to do this to let the web scenario finish tearing down
-    // For some reason this sleep can't be moved into the scenario.teardown itself.
-    await sleep(15);
-  });
-}

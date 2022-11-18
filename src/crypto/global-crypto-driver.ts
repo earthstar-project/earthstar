@@ -1,5 +1,5 @@
-import { CryptoDriverNoble } from "./crypto-driver-noble.ts";
 import { ICryptoDriver } from "./crypto-types.ts";
+import DefaultCrypto from "./default_driver.ts";
 
 //--------------------------------------------------
 
@@ -8,7 +8,7 @@ let logger = new Logger("crypto", "cyan");
 
 //================================================================================
 
-export let GlobalCryptoDriver: ICryptoDriver = CryptoDriverNoble;
+export let GlobalCryptoDriver: ICryptoDriver = DefaultCrypto;
 
 /** Set the crypto driver used for all cryptographic operations. */
 export function setGlobalCryptoDriver(driver: ICryptoDriver): void {

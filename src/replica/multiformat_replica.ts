@@ -158,6 +158,10 @@ export class MultiformatReplica {
     logger.debug("closing...");
     if (this._isClosed) throw new ReplicaIsClosedError();
     // TODO: do this all in a lock?
+
+    // Make sure writing lock is clear
+    await this.ingestLockStream.close();
+
     for (const timeout of this.expireEventTimeouts.values()) {
       clearTimeout(timeout);
     }
@@ -434,6 +438,7 @@ export class MultiformatReplica {
         doc: updatedDocRes,
         hash: stageResult.hash,
         size: stageResult.size,
+        sourceId: "local",
       });
 
       loggerSet.debug("...done ingesting attachment");
@@ -445,6 +450,7 @@ export class MultiformatReplica {
       const ingestEvent = await this.ingest(
         format,
         updatedDocRes as FormatDocType<F>,
+        "local",
       );
       loggerSet.debug("...done ingesting");
 
@@ -459,6 +465,7 @@ export class MultiformatReplica {
     const ingestResult = await this.ingest(
       format,
       result.doc as FormatDocType<F>,
+      "local",
     );
     loggerSet.debug("...done ingesting");
 
@@ -473,6 +480,7 @@ export class MultiformatReplica {
   async ingest<F = DefaultFormat>(
     format: FormatArg<F>,
     docToIngest: FormatDocType<F>,
+    sourceId: "local" | string,
   ): Promise<
     IngestEvent<FormatDocType<F>>
   > {
@@ -588,23 +596,18 @@ export class MultiformatReplica {
         " >> ingest: end of protected region, returning a WriteEvent from the lock",
       );
 
-      ingestPromise.resolve({
-        kind: "success",
+      const event = {
+        kind: "success" as const,
         maxLocalIndex,
         doc: docAsWritten, // with updated extra properties like _localIndex
         docIsLatest: isLatest,
         prevDocFromSameAuthor: prevSameAuthor as FormatDocType<F>,
         prevLatestDoc: prevLatest as FormatDocType<F>,
-      });
+        sourceId,
+      };
 
-      await this.eventWriter.write({
-        kind: "success",
-        maxLocalIndex,
-        doc: docAsWritten, // with updated extra properties like _localIndex
-        docIsLatest: isLatest,
-        prevDocFromSameAuthor: prevSameAuthor,
-        prevLatestDoc: prevLatest,
-      });
+      ingestPromise.resolve(event);
+      await this.eventWriter.write(event);
 
       if (docAsWritten.deleteAfter) {
         // Check for any previous delete after
@@ -723,6 +726,7 @@ export class MultiformatReplica {
     const didIngest = await this.ingest(
       format,
       wipedDoc as FormatDocType<F>,
+      "local",
     );
 
     if (didIngest.kind === "success") {
@@ -875,6 +879,10 @@ export class MultiformatReplica {
             controller.enqueue(event as QuerySourceEvent<FormatDocType<F>>);
             continue;
           }
+
+          if (event.kind === "didClose") {
+            controller.close();
+          }
         }
       },
     }) as ReadableStream<
@@ -904,6 +912,7 @@ export class MultiformatReplica {
     format: FormatArg<F>,
     doc: FormatDocType<F>,
     attachment: Uint8Array | ReadableStream<Uint8Array>,
+    sourceId: "local" | string,
   ): Promise<
     true | false | ValidationError
   > {
@@ -971,6 +980,7 @@ export class MultiformatReplica {
       doc,
       hash: stageRes.hash,
       size: stageRes.size,
+      sourceId,
     });
 
     return true;

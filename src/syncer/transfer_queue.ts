@@ -129,14 +129,20 @@ export class TransferQueue {
   }
 
   hasQueuedTransfer(hash: string, kind: "upload" | "download") {
+    for (const waiting of this.waiting) {
+      if (waiting.hash === hash && waiting.kind === kind) {
+        return true;
+      }
+    }
+
     for (const active of this.active) {
       if (active.hash === hash && active.kind === kind) {
         return true;
       }
     }
 
-    for (const waiting of this.waiting) {
-      if (waiting.hash === hash && waiting.kind === kind) {
+    for (const complete of this.completed) {
+      if (complete.hash === hash && complete.kind === kind) {
         return true;
       }
     }

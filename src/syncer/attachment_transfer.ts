@@ -20,6 +20,7 @@ export class AttachmentTransfer<F> {
   private sourceDoc: DocBase<string>;
   private statusBus = new BlockingBus<AttachmentTransferProgressEvent>();
   private transferOp = deferred<() => Promise<void>>();
+  private abortCb: () => void;
 
   private multiDeferred = new MultiDeferred();
 
@@ -27,10 +28,9 @@ export class AttachmentTransfer<F> {
 
   requester: "us" | "them";
 
-  private abortController = new AbortController();
-
   constructor(
-    { stream, replica, doc, format, requester }: AttachmentTransferOpts<F>,
+    { stream, replica, doc, format, requester, counterpartId }:
+      AttachmentTransferOpts<F>,
   ) {
     this.sourceDoc = doc;
     this.share = replica.share;
@@ -54,12 +54,25 @@ export class AttachmentTransfer<F> {
       // pipe through our bytes counter
       this.kind = "download";
 
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+
+      this.abortCb = () => {
+        if (reader) {
+          reader.cancel();
+        } else {
+          stream.cancel();
+        }
+      };
+
       const counterStream = new ReadableStream<Uint8Array>({
         async start(controller) {
-          const reader = stream.getReader();
+          const newReader = stream.getReader();
+
+          // @ts-ignore Node's ReadableStream types does not like this for some reason.
+          reader = newReader;
 
           while (true) {
-            const { done, value } = await reader.read();
+            const { done, value } = await newReader.read();
 
             if (done) {
               break;
@@ -77,29 +90,34 @@ export class AttachmentTransfer<F> {
       this.transferOp.resolve(() => {
         const promise = deferred<void>();
 
-        replica.ingestAttachment(format, doc, counterStream).then(
-          (result) => {
-            if (isErr(result) && this.loaded === 0) {
-              // The other peer didn't have this attachment.
-              this.changeStatus("missing_attachment");
-              return;
-            }
+        replica.ingestAttachment(format, doc, counterStream, counterpartId)
+          .then(
+            (result) => {
+              if (isErr(result) && this.loaded === 0) {
+                // The other peer didn't have this attachment.
+                this.changeStatus("missing_attachment");
+                return;
+              }
 
-            if (isErr(result)) {
-              promise.reject(result);
-              return;
-            }
+              if (isErr(result)) {
+                promise.reject(result);
+                return;
+              }
 
-            promise.resolve();
-          },
-        ).catch((err) => {
-          promise.reject(err);
-        });
+              promise.resolve();
+            },
+          ).catch((err) => {
+            promise.reject(err);
+          });
 
         return promise;
       });
     } else {
       this.kind = "upload";
+
+      this.abortCb = () => {
+        stream.abort();
+      };
 
       replica.getAttachment(doc, format).then(async (attachmentRes) => {
         if (!attachmentRes) {
@@ -200,7 +218,7 @@ export class AttachmentTransfer<F> {
   }
 
   abort() {
-    this.abortController.abort();
+    this.abortCb();
   }
 
   isDone() {

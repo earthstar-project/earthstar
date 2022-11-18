@@ -1,5 +1,9 @@
-import { DocBase, ShareAddress, Timestamp } from "../util/doc-types.ts";
-import { IPeer } from "../peer/peer-types.ts";
+import {
+  AuthorAddress,
+  DocBase,
+  Path,
+  ShareAddress,
+} from "../util/doc-types.ts";
 import { Replica } from "../replica/replica.ts";
 import {
   FormatArg,
@@ -7,38 +11,63 @@ import {
   FormatsArg,
 } from "../formats/format_types.ts";
 import { TransferManager } from "./transfer_manager.ts";
+import { SyncerManager } from "./syncer_manager.ts";
+import { NotSupportedError } from "../util/errors.ts";
 
-/** Describes a group of docs under a common path which a syncing replica possesses. */
-export type HaveEntry = {
-  id: string;
-  versions: Record<string, Timestamp>;
+/** A short string with a timestamp and hash of the document's path and author. */
+export type DocThumbnail = string;
+
+export type RangeMessage =
+  | {
+    type: "EMPTY_SET";
+    canRespond: boolean;
+  }
+  | {
+    type: "LOWER_BOUND";
+    value: DocThumbnail;
+  }
+  | {
+    type: "PAYLOAD";
+    payload: DocThumbnail;
+    end?: { canRespond: boolean; upperBound: DocThumbnail };
+  }
+  | {
+    type: "EMPTY_PAYLOAD";
+    upperBound: DocThumbnail;
+  }
+  | {
+    type: "FINGERPRINT";
+    /** Base64 encoded version of the fingeprint. */
+    fingerprint: string;
+    upperBound: DocThumbnail;
+  }
+  | { type: "DONE"; upperBound: DocThumbnail }
+  | { type: "TERMINAL" };
+
+/** An event to be passed on to a RangeMessenger */
+export type SyncAgentRangeMessageEvent = {
+  kind: "RANGE_MSG";
+  /** A JSON encoded message. */
+  message: RangeMessage;
 };
 
-/** A mode describing whether the HaveEntryKeeper should process only existing docs, or also live ones. */
-export type HaveEntryKeeperMode = "existing" | "everything";
-
-/** A hash of a replica's entire store of documents, used to quickly check equivalence. */
-export type SyncAgentHashEvent = {
-  kind: "HASH";
-  hash: string;
-};
-
-/** A compressed description of a group of docs a sync agent possesses */
-export interface SyncAgentHaveEvent extends HaveEntry {
+export type SyncAgentHaveEvent = {
   kind: "HAVE";
-}
+  thumbnail: DocThumbnail;
+};
 
 /** Signals that a SyncAgent wants a document/documents from another SyncAgent */
 export type SyncAgentWantEvent = {
   kind: "WANT";
-  id: string;
+  thumbnail: DocThumbnail;
 };
 
 /** An event with an Earthstar document and corresponding ID. */
 export type SyncAgentDocEvent = {
   kind: "DOC";
-  id: string;
+  thumbnail: DocThumbnail;
   doc: DocBase<string>;
+  attachmentHeld: boolean;
 };
 
 export type SyncAgentWantAttachmentEvent = {
@@ -46,11 +75,6 @@ export type SyncAgentWantAttachmentEvent = {
   doc: DocBase<string>;
   shareAddress: string;
   attachmentHash: string;
-};
-
-/* An event sent when a sync agent has offered all docs it knows of. */
-export type SyncAgentExhaustedHavesEvent = {
-  kind: "EXHAUSTED_HAVES";
 };
 
 /** An event sent when a SyncAgent doesn't want anything anymore, though it'll still serve HAVE requests. */
@@ -62,26 +86,40 @@ export type SyncAgentAbortEvent = {
   kind: "ABORT";
 };
 
+/** A special event for the implementation of a PlumTree. Asks the recipient to begin lazily messaging us. */
+export type SyncAgentPruneEvent = {
+  kind: "PRUNE";
+};
+
+export type SynceAgentNewAttachmentEvent = {
+  kind: "NEW_ATTACHMENT";
+  path: Path;
+  author: AuthorAddress;
+  format: string;
+  hash: string;
+};
+
 /** A type of message one SyncAgent can send to another. */
 export type SyncAgentEvent =
-  | SyncAgentHashEvent
-  | SyncAgentHaveEvent
+  | SyncAgentRangeMessageEvent
   | SyncAgentWantEvent
   | SyncAgentDocEvent
   | SyncAgentWantAttachmentEvent
   | SyncAgentAbortEvent
-  | SyncAgentExhaustedHavesEvent
+  | SyncAgentHaveEvent
+  | SyncAgentPruneEvent
+  | SynceAgentNewAttachmentEvent
   | SyncAgentFulfilledEvent;
 
-/** The current status of a SyncAgent
- * - `requested`: The number of documents requested
- * - `received`: The number of requests responded to
- * - `status`: An overall status of the agent. `preparing` is when it is calculating its HAVE entries, `syncing` when it has unfulfilled requests, `idling` when there are no active requests, and `done` when it has been closed, or received all documents it was interested in.
- */
+/** The current status of a SyncAgent. */
 export type SyncAgentStatus = {
-  requested: number;
-  received: number;
-  status: "preparing" | "syncing" | "idling" | "done" | "aborted";
+  /** The number of documents requested by this agent */
+  requestedCount: number;
+  /** The number of documents received by this agent */
+  receivedCount: number;
+  /** The number of documents sent by this agent */
+  sentCount: number;
+  status: "preparing" | "reconciling" | "gossiping" | "done" | "aborted";
   // TODO: Add if partner is done yet.
 };
 
@@ -92,8 +130,12 @@ export type SyncAgentStatus = {
 export type SyncAgentOpts<F> = {
   replica: Replica;
   formats?: FormatsArg<F>;
-  mode: "only_existing" | "live";
   transferManager: TransferManager<F, unknown>;
+  syncerManager: SyncerManager;
+  syncAppetite: SyncAppetite;
+  initiateMessaging: boolean;
+  payloadThreshold: number;
+  rangeDivision: number;
 };
 
 // ===================
@@ -129,31 +171,45 @@ export type SyncerEvent =
 
 /** Provides a syncer with the means to connect the peer being synced with (the partner). */
 export interface ISyncPartner<IncomingAttachmentSourceType> {
-  /** A stream of inbound syncer events from the partner. */
-  readable: ReadableStream<SyncerEvent>;
-
-  /** A stream of outbound syncer events to the partner */
-  writable: WritableStream<SyncerEvent>;
+  /** */
+  syncAppetite: SyncAppetite;
 
   /** The number of permitted concurrent attachment transfers */
   concurrentTransfers: number;
 
+  /** The size at which a subdivided reconciliation range should send a fingerprint instead of items. **Must be at least 1**.
+   *
+   * A lower number mean fewer messages transmitted.
+   */
+  payloadThreshold: number;
+
+  /** The number of subdivisions to make when splitting a mismatched range. **Must be at least 2**. */
+  rangeDivision: number;
+
+  /** An async iterable of events from the partner. */
+  getEvents(): AsyncIterable<SyncerEvent>;
+
+  /** Sends a syncer event to the partner. */
+  sendEvent(event: SyncerEvent): Promise<void>;
+
+  closeConnection(): Promise<void>;
+
   /** Attempt to download an attachment directly from the partner.
-   * @returns A `ReadableStream<Uint8Array>` to read data from, a `ValidationError` if something went wrong, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
+   * @returns A `ReadableStream<Uint8Array>` to read data from, `undefined` if this peer does not have the attachment, or `NotSupportedError` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
    */
   getDownload(
     opts: GetTransferOpts,
-  ): Promise<ReadableStream<Uint8Array> | undefined>;
+  ): Promise<ReadableStream<Uint8Array> | undefined | NotSupportedError>;
 
   /** Handles (usually in-band) request from the other peer to upload an attachment.
    * @returns A `WritableStream<Uint8Array>` to write data to, or `undefined` in the case that there is no way to initiate a transfer (e.g. in the case of a web server syncing with a browser).
    */
   handleUploadRequest(
     opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | undefined>;
+  ): Promise<WritableStream<Uint8Array> | NotSupportedError>;
 
   /** Handles an out-of-band request from the other peer to start a transfer.
-   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, or `undefined` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
+   * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, `undefined` if a download request was made an we have no attachment to serve, or `NotSupportedError` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
    */
   handleTransferRequest(
     source: IncomingAttachmentSourceType,
@@ -162,6 +218,7 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
     | undefined
+    | NotSupportedError
   >;
 }
 
@@ -178,7 +235,7 @@ export type GetTransferOpts = {
  * - `once` - The syncer will only attempt to sync existing docs and then stop.
  * - `live` - Indefinite syncing, including existing docs and new ones as they are ingested into the replica.
  */
-export type SyncerMode = "once" | "live";
+export type SyncAppetite = "once" | "continuous";
 
 /** Options to initialise a Syncer with.
  * - `peer` - The peer to synchronise.
@@ -187,9 +244,8 @@ export type SyncerMode = "once" | "live";
  * - `formats` - An optional array of formats to sync. Defaults to just `es.5`.
  */
 export interface SyncerOpts<F, I> {
-  peer: IPeer;
+  manager: SyncerManager;
   partner: ISyncPartner<I>;
-  mode: SyncerMode;
   formats?: FormatsArg<F>;
 }
 
@@ -217,6 +273,7 @@ export type AttachmentTransferOpts<F> = {
   doc: FormatDocType<F>;
   format: FormatArg<F>;
   requester: "us" | "them";
+  counterpartId: "local" | string;
 };
 
 export type AttachmentTransferReport = {

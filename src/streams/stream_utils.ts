@@ -1,4 +1,5 @@
 import { deferred } from "../../deps.ts";
+import { PromiseEnroller } from "../syncer/promise_enroller.ts";
 
 export class CombineStream<T> {
   private closed = false;
@@ -243,6 +244,8 @@ export class PassThroughTransformer<ChunkType>
 }
 
 export class LockStream {
+  private doneEnroller = new PromiseEnroller();
+
   private writable = new WritableStream<() => void | Promise<void>>({
     async write(cb) {
       await cb();
@@ -264,11 +267,22 @@ export class LockStream {
 
     await this.writer.ready;
 
-    return this.writer.write(cb);
+    const written = this.writer.write(cb);
+
+    this.doneEnroller.enrol(written);
+
+    return written;
   }
 
   async close() {
     this.checkClosed();
+
+    this.doneEnroller.seal();
+
+    // Wait for it to be closed.
+    await this.doneEnroller.isDone();
+
+    this.writer.releaseLock();
 
     await this.writable.abort();
 
@@ -428,8 +442,6 @@ export function websocketWritable<
     }
   };
 
-  let heartbeatInterval: number;
-
   return new WritableStream<T>({
     async write(chunk, controller) {
       setUpSocket();
@@ -446,7 +458,6 @@ export function websocketWritable<
       }
 
       socket.onclose = () => {
-        clearInterval(heartbeatInterval);
         controller.error("Socket closed before we were done");
       };
     },
@@ -516,7 +527,11 @@ export function websocketReadable<
           return;
         }
 
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          // The stream was probably closed by something else already.
+        }
       };
 
       socket.onerror = (err) => {

@@ -1,14 +1,15 @@
+import { AsyncQueue } from "../../deps.ts";
 import { FormatsArg } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
-import { BlockingBus } from "../streams/stream_utils.ts";
-import { isErr } from "../util/errors.ts";
+import { isErr, NotSupportedError } from "../util/errors.ts";
 import { ValidationError } from "../util/errors.ts";
 import { Syncer } from "./syncer.ts";
+import { SyncerManager } from "./syncer_manager.ts";
 import {
   GetTransferOpts,
   ISyncPartner,
+  SyncAppetite,
   SyncerEvent,
-  SyncerMode,
 } from "./syncer_types.ts";
 
 /** A syncing partner to be used with local instances of `IPeer`.
@@ -18,13 +19,14 @@ export class PartnerLocal<
   FormatsType,
   IncomingTransferSourceType extends undefined,
 > implements ISyncPartner<undefined> {
-  readable: ReadableStream<SyncerEvent>;
-  writable: WritableStream<SyncerEvent>;
-
   concurrentTransfers = 1024;
+  payloadThreshold = 1;
+  rangeDivision = 2;
+  syncAppetite: SyncAppetite;
 
-  private incomingEventBus = new BlockingBus<SyncerEvent>();
-  private outgoingEventBus = new BlockingBus<SyncerEvent>();
+  private outgoingQueue = new AsyncQueue<SyncerEvent>();
+  private incomingQueue = new AsyncQueue<SyncerEvent>();
+
   private partnerPeer: IPeer;
 
   // Need this for testing.
@@ -37,30 +39,15 @@ export class PartnerLocal<
   constructor(
     peer: IPeer,
     peerSelf: IPeer,
-    mode: SyncerMode,
+    appetite: SyncAppetite,
     formats?: FormatsArg<FormatsType>,
   ) {
+    this.syncAppetite = appetite;
     this.partnerPeer = peer;
 
-    const { incomingEventBus, outgoingEventBus } = this;
+    const { incomingQueue, outgoingQueue } = this;
 
     // This is a bit confusing, but it does work.
-
-    // We subscribe this driver's readable stream of outgoing events to our outgoing event bus.
-    this.readable = new ReadableStream<SyncerEvent>({
-      start(controller) {
-        outgoingEventBus.on((event) => {
-          controller.enqueue(event);
-        });
-      },
-    });
-
-    // We make the writable stream of incoming events write to the incoming event bus.
-    this.writable = new WritableStream<SyncerEvent>({
-      async write(event) {
-        await incomingEventBus.send(event);
-      },
-    });
 
     // This will be the partner of our partner, which is us.
 
@@ -69,25 +56,20 @@ export class PartnerLocal<
     // We'll give it one that proxies to the readable / writable pair we defined above.
 
     this.partnerSyncer = new Syncer<IncomingTransferSourceType, FormatsType>({
-      peer,
+      manager: (peer as any).syncerManager,
       formats,
       partner: {
-        // Events written by the partner syncer will be sent to the outgoing event bus
-        // And thus to the readable stream.
-        writable: new WritableStream({
-          async write(event) {
-            await outgoingEventBus.send(event);
-          },
-        }),
-        // Events sent to the incoming event bus will be sent to the readable stream here.
-        readable: new ReadableStream({
-          start(controller) {
-            incomingEventBus.on((event) => {
-              controller.enqueue(event);
-            });
-          },
-        }),
+        syncAppetite: appetite,
+        getEvents() {
+          return incomingQueue;
+        },
+        sendEvent(event) {
+          outgoingQueue.push(event);
+          return Promise.resolve();
+        },
         concurrentTransfers: 1024,
+        payloadThreshold: 32,
+        rangeDivision: 32,
         async getDownload(
           opts: GetTransferOpts,
         ): Promise<ReadableStream<Uint8Array> | undefined> {
@@ -115,11 +97,17 @@ export class PartnerLocal<
 
           return await attachment.stream();
         },
+        closeConnection() {
+          outgoingQueue.close();
+
+          return Promise.resolve();
+        },
         handleUploadRequest(
           _opts: GetTransferOpts,
-        ): Promise<WritableStream<Uint8Array> | undefined> {
-          // Just return undefined here because we know how to directly get a transfer from this partner.
-          return Promise.resolve(undefined);
+        ): Promise<WritableStream<Uint8Array> | NotSupportedError> {
+          return Promise.resolve(
+            new NotSupportedError("PartnerLocal does not support uploads."),
+          );
         },
         handleTransferRequest(
           _source: IncomingTransferSourceType,
@@ -128,13 +116,33 @@ export class PartnerLocal<
           | ReadableStream<Uint8Array>
           | WritableStream<Uint8Array>
           | undefined
+          | NotSupportedError
         > {
           // Don't need to implement this either.
-          return Promise.resolve(undefined);
+          return Promise.resolve(
+            new NotSupportedError(
+              "PartnerLocal does not support transfer requests.",
+            ),
+          );
         },
       },
-      mode,
     });
+  }
+
+  getEvents(): AsyncIterable<SyncerEvent> {
+    return this.outgoingQueue;
+  }
+
+  sendEvent(event: SyncerEvent): Promise<void> {
+    this.incomingQueue.push(event);
+
+    return Promise.resolve();
+  }
+
+  closeConnection(): Promise<void> {
+    this.incomingQueue.close();
+
+    return Promise.resolve();
   }
 
   async getDownload(
@@ -167,9 +175,11 @@ export class PartnerLocal<
 
   handleUploadRequest(
     _opts: GetTransferOpts,
-  ): Promise<WritableStream<Uint8Array> | undefined> {
+  ): Promise<WritableStream<Uint8Array> | NotSupportedError> {
     // Just return undefined here because we know how to directly get a transfer from this partner.
-    return Promise.resolve(undefined);
+    return Promise.resolve(
+      new NotSupportedError("PartnerLocal does not support uploads."),
+    );
   }
 
   handleTransferRequest(
@@ -179,8 +189,11 @@ export class PartnerLocal<
     | ReadableStream<Uint8Array>
     | WritableStream<Uint8Array>
     | undefined
+    | NotSupportedError
   > {
     // Don't need to implement this either.
-    return Promise.resolve(undefined);
+    return Promise.resolve(
+      new NotSupportedError("PartnerLocal does not support transfer requests."),
+    );
   }
 }

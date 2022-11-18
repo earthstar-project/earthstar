@@ -6,5 +6,5 @@ cov.lcov
 cov_profile/
 cov_html/
 npm/*
-earthstar.bundle.js
 test.db
+dist/*

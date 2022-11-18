@@ -3,7 +3,7 @@
     "test": "deno test --allow-all --unstable src",
     "test-watch": "deno test --watch --allow-all --no-check --unstable src",
     "bench": "deno bench --allow-all --unstable --no-check src/test/benchmark",
-    "bundle": "deno bundle --no-check=remote ./mod.browser.ts ./earthstar.bundle.js",
+    "bundle": "deno run --allow-all scripts/build_web_bundle.ts",
     "npm": "deno run --allow-all scripts/build_npm.ts",
     "run-bundle": "deno run --allow-all ./earthstar.bundle.js --help",
     "example": "deno run ./example-app.ts",
@@ -11,7 +11,8 @@
     "test-coverage": "deno test --no-check --coverage=cov_profile src",
     "show-coverage": "deno coverage cov_profile --lcov > cov.lcov && genhtml -o cov_html cov.lcov",
     "clean": "rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html cov_profile node_modules",
-    "release-alpha": "deno run --allow-all scripts/release_alpha.ts"
+    "release-alpha": "deno run --allow-all scripts/release_alpha.ts",
+    "syncer-test": "deno test --allow-all --unstable src/test/syncer/syncer.test.ts"
   },
   "fmt": {
     "files": {

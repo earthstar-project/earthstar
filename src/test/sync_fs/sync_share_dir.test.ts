@@ -27,907 +27,916 @@ function makeReplica(address: string, shareSecret: string) {
   });
 }
 
-Deno.test("syncShareAndDir", async (test) => {
-  const keypairA = await Crypto.generateAuthorKeypair(
-    "aaaa",
-  ) as AuthorKeypair;
-  const keypairB = await Crypto.generateAuthorKeypair(
-    "bbbb",
-  ) as AuthorKeypair;
+Deno.test({
+  name: "syncShareAndDir",
+  sanitizeOps: false,
+  sanitizeResources: false,
+  fn: async (test) => {
+    const keypairA = await Crypto.generateAuthorKeypair(
+      "aaaa",
+    ) as AuthorKeypair;
+    const keypairB = await Crypto.generateAuthorKeypair(
+      "bbbb",
+    ) as AuthorKeypair;
 
-  const shareKeypair = await Crypto.generateShareKeypair("syncfstest");
-  const otherShareKeypair = await Crypto.generateShareKeypair(
-    "syncfstestother",
-  );
-
-  assert(!isErr(shareKeypair));
-  assert(!isErr(otherShareKeypair));
-
-  // Throws if the dir is dirty and there is no manifest + the option is on.
-
-  await ensureDir(TEST_DIR);
-  await emptyDir(TEST_DIR);
-  await Deno.writeTextFile(join(TEST_DIR, "dirty"), "heh");
-
-  const TEST_SHARE = shareKeypair.shareAddress;
-  const OTHER_TEST_SHARE = otherShareKeypair.shareAddress;
-
-  await test.step("can't sync a dirty folder without a manifest", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: false,
-          keypair: keypairA,
-          replica: replica,
-        });
-      },
-      EarthstarError,
-      "Tried to sync a directory for the first time, but it was not empty.",
-      "throws on trying to sync dirty folder without a manifest",
+    const shareKeypair = await Crypto.generateShareKeypair("syncfstest");
+    const otherShareKeypair = await Crypto.generateShareKeypair(
+      "syncfstestother",
     );
 
-    assertEquals(
+    assert(!isErr(shareKeypair));
+    assert(!isErr(otherShareKeypair));
+
+    // Throws if the dir is dirty and there is no manifest + the option is on.
+
+    await ensureDir(TEST_DIR);
+    await emptyDir(TEST_DIR);
+    await Deno.writeTextFile(join(TEST_DIR, "dirty"), "heh");
+
+    const TEST_SHARE = shareKeypair.shareAddress;
+    const OTHER_TEST_SHARE = otherShareKeypair.shareAddress;
+
+    await test.step("can't sync a dirty folder without a manifest", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: false,
+            keypair: keypairA,
+            replica: replica,
+          });
+        },
+        EarthstarError,
+        "Tried to sync a directory for the first time, but it was not empty.",
+        "throws on trying to sync dirty folder without a manifest",
+      );
+
+      assertEquals(
+        await syncReplicaAndFsDir({
+          allowDirtyDirWithoutManifest: true,
+          dirPath: TEST_DIR,
+          keypair: keypairA,
+          replica: replica,
+        }),
+        undefined,
+        "does not throw on trying to sync dirty folder without manifest when manually overridden",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Throws if the replica address does not match the manifest address
+
+    await test.step("can't sync a directory which was synced with another share", async () => {
+      const replica = makeReplica(TEST_SHARE, "");
+      const otherReplica = makeReplica(OTHER_TEST_SHARE, "");
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: false,
+        keypair: keypairA,
+        replica: replica,
+      });
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: false,
+            keypair: keypairA,
+            replica: otherReplica,
+          });
+        },
+        EarthstarError,
+        "Tried to sync a replica for",
+        "throws when trying to sync with a folder which had been synced with another share",
+      );
+
+      await replica.close(true);
+      await otherReplica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Throws if you try to change a file at an owned path
+    await test.step("throws when you try to change a file at someone else's owned path", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
+
+      await replica.set(keypairB, {
+        path: `/~${keypairB.address}/mine`,
+        text: "Only Keypair B can change this",
+      });
+
+      // Sync the owned doc to the fs.
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica: replica,
+      });
+
+      // This should not throw.
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica: replica,
+      });
+
+      await Deno.writeTextFile(
+        join(ownedPath, "mine"),
+        "Ho",
+      );
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica: replica,
+          });
+        },
+        EarthstarError,
+        `author ${keypairA.address} can't write to path`,
+        "trying to write a file at someone else's own path",
+      );
+
+      replica.close(true);
+
+      await emptyDir(TEST_DIR);
+
+      const replica2 = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      // Want to guard against a specific sequence of events.
+      // Which is...
+
+      // Replica sets a doc
+      await replica2.set(keypairB, {
+        path: `/~${keypairB.address}/special-case`,
+        text: "A",
+      });
+
+      // We sync it to the FS
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica: replica2,
+      });
+
+      //  Replica sets again
+      await replica2.set(keypairB, {
+        path: `/~${keypairB.address}/special-case`,
+        text: "B",
+      });
+
+      // But before syncing, we bump the modified timestamp of the file.
+      // Now we have a file which looks newer but with the old content.
+      const specialCasePath = join(
+        TEST_DIR,
+        `~${keypairB.address}`,
+        `special-case`,
+      );
+
+      const touch = Deno.run({ cmd: ["touch", specialCasePath] });
+      await touch.status();
+      touch.close();
+
+      // This shouldn't throw.
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica: replica2,
+      });
+
+      const specialContents = await Deno.readTextFile(specialCasePath);
+
+      assertEquals(
+        specialContents,
+        "B",
+        "Document at owned path is new value, even though it was modified out of order.",
+      );
+
+      await emptyDir(TEST_DIR);
+
+      await replica2.close(true);
+
+      // Test attachments
+
+      const replica3 = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await ensureDir(ownedPath);
+
+      await Deno.writeTextFile(
+        join(ownedPath, "mine.txt"),
+        "Lalala",
+      );
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica: replica3,
+          });
+        },
+        EarthstarError,
+        `author ${keypairA.address} can't write to path`,
+        "trying to write a file at someone else's own path",
+      );
+
+      await replica3.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Throws if you try to delete a file at an owned path
+    await test.step("can forcibly overwrite files at owned paths", async () => {
+      const ownedPath = join(TEST_DIR, `~${keypairB.address}/doc`);
+
+      await ensureDir(join(TEST_DIR, `~${keypairB.address}`));
+
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await Deno.writeTextFile(
+        ownedPath,
+        "Not okay!",
+      );
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica,
+          });
+        },
+        EarthstarError,
+        `author ${keypairA.address} can't write to path`,
+        "trying to modify a file at someone's else's owned path",
+      );
+
+      await replica.set(keypairB, {
+        text: "Okay",
+        path: `/~${keypairB.address}/doc`,
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+        overwriteFilesAtOwnedPaths: true,
+      });
+
+      const ownedContents = await Deno.readTextFile(ownedPath);
+
+      assertEquals(
+        ownedContents,
+        "Okay",
+        "File at owned path was forcibly overwritten.",
+      );
+
+      await Deno.remove(ownedPath);
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica,
+          });
+        },
+        EarthstarError,
+        `author ${keypairA.address} can't write to path`,
+        "trying to delete a file at someone's else's owned path",
+      );
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+        overwriteFilesAtOwnedPaths: true,
+      });
+
+      const ownedContents2 = await Deno.readTextFile(ownedPath);
+
+      assertEquals(
+        ownedContents2,
+        "Okay",
+        "File at owned path was forcibly overwritten.",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Throws if you try to delete a file at an owned path
+    await test.step("throws when you try to delete a file at someone else's owned path", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
+
+      await ensureDir(ownedPath);
+
+      const manifest: SyncFsManifest = {
+        share: TEST_SHARE,
+        entries: {
+          [`/~${keypairB.address}/mine.txt`]: {
+            fileLastSeenMs: 0,
+            path: `/~${keypairB.address}/mine.txt`,
+          },
+        },
+      };
+
+      await Deno.writeTextFile(
+        join(TEST_DIR, MANIFEST_FILE_NAME),
+        JSON.stringify(manifest),
+      );
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: false,
+            keypair: keypairA,
+            replica,
+          });
+        },
+        EarthstarError,
+        `author ${keypairA.address} can't write to path`,
+        "throws when trying to delete a file at someone's else's own path",
+      );
+
+      // Test attachments
+
+      await replica.set(keypairB, {
+        text: "A short message",
+        path: `/~${keypairB.address}/message.txt`,
+        attachment: new TextEncoder().encode("Hello"),
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+        overwriteFilesAtOwnedPaths: true,
+      });
+
+      await Deno.remove(join(TEST_DIR, `~${keypairB.address}`, "message.txt"));
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica,
+          });
+        },
+        EarthstarError,
+        `author ${keypairA.address} can't write to path`,
+        "trying to delete a file at someone's else's owned path",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Throws if a file has an invalid path
+    await test.step("throws when you write a file at an invalid path", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      const invalidPath = join(TEST_DIR, `/@invalid`);
+
+      await Deno.writeTextFile(
+        invalidPath,
+        "!",
+      );
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica,
+          });
+        },
+        EarthstarError,
+        `invalid path`,
+        "throws when trying to write an invalid path",
+      );
+
+      await emptyDir(TEST_DIR);
+
+      // Attachments
+
+      const invalidPathAttachment = join(TEST_DIR, `/@invalid.txt`);
+
+      await Deno.writeTextFile(
+        invalidPathAttachment,
+        "!",
+      );
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica,
+          });
+        },
+        EarthstarError,
+        `invalid path`,
+        "throws when trying to write an invalid path (attachment variant)",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Throws if a file is too big
+    await test.step("throws when text files are too big", async () => {
+      await Deno.writeTextFile(
+        join(TEST_DIR, "big"),
+        BIG_LOREM_IPSUM,
+      );
+
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await assertRejects(
+        () => {
+          return syncReplicaAndFsDir({
+            dirPath: TEST_DIR,
+            allowDirtyDirWithoutManifest: true,
+            keypair: keypairA,
+            replica,
+          });
+        },
+        EarthstarError,
+        `File too big for the es.5 format's text field`,
+        "throws because big.jpg is too big",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Writes from fs -> replica
+    await test.step("writes text files from the fs -> replica", async () => {
+      await Deno.writeTextFile(
+        join(TEST_DIR, "text"),
+        "A",
+      );
+
+      await ensureDir(join(TEST_DIR, "sub"));
+
+      await Deno.writeTextFile(
+        join(TEST_DIR, "sub", "text"),
+        "B",
+      );
+
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      const textDoc = await replica.getLatestDocAtPath("/text");
+
+      assert(textDoc);
+      assertEquals(textDoc?.text, "A", "Content of /text is as expected");
+
+      const subTextDoc = await replica.getLatestDocAtPath("/sub/text");
+
+      assert(subTextDoc);
+      assertEquals(
+        subTextDoc?.text,
+        "B",
+        "Content of /sub/text is as expected",
+      );
+
+      // Attachment variant
+
+      await Deno.writeTextFile(
+        join(TEST_DIR, "attachment.txt"),
+        "C",
+      );
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      const attachmentDoc = await replica.getLatestDocAtPath("/attachment.txt");
+
+      assert(attachmentDoc);
+      assertEquals(
+        attachmentDoc?.text,
+        "Document generated by filesystem sync.",
+        "Content of /attachment.txt is as expected",
+      );
+
+      const attachment = await replica.getAttachment(attachmentDoc);
+
+      assert(attachment);
+      assert(!isErr(attachment));
+      assertEquals(new TextDecoder().decode(await attachment.bytes()), "C");
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Writes docs from replica -> fs
+    await test.step("writes files from the replica -> fs", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await replica.set(keypairB, {
+        text: "A",
+        path: "/text",
+      });
+
+      await replica.set(keypairB, {
+        text: "B",
+        path: "/sub/text",
+      });
+
+      await replica.set(keypairA, {
+        text: "A short message",
+        path: "/message.txt",
+        attachment: new TextEncoder().encode("Greetings from abroad."),
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      const textContents = await Deno.readTextFile(join(TEST_DIR, "text"));
+      assertEquals(textContents, "A", "Content of /text is as expected");
+
+      const subTextContents = await Deno.readTextFile(
+        join(TEST_DIR, "sub", "text"),
+      );
+      assertEquals(
+        subTextContents,
+        "B",
+        "Content of /sub/text is as expected",
+      );
+
+      const attachmentContents = await Deno.readTextFile(
+        join(TEST_DIR, "message.txt"),
+      );
+
+      assertEquals(
+        attachmentContents,
+        "Greetings from abroad.",
+        "Content of /message.txt is as expected",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Deletes files from the FS we'd expect it to.
+    await test.step("wiped docs on replica -> deleted file on the fs", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await replica.set(keypairB, {
+        text: "A",
+        path: "/to-delete",
+      });
+
+      await replica.set(keypairB, {
+        text: "A",
+        path: "/sub/to-delete",
+      });
+
+      await replica.set(keypairB, {
+        text: "A",
+        path: "/sub2/to-delete",
+      });
+
+      await replica.set(keypairB, {
+        text: "A",
+        path: "/sub2/dont-delete",
+      });
+
+      await replica.set(keypairB, {
+        text: "A farewell message",
+        path: "/delete.txt",
+        attachment: new TextEncoder().encode("Goodbye."),
+      });
+
+      await replica.set(keypairB, {
+        text: "A message to keep",
+        path: "/keep.txt",
+        attachment: new TextEncoder().encode("Here's my number."),
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      await replica.wipeDocAtPath(keypairB, "/to-delete");
+
+      await Deno.remove(join(TEST_DIR, "sub", "to-delete"));
+
+      await replica.wipeDocAtPath(keypairB, "/sub2/to-delete");
+
+      await replica.wipeDocAtPath(keypairB, "/delete.txt");
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      await assertRejects(
+        () => {
+          return Deno.stat(join(TEST_DIR, "to-delete"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "stat /to-delete",
+      );
+
+      await assertRejects(
+        () => {
+          return Deno.stat(join(TEST_DIR, "sub", "to-delete"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "stat /sub/to-delete",
+      );
+
+      await assertRejects(
+        () => {
+          return Deno.stat(join(TEST_DIR, "sub"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        `stat /sub/ dir`,
+      );
+
+      await assertRejects(
+        () => {
+          return Deno.stat(join(TEST_DIR, "sub2", "to-delete"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "stat /sub2/to-delete",
+      );
+
+      assert(await Deno.stat(join(TEST_DIR, "sub2", "dont-delete")));
+
+      await assertRejects(
+        () => {
+          return Deno.stat(join(TEST_DIR, "delete.txt"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "stat delete.txt",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    // Wipes docs from the replica we'd expect it to.
+    await test.step("deleted files on the fs -> wiped doc on replica", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await replica.set(keypairB, {
+        text: "A",
+        path: "/to-delete",
+      });
+
+      await replica.set(keypairB, {
+        text: "Something to delete",
+        path: "/message.txt",
+        attachment: new TextEncoder().encode("Something surprising."),
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      await Deno.remove(join(TEST_DIR, "to-delete"));
+      await Deno.remove(join(TEST_DIR, "message.txt"));
+
+      await assertRejects(
+        () => {
+          return Deno.stat(join(TEST_DIR, "to-delete"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "/to-delete is gone from the fs",
+      );
+
+      await assertRejects(
+        () => {
+          return Deno.stat(join(TEST_DIR, "message.txt"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "/message.txt is gone from the fs",
+      );
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      const toDeleteDoc = await replica.getLatestDocAtPath("/to-delete");
+
+      assertEquals(toDeleteDoc?.text, "", "/to-delete was wiped");
+
+      const toDeleteAttachmentDoc = await replica.getLatestDocAtPath(
+        "/message.txt",
+      );
+
+      assertEquals(toDeleteAttachmentDoc?.text, "", "/message.txt was wiped");
+
+      // Does not delete a doc which was written to replica-side since last sync
+      await replica.set(keypairB, {
+        text: "A",
+        path: "/will-return",
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      await Deno.remove(join(TEST_DIR, "will-return"));
+
+      await replica.set(keypairB, {
+        text: "B",
+        path: "/will-return",
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      const returnedContents = await Deno.readTextFile(
+        join(TEST_DIR, "will-return"),
+      );
+
+      assertEquals(returnedContents, "B");
+
+      // Deletes docs which have expired replica-side
+
+      await replica.set(keypairB, {
+        text: "!!!",
+        path: "/!ephemeral",
+        deleteAfter: (Date.now() * 1000) + (1000 * 1000),
+      });
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      const ephemeralContents = await Deno.readTextFile(
+        join(TEST_DIR, "!ephemeral"),
+      );
+
+      assertEquals(ephemeralContents, "!!!");
+
+      await sleep(1500);
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      await assertRejects(
+        () => {
+          return Deno.readTextFile(join(TEST_DIR, "!ephemeral"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "reading ephemeral doc which should have been deleted.",
+      );
+
+      // Deletes ephemeral files without corresponding doc
+
+      await Deno.writeTextFile(join(TEST_DIR, "!ephemeral2"), "!!!");
+
+      await syncReplicaAndFsDir({
+        dirPath: TEST_DIR,
+        allowDirtyDirWithoutManifest: true,
+        keypair: keypairA,
+        replica,
+      });
+
+      const ephemeralDoc = await replica.getLatestDocAtPath("/!ephemeral2");
+      assertEquals(
+        ephemeralDoc,
+        undefined,
+        "replica does not have ephemeral doc defined from fs",
+      );
+
+      await assertRejects(
+        () => {
+          return Deno.readTextFile(join(TEST_DIR, "!ephemeral2"));
+        },
+        Deno.errors.NotFound,
+        undefined,
+        "ephemeral doc defined on fs-side is gone",
+      );
+
+      await replica.close(true);
+    });
+
+    await emptyDir(TEST_DIR);
+
+    await test.step("stores older versions of docs from the fs", async () => {
+      const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
+
+      await Deno.writeTextFile(
+        join(TEST_DIR, "wiki"),
+        "B",
+      );
+
+      await replica.set(keypairA, {
+        text: "A",
+        path: "/wiki",
+      });
+
       await syncReplicaAndFsDir({
         allowDirtyDirWithoutManifest: true,
         dirPath: TEST_DIR,
-        keypair: keypairA,
+        keypair: keypairB,
         replica: replica,
-      }),
-      undefined,
-      "does not throw on trying to sync dirty folder without manifest when manually overridden",
-    );
+      });
 
-    await replica.close(true);
-  });
+      const versions = await replica.getAllDocsAtPath("/wiki");
 
-  await emptyDir(TEST_DIR);
+      assertEquals(versions.length, 2, "There are two versions of wiki.txt");
 
-  // Throws if the replica address does not match the manifest address
+      const contents = versions.map(({ text }) => text).sort();
 
-  await test.step("can't sync a directory which was synced with another share", async () => {
-    const replica = makeReplica(TEST_SHARE, "");
-    const otherReplica = makeReplica(OTHER_TEST_SHARE, "");
+      assertEquals(
+        contents,
+        ["A", "B"],
+        "contents of versions are as expected",
+      );
 
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: false,
-      keypair: keypairA,
-      replica: replica,
+      await replica.close(true);
     });
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: false,
-          keypair: keypairA,
-          replica: otherReplica,
-        });
-      },
-      EarthstarError,
-      "Tried to sync a replica for",
-      "throws when trying to sync with a folder which had been synced with another share",
-    );
-
-    await replica.close(true);
-    await otherReplica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Throws if you try to change a file at an owned path
-  await test.step("throws when you try to change a file at someone else's owned path", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
-
-    await replica.set(keypairB, {
-      path: `/~${keypairB.address}/mine`,
-      text: "Only Keypair B can change this",
-    });
-
-    // Sync the owned doc to the fs.
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica: replica,
-    });
-
-    // This should not throw.
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica: replica,
-    });
-
-    await Deno.writeTextFile(
-      join(ownedPath, "mine"),
-      "Ho",
-    );
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica: replica,
-        });
-      },
-      EarthstarError,
-      `author ${keypairA.address} can't write to path`,
-      "trying to write a file at someone else's own path",
-    );
-
-    replica.close(true);
 
     await emptyDir(TEST_DIR);
-
-    const replica2 = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    // Want to guard against a specific sequence of events.
-    // Which is...
-
-    // Replica sets a doc
-    await replica2.set(keypairB, {
-      path: `/~${keypairB.address}/special-case`,
-      text: "A",
-    });
-
-    // We sync it to the FS
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica: replica2,
-    });
-
-    //  Replica sets again
-    await replica2.set(keypairB, {
-      path: `/~${keypairB.address}/special-case`,
-      text: "B",
-    });
-
-    // But before syncing, we bump the modified timestamp of the file.
-    // Now we have a file which looks newer but with the old content.
-    const specialCasePath = join(
-      TEST_DIR,
-      `~${keypairB.address}`,
-      `special-case`,
-    );
-
-    const touch = Deno.run({ cmd: ["touch", specialCasePath] });
-    await touch.status();
-    touch.close();
-
-    // This shouldn't throw.
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica: replica2,
-    });
-
-    const specialContents = await Deno.readTextFile(specialCasePath);
-
-    assertEquals(
-      specialContents,
-      "B",
-      "Document at owned path is new value, even though it was modified out of order.",
-    );
-
-    await emptyDir(TEST_DIR);
-
-    await replica2.close(true);
-
-    // Test attachments
-
-    const replica3 = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await ensureDir(ownedPath);
-
-    await Deno.writeTextFile(
-      join(ownedPath, "mine.txt"),
-      "Lalala",
-    );
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica: replica3,
-        });
-      },
-      EarthstarError,
-      `author ${keypairA.address} can't write to path`,
-      "trying to write a file at someone else's own path",
-    );
-
-    await replica3.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Throws if you try to delete a file at an owned path
-  await test.step("can forcibly overwrite files at owned paths", async () => {
-    const ownedPath = join(TEST_DIR, `~${keypairB.address}/doc`);
-
-    await ensureDir(join(TEST_DIR, `~${keypairB.address}`));
-
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await Deno.writeTextFile(
-      ownedPath,
-      "Not okay!",
-    );
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica,
-        });
-      },
-      EarthstarError,
-      `author ${keypairA.address} can't write to path`,
-      "trying to modify a file at someone's else's owned path",
-    );
-
-    await replica.set(keypairB, {
-      text: "Okay",
-      path: `/~${keypairB.address}/doc`,
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-      overwriteFilesAtOwnedPaths: true,
-    });
-
-    const ownedContents = await Deno.readTextFile(ownedPath);
-
-    assertEquals(
-      ownedContents,
-      "Okay",
-      "File at owned path was forcibly overwritten.",
-    );
-
-    await Deno.remove(ownedPath);
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica,
-        });
-      },
-      EarthstarError,
-      `author ${keypairA.address} can't write to path`,
-      "trying to delete a file at someone's else's owned path",
-    );
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-      overwriteFilesAtOwnedPaths: true,
-    });
-
-    const ownedContents2 = await Deno.readTextFile(ownedPath);
-
-    assertEquals(
-      ownedContents2,
-      "Okay",
-      "File at owned path was forcibly overwritten.",
-    );
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Throws if you try to delete a file at an owned path
-  await test.step("throws when you try to delete a file at someone else's owned path", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    const ownedPath = join(TEST_DIR, `~${keypairB.address}`);
-
-    await ensureDir(ownedPath);
-
-    const manifest: SyncFsManifest = {
-      share: TEST_SHARE,
-      entries: {
-        [`/~${keypairB.address}/mine.txt`]: {
-          fileLastSeenMs: 0,
-          path: `/~${keypairB.address}/mine.txt`,
-        },
-      },
-    };
-
-    await Deno.writeTextFile(
-      join(TEST_DIR, MANIFEST_FILE_NAME),
-      JSON.stringify(manifest),
-    );
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: false,
-          keypair: keypairA,
-          replica,
-        });
-      },
-      EarthstarError,
-      `author ${keypairA.address} can't write to path`,
-      "throws when trying to delete a file at someone's else's own path",
-    );
-
-    // Test attachments
-
-    await replica.set(keypairB, {
-      text: "A short message",
-      path: `/~${keypairB.address}/message.txt`,
-      attachment: new TextEncoder().encode("Hello"),
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-      overwriteFilesAtOwnedPaths: true,
-    });
-
-    await Deno.remove(join(TEST_DIR, `~${keypairB.address}`, "message.txt"));
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica,
-        });
-      },
-      EarthstarError,
-      `author ${keypairA.address} can't write to path`,
-      "trying to delete a file at someone's else's owned path",
-    );
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Throws if a file has an invalid path
-  await test.step("throws when you write a file at an invalid path", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    const invalidPath = join(TEST_DIR, `/@invalid`);
-
-    await Deno.writeTextFile(
-      invalidPath,
-      "!",
-    );
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica,
-        });
-      },
-      EarthstarError,
-      `invalid path`,
-      "throws when trying to write an invalid path",
-    );
-
-    await emptyDir(TEST_DIR);
-
-    // Attachments
-
-    const invalidPathAttachment = join(TEST_DIR, `/@invalid.txt`);
-
-    await Deno.writeTextFile(
-      invalidPathAttachment,
-      "!",
-    );
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica,
-        });
-      },
-      EarthstarError,
-      `invalid path`,
-      "throws when trying to write an invalid path (attachment variant)",
-    );
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Throws if a file is too big
-  await test.step("throws when text files are too big", async () => {
-    await Deno.writeTextFile(
-      join(TEST_DIR, "big"),
-      BIG_LOREM_IPSUM,
-    );
-
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await assertRejects(
-      () => {
-        return syncReplicaAndFsDir({
-          dirPath: TEST_DIR,
-          allowDirtyDirWithoutManifest: true,
-          keypair: keypairA,
-          replica,
-        });
-      },
-      EarthstarError,
-      `File too big for the es.5 format's text field`,
-      "throws because big.jpg is too big",
-    );
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Writes from fs -> replica
-  await test.step("writes text files from the fs -> replica", async () => {
-    await Deno.writeTextFile(
-      join(TEST_DIR, "text"),
-      "A",
-    );
-
-    await ensureDir(join(TEST_DIR, "sub"));
-
-    await Deno.writeTextFile(
-      join(TEST_DIR, "sub", "text"),
-      "B",
-    );
-
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    const textDoc = await replica.getLatestDocAtPath("/text");
-
-    assert(textDoc);
-    assertEquals(textDoc?.text, "A", "Content of /text is as expected");
-
-    const subTextDoc = await replica.getLatestDocAtPath("/sub/text");
-
-    assert(subTextDoc);
-    assertEquals(
-      subTextDoc?.text,
-      "B",
-      "Content of /sub/text is as expected",
-    );
-
-    // Attachment variant
-
-    await Deno.writeTextFile(
-      join(TEST_DIR, "attachment.txt"),
-      "C",
-    );
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    const attachmentDoc = await replica.getLatestDocAtPath("/attachment.txt");
-
-    assert(attachmentDoc);
-    assertEquals(
-      attachmentDoc?.text,
-      "Document generated by filesystem sync.",
-      "Content of /attachment.txt is as expected",
-    );
-
-    const attachment = await replica.getAttachment(attachmentDoc);
-
-    assert(attachment);
-    assert(!isErr(attachment));
-    assertEquals(new TextDecoder().decode(await attachment.bytes()), "C");
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Writes docs from replica -> fs
-  await test.step("writes files from the replica -> fs", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await replica.set(keypairB, {
-      text: "A",
-      path: "/text",
-    });
-
-    await replica.set(keypairB, {
-      text: "B",
-      path: "/sub/text",
-    });
-
-    await replica.set(keypairA, {
-      text: "A short message",
-      path: "/message.txt",
-      attachment: new TextEncoder().encode("Greetings from abroad."),
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    const textContents = await Deno.readTextFile(join(TEST_DIR, "text"));
-    assertEquals(textContents, "A", "Content of /text is as expected");
-
-    const subTextContents = await Deno.readTextFile(
-      join(TEST_DIR, "sub", "text"),
-    );
-    assertEquals(
-      subTextContents,
-      "B",
-      "Content of /sub/text is as expected",
-    );
-
-    const attachmentContents = await Deno.readTextFile(
-      join(TEST_DIR, "message.txt"),
-    );
-
-    assertEquals(
-      attachmentContents,
-      "Greetings from abroad.",
-      "Content of /message.txt is as expected",
-    );
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Deletes files from the FS we'd expect it to.
-  await test.step("wiped docs on replica -> deleted file on the fs", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await replica.set(keypairB, {
-      text: "A",
-      path: "/to-delete",
-    });
-
-    await replica.set(keypairB, {
-      text: "A",
-      path: "/sub/to-delete",
-    });
-
-    await replica.set(keypairB, {
-      text: "A",
-      path: "/sub2/to-delete",
-    });
-
-    await replica.set(keypairB, {
-      text: "A",
-      path: "/sub2/dont-delete",
-    });
-
-    await replica.set(keypairB, {
-      text: "A farewell message",
-      path: "/delete.txt",
-      attachment: new TextEncoder().encode("Goodbye."),
-    });
-
-    await replica.set(keypairB, {
-      text: "A message to keep",
-      path: "/keep.txt",
-      attachment: new TextEncoder().encode("Here's my number."),
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    await replica.wipeDocAtPath(keypairB, "/to-delete");
-
-    await Deno.remove(join(TEST_DIR, "sub", "to-delete"));
-
-    await replica.wipeDocAtPath(keypairB, "/sub2/to-delete");
-
-    await replica.wipeDocAtPath(keypairB, "/delete.txt");
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    await assertRejects(
-      () => {
-        return Deno.stat(join(TEST_DIR, "to-delete"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "stat /to-delete",
-    );
-
-    await assertRejects(
-      () => {
-        return Deno.stat(join(TEST_DIR, "sub", "to-delete"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "stat /sub/to-delete",
-    );
-
-    await assertRejects(
-      () => {
-        return Deno.stat(join(TEST_DIR, "sub"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      `stat /sub/ dir`,
-    );
-
-    await assertRejects(
-      () => {
-        return Deno.stat(join(TEST_DIR, "sub2", "to-delete"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "stat /sub2/to-delete",
-    );
-
-    assert(await Deno.stat(join(TEST_DIR, "sub2", "dont-delete")));
-
-    await assertRejects(
-      () => {
-        return Deno.stat(join(TEST_DIR, "delete.txt"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "stat delete.txt",
-    );
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  // Wipes docs from the replica we'd expect it to.
-  await test.step("deleted files on the fs -> wiped doc on replica", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await replica.set(keypairB, {
-      text: "A",
-      path: "/to-delete",
-    });
-
-    await replica.set(keypairB, {
-      text: "Something to delete",
-      path: "/message.txt",
-      attachment: new TextEncoder().encode("Something surprising."),
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    await Deno.remove(join(TEST_DIR, "to-delete"));
-    await Deno.remove(join(TEST_DIR, "message.txt"));
-
-    await assertRejects(
-      () => {
-        return Deno.stat(join(TEST_DIR, "to-delete"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "/to-delete is gone from the fs",
-    );
-
-    await assertRejects(
-      () => {
-        return Deno.stat(join(TEST_DIR, "message.txt"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "/message.txt is gone from the fs",
-    );
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    const toDeleteDoc = await replica.getLatestDocAtPath("/to-delete");
-
-    assertEquals(toDeleteDoc?.text, "", "/to-delete was wiped");
-
-    const toDeleteAttachmentDoc = await replica.getLatestDocAtPath(
-      "/message.txt",
-    );
-
-    assertEquals(toDeleteAttachmentDoc?.text, "", "/message.txt was wiped");
-
-    // Does not delete a doc which was written to replica-side since last sync
-    await replica.set(keypairB, {
-      text: "A",
-      path: "/will-return",
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    await Deno.remove(join(TEST_DIR, "will-return"));
-
-    await replica.set(keypairB, {
-      text: "B",
-      path: "/will-return",
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    const returnedContents = await Deno.readTextFile(
-      join(TEST_DIR, "will-return"),
-    );
-
-    assertEquals(returnedContents, "B");
-
-    // Deletes docs which have expired replica-side
-
-    await replica.set(keypairB, {
-      text: "!!!",
-      path: "/!ephemeral",
-      deleteAfter: (Date.now() * 1000) + (1000 * 1000),
-    });
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    const ephemeralContents = await Deno.readTextFile(
-      join(TEST_DIR, "!ephemeral"),
-    );
-
-    assertEquals(ephemeralContents, "!!!");
-
-    await sleep(1500);
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    await assertRejects(
-      () => {
-        return Deno.readTextFile(join(TEST_DIR, "!ephemeral"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "reading ephemeral doc which should have been deleted.",
-    );
-
-    // Deletes ephemeral files without corresponding doc
-
-    await Deno.writeTextFile(join(TEST_DIR, "!ephemeral2"), "!!!");
-
-    await syncReplicaAndFsDir({
-      dirPath: TEST_DIR,
-      allowDirtyDirWithoutManifest: true,
-      keypair: keypairA,
-      replica,
-    });
-
-    const ephemeralDoc = await replica.getLatestDocAtPath("/!ephemeral2");
-    assertEquals(
-      ephemeralDoc,
-      undefined,
-      "replica does not have ephemeral doc defined from fs",
-    );
-
-    await assertRejects(
-      () => {
-        return Deno.readTextFile(join(TEST_DIR, "!ephemeral2"));
-      },
-      Deno.errors.NotFound,
-      undefined,
-      "ephemeral doc defined on fs-side is gone",
-    );
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
-
-  await test.step("stores older versions of docs from the fs", async () => {
-    const replica = makeReplica(TEST_SHARE, shareKeypair.secret);
-
-    await Deno.writeTextFile(
-      join(TEST_DIR, "wiki"),
-      "B",
-    );
-
-    await replica.set(keypairA, {
-      text: "A",
-      path: "/wiki",
-    });
-
-    await syncReplicaAndFsDir({
-      allowDirtyDirWithoutManifest: true,
-      dirPath: TEST_DIR,
-      keypair: keypairB,
-      replica: replica,
-    });
-
-    const versions = await replica.getAllDocsAtPath("/wiki");
-
-    assertEquals(versions.length, 2, "There are two versions of wiki.txt");
-
-    const contents = versions.map(({ text }) => text).sort();
-
-    assertEquals(contents, ["A", "B"], "contents of versions are as expected");
-
-    await replica.close(true);
-  });
-
-  await emptyDir(TEST_DIR);
+  },
 });
 
 const BIG_LOREM_IPSUM =

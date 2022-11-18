@@ -34,13 +34,6 @@ export class ReplicaCacheIsClosedError extends EarthstarError {
   }
 }
 
-export class NotFoundError extends EarthstarError {
-  constructor(message?: string) {
-    super(message || "not found");
-    this.name = "NotFoundError";
-  }
-}
-
 /** A pub URL is bad or the network is down */
 
 export class NetworkError extends EarthstarError {
@@ -70,6 +63,14 @@ export class NotImplementedError extends EarthstarError {
   constructor(message?: string) {
     super(message || "not implemented yet");
     this.name = "NotImplementedError";
+  }
+}
+
+/** Validation failed on a document, share address, author address, etc. */
+export class NotSupportedError extends EarthstarError {
+  constructor(message?: string) {
+    super(message || "Not supported");
+    this.name = "NotSupportedError";
   }
 }
 

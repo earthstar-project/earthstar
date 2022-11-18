@@ -9,9 +9,11 @@ import { Replica } from "../replica/replica.ts";
 import { Syncer } from "../syncer/syncer.ts";
 
 import { BlockingBus } from "../streams/stream_utils.ts";
-import { PartnerWebClient } from "../syncer/partner_web_client.ts";
+import { PartnerWebServer } from "../syncer/partner_web_server.ts";
 import { PartnerLocal } from "../syncer/partner_local.ts";
 import { FormatsArg } from "../formats/format_types.ts";
+import { SyncerManager } from "../syncer/syncer_manager.ts";
+import { ISyncPartner } from "../syncer/syncer_types.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
@@ -21,12 +23,15 @@ const J = JSON.stringify;
 /** Holds many shares' replicas and manages their synchronisation with other peers. Recommended as the point of contact between your application and Earthstar shares. */
 export class Peer implements IPeer {
   private replicaEventBus = new BlockingBus<Map<ShareAddress, Replica>>();
+  private syncerManager: SyncerManager;
 
-  /** A subscribable map of the replicas stored in this peer. */
+  /** A map of the replicas stored in this peer. */
   replicaMap: Map<ShareAddress, Replica> = new Map();
 
   constructor() {
     logger.debug("constructor");
+
+    this.syncerManager = new SyncerManager(this);
   }
 
   //--------------------------------------------------
@@ -97,43 +102,31 @@ export class Peer implements IPeer {
   /**
    * Begin synchronising with a remote or local peer.
    * @param target - A HTTP URL or `Peer` instance.
-   * @param live - Whether the connection should be kept open for newly written docs, or stop after an initial sync.
+   * @param continuous - Whether the connection should be kept open for newly written docs, or stop after an initial sync.
    * @param formats - Optional. Which document formats to sync. Defaults to `es.5`.
    */
   sync<F>(
     target: IPeer | string,
-    live = false,
+    continuous = false,
     formats?: FormatsArg<F>,
   ): Syncer<undefined, F> {
     try {
-      const partner = new PartnerWebClient({
+      const partner = new PartnerWebServer({
         url: target as string,
-        mode: live ? "live" : "once",
+        appetite: continuous ? "continuous" : "once",
       });
 
-      const syncer = new Syncer({
-        partner,
-        mode: live ? "live" : "once",
-        peer: this,
-        formats,
-      });
-
-      return syncer;
+      return this.syncerManager.addPartner(partner, formats);
     } catch {
       if (target instanceof Peer) {
-        const syncer = new Syncer({
-          peer: this,
-          partner: new PartnerLocal(
-            target as IPeer,
-            this,
-            live ? "live" : "once",
-            formats,
-          ),
-          mode: live ? "live" : "once",
+        const partner = new PartnerLocal(
+          target as IPeer,
+          this,
+          continuous ? "continuous" : "once",
           formats,
-        });
+        );
 
-        return syncer;
+        return this.syncerManager.addPartner(partner, formats);
       }
 
       // This shouldn't happen.
@@ -143,6 +136,11 @@ export class Peer implements IPeer {
       );
       return undefined as never;
     }
+  }
+
+  /** Begin syncing using an instance implementing `ISyncPartner`. Use this if you don't want to sync with a local peer or a replica server. */
+  addSyncPartner<I, F>(partner: ISyncPartner<I>, formats?: FormatsArg<F>) {
+    return this.syncerManager.addPartner(partner, formats);
   }
 
   //----------------------------------------------

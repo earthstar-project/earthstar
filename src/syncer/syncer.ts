@@ -6,51 +6,34 @@ import {
 } from "../formats/util.ts";
 import { DefaultFormats, FormatsArg } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
-
-import {
-  BlockingBus,
-  CloneStream,
-  StreamSplitter,
-} from "../streams/stream_utils.ts";
+import { BlockingBus } from "../streams/stream_utils.ts";
 import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
 
 import { randomId } from "../util/misc.ts";
 import {
   ISyncPartner,
   SyncAgentEvent,
+  SyncAppetite,
   SyncerEvent,
-  SyncerMode,
   SyncerOpts,
   SyncerStatus,
 } from "./syncer_types.ts";
 import { SyncAgent } from "./sync_agent.ts";
 import { TransferManager } from "./transfer_manager.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
-import { deferred } from "../../deps.ts";
+import { AsyncQueue, deferred } from "../../deps.ts";
+import { SyncerManager } from "./syncer_manager.ts";
 
 /** Syncs the contents of a Peer's replicas with that of another peer's.  */
 export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   peer: IPeer;
   id = randomId();
+  private manager: SyncerManager;
   private partner: ISyncPartner<IncomingTransferSourceType>;
-  private outgoingEventBus = new BlockingBus<
-    SyncerEvent | { kind: "CMD_FINISHED" }
-  >();
   private syncAgents = new Map<ShareAddress, SyncAgent<FormatsType>>();
-  private mode: SyncerMode;
-  private incomingStreamCloner = new CloneStream<SyncerEvent>();
+  private syncAgentQueues = new Map<ShareAddress, AsyncQueue<SyncAgentEvent>>();
+  private appetite: SyncAppetite;
   private statusBus = new BlockingBus<SyncerStatus>();
-  private agentStreamSplitter = new StreamSplitter<SyncerEvent>((chunk) => {
-    if (
-      chunk.kind === "DISCLOSE" ||
-      chunk.kind === "SYNCER_FULFILLED" ||
-      chunk.kind === "HEARTBEAT"
-    ) {
-      return;
-    }
-
-    return chunk.to;
-  });
   private formats: FormatsArg<FormatsType>;
   private transferManager: TransferManager<
     FormatsType,
@@ -64,12 +47,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   constructor(opts: SyncerOpts<FormatsType, IncomingTransferSourceType>) {
     // Have to do this because we'll be using these values in a context where 'this' is different
     // (the streams below)
-    const { outgoingEventBus } = this;
-    const handleIncomingEvent = this.handleIncomingEvent.bind(this);
+    this.manager = opts.manager;
+    this.peer = opts.manager.peer;
+    this.appetite = opts.partner.syncAppetite;
 
-    this.peer = opts.peer;
-
-    this.mode = opts.mode;
     this.formats = getFormatsWithFallback(opts.formats);
     this.partner = opts.partner;
 
@@ -85,64 +66,25 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     });
 
     this.heartbeatInterval = setInterval(() => {
-      this.outgoingEventBus.send({ kind: "HEARTBEAT" });
+      this.partner.sendEvent({ kind: "HEARTBEAT" });
     }, 1000);
 
-    // Create a new readable stream which is subscribed to events from this syncer.
-    // Pipe it to the outgoing stream to the other peer.
-    const outgoingStream = new ReadableStream({
-      start(controller) {
-        outgoingEventBus.on((event) => {
-          if (event.kind === "CMD_FINISHED") {
-            controller.close();
-            return;
-          }
-
-          controller.enqueue(event);
-        });
-      },
-    });
-
-    outgoingStream.pipeTo(opts.partner.writable).catch(() => {
-      // We'll abort the signal eventually, so we catch that here.
-    });
-
-    // Create a sink to handle incoming events, pipe the readable into that
-    opts.partner.readable.pipeTo(this.incomingStreamCloner.writable).catch(
-      (err) => {
-        // HERE... websocket passing out
-        this.cancel(err);
-      },
-    );
-
-    const incomingClone = this.incomingStreamCloner.getReadableStream();
-
-    incomingClone.pipeTo(
-      new WritableStream({
-        async write(event) {
-          await handleIncomingEvent(event);
-        },
-      }),
-    ).catch((err) => {
-      this.cancel(err);
-    });
-
-    const incomingCloneForAgents = this.incomingStreamCloner
-      .getReadableStream();
-
-    // TODO: This cloner pipes all events, so if a replica is removed and re-added to a peer, it will get events intended for a previous sync agent. Which shouldn't be a problem, but it'd be better if it didn't.
-    incomingCloneForAgents.pipeTo(this.agentStreamSplitter.writable).catch(
-      (err) => {
-        this.cancel(err);
-      },
-    );
+    (async () => {
+      try {
+        for await (const event of opts.partner.getEvents()) {
+          this.handleIncomingEvent(event);
+        }
+      } catch {
+        this.cancel("Partner disconnected");
+      }
+    })();
 
     // Send off a salted handshake event
     const salt = randomId();
     Promise.all(
       this.peer.shares().map((ws) => saltAndHashShare(salt, ws)),
     ).then((saltedShares) => {
-      outgoingEventBus.send({
+      this.partner.sendEvent({
         kind: "DISCLOSE",
         salt,
         syncerId: this.id,
@@ -154,20 +96,24 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     });
 
     this.transferManager.transfersRequestedByUsFinished().then(async () => {
-      await this.outgoingEventBus.send({
+      if (opts.partner.syncAppetite === "continuous") {
+        return;
+      }
+
+      await this.partner.sendEvent({
         kind: "SYNCER_FULFILLED",
       });
-    });
 
-    this.partnerIsFulfilled.then(async () => {
-      await this.transferManager.transfersRequestedByUsFinished();
+      await this.partnerIsFulfilled;
 
       clearInterval(this.heartbeatInterval);
-      await this.outgoingEventBus.send({ kind: "CMD_FINISHED" });
+
+      await this.partner.closeConnection();
+
       this.isDoneMultiDeferred.resolve();
     });
 
-    // TODO: What do we do when transfers change?
+    // TODO: What do we do when held replicas change?
     // This should not be permitted during 'once' mode...
     /*
     this.peer.onReplicasChange(() => {
@@ -192,6 +138,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private addShare(
     address: string,
     formats: FormatsArg<FormatsType>,
+    initiateMessaging: boolean,
   ) {
     // Bail if we already have a sync agent for this share.
     if (this.syncAgents.has(address)) {
@@ -209,9 +156,13 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     const agent = new SyncAgent({
       replica,
-      mode: this.mode === "once" ? "only_existing" : "live",
       formats,
+      syncerManager: this.manager,
       transferManager: this.transferManager,
+      initiateMessaging: initiateMessaging,
+      payloadThreshold: this.partner.payloadThreshold,
+      rangeDivision: this.partner.rangeDivision,
+      syncAppetite: this.appetite,
     });
 
     agent.onStatusUpdate(() => {
@@ -219,59 +170,39 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     });
 
     this.syncAgents.set(address, agent);
-
-    // Have to do this because we'll be using these values in a context where 'this' is different
-    // (the streams below)
-    const { outgoingEventBus } = this;
-
-    // Pipe the agent's outgoing events into our event bus so they'll be sent out.
-    agent.readable.pipeTo(
-      new WritableStream({
-        async write(event) {
-          await outgoingEventBus.send({
-            ...event,
-            to: replica.share,
-          });
-        },
-      }),
-    ).then(() => {
-      // Sticking a pin here 'cos it's handy.
-      // The sync agent will finish here if in 'only_existing' mode.
-    });
-
-    const incomingFilteredEvents = this.agentStreamSplitter.getReadable(
-      replica.share,
-    );
-
-    incomingFilteredEvents.pipeThrough(
-      new TransformStream<SyncerEvent, SyncAgentEvent>({
-        transform(event, controller) {
-          switch (event.kind) {
-            case "DISCLOSE":
-            case "SYNCER_FULFILLED":
-            case "HEARTBEAT":
-              break;
-            default: {
-              if (event.to === replica.share) {
-                const { to: _to, ...agentEvent } = event;
-                controller.enqueue(agentEvent);
-                break;
-              }
-            }
-          }
-        },
-      }),
-    ).pipeTo(agent.writable).catch((err) => {
-      this.cancel(err);
-    });
-
     this.transferManager.registerSyncAgent(agent);
+
+    const existingQueue = this.syncAgentQueues.get(address);
+    let queueToUse: AsyncQueue<SyncAgentEvent>;
+
+    if (!existingQueue) {
+      const queue = new AsyncQueue<SyncAgentEvent>();
+      queueToUse = queue;
+      this.syncAgentQueues.set(address, queue);
+    } else {
+      queueToUse = existingQueue;
+    }
+
+    (async () => {
+      for await (const incomingEvent of queueToUse) {
+        agent.sendEvent(incomingEvent);
+      }
+    })();
+
+    (async () => {
+      for await (const event of agent.events()) {
+        this.partner.sendEvent({
+          to: address,
+          ...event,
+        });
+      }
+    })();
   }
 
   /** Handle inbound events from the other peer. */
   private async handleIncomingEvent(event: SyncerEvent) {
-    // Handle an incoming salted handsake
     switch (event.kind) {
+      // Handle an incoming salted handsake
       case "DISCLOSE": {
         const intersectingFormats = getFormatIntersection(
           event.formats,
@@ -294,15 +225,17 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           }
         }
 
+        const initiateMessaging = this.id > event.syncerId;
+
         for (const share of commonShareSet) {
-          this.addShare(share, intersectingFormats);
+          this.addShare(share, intersectingFormats, initiateMessaging);
         }
 
         this.transferManager.registerOtherSyncerId(event.syncerId);
         this.transferManager.allSyncAgentsKnown();
 
-        if (commonShareSet.size === 0 && this.mode === "once") {
-          this.outgoingEventBus.send({
+        if (commonShareSet.size === 0 && this.appetite === "once") {
+          this.partner.sendEvent({
             "kind": "SYNCER_FULFILLED",
           });
         }
@@ -311,6 +244,28 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       }
       case "SYNCER_FULFILLED": {
         this.partnerIsFulfilled.resolve();
+        break;
+      }
+      case "HEARTBEAT": {
+        break;
+      }
+
+      // Pass on to the sync agent.
+
+      default: {
+        // Get the share address;
+        const { to } = event;
+
+        const agentQueue = this.syncAgentQueues.get(to);
+
+        if (!agentQueue) {
+          const queue = new AsyncQueue<SyncAgentEvent>();
+          queue.push(event);
+          this.syncAgentQueues.set(to, queue);
+          break;
+        }
+
+        agentQueue.push(event);
       }
     }
   }
@@ -345,6 +300,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
     clearInterval(this.heartbeatInterval);
 
     this.transferManager.cancel();
+
+    await this.partner.closeConnection();
   }
 
   // externally callable... to get a readable...
@@ -358,10 +315,26 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       kind: "upload" | "download";
     },
   ) {
+    if (this.isDoneMultiDeferred.state === "rejected") {
+      return;
+    }
+
     const replica = this.peer.getReplica(shareAddress);
 
     if (!replica) {
       return;
+    }
+
+    let counterpartId = "unused";
+
+    if (kind === "upload") {
+      // Someone is uploading to us...
+      // Get their counterpart Id.
+      const agent = this.syncAgents.get(shareAddress);
+
+      if (agent) {
+        counterpartId = agent.counterpartId;
+      }
     }
 
     return this.transferManager.handleTransferRequest(
@@ -372,11 +345,12 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         kind,
         path,
         source,
+        counterpartId,
       },
     );
   }
 
-  /** If the syncer was configured with the `mode: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
+  /** If the syncer was configured with the `appetite: 'once'`, this promise will resolve when all the partner's existing documents and attachments have synchronised. */
   isDone() {
     return this.isDoneMultiDeferred.getPromise();
   }

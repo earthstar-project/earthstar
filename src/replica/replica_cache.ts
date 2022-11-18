@@ -181,12 +181,12 @@ export class ReplicaCache {
 
     this.replica.getEventStream("*").pipeTo(
       new WritableStream({
-        write(event) {
+        async write(event) {
           if (
             event.kind === "attachment_ingest" || event.kind === "success" ||
             event.kind === "expire"
           ) {
-            onReplicaEvent(event);
+            await onReplicaEvent(event);
           }
         },
       }),
@@ -613,7 +613,7 @@ export class ReplicaCache {
     AttachmentCacheEntry<any>
   >();
 
-  private onReplicaEvent(
+  private async onReplicaEvent(
     event:
       | ExpireEvent<DocBase<string>>
       | IngestEventSuccess<DocBase<string>>
@@ -628,20 +628,19 @@ export class ReplicaCache {
     }
 
     // Update cache
-    this.replica.getAttachment(event.doc, cacheEntry.format).then((res) => {
-      // Update cache
+    const res = await this.replica.getAttachment(event.doc, cacheEntry.format);
 
-      this.attachmentCache.set(
-        cacheKey,
-        {
-          expires: Date.now() + this.timeToLive,
-          attachment: res,
-          format: cacheEntry.format,
-        },
-      );
+    // Update cache
+    this.attachmentCache.set(
+      cacheKey,
+      {
+        expires: Date.now() + this.timeToLive,
+        attachment: res,
+        format: cacheEntry.format,
+      },
+    );
 
-      this.fireOnCacheUpdateds();
-    });
+    this.fireOnCacheUpdateds();
   }
 
   getAttachment<F = DefaultFormat>(
@@ -680,6 +679,10 @@ export class ReplicaCache {
 
           this.fireOnCacheUpdateds();
         });
+      }
+
+      if (doc.deleteAfter && Date.now() * 1000 > doc.deleteAfter) {
+        return new ValidationError("This document has expired");
       }
 
       return cachedResult.attachment;
