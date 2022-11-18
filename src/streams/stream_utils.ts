@@ -527,7 +527,11 @@ export function websocketReadable<
           return;
         }
 
-        controller.close();
+        try {
+          controller.close();
+        } catch {
+          // The stream was probably closed by something else already.
+        }
       };
 
       socket.onerror = (err) => {

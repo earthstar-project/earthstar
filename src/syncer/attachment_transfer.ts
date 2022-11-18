@@ -20,14 +20,13 @@ export class AttachmentTransfer<F> {
   private sourceDoc: DocBase<string>;
   private statusBus = new BlockingBus<AttachmentTransferProgressEvent>();
   private transferOp = deferred<() => Promise<void>>();
+  private abortCb: () => void;
 
   private multiDeferred = new MultiDeferred();
 
   hash: string;
 
   requester: "us" | "them";
-
-  private abortController = new AbortController();
 
   constructor(
     { stream, replica, doc, format, requester, counterpartId }:
@@ -55,9 +54,19 @@ export class AttachmentTransfer<F> {
       // pipe through our bytes counter
       this.kind = "download";
 
+      let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+
+      this.abortCb = () => {
+        if (reader) {
+          reader.cancel();
+        } else {
+          stream.cancel();
+        }
+      };
+
       const counterStream = new ReadableStream<Uint8Array>({
         async start(controller) {
-          const reader = stream.getReader();
+          reader = stream.getReader();
 
           while (true) {
             const { done, value } = await reader.read();
@@ -102,6 +111,10 @@ export class AttachmentTransfer<F> {
       });
     } else {
       this.kind = "upload";
+
+      this.abortCb = () => {
+        stream.abort();
+      };
 
       replica.getAttachment(doc, format).then(async (attachmentRes) => {
         if (!attachmentRes) {
@@ -202,7 +215,7 @@ export class AttachmentTransfer<F> {
   }
 
   abort() {
-    this.abortController.abort();
+    this.abortCb();
   }
 
   isDone() {
