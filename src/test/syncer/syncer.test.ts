@@ -418,7 +418,7 @@ Deno.test({
 
           // Check that that things have synced... eventually.
           await new Promise((res) => {
-            setTimeout(res, 500);
+            setTimeout(res, 800);
           });
 
           try {

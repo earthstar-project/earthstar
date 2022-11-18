@@ -149,7 +149,6 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
   async teardown() {
     const server = await this.server;
     server.close();
-    return sleep(500);
   }
 }
 
