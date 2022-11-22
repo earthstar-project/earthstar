@@ -201,7 +201,7 @@ export let globToQueryAndRegex = (
  * `path`, `pathStartsWith` or `pathEndsWith` in your moreQueryOptions unless you
  * intend to override the glob's query.
  */
-export async function queryByGlobAsync<F = DefaultFormats>(
+export async function queryByGlob<F = DefaultFormats>(
   replica: Replica,
   glob: string,
   moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
@@ -480,14 +480,14 @@ export let insertVariablesIntoTemplate = (
  * You can get the variables out of your document paths like this:
  *
  *      let template = '/posts/{postId}.json';
- *      let docs = await queryByTemplateAsync(myReplica, template);
+ *      let docs = await queryByTemplate(myReplica, template);
  *      for (let doc of docs) {
  *          // vars will be like { postId: 'abc' }
  *          let vars = extractTemplateVariablesFromPath(template, doc.path);
  *      }
  */
 
-export async function queryByTemplateAsync<F = DefaultFormats>(
+export async function queryByTemplate<F = DefaultFormats>(
   replica: Replica,
   template: string,
   moreQueryOptions: Omit<Query<[string]>, "formats"> = {},

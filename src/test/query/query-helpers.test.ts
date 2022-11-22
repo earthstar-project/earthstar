@@ -22,8 +22,8 @@ import {
   globToQueryAndRegex,
   insertVariablesIntoTemplate,
   parseTemplate,
-  queryByGlobAsync,
-  queryByTemplateAsync,
+  queryByGlob,
+  queryByTemplate,
 } from "../../query/query-helpers.ts";
 import { DocDriverScenario, Scenario } from "../scenarios/types.ts";
 import { docDriverScenarios } from "../scenarios/scenarios.ts";
@@ -421,7 +421,7 @@ let runQueryHelpersTests = async (
     },
   ];
 
-  await test.step(SUBTEST_NAME + ": queryByGlobAsync", async () => {
+  await test.step(SUBTEST_NAME + ": queryByGlob", async () => {
     let share = "+gardening.abcde";
     let storage = makeStorage(share);
     let now = microsecondNow();
@@ -438,7 +438,7 @@ let runQueryHelpersTests = async (
     for (let vector of globQueryVectors) {
       let { glob, expectedPaths } = vector;
 
-      let docs = await queryByGlobAsync(storage, glob);
+      let docs = await queryByGlob(storage, glob);
       let actualPaths = docs.map((doc) => doc.path);
 
       actualPaths.sort();
@@ -453,7 +453,7 @@ let runQueryHelpersTests = async (
         `glob: ${glob} should match ${expectedPaths.length} paths.${note}`,
       );
 
-      let docsLimit2 = await queryByGlobAsync(storage, glob, { limit: 1 });
+      let docsLimit2 = await queryByGlob(storage, glob, { limit: 1 });
       assert(docsLimit2.length <= 1, "limit was applied");
     }
 
@@ -832,7 +832,7 @@ let runQueryHelpersTests = async (
     },
   ];
 
-  await test.step(SUBTEST_NAME + ": queryByTemplateAsyncSync", async () => {
+  await test.step(SUBTEST_NAME + ": queryByTemplate", async () => {
     let share = "+gardening.abcde";
     let storage = makeStorage(share);
     let now = microsecondNow();
@@ -848,7 +848,7 @@ let runQueryHelpersTests = async (
 
     for (let vector of templateQueryVectors) {
       let { template, expectedPaths } = vector;
-      let docs = await queryByTemplateAsync(storage, template);
+      let docs = await queryByTemplate(storage, template);
       let actualPaths = docs.map((doc) => doc.path);
 
       actualPaths.sort();
