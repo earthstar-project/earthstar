@@ -23,7 +23,7 @@ const result = await esbuild.build({
     denoPlugin(),
   ],
   entryPoints: ["./mod.browser.ts"],
-  outfile: "./dist/earthstar.web.js",
+  outfile: `./dist/earthstar${version ? `-${version}` : ""}.web.js`,
   bundle: true,
   format: "esm",
   platform: "browser",
