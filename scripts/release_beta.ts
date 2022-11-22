@@ -75,7 +75,7 @@ if (proceed) {
   await run(["git", "push", "origin", nextTag]);
 
   console.log("Publishing to NPM...");
-  await run(["npm", "publish", "./npm", "--tag", "alpha"]);
+  await run(["npm", "publish", "./npm", "--tag", "beta"]);
 
   console.groupEnd();
 

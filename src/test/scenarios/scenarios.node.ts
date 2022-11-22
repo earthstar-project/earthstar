@@ -26,6 +26,7 @@ import { AttachmentDriverFilesystem } from "../../replica/attachment_drivers/fil
 import { deferred } from "../../../deps.ts";
 import { SyncAppetite } from "../../syncer/syncer_types.ts";
 import getPort from "https://esm.sh/get-port@5.1.1";
+import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -74,6 +75,8 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
   appetite: SyncAppetite;
 
   constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
+    setGlobalCryptoDriver(CryptoDriverChloride);
+
     this.formats = formats;
 
     this.appetite = appetite;

@@ -116,7 +116,10 @@ export class AttachmentTransfer<F> {
       this.kind = "upload";
 
       this.abortCb = () => {
-        stream.abort();
+        stream.abort().catch(() => {
+          // Node doesn't let you abort a locked writablestream (wrong)
+          // https://github.com/nodejs/node/issues/41159
+        });
       };
 
       replica.getAttachment(doc, format).then(async (attachmentRes) => {

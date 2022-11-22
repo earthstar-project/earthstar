@@ -519,7 +519,11 @@ export function websocketReadable<
       socket.onmessage = (event) => {
         const toQueue = prepareForQueue(event as unknown as MessageEvent);
 
-        controller.enqueue(toQueue);
+        try {
+          controller.enqueue(toQueue);
+        } catch {
+          // The stream was probably closed by something else.
+        }
       };
 
       socket.onclose = () => {

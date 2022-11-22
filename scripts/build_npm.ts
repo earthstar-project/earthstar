@@ -78,7 +78,7 @@ await build({
       version: "2.4.1",
     },
 
-    "./src/crypto/default_driver.ts": "./src/crypto/default_driver.node.ts",
+    "./src/crypto/default_driver.ts": "./src/crypto/default_driver.npm.ts",
 
     "./src/replica/driver_fs.ts": "./src/replica/driver_fs.node.ts",
     "https://esm.sh/better-sqlite3?dts": {
