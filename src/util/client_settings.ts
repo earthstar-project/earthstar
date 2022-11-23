@@ -245,6 +245,11 @@ export class ClientSettings {
 
     const serversKey = makeStorageKey(SERVERS_KEY, this.namespace);
     this.storage.setItem(serversKey, JSON.stringify([]));
+
+    this.fireAuthorEvent();
+    this.fireSharesEvent();
+    this.fireSecretsEvent();
+    this.fireServersEvent();
   }
 
   private authorChangedCbs = new Set<(keypair: AuthorKeypair | null) => void>();
