@@ -129,17 +129,17 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
         appetite: this.appetite,
       });
 
-      const serverSyncer = peerB.addSyncPartner(partner);
+      const serverSyncer = peerB.addSyncPartner(partner, "Test web client");
 
       serverSyncerPromise.resolve(serverSyncer as Syncer<WebSocket, F>);
     });
 
-    const clientPartner = new PartnerWebServer({
+    const serverPartner = new PartnerWebServer({
       url: `ws://localhost:${port}`,
       appetite: this.appetite,
     });
 
-    const clientSyncer = peerA.addSyncPartner(clientPartner);
+    const clientSyncer = peerA.addSyncPartner(serverPartner, "Test web server");
 
     const serverSyncer = await serverSyncerPromise;
 

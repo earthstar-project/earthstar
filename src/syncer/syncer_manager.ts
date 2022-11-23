@@ -24,7 +24,10 @@ type DocThumbnailHashToDocLookup = Record<
 
 export class SyncerManager {
   /** A map of syncer IDs to syncers  */
-  private syncers = new Map<string, Syncer<unknown, unknown>>();
+  private syncers = new Map<
+    string,
+    { description: string; syncer: Syncer<unknown, unknown> }
+  >();
 
   peer: IPeer;
 
@@ -34,6 +37,7 @@ export class SyncerManager {
 
   addPartner<I, F>(
     partner: ISyncPartner<I>,
+    description: string,
     formats?: FormatsArg<F>,
   ): Syncer<I, F> {
     // Add a new syncer with a given partner config.
@@ -43,9 +47,20 @@ export class SyncerManager {
       formats,
     });
 
-    this.syncers.set(syncer.id, syncer);
+    this.syncers.set(syncer.id, { syncer, description });
 
     return syncer;
+  }
+
+  /** Returns a record of syncers with their given descriptions as keys. */
+  getSyncers() {
+    const acc: Record<string, Syncer<unknown, unknown>> = {};
+
+    for (const { description, syncer } of this.syncers.values()) {
+      acc[description] = syncer;
+    }
+
+    return acc;
   }
 
   // INITIAL SYNC (range-based set reconciliation)

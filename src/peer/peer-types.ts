@@ -33,8 +33,11 @@ export interface IPeer {
 
   addSyncPartner<I, F>(
     partner: ISyncPartner<I>,
+    description: string,
     formats?: FormatsArg<F>,
   ): Syncer<unknown, F>;
+
+  getSyncers(): Record<string, Syncer<unknown, unknown>>;
 
   onReplicasChange(
     callback: (map: Map<ShareAddress, Replica>) => void | Promise<void>,

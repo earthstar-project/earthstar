@@ -52,7 +52,7 @@ export class SyncScenarioLocal<F> implements SyncPartnerScenario<F> {
   setup(peerA: IPeer, peerB: IPeer) {
     const partner = new PartnerLocal(peerB, peerA, this.appetite, this.formats);
 
-    const syncerA = peerA.addSyncPartner(partner);
+    const syncerA = peerA.addSyncPartner(partner, "Test local");
 
     return Promise.resolve(
       [syncerA, partner.partnerSyncer] as [

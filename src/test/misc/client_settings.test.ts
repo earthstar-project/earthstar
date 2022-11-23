@@ -4,9 +4,12 @@ import { ClientSettings } from "../../util/client_settings.ts";
 import { isErr, notErr } from "../../util/errors.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
+import { Replica } from "../../replica/replica.ts";
+import { ReplicaDriverMemory } from "../../replica/driver_memory.ts";
 
 Deno.test({
   name: "ClientSettings",
+  // Don't run this on Node where it'll implode.
   ignore: isNode,
   fn: async (test) => {
     const settings = new ClientSettings();
@@ -16,6 +19,9 @@ Deno.test({
     ) as ShareKeypair;
     const shareBKeypair = await Crypto.generateShareKeypair(
       "bananas",
+    ) as ShareKeypair;
+    const shareCKeypair = await Crypto.generateShareKeypair(
+      "coconuts",
     ) as ShareKeypair;
 
     await test.step("Initial values", () => {
@@ -122,6 +128,34 @@ Deno.test({
 
       // Can't remove an invalid URL
       assert(isErr(settings.removeServer("blaaaaa")));
+    });
+
+    await test.step("Managed peer", async () => {
+      const { peer } = settings.getPeer({
+        sync: false,
+        onCreateReplica: (addr, secret) =>
+          new Replica({
+            driver: new ReplicaDriverMemory(addr),
+            shareSecret: secret,
+          }),
+      });
+
+      assertEquals(peer.shares(), [
+        shareAKeypair.shareAddress,
+        shareBKeypair.shareAddress,
+      ]);
+
+      settings.addShare(shareCKeypair.shareAddress);
+
+      assertEquals(peer.shares(), [
+        shareAKeypair.shareAddress,
+        shareBKeypair.shareAddress,
+        shareCKeypair.shareAddress,
+      ]);
+
+      for (const replica of peer.replicas()) {
+        await replica.close(true);
+      }
     });
 
     settings.clear();

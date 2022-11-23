@@ -156,7 +156,7 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
 
       const partner = new PartnerWebClient({ socket, appetite: this.appetite });
 
-      const serverSyncer = peerB.addSyncPartner(partner);
+      const serverSyncer = peerB.addSyncPartner(partner, "Test web client");
 
       serverSyncerPromise.resolve(serverSyncer as Syncer<WebSocket, F>);
 
@@ -180,7 +180,10 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
 
     const serverSyncer = await serverSyncerPromise;
 
-    const clientSyncer = peerA.addSyncPartner(clientPartner);
+    const clientSyncer = peerA.addSyncPartner(
+      clientPartner,
+      "Test web partner",
+    );
 
     return Promise.resolve(
       [clientSyncer, serverSyncer] as [

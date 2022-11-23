@@ -3,6 +3,9 @@ import { Crypto } from "../crypto/crypto.ts";
 import { AuthorKeypair } from "../crypto/crypto-types.ts";
 import { ShareAddress } from "./doc-types.ts";
 import { isErr, ValidationError } from "./errors.ts";
+import { Replica } from "../replica/replica.ts";
+import { Peer } from "../peer/peer.ts";
+import { ConfigEs5 } from "../formats/format_es5.ts";
 
 const EARTHSTAR_KEY = "earthstar";
 const AUTHOR_KEY = "current_author";
@@ -32,44 +35,27 @@ export class ClientSettings {
       this.storage = sessionStorage;
     }
 
+    // Deno and Node don't know about the storage event yet
+    // So this is just for cross-browser tab changes.
     addEventListener("storage", (event) => {
-      // Deno doesn't know about the storage event yet
       const changedKey = (event as any).key;
 
       switch (changedKey) {
         case makeStorageKey(AUTHOR_KEY, this.namespace): {
-          const author = this.author;
-
-          for (const cb of this.authorChangedCbs) {
-            cb(author);
-          }
-
+          this.fireAuthorEvent();
           break;
         }
         case makeStorageKey(SHARES_KEY, this.namespace): {
-          const shares = this.shares;
-
-          for (const cb of this.sharesChangedCbs) {
-            cb(shares);
-          }
+          this.fireSharesEvent();
 
           break;
         }
         case makeStorageKey(SHARE_SECRETS_KEY, this.namespace): {
-          const secrets = this.shareSecrets;
-
-          for (const cb of this.shareSecretsChangedCbs) {
-            cb(secrets);
-          }
-
+          this.fireSecretsEvent();
           break;
         }
         case makeStorageKey(SERVERS_KEY, this.namespace): {
-          const servers = this.servers;
-
-          for (const cb of this.serversChangedCbs) {
-            cb(servers);
-          }
+          this.fireServersEvent();
 
           break;
         }
@@ -95,6 +81,8 @@ export class ClientSettings {
     const key = makeStorageKey(AUTHOR_KEY, this.namespace);
 
     this.storage.setItem(key, JSON.stringify(keypair));
+
+    this.fireAuthorEvent();
   }
 
   // Shares
@@ -117,6 +105,8 @@ export class ClientSettings {
     const nextShares = Array.from(nextSharesSet);
     this.storage.setItem(key, JSON.stringify(nextShares));
 
+    this.fireSharesEvent();
+
     return nextShares;
   }
 
@@ -135,6 +125,9 @@ export class ClientSettings {
     const key = makeStorageKey(SHARES_KEY, this.namespace);
 
     this.storage.setItem(key, JSON.stringify(shares));
+
+    this.fireSharesEvent();
+
     return shares;
   }
 
@@ -163,6 +156,7 @@ export class ClientSettings {
     const nextSecrets = { ...this.shareSecrets, [shareAddress]: secret };
 
     this.storage.setItem(key, JSON.stringify(nextSecrets));
+    this.fireSecretsEvent();
     return nextSecrets;
   }
 
@@ -179,6 +173,8 @@ export class ClientSettings {
     delete nextSecrets[shareAddress];
 
     this.storage.setItem(key, JSON.stringify(nextSecrets));
+
+    this.fireSecretsEvent();
 
     return nextSecrets;
   }
@@ -202,6 +198,8 @@ export class ClientSettings {
 
       const key = makeStorageKey(SERVERS_KEY, this.namespace);
       this.storage.setItem(key, JSON.stringify(nextServers));
+
+      this.fireServersEvent();
 
       return nextServers;
     } catch {
@@ -227,6 +225,8 @@ export class ClientSettings {
       const key = makeStorageKey(SERVERS_KEY, this.namespace);
 
       this.storage.setItem(key, JSON.stringify(servers));
+
+      this.fireServersEvent();
       return servers;
     } catch {
       return new ValidationError("Not a valid URL");
@@ -249,7 +249,7 @@ export class ClientSettings {
 
   private authorChangedCbs = new Set<(keypair: AuthorKeypair | null) => void>();
 
-  onCurrentAuthorChanged(cb: (keypair: AuthorKeypair | null) => void) {
+  onAuthorChanged(cb: (keypair: AuthorKeypair | null) => void) {
     this.authorChangedCbs.add(cb);
 
     return () => {
@@ -287,6 +287,157 @@ export class ClientSettings {
     return () => {
       this.serversChangedCbs.delete(cb);
     };
+  }
+
+  /** Get a new `Peer` preconfigured with shares, secrets, and syncers derived from these settings.
+   *
+   * When settings are updated, the peer's replicas and syncers will be updated too.
+   */
+  getPeer(
+    { sync, onCreateReplica }: {
+      /** Whether to start syncing using the settings' servers. */
+      sync: "once" | "continuous" | false;
+      /** Used to create replicas when a new share is added to settings. */
+      onCreateReplica: (addr: ShareAddress, secret?: string) => Replica;
+    },
+  ): {
+    /** A preconfigured Peer. */
+    peer: Peer;
+    /** Stop changes to ClientSettings from propagating to the Peer. */
+    unsubscribeFromSettings: () => void;
+  } {
+    const peer = new Peer();
+
+    // Get all shares
+    const shares = this.shares;
+
+    // Add ones for those we do
+    for (const share of shares) {
+      const replica = onCreateReplica(share, this.shareSecrets[share]);
+      peer.addReplica(replica);
+    }
+
+    // Listen for share events
+    const unsubSharesChanged = this.onSharesChanged((newShares) => {
+      const existingShares = peer.shares();
+
+      for (const share of existingShares) {
+        if (!newShares.includes(share)) {
+          peer.removeReplicaByShare(share);
+        }
+      }
+
+      for (const share of newShares) {
+        if (!existingShares.includes(share)) {
+          const replica = onCreateReplica(share, this.shareSecrets[share]);
+          peer.addReplica(replica);
+        }
+      }
+    });
+
+    // Secrets
+
+    // Listen for secret events
+    const unsubSecretsChanged = this.onShareSecretsChanged((newSecrets) => {
+      // We know that we can't add a secret without adding the share first.
+      const existingShares = peer.shares();
+      const nextShares = Object.keys(newSecrets);
+
+      for (const share of existingShares) {
+        // If the secret was removed, re-add the share's replica without the secret.
+        if (!nextShares.includes(share)) {
+          peer.removeReplicaByShare(share);
+          const replica = onCreateReplica(share);
+          peer.addReplica(replica);
+        }
+      }
+
+      for (const share of nextShares) {
+        // If the secret was added, remove the old replica and add the new one with a secret
+
+        // But only if the share doesn't have a secret yet.
+        const existingReplica = peer.getReplica(share);
+        if (
+          existingReplica?.formatsConfig["es.5"] &&
+          (existingReplica.formatsConfig["es.5"] as ConfigEs5)["shareSecret"]
+        ) {
+          return;
+        }
+
+        peer.removeReplicaByShare(share);
+        const replica = onCreateReplica(share, newSecrets[share]);
+        peer.addReplica(replica);
+      }
+    });
+
+    // Servers
+
+    // Add syncers for each server
+    if (sync) {
+      for (const server of this.servers) {
+        peer.sync(server, sync === "continuous");
+      }
+    }
+
+    // Listen for server events
+    const unsubServersChanged = this.onServersChanged((newServers) => {
+      if (sync) {
+        // Remove syncers no longer in the new list
+        const syncers = peer.getSyncers();
+
+        for (const existingServer in syncers) {
+          if (!newServers.includes(existingServer)) {
+            syncers[existingServer].cancel();
+          }
+        }
+
+        // Add syncers for servers not in the list yet.
+        for (const newServer of newServers) {
+          peer.sync(newServer, sync === "continuous");
+        }
+      }
+    });
+
+    const unsubscribeFromSettings = () => {
+      // Unsub.
+      unsubSharesChanged();
+      unsubSecretsChanged();
+      unsubServersChanged();
+    };
+
+    return { peer, unsubscribeFromSettings };
+  }
+
+  private fireAuthorEvent() {
+    const author = this.author;
+
+    for (const cb of this.authorChangedCbs) {
+      cb(author);
+    }
+  }
+
+  private fireSharesEvent() {
+    const shares = this.shares;
+
+    for (const cb of this.sharesChangedCbs) {
+      cb(shares);
+    }
+  }
+
+  private fireSecretsEvent() {
+    const secrets = this.shareSecrets;
+
+    for (const cb of this.shareSecretsChangedCbs) {
+      cb(secrets);
+    }
+  }
+
+  private fireServersEvent() {
+    const servers = this.servers;
+
+    for (const cb of this.serversChangedCbs) {
+      cb(servers);
+    }
   }
 }
 
