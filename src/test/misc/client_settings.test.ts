@@ -153,6 +153,20 @@ Deno.test({
         shareCKeypair.shareAddress,
       ]);
 
+      settings.addSecret(shareCKeypair.shareAddress, shareCKeypair.secret);
+
+      const replicaC = peer.getReplica(shareCKeypair.shareAddress);
+
+      assert(replicaC);
+
+      const keypair = await Crypto.generateAuthorKeypair(
+        "test",
+      ) as AuthorKeypair;
+
+      const res = await replicaC.set(keypair, { text: "test", path: "/test" });
+
+      assert(notErr(res));
+
       for (const replica of peer.replicas()) {
         await replica.close(true);
       }

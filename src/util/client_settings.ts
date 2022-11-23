@@ -346,7 +346,13 @@ export class ClientSettings {
       for (const share of existingShares) {
         // If the secret was removed, re-add the share's replica without the secret.
         if (!nextShares.includes(share)) {
-          peer.removeReplicaByShare(share);
+          const existingReplica = peer.getReplica(share);
+
+          if (existingReplica) {
+            peer.removeReplica(existingReplica);
+            existingReplica.close(true);
+          }
+
           const replica = onCreateReplica(share);
           peer.addReplica(replica);
         }
@@ -361,7 +367,7 @@ export class ClientSettings {
           existingReplica?.formatsConfig["es.5"] &&
           (existingReplica.formatsConfig["es.5"] as ConfigEs5)["shareSecret"]
         ) {
-          return;
+          continue;
         }
 
         peer.removeReplicaByShare(share);
