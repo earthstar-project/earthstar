@@ -116,7 +116,7 @@ export class Peer implements IPeer {
         appetite: continuous ? "continuous" : "once",
       });
 
-      return this.syncerManager.addPartner(partner, formats);
+      return this.syncerManager.addPartner(partner, target as string, formats);
     } catch {
       if (target instanceof Peer) {
         const partner = new PartnerLocal(
@@ -126,7 +126,7 @@ export class Peer implements IPeer {
           formats,
         );
 
-        return this.syncerManager.addPartner(partner, formats);
+        return this.syncerManager.addPartner(partner, "Local", formats);
       }
 
       // This shouldn't happen.
@@ -139,8 +139,17 @@ export class Peer implements IPeer {
   }
 
   /** Begin syncing using an instance implementing `ISyncPartner`. Use this if you don't want to sync with a local peer or a replica server. */
-  addSyncPartner<I, F>(partner: ISyncPartner<I>, formats?: FormatsArg<F>) {
-    return this.syncerManager.addPartner(partner, formats);
+  addSyncPartner<I, F>(
+    partner: ISyncPartner<I>,
+    description: string,
+    formats?: FormatsArg<F>,
+  ) {
+    return this.syncerManager.addPartner(partner, description, formats);
+  }
+
+  /** Get all syncers created by this peer. This includes running and cancelled syncers. */
+  getSyncers() {
+    return this.syncerManager.getSyncers();
   }
 
   //----------------------------------------------
