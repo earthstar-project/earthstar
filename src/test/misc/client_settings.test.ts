@@ -131,7 +131,7 @@ Deno.test({
     });
 
     await test.step("Managed peer", async () => {
-      const { peer } = settings.getPeer({
+      const { peer, unsubscribeFromSettings } = settings.getPeer({
         sync: false,
         onCreateReplica: (addr, secret) =>
           new Replica({
@@ -170,6 +170,8 @@ Deno.test({
       for (const replica of peer.replicas()) {
         await replica.close(true);
       }
+
+      unsubscribeFromSettings();
     });
 
     settings.clear();

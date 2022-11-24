@@ -184,7 +184,7 @@ export class MultiformatReplica {
     await this.replicaDriver.attachmentDriver.close(erase);
 
     logger.debug("    sending didClose nonblockingly...");
-    this.eventWriter.write({
+    await this.eventWriter.write({
       kind: "didClose",
     });
     logger.debug("...closing done");

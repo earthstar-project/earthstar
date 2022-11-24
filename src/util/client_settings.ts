@@ -323,12 +323,15 @@ export class ClientSettings {
     }
 
     // Listen for share events
-    const unsubSharesChanged = this.onSharesChanged((newShares) => {
+    const unsubSharesChanged = this.onSharesChanged(async (newShares) => {
+      const existingReplicas = peer.replicas();
       const existingShares = peer.shares();
 
-      for (const share of existingShares) {
-        if (!newShares.includes(share)) {
-          peer.removeReplicaByShare(share);
+      for (const replica of existingReplicas) {
+        if (!newShares.includes(replica.share)) {
+          peer.removeReplica(replica);
+
+          await replica.close(false);
         }
       }
 
@@ -343,43 +346,46 @@ export class ClientSettings {
     // Secrets
 
     // Listen for secret events
-    const unsubSecretsChanged = this.onShareSecretsChanged((newSecrets) => {
-      // We know that we can't add a secret without adding the share first.
-      const existingShares = peer.shares();
-      const nextShares = Object.keys(newSecrets);
+    const unsubSecretsChanged = this.onShareSecretsChanged(
+      async (newSecrets) => {
+        // We know that we can't add a secret without adding the share first.
+        const existingShares = peer.shares();
+        const nextShares = Object.keys(newSecrets);
 
-      for (const share of existingShares) {
-        // If the secret was removed, re-add the share's replica without the secret.
-        if (!nextShares.includes(share)) {
+        for (const share of existingShares) {
+          // If the secret was removed, re-add the share's replica without the secret.
+          if (!nextShares.includes(share)) {
+            const existingReplica = peer.getReplica(share);
+
+            if (existingReplica) {
+              peer.removeReplica(existingReplica);
+              existingReplica.close(false);
+            }
+
+            const replica = onCreateReplica(share);
+            peer.addReplica(replica);
+          }
+        }
+
+        for (const share of nextShares) {
+          // If the secret was added, remove the old replica and add the new one with a secret
+
+          // But only if the share doesn't have a secret yet.
           const existingReplica = peer.getReplica(share);
-
-          if (existingReplica) {
-            peer.removeReplica(existingReplica);
-            existingReplica.close(true);
+          if (
+            existingReplica?.formatsConfig["es.5"] &&
+            (existingReplica.formatsConfig["es.5"] as ConfigEs5)["shareSecret"]
+          ) {
+            continue;
           }
 
-          const replica = onCreateReplica(share);
+          await existingReplica?.close(false);
+          peer.removeReplicaByShare(share);
+          const replica = onCreateReplica(share, newSecrets[share]);
           peer.addReplica(replica);
         }
-      }
-
-      for (const share of nextShares) {
-        // If the secret was added, remove the old replica and add the new one with a secret
-
-        // But only if the share doesn't have a secret yet.
-        const existingReplica = peer.getReplica(share);
-        if (
-          existingReplica?.formatsConfig["es.5"] &&
-          (existingReplica.formatsConfig["es.5"] as ConfigEs5)["shareSecret"]
-        ) {
-          continue;
-        }
-
-        peer.removeReplicaByShare(share);
-        const replica = onCreateReplica(share, newSecrets[share]);
-        peer.addReplica(replica);
-      }
-    });
+      },
+    );
 
     // Servers
 
