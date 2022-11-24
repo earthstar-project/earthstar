@@ -396,9 +396,9 @@ export class ClientSettings {
         // Remove syncers no longer in the new list
         const syncers = peer.getSyncers();
 
-        for (const existingServer in syncers) {
-          if (!newServers.includes(existingServer)) {
-            syncers[existingServer].cancel();
+        for (const [_id, { description, syncer }] of syncers) {
+          if (!newServers.includes(description)) {
+            syncer.cancel();
           }
         }
 

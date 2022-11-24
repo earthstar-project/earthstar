@@ -46,7 +46,7 @@ export interface IPeer {
     callback: (map: Map<ShareAddress, Replica>) => void | Promise<void>,
   ): () => void;
 
-  onySyncersChange(
+  onSyncersChange(
     callback: (
       map: Map<
         string,
