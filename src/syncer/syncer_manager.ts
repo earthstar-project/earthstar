@@ -1,6 +1,7 @@
 import { deferred, XXH64 } from "../../deps.ts";
 import { FormatsArg } from "../formats/format_types.ts";
 import { IPeer } from "../peer/peer-types.ts";
+import { BlockingBus } from "../streams/stream_utils.ts";
 import {
   AuthorAddress,
   Path,
@@ -29,6 +30,13 @@ export class SyncerManager {
     { description: string; syncer: Syncer<unknown, unknown> }
   >();
 
+  private syncerEventBus = new BlockingBus<
+    Map<
+      string,
+      { description: string; syncer: Syncer<unknown, unknown> }
+    >
+  >();
+
   peer: IPeer;
 
   constructor(peer: IPeer) {
@@ -49,18 +57,14 @@ export class SyncerManager {
 
     this.syncers.set(syncer.id, { syncer, description });
 
+    this.syncerEventBus.send(this.syncers);
+
     return syncer;
   }
 
   /** Returns a record of syncers with their given descriptions as keys. */
   getSyncers() {
-    const acc: Record<string, Syncer<unknown, unknown>> = {};
-
-    for (const { description, syncer } of this.syncers.values()) {
-      acc[description] = syncer;
-    }
-
-    return acc;
+    return this.syncers;
   }
 
   // INITIAL SYNC (range-based set reconciliation)
@@ -182,5 +186,18 @@ export class SyncerManager {
     const plumTree = new PlumTree();
     this.plumTrees.set(address, plumTree);
     return plumTree;
+  }
+
+  // Subscribe
+
+  onSyncersChange(
+    callback: (
+      map: Map<
+        string,
+        { description: string; syncer: Syncer<unknown, unknown> }
+      >,
+    ) => void | Promise<void>,
+  ) {
+    return this.syncerEventBus.on(callback);
   }
 }

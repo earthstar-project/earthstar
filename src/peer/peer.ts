@@ -161,4 +161,16 @@ export class Peer implements IPeer {
   ) {
     return this.replicaEventBus.on(callback);
   }
+
+  /** Fires a given callback whenever a new syncer is added to the peer. */
+  onSyncersChange(
+    callback: (
+      map: Map<
+        string,
+        { description: string; syncer: Syncer<unknown, unknown> }
+      >,
+    ) => void | Promise<void>,
+  ): () => void {
+    return this.syncerManager.onSyncersChange(callback);
+  }
 }

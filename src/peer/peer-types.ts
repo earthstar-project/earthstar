@@ -37,9 +37,21 @@ export interface IPeer {
     formats?: FormatsArg<F>,
   ): Syncer<unknown, F>;
 
-  getSyncers(): Record<string, Syncer<unknown, unknown>>;
+  getSyncers(): Map<
+    string,
+    { description: string; syncer: Syncer<unknown, unknown> }
+  >;
 
   onReplicasChange(
     callback: (map: Map<ShareAddress, Replica>) => void | Promise<void>,
+  ): () => void;
+
+  onySyncersChange(
+    callback: (
+      map: Map<
+        string,
+        { description: string; syncer: Syncer<unknown, unknown> }
+      >,
+    ) => void | Promise<void>,
   ): () => void;
 }
