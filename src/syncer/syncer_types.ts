@@ -147,6 +147,7 @@ export type SyncerDiscloseEvent = {
   salt: string;
   shares: string[];
   formats: string[];
+  canRespond: boolean;
 };
 
 export type SyncerFulfilledEvent = {

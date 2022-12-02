@@ -99,10 +99,6 @@ export function docsAreEquivalent(
     sortByPathThenAuthor,
   );
 
-  if (!equal(aStripped, bStripped)) {
-    console.log(aStripped, bStripped);
-  }
-
   return equal(aStripped, bStripped);
 }
 
@@ -205,6 +201,7 @@ export async function overlappingDocSets(
   }[] = [];
 
   const overlap = Math.round((overlapPercentage / 100) * totalSize);
+
   const docsToGenerate = (totalSize * numberOfSets) - overlap;
 
   for (let i = 0; i < docsToGenerate; i++) {
@@ -259,8 +256,8 @@ export async function overlappingDocSets(
   const sets = [];
 
   for (let i = 0; i < numberOfSets; i++) {
-    const start = i === 0 ? overlap : ((totalSize - overlap) * i);
-    const end = i === 0 ? totalSize : (totalSize - overlap) * (i + 1);
+    const start = i === 0 ? overlap : ((totalSize + overlap) * i);
+    const end = i === 0 ? totalSize : overlap + ((totalSize) * (i + 1));
 
     const uniqueDocs = docs.slice(start, end);
 

@@ -179,6 +179,7 @@ export class ReplicaCache {
 
     const onReplicaEvent = this.onReplicaEvent.bind(this);
     const close = this.close.bind(this);
+    const isClosed = this.isClosed.bind(this);
 
     this.replica.getEventStream("*").pipeTo(
       new WritableStream({
@@ -188,7 +189,7 @@ export class ReplicaCache {
             event.kind === "expire"
           ) {
             await onReplicaEvent(event);
-          } else if (event.kind === "willClose") {
+          } else if (event.kind === "willClose" && !isClosed()) {
             await close();
           }
         },

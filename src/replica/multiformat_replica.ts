@@ -183,12 +183,13 @@ export class MultiformatReplica {
     await this.replicaDriver.docDriver.close(erase);
     await this.replicaDriver.attachmentDriver.close(erase);
 
+    clearInterval(this.eraseInterval);
+
     logger.debug("    sending didClose nonblockingly...");
     await this.eventWriter.write({
       kind: "didClose",
     });
     logger.debug("...closing done");
-    clearInterval(this.eraseInterval);
 
     return Promise.resolve();
   }
