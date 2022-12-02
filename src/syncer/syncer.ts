@@ -92,6 +92,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         formats: this.formats
           ? this.formats.map((f) => f.id)
           : [DEFAULT_FORMAT.id],
+        canRespond: false,
       });
     });
 
@@ -113,26 +114,37 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       this.isDoneMultiDeferred.resolve();
     });
 
-    // TODO: What do we do when held replicas change?
-    // This should not be permitted during 'once' mode...
-    /*
-    this.peer.onReplicasChange(() => {
+    this.peer.onReplicasChange(async (replicas) => {
+      if (this.appetite === "once") {
+        return;
+      }
+
+      const shares = Array.from(replicas.keys());
+
+      for (const [address, agent] of this.syncAgents) {
+        if (shares.includes(address) === false) {
+          await agent.cancel("Replica was removed from peer.");
+          this.syncAgents.delete(address);
+        }
+      }
+
       // send out disclose event again
       const salt = randomId();
       Promise.all(
-        this.peer.shares().map((ws) => saltAndHashShare(salt, ws)),
+        shares.map((ws) => saltAndHashShare(salt, ws)),
       ).then((saltedShares) => {
-        outgoingEventBus.send({
+        this.partner.sendEvent({
           kind: "DISCLOSE",
           salt,
+          syncerId: this.id,
           shares: saltedShares,
           formats: this.formats
             ? this.formats.map((f) => f.id)
-            : [DefaultFormat.id],
+            : [DEFAULT_FORMAT.id],
+          canRespond: true,
         });
       });
     });
-    */
   }
 
   private addShare(
@@ -215,13 +227,16 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
         const serverSaltedSet = new Set<string>(event.shares);
         const commonShareSet = new Set<ShareAddress>();
+        const uncommonShareSet = new Set<ShareAddress>();
 
         // For each of our own shares, hash with the salt given to us by the event
         // If it matches any of the hashes sent by the other side, we have a share in common.
-        for (const plainWs of this.peer.shares()) {
-          const saltedWs = await saltAndHashShare(event.salt, plainWs);
-          if (serverSaltedSet.has(saltedWs)) {
-            commonShareSet.add(plainWs);
+        for (const planeAddr of this.peer.shares()) {
+          const saltedAddr = await saltAndHashShare(event.salt, planeAddr);
+          if (serverSaltedSet.has(saltedAddr)) {
+            commonShareSet.add(planeAddr);
+          } else {
+            uncommonShareSet.add(planeAddr);
           }
         }
 
@@ -231,8 +246,38 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
           this.addShare(share, intersectingFormats, initiateMessaging);
         }
 
+        for (const share of uncommonShareSet) {
+          const syncAgent = this.syncAgents.get(share);
+
+          if (syncAgent) {
+            syncAgent.cancel("No longer in common with the other peer.");
+            this.syncAgents.delete(share);
+          }
+        }
+
         this.transferManager.registerOtherSyncerId(event.syncerId);
-        this.transferManager.allSyncAgentsKnown();
+
+        if (this.appetite === "once") {
+          this.transferManager.allSyncAgentsKnown();
+        }
+
+        if (event.canRespond) {
+          const salt = randomId();
+          Promise.all(
+            this.peer.shares().map((ws) => saltAndHashShare(salt, ws)),
+          ).then((saltedShares) => {
+            this.partner.sendEvent({
+              kind: "DISCLOSE",
+              salt,
+              syncerId: this.id,
+              shares: saltedShares,
+              formats: this.formats
+                ? this.formats.map((f) => f.id)
+                : [DEFAULT_FORMAT.id],
+              canRespond: false,
+            });
+          });
+        }
 
         if (commonShareSet.size === 0 && this.appetite === "once") {
           this.partner.sendEvent({

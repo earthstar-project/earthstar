@@ -323,7 +323,6 @@ Deno.test("Syncing (appetite 'once')", async (test) => {
 // ==========================================
 
 // Testing syncing with appetite 'continuous'
-
 Deno.test({
   name: "Syncing (appetite continuous, multiple peers)",
   // Not sanitising ops / resources because these fail due to Deno not cleaning up websockets as fast as they should be.
@@ -468,6 +467,148 @@ Deno.test({
           await ra3.close(true);
           await rb3.close(true);
           await rc3.close(true);
+        },
+      });
+    }
+  },
+});
+
+// Testing syncing with appetite 'continuous'
+Deno.test({
+  name: "Syncing (appetite continuous, held replicas change during sync)",
+  // Not sanitising ops / resources because these fail due to Deno not cleaning up websockets as fast as they should be.
+  fn: async (test) => {
+    const authorKeypair = await Crypto.generateAuthorKeypair(
+      "test",
+    ) as AuthorKeypair;
+
+    // Create three shares
+    const shareKeypairA = await Crypto.generateShareKeypair(
+      "apples",
+    ) as ShareKeypair;
+    const shareKeypairB = await Crypto.generateShareKeypair(
+      "bananas",
+    ) as ShareKeypair;
+    const shareKeypairC = await Crypto.generateShareKeypair(
+      "coconuts",
+    ) as ShareKeypair;
+
+    for (const scenario of syncDriverScenarios) {
+      await test.step({
+        name: `Syncs over time (${scenario.name})`,
+        fn: async () => {
+          // Create three peers, add one to each.
+          const [ra1, ra2] = await makeOverlappingReplicaTuple(
+            authorKeypair,
+            shareKeypairA,
+            50,
+            2,
+            10,
+          );
+
+          const [rb1, rb2] = await makeOverlappingReplicaTuple(
+            authorKeypair,
+            shareKeypairB,
+            50,
+            2,
+            10,
+          );
+
+          const [rc1, rc2] = await makeOverlappingReplicaTuple(
+            authorKeypair,
+            shareKeypairC,
+            50,
+            2,
+            10,
+          );
+
+          const peerA = new Peer();
+          peerA.addReplica(ra1);
+          peerA.addReplica(rb1);
+          peerA.addReplica(rc1);
+
+          const peerB = new Peer();
+          peerB.addReplica(ra2);
+
+          const syncDriverScenario1 = scenario.item(
+            [FormatEs5],
+            "continuous",
+          );
+
+          const syncDriverScenario2 = scenario.item(
+            [FormatEs5],
+            "continuous",
+          );
+
+          // Initiate sync for each peer using the driver.
+          const [syncerA, syncerB] = await syncDriverScenario1.setup(
+            peerA,
+            peerB,
+          );
+
+          // Check that that things have synced... eventually.
+          await sleep(800);
+
+          // +bananas should not sync because peer A removed it before peer B added it.
+          peerA.removeReplica(rb1);
+
+          await sleep(200);
+
+          peerB.addReplica(rb2);
+
+          // +coconuts should sync because now both peers have it.
+          peerB.addReplica(rc2);
+
+          await sleep(800);
+
+          try {
+            syncerA.cancel("Test finished");
+            syncerB.cancel("Test finished");
+          } catch {
+            assert(false, "Cancellation happens without throwing an error");
+          }
+
+          // Check that all replicas fully synced.
+
+          await syncDriverScenario1.teardown();
+          await syncDriverScenario2.teardown();
+
+          assert(
+            await replicaDocsAreSynced([ra1, ra2]),
+            `+a docs are in sync`,
+          );
+
+          assert(
+            await replicaDocsAreSynced([rc1, rc2]),
+            `+c docs are in sync`,
+          );
+
+          assert(
+            await replicaAttachmentsAreSynced([ra1, ra2]),
+            `+a attachments are in sync`,
+          );
+
+          assert(
+            await replicaAttachmentsAreSynced([rc1, rc2]),
+            `+c attachments are in sync`,
+          );
+
+          assert(
+            await replicaDocsAreSynced([rb1, rb2]) === false,
+            `+b docs are NOT in sync`,
+          );
+
+          assert(
+            await replicaAttachmentsAreSynced([rb1, rb2]) === false,
+            `+b attachments are NOT in sync`,
+          );
+
+          await ra1.close(true);
+          await ra2.close(true);
+          await rb1.close(true);
+          await rb2.close(true);
+          await rc1.close(true);
+          await rc2.close(true);
         },
       });
     }

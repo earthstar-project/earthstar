@@ -163,6 +163,8 @@ export class SyncAgent<F> {
     gossiper.isDone.then(() => {
       this.isDoneMultiDeferred.resolve();
     });
+
+    this.statusBus.send(this.getStatus());
   }
 
   /** Subscribe to status updates with a callback. */
@@ -182,7 +184,7 @@ export class SyncAgent<F> {
 
     this.isDoneMultiDeferred.reject();
 
-    this.statusBus.send(this.getStatus());
+    await this.statusBus.send(this.getStatus());
 
     this.outboundEventQueue.push({ kind: "ABORT" });
     this.outboundEventQueue.close();
