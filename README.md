@@ -16,8 +16,7 @@ about what Earthstar is, please see these links:
 - [What is Earthstar?](TODO)
 - [How does Earthstar work?](TODO)
 
-To learn about the layout of this codebase, please see
-[ARCHITECTURE](ARCHITECTURE.md).
+To learn more about this codebase, please see [ARCHITECTURE](ARCHITECTURE.md).
 
 To learn about contributing to this codebase, please see
 [CONTRIBUTING](CONTRIBUTING.md).
