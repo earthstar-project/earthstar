@@ -302,7 +302,7 @@ await replica.set(authorKeypair, {
 });
 ```
 
-The path _must_ have a file extension e.g.`.jpg`, `.mp3` if it also has an
+The path _must_ have a file extension e.g. `.jpg`, `.mp3` if it also has an
 attachment.
 
 If we were attaching a large amount of data, we would use a `ReadableStream`
@@ -366,7 +366,7 @@ an empty result. To get new updates, you must subscribe to changes. In the
 following example, we build a UI with a fictitious `renderDocListUI` function
 with the results of `ReplicaCache.getAllDocs`:
 
-```
+```ts
 function triggerUIRender() {
   const allDocs = replicaCache.getAllDocs();
   
@@ -388,7 +388,7 @@ If you're not tracking changes for a UI, `Replica.getQueryStream` returns a
 This API is great for creating indexes.
 
 ```ts
-// Create a query steram for all docs with paths starting with /chat
+// Create a query stream for all docs with paths starting with /chat
 // And include all existing documents and all newly created or synced documents
 const chatMessagesStream = replica.getQueryStream({
   filter: { pathStartsWith: "/chat" },
