@@ -11,7 +11,7 @@ export { hash as xxhash64, XXH64 } from "./src/util/xxhash64.js";
 export {
   FingerprintTree,
   RangeMessenger,
-} from "https://deno.land/x/range_reconcile@0.1.0/mod.ts";
+} from "https://deno.land/x/range_reconcile@0.1.1/mod.ts";
 export type {
   LiftingMonoid,
   RangeMessengerConfig,
