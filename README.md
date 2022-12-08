@@ -39,6 +39,9 @@ Or Deno:
 import * as Earthstar from "https://deno.land/x/earthstar@v10.0.0/mod.ts";`}
 ```
 
+> Earthstar's syncing does not work with version of Deno between 1.27.0 - 1.28.1
+> (inclusive) due to a regression in these versions' WebSocket implementation.
+
 or installed with NPM:
 
 ```bash
@@ -368,15 +371,15 @@ with the results of `ReplicaCache.getAllDocs`:
 ```ts
 function triggerUIRender() {
   const allDocs = replicaCache.getAllDocs();
-  
+
   renderDocListUI(allDocs);
 }
 
 replicaCache.onCacheUpdated(() => {
-  triggerUIRender()
-})
+  triggerUIRender();
+});
 
-triggerUIRender()
+triggerUIRender();
 ```
 
 The important thing to remember is that the callback to `onCacheUpdated` will
