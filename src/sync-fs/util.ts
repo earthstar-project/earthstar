@@ -1,4 +1,4 @@
-import { MANIFEST_FILE_NAME } from "./constants.ts";
+import { MANIFEST_FILE_NAME, MIN_TIMESTAMP_MS } from "./constants.ts";
 import {
   AbsenceEntry,
   FileInfoEntry,
@@ -168,14 +168,14 @@ export async function writeDocToDir(
 
       return {
         path: doc.path,
-        fileLastSeenMs: Date.now(),
+        fileLastSeenMs: MIN_TIMESTAMP_MS,
       };
     } catch {
       // Document is gone from the FS already.
 
       return {
         path: doc.path,
-        fileLastSeenMs: Date.now(),
+        fileLastSeenMs: MIN_TIMESTAMP_MS,
       };
     }
   }
@@ -214,8 +214,8 @@ export async function writeDocToDir(
       dirName: dirname(pathToWrite),
       path: doc.path,
       abspath: resolve(pathToWrite),
-      mtimeMs: stat.mtime?.getTime() || null,
-      birthtimeMs: stat.birthtime?.getTime() || null,
+      mtimeMs: stat.mtime?.getTime() || MIN_TIMESTAMP_MS,
+      birthtimeMs: stat.birthtime?.getTime() || MIN_TIMESTAMP_MS,
     };
   }
 
@@ -229,8 +229,8 @@ export async function writeDocToDir(
     dirName: dirname(pathToWrite),
     path: doc.path,
     abspath: resolve(pathToWrite),
-    mtimeMs: stat.mtime?.getTime() || null,
-    birthtimeMs: stat.birthtime?.getTime() || null,
+    mtimeMs: stat.mtime?.getTime() || MIN_TIMESTAMP_MS,
+    birthtimeMs: stat.birthtime?.getTime() || MIN_TIMESTAMP_MS,
   };
 }
 
@@ -255,7 +255,7 @@ export async function writeEntryToReplica(
   if (isAbsenceEntry(entry)) {
     if (
       correspondingDoc &&
-      correspondingDoc.timestamp > entry.fileLastSeenMs * 1000
+      correspondingDoc.timestamp >= entry.fileLastSeenMs * 1000
     ) {
       return;
     }

@@ -8,7 +8,11 @@ import {
 } from "https://deno.land/std@0.154.0/path/mod.ts";
 import { Crypto } from "../crypto/crypto.ts";
 import { EarthstarError, isErr } from "../util/errors.ts";
-import { IGNORED_FILES, MANIFEST_FILE_NAME } from "./constants.ts";
+import {
+  IGNORED_FILES,
+  MANIFEST_FILE_NAME,
+  MIN_TIMESTAMP_MS,
+} from "./constants.ts";
 import {
   FileInfoEntry,
   SyncFsManifest,
@@ -93,8 +97,8 @@ export async function reconcileManifestWithDirContents(
         path: esPath,
         abspath: resolve(path),
         exposedContentSize,
-        mtimeMs: stat.mtime?.getTime() || null,
-        birthtimeMs: stat.birthtime?.getTime() || null,
+        mtimeMs: stat.mtime?.getTime() || MIN_TIMESTAMP_MS,
+        birthtimeMs: stat.birthtime?.getTime() || MIN_TIMESTAMP_MS,
         exposedContentHash,
       };
 
@@ -118,7 +122,7 @@ export async function reconcileManifestWithDirContents(
       }
 
       return {
-        fileLastSeenMs: entryA.mtimeMs || Date.now(),
+        fileLastSeenMs: entryA.mtimeMs,
         path: entryA.path,
       };
     }

@@ -31,7 +31,7 @@ export interface FileInfoEntry {
   path: string;
   abspath: string;
   exposedContentSize: number;
-  mtimeMs: number | null; // modified time (write)
-  birthtimeMs: number | null; // created time
+  mtimeMs: number; // modified time (write)
+  birthtimeMs: number; // created time
   exposedContentHash: string;
 }
