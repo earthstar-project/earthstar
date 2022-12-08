@@ -206,6 +206,9 @@ export async function writeDocToDir(
       }),
     );
 
+    const date = new Date(doc.timestamp / 1000);
+    await Deno.utime(pathToWrite, date, date);
+
     const stat = await Deno.lstat(pathToWrite);
 
     return {
@@ -220,6 +223,9 @@ export async function writeDocToDir(
   }
 
   await Deno.writeTextFile(pathToWrite, doc.text);
+
+  const date = new Date(doc.timestamp / 1000);
+  await Deno.utime(pathToWrite, date, date);
 
   const stat = await Deno.lstat(pathToWrite);
 
@@ -270,7 +276,7 @@ export async function writeEntryToReplica(
 
     if (
       correspondingDoc &&
-      correspondingDoc.timestamp >= entry.fileLastSeenMs * 1000
+      correspondingDoc.timestamp > entry.fileLastSeenMs * 1000
     ) {
       return;
     }
