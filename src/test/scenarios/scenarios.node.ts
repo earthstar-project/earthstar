@@ -83,15 +83,17 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
 
     getPort({ port: 8087 }).then((port) => {
       this.port.resolve(port);
+
+      const server = new WebSocketServer({ port });
+
+      this.server.resolve(server);
     });
   }
 
   async setup(peerA: IPeer, peerB: IPeer) {
     const port = await this.port;
 
-    const server = new WebSocketServer({ port });
-
-    this.server.resolve(server);
+    const server = await this.server;
 
     const serverSyncerPromise = deferred<Syncer<WebSocket, F>>();
 
