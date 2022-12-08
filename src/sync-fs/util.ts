@@ -260,7 +260,7 @@ export async function writeEntryToReplica(
 
       if (
         correspondingDoc &&
-        correspondingDoc.timestamp >= entry.fileLastSeenMs * 1000
+        correspondingDoc.timestamp > entry.fileLastSeenMs * 1000
       ) {
         console.log("won't wipe");
       } else {
