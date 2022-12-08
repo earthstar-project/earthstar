@@ -253,6 +253,23 @@ export async function writeEntryToReplica(
   const correspondingDoc = await replica.getLatestDocAtPath(entry.path);
 
   if (isAbsenceEntry(entry)) {
+    if (entry.path === "/to-delete") {
+      console.group("/to-delete");
+      console.log(correspondingDoc?.timestamp);
+      console.log(entry.fileLastSeenMs * 1000);
+
+      if (
+        correspondingDoc &&
+        correspondingDoc.timestamp >= entry.fileLastSeenMs * 1000
+      ) {
+        console.log("won't wipe");
+      } else {
+        console.log("should wipe");
+      }
+
+      console.groupEnd();
+    }
+
     if (
       correspondingDoc &&
       correspondingDoc.timestamp >= entry.fileLastSeenMs * 1000
