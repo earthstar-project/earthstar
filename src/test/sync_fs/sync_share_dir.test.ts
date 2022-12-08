@@ -356,7 +356,7 @@ Deno.test({
         share: TEST_SHARE,
         entries: {
           [`/~${keypairB.address}/mine.txt`]: {
-            fileLastSeenMs: 0,
+            fileLastSeenMs: Date.now(),
             path: `/~${keypairB.address}/mine.txt`,
           },
         },

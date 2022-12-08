@@ -118,7 +118,7 @@ export async function reconcileManifestWithDirContents(
       }
 
       return {
-        fileLastSeenMs: entryA.mtimeMs || 0,
+        fileLastSeenMs: entryA.mtimeMs || Date.now(),
         path: entryA.path,
       };
     }
@@ -243,7 +243,7 @@ export async function syncReplicaAndFsDir(
       const result = await FormatEs5.generateDocument({
         keypair: opts.keypair,
         share: opts.replica.share,
-        timestamp: Date.now() * 1000,
+        timestamp: entry.fileLastSeenMs * 1000,
         input: {
           path: entry.path,
           text: "",

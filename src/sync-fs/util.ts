@@ -168,14 +168,14 @@ export async function writeDocToDir(
 
       return {
         path: doc.path,
-        fileLastSeenMs: 0,
+        fileLastSeenMs: Date.now(),
       };
     } catch {
       // Document is gone from the FS already.
 
       return {
         path: doc.path,
-        fileLastSeenMs: 0,
+        fileLastSeenMs: Date.now(),
       };
     }
   }
