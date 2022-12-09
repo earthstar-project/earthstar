@@ -4,8 +4,9 @@ import {
   IReplicaAttachmentDriver,
   IReplicaDocDriver,
 } from "../../replica/replica-types.ts";
+import { IServerExtension } from "../../server/extensions/extension.ts";
 import { Syncer } from "../../syncer/syncer.ts";
-import { ISyncPartner, SyncAppetite } from "../../syncer/syncer_types.ts";
+import { SyncAppetite } from "../../syncer/syncer_types.ts";
 import {
   DocBase,
   DocInputBase,
@@ -40,6 +41,11 @@ export interface SyncPartnerScenario<F> {
     peerB: IPeer,
   ): Promise<[Syncer<unknown, F>, Syncer<unknown, F>]>;
   teardown(): Promise<void>;
+}
+
+export interface ServerScenario {
+  start(testExtension: IServerExtension): Promise<void>;
+  close(): Promise<void>;
 }
 
 export type DocDriverScenario = {

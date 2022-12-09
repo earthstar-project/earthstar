@@ -74,8 +74,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         for await (const event of opts.partner.getEvents()) {
           this.handleIncomingEvent(event);
         }
-      } catch {
-        this.cancel("Partner disconnected");
+      } catch (err) {
+        this.cancel(err || "Partner disconnected");
       }
     })();
 

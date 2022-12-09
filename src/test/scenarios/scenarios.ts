@@ -6,6 +6,7 @@ import {
   AttachmentDriverScenario,
   DocDriverScenario,
   Scenario,
+  ServerScenario,
   SyncPartnerScenario,
 } from "./types.ts";
 import {
@@ -30,6 +31,9 @@ import { deferred } from "../../../deps.ts";
 import { SyncAppetite } from "../../syncer/syncer_types.ts";
 import { randomId } from "../../util/misc.ts";
 import { getFreePort } from "https://deno.land/x/free_port@v1.2.0/mod.ts";
+import { Server } from "../../server/server.ts";
+import { IServerExtension } from "../../server/extensions/extension.ts";
+import { ExtensionSyncWeb } from "../../server/extensions/sync_web.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -209,3 +213,29 @@ export const syncDriverScenarios: Scenario<
   name: "Web",
   item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
 }];
+
+export class WebServerScenario implements ServerScenario {
+  private port: number;
+  private server = deferred<Server>();
+
+  constructor(port: number) {
+    this.port = port;
+  }
+
+  start(testExtension: IServerExtension) {
+    const server = new Server([
+      testExtension,
+      new ExtensionSyncWeb(),
+    ], { port: this.port });
+
+    this.server.resolve(server);
+
+    return Promise.resolve();
+  }
+
+  async close() {
+    const server = await this.server;
+
+    return server.close();
+  }
+}

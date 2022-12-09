@@ -5,6 +5,7 @@ import {
   AttachmentDriverScenario,
   DocDriverScenario,
   Scenario,
+  ServerScenario,
   SyncPartnerScenario,
 } from "./types.ts";
 import {
@@ -17,7 +18,7 @@ import { Syncer } from "../../syncer/syncer.ts";
 import { PartnerWebServer } from "../../syncer/partner_web_server.ts";
 import { IPeer } from "../../peer/peer-types.ts";
 import { CryptoDriverChloride } from "../../crypto/crypto-driver-chloride.ts";
-import { sleep } from "../../util/misc.ts";
+
 import { WebSocketServer } from "https://esm.sh/ws@8.8.1";
 import { FormatsArg } from "../../formats/format_types.ts";
 import { PartnerWebClient } from "../../syncer/partner_web_client.ts";
@@ -27,6 +28,10 @@ import { deferred } from "../../../deps.ts";
 import { SyncAppetite } from "../../syncer/syncer_types.ts";
 import getPort from "https://esm.sh/get-port@5.1.1";
 import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
+import { Server } from "../../server/server.node.ts";
+import { IServerExtension } from "../../server/extensions/extension.ts";
+import { ExtensionSyncWeb } from "../../server/extensions/sync_web.node.ts";
+import { createServer } from "https://deno.land/std@0.167.0/node/http.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -166,3 +171,31 @@ export const syncDriverScenarios: Scenario<
     item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
   },
 ];
+
+export class WebServerScenario implements ServerScenario {
+  private port: number;
+  private server = deferred<Server>();
+
+  constructor(port: number) {
+    this.port = port;
+  }
+
+  start(testExtension: IServerExtension) {
+    const nodeServer = createServer();
+
+    const server: Server = new Server([
+      testExtension,
+      new ExtensionSyncWeb({ server: nodeServer }),
+    ], { port: this.port, server: nodeServer });
+
+    this.server.resolve(server);
+
+    return Promise.resolve();
+  }
+
+  async close() {
+    const server = await this.server;
+
+    return server.close();
+  }
+}
