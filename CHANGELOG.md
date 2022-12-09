@@ -84,6 +84,10 @@ changes are like.
 - Added CONTRIBUTING.md
 - Added CODE_OF_CONDUCT.md
 
+## v9.3.3
+
+- Fix: Removed the crayon dependency, fixing a broken dependency issue in 9.3.2
+
 ## v9.3.2
 
 - Updated earthstar_streaming_rcp to v5.0.1

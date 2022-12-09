@@ -1,7 +1,5 @@
-import { DocBase, FormatName } from "../util/doc-types.ts";
+import { DocBase } from "../util/doc-types.ts";
 import { DEFAULT_QUERY, Query, QueryFilter } from "./query-types.ts";
-
-import { stringLengthInBytes } from "../util/bytes.ts";
 
 //--------------------------------------------------
 
