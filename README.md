@@ -16,6 +16,9 @@ about what Earthstar is, please see these links:
 - [What is Earthstar?](TODO)
 - [How does Earthstar work?](TODO)
 
+To learn more about running Earthstar servers, see
+[README_SERVERS](README_SERVERS.md)
+
 To learn more about this codebase, please see [ARCHITECTURE](ARCHITECTURE.md).
 
 To learn about contributing to this codebase, please see
