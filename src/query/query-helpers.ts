@@ -14,8 +14,7 @@ let logger = new Logger("query helpers", "gold");
 //================================================================================
 // HELPERS
 
-/*
- * Escape a string so it's safe to use in a regular expression.
+/** Escape a string so it's safe to use in a regular expression.
  * (Put a backslash in front of each special regex character
  *  so the string won't trigger any regex behavior).
  */
@@ -51,8 +50,7 @@ export let _matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
 //================================================================================
 // GLOBS
 
-/*
- *  A helper used by globToQueryAndRegex -- see that function for details.
+/** A helper used by globToQueryAndRegex -- see that function for details.
  *
  *  This function simply turns a glob string into a regex.
  *  The other function calls this one, but sometimes discards the regex
@@ -90,8 +88,7 @@ export let globToRegex = (
   return regex;
 };
 
-/*
- * Helper for querying Earthstar docs using a glob-style query string.
+/** Helper for querying Earthstar docs using a glob-style query string.
  *
  * Given a glob string, return:
  *    - an earthstar Query
@@ -189,8 +186,7 @@ export let globToQueryAndRegex = (
 //================================================================================
 // GLOB: USER-FACING API CALLS
 
-/*
- * Find documents whose path matches the glob string.
+/** Find documents whose path matches the glob string.
  * See documentation for globToQueryAndRegex for details on glob strings.
  *
  * You can specify additional query options by providing a `moreQueryOptions` object.
@@ -245,8 +241,7 @@ interface ParsedTemplate {
   glob: string; // the template with all the variables replaced by '*'
   namedCaptureRegex: string; // a regex string that will match paths and do named captures of the variables
 }
-/*
- *  This is a low-level helper for the template matching code; probably don't use it directly.
+/** This is a low-level helper for the template matching code; probably don't use it directly.
  *
  *  Given a template, parse it and return:
  *  - a list of variable names
@@ -269,7 +264,6 @@ interface ParsedTemplate {
  *  - A variable cannot be directly touching a star {likeThis}* or *{likeThis}.
  *
  *  If variable names don't match these rules, a ValidationError will be thrown.
- *
  */
 export function parseTemplate(template: string): ParsedTemplate {
   //--------------------------------------------------------------------------------
@@ -471,8 +465,7 @@ export let insertVariablesIntoTemplate = (
 //================================================================================
 // TEMPLATE: USER-FACING API CALLS
 
-/*
- * Given a template string like "/posts/{postId}.json",
+/** Given a template string like "/posts/{postId}.json",
  *  query the replica for docs with matching paths.
  *
  * See the docs for matchTemplateAndPath for details on template strings.

@@ -71,9 +71,11 @@ export interface DocAlreadyExists<
   //// note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
   //prevLatestDoc: Doc | null,
 }
+
 export interface ReplicaEventWillClose {
   kind: "willClose";
 }
+
 export interface ReplicaEventDidClose {
   kind: "didClose";
 }

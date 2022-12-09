@@ -131,7 +131,7 @@ const ES4_CORE_SCHEMA: CheckObjOpts = {
 
 /**
  * Validator for the 'es.4' format. Checks if documents are spec-compliant before ingesting, and signs them according to spec.
- * @link https://earthstar-project.org/specs/data-spec
+ * @link https://earthstar-project.org/specs/data-spec-es4
  */
 
 export const FormatEs4: IFormat<"es.4", DocInputEs4, DocEs4, undefined> =

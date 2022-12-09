@@ -12,9 +12,8 @@ const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
 /**
- * A verison of the ICryptoDriver interface backed by noble/ed25519.
- * The slowest crypto driver available.
- * Works in the browser, Deno, and Node.
+ * A version of the ICryptoDriver interface backed by noble/ed25519.
+ * The slowest crypto driver available, but works everywhere.
  */
 export const CryptoDriverNoble: ICryptoDriver = class {
   static sha256(

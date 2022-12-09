@@ -44,11 +44,15 @@ let logger = new Logger("validator es.5", "red");
 export interface DocEs5 extends DocBase<"es.5"> {
   /** Which document format the doc adheres to, e.g. `es.5`. */
   format: "es.5";
+  /** The address of the author keypair which wrote this document. */
   author: AuthorAddress;
+  /** Text content. If the document has an attachment, this should be a description of that attachment. */
   text: string;
+  /** Base32 SHA256 hash of this document's text. */
   textHash: string;
   /** When the document should be deleted, as a UNIX timestamp in microseconds. */
   deleteAfter?: number;
+  /** The path this document was written to. */
   path: Path;
   /** Used to verify the authorship of the document. */
   signature: Signature;
@@ -56,7 +60,7 @@ export interface DocEs5 extends DocBase<"es.5"> {
   shareSignature: Signature;
   /** When the document was written, as a UNIX timestamp in microseconds (millionths of a second, e.g. `Date.now() * 1000`).*/
   timestamp: Timestamp;
-  /** The share this document is from. */
+  /** The public address of the share this document is from. */
   share: ShareAddress;
   /** The size of the associated attachment in bytes, if any. */
   attachmentSize?: number;
@@ -157,8 +161,8 @@ export type ConfigEs5 = {
 };
 
 /**
- * Format for 'es.5' documents. Supports attachments.
- * @link https://earthstar-project.org/specs/data-spec
+ * Format for 'es.5' documents. Supports attachments and share keypairs.
+ * @link https://earthstar-project.org/specs/data-spec-es5
  */
 export const FormatEs5: IFormat<
   "es.5",

@@ -8,9 +8,23 @@ export type ServerOpts = {
 };
 
 /**
- * An extensible replica server able to synchronise with other peers.
+ * An extensible Earthstar server able to synchronise with other peers.
  *
- * A replica server's functionality can be extended using extensions of type `IReplicaServerExtension`.
+ * A server's functionality can be extended using extensions of type `IServerExtension`.
+ *
+ * ```ts
+ * const server = new Server([
+ *  new ExtensionKnownShares({
+ *    knownSharesPath: "./known_shares.json",
+ *      onCreateReplica: (shareAddress) => {
+ *        return new Earthstar.Replica({
+ *          driver: new ReplicaDriverFs(shareAddress, "./share_data"),
+ *         });
+ *      },
+ *    }),
+ *  new ExtensionSyncWeb(),
+ * ]);
+ * ```
  */
 export class Server {
   private core: ServerCore;
@@ -18,8 +32,8 @@ export class Server {
   private server: Promise<void>;
 
   /**
-   * Create a new replica server with an array of extensions.
-   * @param extensions - The extensions used by the replica server. Extensions will be registered in the order you provide them in, as one extension may depend on the actions of another. For example, the `ExtensionServeContent` may rely on a replica created by `ExtensionKnownShares`.
+   * Create a new server with an array of extensions.
+   * @param extensions - The extensions used by the server. Extensions will be registered in the order you provide them in, as one extension may depend on the actions of another. For example, the `ExtensionServeContent` may rely on a replica created by `ExtensionKnownShares`.
    */
   constructor(extensions: IServerExtension[], opts?: ServerOpts) {
     this.core = new ServerCore(extensions);

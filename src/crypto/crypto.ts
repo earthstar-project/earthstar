@@ -26,7 +26,7 @@ let logger = new Logger("crypto", "cyan");
 
 //================================================================================
 
-/** Higher-level crypto functions. Not used directly for the most part, but useful for generating new keypairs. */
+/** Higher-level crypto functions. Mostly used for generating new author and share keypairs. */
 export const Crypto: ICrypto = class {
   /** Do a sha256 hash, then return the output bytes encoded as base32. */
   static async sha256base32(
@@ -42,24 +42,24 @@ export const Crypto: ICrypto = class {
   }
 
   /**
-   * Generate a new author identity -- a keypair of public and private keys as strings encoded in base32.
+   * Generate a new author keypair — a keypair of public and private keys as strings encoded in base32.
    *
    * NOTE: this will return a different keypair every time, even if the name is the same.
    * (Names are not unique.)
    *
    * Returns a ValidationError if the name doesn't follow the rules.
    *
-   * @param name A 4-character nickname to make the address easier to remember and identify.
+   * @param shortname A 4-character nickname to make the address easier to remember and identify.
    */
   static async generateAuthorKeypair(
-    name: string,
+    shortname: string,
   ): Promise<AuthorKeypair | ValidationError> {
-    logger.debug(`generateAuthorKeypair("${name}")`);
+    logger.debug(`generateAuthorKeypair("${shortname}")`);
     const keypairBytes = await GlobalCryptoDriver
       .generateKeypairBytes();
     const keypairFormatted = {
       address: assembleAuthorAddress(
-        name,
+        shortname,
         base32BytesToString(keypairBytes.pubkey),
       ),
       secret: base32BytesToString(keypairBytes.secret),
@@ -70,6 +70,16 @@ export const Crypto: ICrypto = class {
     return keypairFormatted;
   }
 
+  /**
+   * Generate a new share keypair — a keypair of public and private keys as strings encoded in base32.
+   *
+   * NOTE: this will return a different keypair every time, even if the name is the same.
+   * (Names are not unique.)
+   *
+   * Returns a ValidationError if the name doesn't follow the rules.
+   *
+   * @param name A free-form name to identify the share.
+   */
   static async generateShareKeypair(
     name: string,
   ): Promise<ShareKeypair | ValidationError> {
@@ -116,7 +126,7 @@ export const Crypto: ICrypto = class {
   }
 
   /**
-   * Check if an author signature is valid.
+   * Check if a ed25519 signature is valid.
    *
    * This returns false on any kind of failure:
    *   * bad author address format
@@ -146,7 +156,7 @@ export const Crypto: ICrypto = class {
   }
 
   /**
-   * Check if an author keypair is valid, e.g. does the secret match the pubkey.
+   * Check if an ed25519 keypair is valid, e.g. does the secret match the pubkey.
    *
    * Returns...
    * - true on success (format is correct, and secret matches pubkey)

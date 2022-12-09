@@ -14,10 +14,17 @@ type ReplicaOpts = {
 };
 
 /**
- * A replica holding a share's documents and attachments, used to read, write, and synchronise data to.
+ * A replica holding a share's data, used to read, write, and synchronise data to.
+ *
  * Should be closed using the `close` method when no longer being used.
- * ```
- * const myReplica = new Replica(new ReplicaDriverMemory("+gardens.a37ib9"));
+ *
+ * ```ts
+ * const gardeningKeypair = await Crypto.generateShareKeypair("gardening");
+ *
+ * const myReplica = new Replica({
+ *  driver: new ReplicaDriverMemory(gardeningKeypair.shareAddress),
+ *  shareSecret: gardeningKeypair.secret
+ * });
  * ```
  */
 export class Replica extends MultiformatReplica {

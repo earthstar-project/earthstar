@@ -325,7 +325,7 @@ logNarrator("To be continued...");
 // In which Rabbit adds another share to his peer
 // =======================================================================
 
-// In which they start a replica server to sync over the internet?
+// In which they start a server to sync over the internet?
 // =======================================================================
 
 Deno.exit(0);

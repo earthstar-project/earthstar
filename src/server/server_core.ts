@@ -1,15 +1,15 @@
 import { Peer } from "../peer/peer.ts";
 import { IServerExtension } from "./extensions/extension.ts";
 
-/** The core replica server logic. Combine this with a HTTP framework to create a fully-fledged replica server. */
+/** The core server logic. Combine this with a HTTP framework to create a fully-fledged server. */
 export class ServerCore {
   private extensions: IServerExtension[];
   private peer: Peer;
   private isReady: Promise<void>;
 
   /**
-   * Create a new replica server with an array of extensions.
-   * @param extensions - The extensions used by the replica server. Extensions will be registered in the order you provide them in, as one extension may depend on the actions of another. For example, the `ExtensionServeContent` may rely on a replica created by `ExtensionKnownShares`.
+   * Create a new server with an array of extensions.
+   * @param extensions - The extensions used by the server. Extensions will be registered in the order you provide them in, as one extension may depend on the actions of another. For example, the `ExtensionServeContent` may rely on a replica created by `ExtensionKnownShares`.
    */
   constructor(extensions: IServerExtension[]) {
     this.peer = new Peer();
@@ -18,7 +18,7 @@ export class ServerCore {
 
     this.isReady = this.registerExtensions();
 
-    console.log("Your replica server is running.");
+    console.log("Your server is running.");
   }
 
   private async registerExtensions() {

@@ -5,20 +5,18 @@ import { IServerExtension } from "./extension.ts";
 import { contentType } from "https://deno.land/std@0.167.0/media_types/mod.ts";
 import { extname } from "https://deno.land/std@0.154.0/path/mod.ts";
 
-/**
- * - `sourceShare`: The share to use as the source of documents. Must have been created by another extension.
- * - `path`: An optional path prefix for requests. E.g. `/stuff` means a call to `/stuff/blog.md` would fetch `/blog.md` from the replica.
- * - `indexPath`: A fallback path to use when none is provided. Useful for landing pages.
- * - `allowOrigins`: A list of origins allowed by CORS, if you want other sites to be able to request content from your replica server.
- */
 export interface ExtensionServeContentOpts {
+  /** The share to use as the source of documents. Must have been created by another extension. */
   sourceShare: string;
+  /** An optional path prefix for requests. E.g. `/stuff` means a call to `/stuff/blog.md` would fetch `/blog.md` from the replica. */
   path?: string;
+  /** A fallback path to use when none is provided. Useful for landing pages. */
   indexPath?: string;
+  /** A list of origins allowed by CORS, if you want other sites to be able to request content from your server. */
   allowedOrigins?: string[];
 }
 
-/** An extension for exposing the contents of shares, so that you can request documents by their path and have them served over HTTP. Can be used to create wikis, websites, image galleries, and more. */
+/** A server extension for exposing the contents of shares, so that you can request documents by their path and have them served over HTTP. Can be used to create wikis, websites, image galleries, and more. */
 export class ExtensionServeContent implements IServerExtension {
   private peer: Peer | null = null;
   private path = "/";

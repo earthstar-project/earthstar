@@ -7,6 +7,7 @@ import {
   IReplicaDriver,
 } from "./replica-types.ts";
 
+/** A replica driver which stores data in memory. All data is lost when the replica is closed. */
 export class ReplicaDriverMemory implements IReplicaDriver {
   docDriver: IReplicaDocDriver;
   attachmentDriver: IReplicaAttachmentDriver;

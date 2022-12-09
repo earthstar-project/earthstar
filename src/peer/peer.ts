@@ -20,7 +20,14 @@ const J = JSON.stringify;
 
 //================================================================================
 
-/** Holds many shares' replicas and manages their synchronisation with other peers. Recommended as the point of contact between your application and Earthstar shares. */
+/** Holds many shares' replicas and manages their synchronisation with other peers. Recommended as the point of contact between your application and Earthstar shares.
+ *
+ * ```ts
+ * const peer = new Peer();
+ * peer.addReplica(myReplica);
+ * peer.sync("https://my.server");
+ * ```
+ */
 export class Peer implements IPeer {
   private replicaEventBus = new BlockingBus<Map<ShareAddress, Replica>>();
   private syncerManager: SyncerManager;
@@ -40,6 +47,7 @@ export class Peer implements IPeer {
   hasShare(share: ShareAddress): boolean {
     return this.replicaMap.has(share);
   }
+  /** Returns an array of all the addresses of this peer's held replicas. */
   shares(): ShareAddress[] {
     const keys = [...this.replicaMap.keys()];
     keys.sort();
@@ -75,6 +83,7 @@ export class Peer implements IPeer {
     await this.replicaEventBus.send(this.replicaMap);
     logger.debug(`    ...addReplica: done`);
   }
+  /** Remove a replica from the peer using its share address. */
   async removeReplicaByShare(share: ShareAddress): Promise<void> {
     logger.debug(`removeReplicaByShare(${J(share)})`);
     this.replicaMap.delete(share);
@@ -102,7 +111,7 @@ export class Peer implements IPeer {
   /**
    * Begin synchronising with a remote or local peer.
    * @param target - A HTTP URL or `Peer` instance.
-   * @param continuous - Whether the connection should be kept open for newly written docs, or stop after an initial sync.
+   * @param continuous - Whether the connection should be kept open for new changes from the other peer, or stop after initial reconciliation. Defaults to false.
    * @param formats - Optional. Which document formats to sync. Defaults to `es.5`.
    */
   sync<F>(
@@ -138,7 +147,7 @@ export class Peer implements IPeer {
     }
   }
 
-  /** Begin syncing using an instance implementing `ISyncPartner`. Use this if you don't want to sync with a local peer or a replica server. */
+  /** Begin syncing using an instance implementing `ISyncPartner`. Use this if you don't want to sync with a local peer or a server. */
   addSyncPartner<I, F>(
     partner: ISyncPartner<I>,
     description: string,

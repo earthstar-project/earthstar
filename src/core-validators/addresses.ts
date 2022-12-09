@@ -85,7 +85,7 @@ export function parseAuthorAddress(
   });
 }
 
-/** Parse a workspace address into its parts. */
+/** Parse a share address into its parts. */
 export function parseShareAddress(
   address: ShareAddress,
 ): ParsedAddress | ValidationError {

@@ -9,15 +9,20 @@ import {
 
 /** Filters a query by document attributes. */
 export interface QueryFilter {
+  /** Match an exact path. */
   path?: Path;
   pathStartsWith?: string;
   pathEndsWith?: string;
+  /** Match documents with a given author. */
   author?: AuthorAddress;
   timestamp?: Timestamp;
+  /** Match documents newer than the given timestamp. */
   timestampGt?: Timestamp;
+  /** Match documents older than the given timestamp. */
   timestampLt?: Timestamp;
 }
 
+/** Represents fetching all historical versions of a document by authors, or just the latest versions. */
 export type HistoryMode = "latest" | "all";
 
 /** Describes a query for fetching documents from a replica. */

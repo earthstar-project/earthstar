@@ -58,7 +58,7 @@ Deno.test("Server", async (test) => {
     "coconuts",
   ) as ShareKeypair;
 
-  const [replicaClientA, replicaServerA] = await makeOverlappingReplicaTuple(
+  const [replicaClientA, serverA] = await makeOverlappingReplicaTuple(
     authorKeypair,
     shareKeypairA,
     50,
@@ -66,7 +66,7 @@ Deno.test("Server", async (test) => {
     100,
   );
 
-  const [replicaClientB, replicaServerB] = await makeOverlappingReplicaTuple(
+  const [replicaClientB, serverB] = await makeOverlappingReplicaTuple(
     authorKeypair,
     shareKeypairB,
     50,
@@ -74,7 +74,7 @@ Deno.test("Server", async (test) => {
     100,
   );
 
-  const [replicaClientC, replicaServerC] = await makeOverlappingReplicaTuple(
+  const [replicaClientC, serverC] = await makeOverlappingReplicaTuple(
     authorKeypair,
     shareKeypairC,
     50,
@@ -89,9 +89,9 @@ Deno.test("Server", async (test) => {
   peer.addReplica(replicaClientC);
 
   const testExtension = new ExtensionTest([
-    replicaServerA,
-    replicaServerB,
-    replicaServerC,
+    serverA,
+    serverB,
+    serverC,
   ]);
 
   const serverScenario = new WebServerScenario(8087);
@@ -106,29 +106,29 @@ Deno.test("Server", async (test) => {
       await syncer.isDone();
 
       assert(
-        await replicaDocsAreSynced([replicaClientA, replicaServerA]),
+        await replicaDocsAreSynced([replicaClientA, serverA]),
         `+a docs are in sync`,
       );
       assert(
-        await replicaDocsAreSynced([replicaClientB, replicaServerB]),
+        await replicaDocsAreSynced([replicaClientB, serverB]),
         `+b docs are in sync`,
       );
       assert(
-        await replicaDocsAreSynced([replicaClientC, replicaServerC]),
+        await replicaDocsAreSynced([replicaClientC, serverC]),
         `+c docs are in sync`,
       );
 
       assert(
-        await replicaAttachmentsAreSynced([replicaClientA, replicaServerA]),
+        await replicaAttachmentsAreSynced([replicaClientA, serverA]),
         `+a attachments are in sync`,
       );
 
       assert(
-        await replicaAttachmentsAreSynced([replicaClientB, replicaServerB]),
+        await replicaAttachmentsAreSynced([replicaClientB, serverB]),
         `+b attachments are in sync`,
       );
       assert(
-        await replicaAttachmentsAreSynced([replicaClientC, replicaServerC]),
+        await replicaAttachmentsAreSynced([replicaClientC, serverC]),
         `+c attachments are in sync`,
       );
     },
@@ -142,7 +142,7 @@ Deno.test("Server", async (test) => {
   await replicaClientB.close(true);
   await replicaClientC.close(true);
 
-  await replicaServerA.close(true);
-  await replicaServerB.close(true);
-  await replicaServerC.close(true);
+  await serverA.close(true);
+  await serverB.close(true);
+  await serverC.close(true);
 });

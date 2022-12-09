@@ -7,6 +7,7 @@ import {
   IReplicaDriver,
 } from "./replica-types.ts";
 
+/** A replica driver which persists data to IndexedDB. */
 export class ReplicaDriverWeb implements IReplicaDriver {
   docDriver: IReplicaDocDriver;
   attachmentDriver: IReplicaAttachmentDriver;

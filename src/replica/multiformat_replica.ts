@@ -80,10 +80,19 @@ function docCompareNewestFirst<
 }
 
 /**
- * A replica holding a share's documents and attachments, used to read, write, and synchronise data to.
+ * A replica holding a share's data, used to read, write, and synchronise data to.
+ *
  * Should be closed using the `close` method when no longer being used.
- * ```
- * const myReplica = new Replica(new ReplicaDriverMemory("+gardens.a37ib9"));
+ *
+ * ```ts
+ * const gardeningKeypair = await Crypto.generateShareKeypair("gardening");
+ *
+ * const myReplica = new Replica({
+ *  driver: new ReplicaDriverMemory(gardeningKeypair.shareAddress),
+ *  config: {
+ *    "es.5": { shareSecret: gardeningKeypair.secret }
+ *  }
+ * });
  * ```
  */
 export class MultiformatReplica {
@@ -216,12 +225,6 @@ export class MultiformatReplica {
 
   //--------------------------------------------------
   // GET
-
-  /** Returns the max local index of all stored documents */
-  getMaxLocalIndex(): Promise<number> {
-    if (this._isClosed) throw new ReplicaIsClosedError();
-    return this.replicaDriver.docDriver.getMaxLocalIndex();
-  }
 
   /** Returns all documents, including historical versions of documents by other identities. */
   getAllDocs<F = DefaultFormats>(
@@ -904,9 +907,10 @@ export class MultiformatReplica {
   }
 
   //--------------------------------------------------
-  // BLOBS
+  // ATTACHMENTS
 
-  /**
+  /** Ingest an attachment for a given document.
+   *
    * @returns `true` (indicating it was upsert), `false` (indicating this attachment is already in storage), or a `ValidationError` (indicating something went wrong.)
    */
   async ingestAttachment<F = DefaultFormat>(

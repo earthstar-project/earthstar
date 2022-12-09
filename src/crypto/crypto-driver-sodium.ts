@@ -14,9 +14,9 @@ const logger = new Logger("crypto-driver-noble", "cyan");
 
 //================================================================================
 /**
- * A verison of the ICryptoDriver interface backed a WASM wrapper of libsodium.
+ * A version of the ICryptoDriver interface backed a WASM wrapper of libsodium.
  * Faster than noble by several magnitudes.
- * Works in deno and the browser.
+ * Works in Deno.
  */
 export const CryptoDriverSodium: ICryptoDriver = class {
   static async sha256(

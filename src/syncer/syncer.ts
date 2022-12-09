@@ -24,7 +24,20 @@ import { MultiDeferred } from "./multi_deferred.ts";
 import { AsyncQueue, deferred } from "../../deps.ts";
 import { SyncerManager } from "./syncer_manager.ts";
 
-/** Syncs the contents of a Peer's replicas with that of another peer's.  */
+/** Syncs the data of a Peer's replicas with that of another peer.
+ *
+ * ```ts
+ * const syncer = peer.sync("https://my.server");
+ *
+ * syncer.onStatusChange((newStatus) => {
+ *  console.log(newStatus);
+ * });
+ *
+ * await syncer.isDone();
+ *
+ * console.log('Sync complete!');
+ * ```
+ */
 export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   peer: IPeer;
   id = randomId();
@@ -335,7 +348,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   }
 
   /** Stop syncing. */
-  async cancel(reason?: any) {
+  async cancel(reason?: Error | string) {
     this.isDoneMultiDeferred.reject(reason);
 
     for (const [_addr, agent] of this.syncAgents) {
@@ -350,6 +363,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   }
 
   // externally callable... to get a readable...
+  /** Handle a transfer request which came out of band. This method is mostly used by other syncing APIs. */
   handleTransferRequest(
     { shareAddress, path, author, source, kind, formatName }: {
       shareAddress: string;

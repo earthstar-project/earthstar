@@ -123,10 +123,6 @@ export type SyncAgentStatus = {
   // TODO: Add if partner is done yet.
 };
 
-/** Options used for initialisng a `SyncAgent`.
- * - `replica`: The replica to represent.
- * - `mode`: Whether to sync only existing docs or keep the connection open for new docs too.
- */
 export type SyncAgentOpts<F> = {
   replica: Replica;
   formats?: FormatsArg<F>;
@@ -232,21 +228,19 @@ export type GetTransferOpts = {
   attachmentHash: string;
 };
 
-/** A mode which determines when the syncer will stop syncing.
- * - `once` - The syncer will only attempt to sync existing docs and then stop.
- * - `live` - Indefinite syncing, including existing docs and new ones as they are ingested into the replica.
+/** An 'appetite' which determines when the syncer will stop syncing.
+ * - `once` - The syncer will only attempt to reconcile existing docs and then stop.
+ * - `continuous` - Indefinite syncing, including existing docs and new ones as they are ingested into the replica.
  */
 export type SyncAppetite = "once" | "continuous";
 
-/** Options to initialise a Syncer with.
- * - `peer` - The peer to synchronise.
- * - `partner` - Determines who you'll be syncing with (e.g. a remote peer on a server, a local peer)
- * - `mode` - Determines what kind of sync to carry out.
- * - `formats` - An optional array of formats to sync. Defaults to just `es.5`.
- */
+/** Options to initialise a Syncer with. */
 export interface SyncerOpts<F, I> {
+  /** The manager this syncer will be managed by. */
   manager: SyncerManager;
+  /** Determines how sync messages will be sent and received */
   partner: ISyncPartner<I>;
+  /** An optional array of formats to sync. Defaults to just `es.5`. */
   formats?: FormatsArg<F>;
 }
 
@@ -254,7 +248,9 @@ export interface SyncerOpts<F, I> {
 export type SyncerStatus = Record<
   ShareAddress,
   {
+    /** The status of document sync for a single share. */
     docs: SyncAgentStatus;
+    /** The status of attachment transfers for a single share. */
     attachments: AttachmentTransferReport[];
   }
 >;
@@ -283,7 +279,9 @@ export type AttachmentTransferReport = {
   format: string;
   hash: string;
   status: AttachmentTransferStatus;
+  /** The number of bytes transferred so far. */
   bytesLoaded: number;
+  /** The total number of bytes of the data being transferred. */
   totalBytes: number;
   kind: "download" | "upload";
 };

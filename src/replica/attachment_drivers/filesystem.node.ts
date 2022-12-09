@@ -15,7 +15,7 @@ import { bufferToBytes } from "../../util/buffers.ts";
 import { deferred } from "../../../deps.ts";
 
 /** An attachment driver which persists attachments using the local filesystem.
- * Works with Deno and Node.
+ * Works with Node.
  */
 export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
   private path: string;

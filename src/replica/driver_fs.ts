@@ -9,6 +9,7 @@ import {
   IReplicaDriver,
 } from "./replica-types.ts";
 
+/** A replica driver which persists data to the filesystem. */
 export class ReplicaDriverFs implements IReplicaDriver {
   docDriver: IReplicaDocDriver;
   attachmentDriver: IReplicaAttachmentDriver;

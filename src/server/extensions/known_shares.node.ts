@@ -10,9 +10,9 @@ interface ExtensionKnownSharesOpts {
   onCreateReplica: (shareAddress: string) => Replica;
 }
 
-/** An extension for populating a replica server with known shares. Use this to specify which shares you'd like your replica server to sync with others.
+/** A server extension for populating a server with known shares. Use this to specify which shares you'd like your server to sync with others.
  *
- * You most likely want to pass this as the first extension to your replica server.
+ * You most likely want to pass this as the first extension to your server.
  */
 export class ExtensionKnownShares implements IServerExtension {
   private peer: Peer | null = null;

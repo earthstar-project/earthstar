@@ -12,15 +12,18 @@ import { notErr } from "../../util/errors.ts";
 import { IServerExtension } from "./extension.ts";
 
 interface ExtensionServerSettingsOpts {
-  configurationShare: ShareAddress;
+  /** The address of the share to read settings from. */
+  settingsShare: ShareAddress;
+  /** The method used to create the replica for the settings share. */
   onCreateReplica: (
-    configurationShareAddress: string,
+    settingsShareAddress: string,
   ) => Replica;
 }
 
 const HOSTED_SHARE_TEMPLATE =
   `/server-settings/1.*/shares/{shareHash}/{hostType}`;
 
+/** A server extension which reads settings from a specified share, e.g. which shares to host on the server. Settings are modified by other peers syncing with this server. */
 export class ExtensionServerSettings implements IServerExtension {
   private configReplica: Replica;
   private onCreateReplica: (
@@ -28,7 +31,7 @@ export class ExtensionServerSettings implements IServerExtension {
   ) => Replica;
 
   constructor(opts: ExtensionServerSettingsOpts) {
-    this.configReplica = opts.onCreateReplica(opts.configurationShare);
+    this.configReplica = opts.onCreateReplica(opts.settingsShare);
     this.onCreateReplica = opts.onCreateReplica;
   }
 

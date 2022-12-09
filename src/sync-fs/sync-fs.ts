@@ -199,7 +199,6 @@ are iterated over, writing contents to the replica
 /**
  * Syncs an earthstar replica with a directory on the filesystem, representing Earthstar documents as files and vice versa. *Make sure you understand the changes this function could enact upon a given directory before using it, as it can delete files in certain circumstances.*
  * - Changes from the filesystem which are superseded by writes from the replica will still be synced to the replica as an older version of the document, provided they were authored by different identities.
- * - If a document has a certain extension (e.g. .jpg, .mp3), the syncer assumes the contents are base64 encoded when writing data to the filesystem.
  * - If a file has a path containing a `!` (i.e. an ephemeral path), *it will be deleted unless a correspending document is found in the replica*.
  */
 export async function syncReplicaAndFsDir(

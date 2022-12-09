@@ -20,10 +20,10 @@ type ClientSettingsOpts = {
   sessionOnly?: true;
 };
 
-/* Get and set values from a common pool of settings for Earthstar clients, such as an author, shares, share secrets, and servers.
-*
-* Uses the Storage API, so only clients on the same origin will share the same settings.
-*/
+/** Get and set values from a common pool of settings for Earthstar clients, such as an author, shares, share secrets, and servers.
+ *
+ * Uses the Storage API, so only clients on the same origin will share the same settings.
+ */
 export class ClientSettings {
   private namespace: string | undefined;
   private storage = localStorage;
@@ -65,6 +65,7 @@ export class ClientSettings {
 
   // Author
 
+  /** The currently persisted author keypair. */
   get author(): AuthorKeypair | null {
     const key = makeStorageKey(AUTHOR_KEY, this.namespace);
 
@@ -87,6 +88,7 @@ export class ClientSettings {
 
   // Shares
 
+  /** An array of shares stored by these settings. */
   get shares(): ShareAddress[] {
     const key = makeStorageKey(SHARES_KEY, this.namespace);
 
@@ -95,6 +97,9 @@ export class ClientSettings {
     return shares || [];
   }
 
+  /** Add a share to the settings.
+   * @returns All stored shares after the addition, or a `ValidationError` if the address is invalid.
+   */
   addShare(address: ShareAddress) {
     if (isErr(checkShareIsValid(address))) {
       return new ValidationError("Not a valid share");
@@ -110,6 +115,9 @@ export class ClientSettings {
     return nextShares;
   }
 
+  /** Removes a share from settings.
+   * @returns All stored shares after the removal, or a `ValidationError` if the share is not yet known.
+   */
   removeShare(addressToRemove: string) {
     const shares = this.shares;
 
@@ -133,6 +141,7 @@ export class ClientSettings {
 
   // Share secrets
 
+  /** A record of known shares and their corresponding secret, if known. */
   get shareSecrets() {
     const key = makeStorageKey(SHARE_SECRETS_KEY, this.namespace);
 
@@ -141,6 +150,9 @@ export class ClientSettings {
     return shares || {};
   }
 
+  /** Add a secret for a share already known to the settings.
+   * @returns The next record of share secret pairs, or returns a `ValidationError` if the share is not known or if the secret is incorrect.
+   */
   async addSecret(shareAddress: ShareAddress, secret: string) {
     const knownShare = this.shares.find((addr) => shareAddress === addr);
 
@@ -160,6 +172,9 @@ export class ClientSettings {
     return nextSecrets;
   }
 
+  /** Remove a secret from settings.
+   * @returns The next record of share secret pairs, or returns a `ValidationError` if the share is not known.
+   */
   removeSecret(shareAddress: ShareAddress) {
     const secrets = this.shareSecrets;
     const currentSecret = secrets[shareAddress];
@@ -181,6 +196,7 @@ export class ClientSettings {
 
   // Servers
 
+  /** An array of server URLs stored by these settings. */
   get servers(): string[] {
     const key = makeStorageKey(SERVERS_KEY, this.namespace);
 
@@ -189,6 +205,9 @@ export class ClientSettings {
     return servers || [];
   }
 
+  /** Add a server URL to be stored by settings.
+   * @returns The list of servers after the addition, or a `ValidationError` if the string is not a valid URL.
+   */
   addServer(address: string): string[] | ValidationError {
     try {
       const url = new URL(address);
@@ -207,6 +226,9 @@ export class ClientSettings {
     }
   }
 
+  /** Remove a server URL from the settings' stored list of servers..
+   * @returns The list of servers after the removal, or a `ValidationError` if the string is not yet known.
+   */
   removeServer(addressToRemove: string) {
     try {
       const url = new URL(addressToRemove);
@@ -233,6 +255,7 @@ export class ClientSettings {
     }
   }
 
+  /** Delete all stored settings. */
   clear() {
     const authorKey = makeStorageKey(AUTHOR_KEY, this.namespace);
     this.storage.setItem(authorKey, JSON.stringify(null));
@@ -254,6 +277,7 @@ export class ClientSettings {
 
   private authorChangedCbs = new Set<(keypair: AuthorKeypair | null) => void>();
 
+  /** Fires the given callback when the stored author changes. */
   onAuthorChanged(cb: (keypair: AuthorKeypair | null) => void) {
     this.authorChangedCbs.add(cb);
 
@@ -264,6 +288,7 @@ export class ClientSettings {
 
   private sharesChangedCbs = new Set<(shares: ShareAddress[]) => void>();
 
+  /** Fires the given callback when the stored list of shares changes. */
   onSharesChanged(cb: (shares: ShareAddress[]) => void) {
     this.sharesChangedCbs.add(cb);
 
@@ -276,6 +301,7 @@ export class ClientSettings {
     (secrets: Record<ShareAddress, string>) => void
   >();
 
+  /** Fires the given callback when the stored record of share secrets changes. */
   onShareSecretsChanged(cb: (secrets: Record<ShareAddress, string>) => void) {
     this.shareSecretsChangedCbs.add(cb);
 
@@ -286,6 +312,7 @@ export class ClientSettings {
 
   private serversChangedCbs = new Set<(shares: string[]) => void>();
 
+  /** Fires the given callback when the stored list of server URLs changes. */
   onServersChanged(cb: (shares: string[]) => void) {
     this.serversChangedCbs.add(cb);
 

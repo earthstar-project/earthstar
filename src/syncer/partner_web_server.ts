@@ -12,12 +12,12 @@ import {
 } from "./syncer_types.ts";
 
 type SyncerDriverWebClientOpts = {
-  /** The URL of the replica server to sync with. */
+  /** The URL of the server to sync with. */
   url: string;
   appetite: SyncAppetite;
 };
 
-/** A syncing partner to be used with replica servers reachable via the internet.
+/** A syncing partner to be used with servers reachable via the internet.
  * Works everywhere.
  */
 export class PartnerWebServer<

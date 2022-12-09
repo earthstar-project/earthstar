@@ -24,9 +24,9 @@ setLogLevel("crypto-driver-chloride", LogLevel.Info);
 //================================================================================
 
 /**
- * A verison of the ICryptoDriver interface backed by Chloride.
+ * A version of the ICryptoDriver interface backed by Chloride.
  * Faster than noble.
- * Works in node and the browser.
+ * Works in Node and the browser (with some polyfilling on your part).
  */
 export const CryptoDriverChloride: ICryptoDriver = class {
   static sha256(input: string | Buffer): Promise<Uint8Array> {

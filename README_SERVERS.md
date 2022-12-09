@@ -1,4 +1,4 @@
-# Earthstar Server
+# Earthstar Servers
 
 An Earthstar server is an always-online peer which can synchronise with other
 [Earthstar](https://earthstar-project.org) peers over the internet.
@@ -67,7 +67,7 @@ import {
   Server,
 } from "https://deno.land/x/earthstar@v10.0.0/mod.ts";
 
-const server = new ReplicaServer([
+const server = new Server([
   new ExtensionKnownShares({
     // known_shares.json contains a JSON array of public share addresses.
     knownSharesPath: "./known_shares.json",
@@ -78,7 +78,7 @@ const server = new ReplicaServer([
       });
     },
   }),
-  new ExtensionSyncWebsocket(),
+  new ExtensionSyncWeb(),
 ]);
 ```
 
@@ -97,7 +97,7 @@ import { createServer } from "http";
 
 const nodeServer = createServer();
 
-const server = new ReplicaServer([
+const server = new Server([
   new ExtensionKnownShares({
     // known_shares.json contains a JSON array of public share addresses.
     knownSharesPath: "./known_shares.json",
@@ -108,7 +108,7 @@ const server = new ReplicaServer([
       });
     },
   }),
-  new ExtensionSyncWebsocket({ server: nodeServer }),
+  new ExtensionSyncWeb({ server: nodeServer }),
 ], { server: nodeServer });
 ```
 
@@ -158,10 +158,10 @@ made.
 Your extension needs to implement the interface `IServerExtension`, which has
 two methods:
 
-- `register`: This will be called once when the replica server is initialised.
-  This is where your extension will get access to the replica server's `Peer`
+- `register`: This will be called once when the server is initialised.
+  This is where your extension will get access to the server's `Peer`
   instance.
-- `handler`: This is called whenever a request is made to the replica server,
+- `handler`: This is called whenever a request is made to the server,
   and can be optionally handled by your extension if it does something with
   server requests (e.g. syncing, serving web content). If it doesn't, you can
   return `Promise<null>`, which will pass the request on to the next extension.
@@ -176,7 +176,7 @@ Here's a simple extension which would display a message showing the number of
 shares when a user would make a request to `/share-count`:
 
 ```ts
-class ShareCounterExtension implements IReplicaServerExtension {
+class ShareCounterExtension implements IServerExtension {
   private greeting: string;
   private peer: Earthstar.Peer;
 
@@ -186,7 +186,7 @@ class ShareCounterExtension implements IReplicaServerExtension {
   }
 
   register(peer: Earthstar.Peer) {
-    // Set the replica server's peer to a private variable.
+    // Set the server's peer to a private variable.
     this.peer = peer;
 
     // We could also do other stuff here, like start a new process in the background.
@@ -199,9 +199,9 @@ class ShareCounterExtension implements IReplicaServerExtension {
     if (url.pathname === "/share-count") {
       const shareCount = this.peer.replicas.length;
 
-      // Serve up the greeting along with the number of shares on the replica server.
+      // Serve up the greeting along with the number of shares on the server.
       return new Response(
-        `${this.greeting}. This replica server is serving ${shareCount} shares!`,
+        `${this.greeting}. This server is serving ${shareCount} shares!`,
       );
     }
 
@@ -252,7 +252,7 @@ import {
   Server,
 } from "https://deno.land/x/earthstar@v10.0.0/mod.ts";
 
-const server = new ReplicaServer([
+const server = new Server([
   new ExtensionKnownShares({
     // known_shares.json contains a JSON array of public share addresses.
     knownSharesPath: "./known_shares.json",
@@ -263,7 +263,7 @@ const server = new ReplicaServer([
       });
     },
   }),
-  new ExtensionSyncWebsocket(),
+  new ExtensionSync(),
 ], { port: 8000 });
 ```
 
