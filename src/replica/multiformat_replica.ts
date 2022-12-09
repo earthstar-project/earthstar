@@ -226,6 +226,12 @@ export class MultiformatReplica {
   //--------------------------------------------------
   // GET
 
+  /** Returns the max local index of all stored documents */
+  getMaxLocalIndex(): Promise<number> {
+    if (this._isClosed) throw new ReplicaIsClosedError();
+    return this.replicaDriver.docDriver.getMaxLocalIndex();
+  }
+
   /** Returns all documents, including historical versions of documents by other identities. */
   getAllDocs<F = DefaultFormats>(
     formats?: FormatsArg<F>,
