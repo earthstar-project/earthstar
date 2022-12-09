@@ -13,7 +13,7 @@ import { syncDriverScenarios } from "../scenarios/scenarios.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import {
-  overlappingDocSets,
+  makeOverlappingReplicaTuple,
   replicaAttachmentsAreSynced,
   replicaDocsAreSynced,
   writeRandomDocs,
@@ -49,54 +49,6 @@ const scenarios: MultiplyScenarioOutput<{
   description: "overlap",
   scenarios: setOverlap,
 });
-
-function makeReplicasForShare(keypair: ShareKeypair, count: number) {
-  const replicas = [];
-
-  for (let i = 0; i < count; i++) {
-    const replica = new Replica({
-      driver: new ReplicaDriverMemory(keypair.shareAddress),
-      shareSecret: keypair.secret,
-    });
-
-    replicas.push(replica);
-  }
-
-  return replicas;
-}
-
-async function makeOverlappingReplicaTuple(
-  authorKeypair: AuthorKeypair,
-  shareKeypair: ShareKeypair,
-  overlap: number,
-  tupleSize: number,
-  docSetSize: number,
-) {
-  const replicas = makeReplicasForShare(shareKeypair, tupleSize);
-
-  const docSets = await overlappingDocSets(
-    authorKeypair,
-    shareKeypair,
-    overlap,
-    docSetSize,
-    tupleSize,
-  );
-
-  for (let i = 0; i < tupleSize; i++) {
-    const replica = replicas[i];
-    const set = docSets[i];
-
-    for (const { doc, attachment } of set) {
-      await replica.ingest(FormatEs5, doc, "local");
-
-      if (attachment) {
-        await replica.ingestAttachment(FormatEs5, doc, attachment, "local");
-      }
-    }
-  }
-
-  return replicas;
-}
 
 Deno.test("Syncing (appetite 'once')", async (test) => {
   const authorKeypair = await Crypto.generateAuthorKeypair(

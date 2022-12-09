@@ -23,8 +23,5 @@ export { AsyncQueue } from "https://deno.land/x/for_awaitable_queue@1.0.0/mod.ts
 export {
   type Deferred,
   deferred,
-} from "https://deno.land/std@0.154.0/async/deferred.ts";
-export { equals as bytesEquals } from "https://deno.land/std@0.154.0/bytes/equals.ts";
-
-// fs
-// path
+} from "https://deno.land/std@0.167.0/async/deferred.ts";
+export { equals as bytesEquals } from "https://deno.land/std@0.167.0/bytes/equals.ts";

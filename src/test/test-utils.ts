@@ -11,6 +11,7 @@ import { isErr } from "../util/errors.ts";
 import { bytesEquals, shallowEqualObjects } from "../../deps.ts";
 import { AuthorKeypair, ShareKeypair } from "../crypto/crypto-types.ts";
 import { Crypto } from "../crypto/crypto.ts";
+import { ReplicaDriverMemory } from "../replica/driver_memory.ts";
 
 // for testing unicode
 export const snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
@@ -353,4 +354,52 @@ export async function storageHasAllStoragesDocs(
   }, true);
 
   return aHasAllB;
+}
+
+export function makeReplicasForShare(keypair: ShareKeypair, count: number) {
+  const replicas = [];
+
+  for (let i = 0; i < count; i++) {
+    const replica = new Replica({
+      driver: new ReplicaDriverMemory(keypair.shareAddress),
+      shareSecret: keypair.secret,
+    });
+
+    replicas.push(replica);
+  }
+
+  return replicas;
+}
+
+export async function makeOverlappingReplicaTuple(
+  authorKeypair: AuthorKeypair,
+  shareKeypair: ShareKeypair,
+  overlap: number,
+  tupleSize: number,
+  docSetSize: number,
+) {
+  const replicas = makeReplicasForShare(shareKeypair, tupleSize);
+
+  const docSets = await overlappingDocSets(
+    authorKeypair,
+    shareKeypair,
+    overlap,
+    docSetSize,
+    tupleSize,
+  );
+
+  for (let i = 0; i < tupleSize; i++) {
+    const replica = replicas[i];
+    const set = docSets[i];
+
+    for (const { doc, attachment } of set) {
+      await replica.ingest(FormatEs5, doc, "local");
+
+      if (attachment) {
+        await replica.ingestAttachment(FormatEs5, doc, attachment, "local");
+      }
+    }
+  }
+
+  return replicas;
 }

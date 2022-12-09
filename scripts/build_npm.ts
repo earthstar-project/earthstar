@@ -66,6 +66,16 @@ await build({
         },
         globalNames: ["TextEncoder", "TextDecoder"],
       },
+      {
+        package: {
+          name: "@sgwilym/urlpattern-polyfill",
+          version: "1.0.0-rc8",
+        },
+        globalNames: [{
+          name: "URLPattern",
+          exportName: "URLPattern",
+        }],
+      },
     ],
   },
 
@@ -108,6 +118,9 @@ await build({
       name: "ws",
       version: "8.8.1",
     },
+
+    "https://deno.land/std@0.167.0/node/http.ts": "node:http",
+    "https://deno.land/std@0.167.0/node/buffer.ts": "node:buffer",
   },
   package: {
     // package.json properties
