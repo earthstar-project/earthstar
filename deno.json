@@ -9,7 +9,7 @@
     "coverage": "deno task test-coverage && deno task show-coverage",
     "test-coverage": "deno test --no-check --coverage=cov_profile src",
     "show-coverage": "deno coverage cov_profile --lcov > cov.lcov && genhtml -o cov_html cov.lcov",
-    "clean": "rm -rf npm build .nyc_output coverage earthstar.bundle.js cov.lcov coverage_html cov_profile node_modules",
+    "clean": "rm -rf npm build coverage dist cov.lcov coverage_html cov_profile",
     "release-alpha": "deno run --allow-all scripts/release_alpha.ts",
     "release-beta": "deno run --allow-all scripts/release_beta.ts"
   },

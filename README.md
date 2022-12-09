@@ -1,426 +1,488 @@
 # Earthstar
 
-Sync stuff you care about with people you know. A specification and Javascript
-library for building online tools you can truly call your own.Build
-offline-first, decentralised, and private network applications in the browser,
-server, or command-line.
+[Earthstar](https://earthstar-project.org) is a small and resilient distributed
+storage protocol designed with a strong focus on simplicity and versatility,
+with the social realities of peer-to-peer computing kept in mind.
 
-**Clearly there's a lot to unpack, so check out
-[Earthstar's website](https://earthstar-project.org) for an introduction to
-Earthstar's concepts, an API tour, technical documentation, videos, and more!**
+This is a reference implementation written in Typescript. You can use it to add
+Earthstar functionality to applications running on servers, browsers, the
+command line, or anywhere else JavaScript can be run.
 
-## Usage
+[Detailed API documentation for this module can be found here](TODO).
 
-To use in Deno, add the following:
+This document is concerned with the usage of this module's APIs. To learn more
+about what Earthstar is, please see these links:
+
+- [What is Earthstar?](TODO)
+- [How does Earthstar work?](TODO)
+
+To learn more about running Earthstar servers, see
+[README_SERVERS](README_SERVERS.md)
+
+To learn more about this codebase, please see [ARCHITECTURE](ARCHITECTURE.md).
+
+To learn about contributing to this codebase, please see
+[CONTRIBUTING](CONTRIBUTING.md).
+
+## Table of contents
+
+## Importing the module
+
+It can be imported via URL into a browser:
+
+```html
+<script type="module">
+  import * as Earthstar from "https://cdn.earthstar-project.org/js/earthstar.bundle.v10.0.0.js";
+</script>
+```
+
+Or Deno:
 
 ```ts
-import * as Earthstar from "https://deno.land/x/earthstar/mod.ts";
+import * as Earthstar from "https://deno.land/x/earthstar@v10.0.0/mod.ts";`}
 ```
 
-To use with Node or apps built with NPM dependencies:
+> Earthstar's syncing does not work with version of Deno between 1.27.0 - 1.28.1
+> (inclusive) due to a regression in these versions' WebSocket implementation.
 
-```
-npm i earthstar
+or installed with NPM:
+
+```bash
+{`npm install earthstar@${LATEST_EARTHSTAR_VERSION}`}
 ```
 
-And then import in your code:
+We recommend the browser and Deno versions. This module has been built with many
+standard web APIs that have need to be polyfilled to work in Node.
+
+## Instantiating a replica
+
+`Replica` is the central API of this module. It is used to write and read data
+to a locally persisted copy of a share's data, and much more besides.
+
+To instantiate a replica, you will need knowledge of a share's public address.
 
 ```ts
-import * as Earthstar from "earthstar";
+import { Replica, ReplicaDriverMemory } from "earthstar";
+
+const replica = new Replica({
+  driver: ReplicaDriverMemory(YOUR_SHARE_ADDRESS),
+  shareSecret: YOUR_SHARE_SECRET,
+});
 ```
 
-## Development
+The `shareSecret` property is optional. If we omit it, the replica will be
+read-only.
 
-### Setup
+### Generating share keypairs
 
-You will need Deno installed.
-[Instructions for installation can be found here](https://deno.land/#installation).
-You may also want type-checking and linting from Deno for your IDE, which you
-can get with extensions
-[like this one for VSCode](https://deno.land/manual@v1.17.2/vscode_deno).
-
-To check that you've got everything set up correctly:
-
-`make example`
-
-This will run the example script at `example-app.ts`, and you will see a lot of
-colourful log messages from the app.
-
-### Scripts
-
-Scripts are run with the `make` command.
-
-- `make test` - Run all tests
-- `make test-watch` - Run all tests in watch mode
-- `make fmt` - Format all code in the codebase
-- `make npm` - Create a NPM package in `npm` and run tests against it (requires
-  Node v14 or v16 to be installed).
-- `make bundle` - Create a bundled browser script at `earthstar.bundle.js`
-- `make depchart` - Regenerate the dependency chart images
-- `make coverage` - Generate code test coverage statistics
-- `make clean` - Delete generated files
-
-### Orientation
-
-- The entry for the package can be found at `mod.ts`.
-- Most external dependencies can be found in `deps.ts`. All other files import
-  external dependencies from this file.
-- Script definitions can be found in `Makefile`.
-- Tests are all in `src/test/`
-- The script for building the NPM package can be found in `scripts/build_npm.ts`
-
-### Uint8Arrays and Buffers
-
-We use Uint8Arrays throughout the code to maximize platform support. Some of the
-node-specific drivers use Buffers internally but the Buffers are converted to
-Uint8Arrays before leaving those drivers.
-
-For convenience, variables that hold Uint8Arrays are called "bytes", like
-`bytesToHash` instead of `uint8ArrayToHash`.
-
-`util/bytes.ts` has a bunch of helper code to do common operations on
-Uint8Arrays and to convert them back and forth to strings and to Buffers.
-
-### Platform-specific tests
-
-Drivers are tested against the runtimes they're intended for. When tests are
-run, they pull the correct scenarios from 'src/test/test-scenarios.ts', where
-the current runtime is inferred during runtime.
-
-### Classes
-
-The `Replica` is the main star of the show. Classes to the right are used
-internally for its implementation. Classes to the left stack on top of an
-`Replica` to do extra things to it (subscribe to changes, cache data, etc).
-
-Each `Replica` holds the Docs for one Share.
-
-![](classes.png)
-
-Names starting with `I` are interfaces; there are one or multiple actual classes
-that implement those interfaces.
-
-The orange classes are "drivers" which have multiple implementations to choose
-from, for different platforms (node, browser, etc).
-
-Blue arrows show which functions call each other.
-
-Thick black arrows show which classes have pointers to other classes when
-they're running.
-
-### Source code dependency chart
-
-A --> B means "file A imports file B".
-
-For readability this hides `/test/` and `/util/` and `*-types.ts`.
-
-![](depchart/depchart-no-types.png)
-
-And again with 3rd party dependencies as brown boxes with dotted lines, and
-including `*-types.ts`
-
-![](depchart/depchart-deps.png)
-
-Run `yarn depchart` to regenerate this. You'll need graphviz installed.
-
-### Platform-specific drivers
-
-There are two parts of stone-soup which are swappable to support different
-platforms or backends: `IReplica` and `IReplicaDriver`. Everything else should
-work on all platforms.
-
-Crypto drivers:
-
-- `ReplicaDriverChloride` - only in browser, Node
-- `ReplicaDriverNode` - only in Node
-- `ReplicaDriverNoble` - universal
-
-Storage drivers:
-
-- `ReplicaDriverMemory` - univeral
-- `ReplicaDriverLocalStorage` - browser
-- `ReplicaDriverIndexedDB` - browser
-- `ReplicaDriverSqlite` - Node, Deno
-
-Users of this library have to decide which of these drivers to import and use in
-their app.
-
-### Documentation
-
-We use JSDoc for user documentation. You can view docs for the whole codebase at
-https://doc.deno.land/https://deno.land/x/stone_soup@v8.0.0/mod.ts, or by
-running the following from the root of the project:
-
-```
-deno doc mod.ts
-```
-
-JSDocs are intended for end-users of the library. Comments for contributors
-working with the codebase — e.g. notes on how something is implemented — are
-better as standard JS comments.
-
-If possible, use a single line for the JSDoc. Example:
+You can create new shares whenever you want.
 
 ```ts
-/** Does something great */
-export function doSomething() {
-  // ...
+import { Crypto } from "earthstar";
+
+const shareKeypair = await Crypto.generateShareKeypair("gardening");
+```
+
+The result of this operation will either be a `ShareKeypair` object with
+`shareAddress` and `secret` properties, or a `ValidationError`.
+
+### Persisting data with drivers
+
+`Replica` must always be instantiated with a driver. These drivers tell the
+`Replica` how to store and retrieve data, with different drivers using different
+storage mechanisms.
+
+Here are the available drivers:
+
+- `ReplicaDriverMemory` (works in all environments, but only stores data in
+  memory)
+- `ReplicaDriverWeb` (works in the browser, stores data with IndexedDB)
+- `ReplicaDriverFs` (works on runtimes with filesystem access, stores data with
+  Sqlite and the filesystem)
+
+Drivers are made of two sub-drivers: one for documents, and one for attachments
+(arbitrary binary data).
+
+There are some extra document drivers not used in the default drivers:
+
+- `DocDriverLocalStorage` (works in runtimes supporting the WebStorage API)
+- `DocDriverSqliteFFI` (works in Deno, stores data with a FFI implementation of
+  Sqlite, requires using the `--unstable` flag, and is faster than the default
+  driver in `ReplicaDriverFs`)
+
+These document drivers can be used like this:
+
+```ts
+const driver: IReplicaDriver = {
+  docDriver: new DocDriverSqliteFfi(SHARE_ADDR, FS_PATH),
+  attachmentDriver: new AttachmentDriverFs(FS_ATTACHMENTS_PATH),
+};
+
+const replica = new Replica({ driver });
+```
+
+## Writing data
+
+Writing data requires two things:
+
+- A replica configured with a valid share secret
+- An author keypair
+
+Author keypairs can be generated like this:
+
+```ts
+import { Crypto } from "earthstar";
+
+const authorKeypair = await Crypto.generateAuthorKeypair("suzy");
+```
+
+The result will be a new `AuthorKeypair` object with `address` and `secret`
+properties, or a `ValidationError`.
+
+With a valid author keypair you can write data using `Replica.set`:
+
+```ts
+const setResult = await replica.set(authorKeypair, {
+  path: "/my-note",
+  text: "Saw seven magpies today",
+});
+```
+
+The result of this operation is either an `IngestEvent` describing the
+operation's success (or failure, if one of the parameters was invalid in some
+way).
+
+## Wiping data
+
+Once written, data can be removed by overwriting it:
+
+```ts
+await replica.set(authorKeypair, {
+  path: "/my-note",
+  text: "",
+});
+```
+
+Or with the convenience method:
+
+```ts
+await replica.wipeDocAtPath(authorKeypair, "/my-note");
+```
+
+### Creating ephemeral documents
+
+There is another way to remove written data without leaving any trace of it.
+
+Ephemeral documents are held by replicas until a specified time, until at which
+point they are deleted.
+
+```ts
+await replica.set(authorKeypair, {
+  path: "/my-temporary-note!",
+  text: "I accidentally stepped on the strawberries.",
+  deleteAfter: TIME_IN_MICROSECONDS,
+});
+```
+
+To set an ephemeral document, the path _must_ contain a `!`, and the
+`deleteAfter` property must be set with a timestamp in _microseconds_.
+
+## Querying data
+
+There are many ways to get data back out of a Replica. The simplest one is
+`Replica.getAllDocs`:
+
+```ts
+const everything = await replica.getAllDocs();
+```
+
+The most powerful is `Replica.queryDocs`:
+
+```ts
+const mostRecentlyEditedWikiPageDocs = await replica.queryDocs({
+  historyMode: "latest",
+  filter: {
+    pathStartsWith: "/wiki",
+  },
+  limit: 10,
+});
+```
+
+Here are all the querying methods on `Replica`:
+
+- `getAllDocs`
+- `getLatestDocs`
+- `getAllDocsAtPath`
+- `getLatestDocAtPath`
+- `queryDocs`
+- `queryPaths`
+- `queryAuthors`
+
+Detailed API documentation for all of them can be found [here](TODO).
+
+## Using document contents
+
+The documents returned by queries are plain objects with the following shape:
+
+```ts
+type Doc = {
+  /** Which document format the doc adheres to, e.g. `es.5`. */
+  format: "es.5";
+  author: AuthorAddress;
+  text: string;
+  textHash: string;
+  /** When the document should be deleted, as a UNIX timestamp in microseconds. */
+  deleteAfter?: number;
+  path: Path;
+  /** Used to verify the authorship of the document. */
+  signature: Signature;
+  /** Used to verify the author knows the share's secret */
+  shareSignature: Signature;
+  /** When the document was written, as a UNIX timestamp in microseconds (millionths of a second, e.g. `Date.now() * 1000`).*/
+  timestamp: Timestamp;
+  /** The share this document is from. */
+  share: ShareAddress;
+  /** The size of the associated attachment in bytes, if any. */
+  attachmentSize?: number;
+  /** The sha256 hash of the associated attachment, if any. */
+  attachmentHash?: string;
+};
+```
+
+Though most applications will probably only use the `author`, `text`, and
+`timestamp` properties.
+
+## Syncing with other peers
+
+Syncing data with other peers requires adding your replica(s) to an instance of
+`Peer`:
+
+```ts
+import { Peer } from "earthstar";
+
+const peer = new Peer();
+
+// Pretend myReplica is an instance of `Replica`
+peer.addReplica(myReplica);
+
+peer.sync("https://my.server");
+```
+
+`Peer.sync` can be passed another instance of `Peer` or a valid URL of an
+Earthstar server to sync with.
+
+The two peers will only sync the replicas with shares they have in common.
+
+The result of `Peer.sync` can be assigned and used to monitor the progress of
+the sync operation:
+
+```ts
+const syncer = peer.sync("https://my.server");
+
+syncer.onStatusChange((newStatus) => {
+  console.log(newStatus);
+});
+
+syncer.isDone().then(() => {
+  console.log("Sync complete");
+}).catch((err) => {
+  console.error("Sync failed", err);
+});
+```
+
+## Using document attachments
+
+Documents can be written along with some arbitrary data which is persisted as an
+'attachment'. Whereas a document's `text` field can hold a UTF-8 string of 8kb,
+attachments can be of any kind of data and of any size.
+
+```ts
+// Here we use Deno.readFile to get a file's contents as a Uint8Array
+const imageData = await Deno.readFile("/Desktop/leaf.jpg");
+
+await replica.set(authorKeypair, {
+  path: "/images/pear-leaf.jpg",
+  text: "A close-up of a leaf of a pear tree",
+  attachment: imageData,
+});
+```
+
+The path _must_ have a file extension e.g. `.jpg`, `.mp3` if it also has an
+attachment.
+
+If we were attaching a large amount of data, we would use a `ReadableStream`
+instead:
+
+```ts
+// Here we use Deno.readFile to get a file's contents as a ReadableStream<Uint8Array>
+const videoFile = await Deno.open("/Desktop/little-mole.mp4");
+
+await replica.set(authorKeypair, {
+  path: "/videos/little-mole.mp4",
+  text: "A close-up of a leaf of a pear tree",
+  attachment: videoFile.readable,
+});
+```
+
+### Retrieving attachments
+
+If you already have a document with an attachment, you can use
+`Replica.getAttachment`:
+
+```ts
+const attachment = await replica.getAttachment(docWithAttachment);
+```
+
+The result of this operation will be a `DocAttachment` with `getBytes` and
+`getStream` methods, undefined (if our replica has not received a copy of this
+attachment from other peers), or a `ValidationError` in case `getAttachment` was
+passed a document which can't have an attachment.
+
+It's also possible to add attachments to many documents at once:
+
+```ts
+const allDocs = await replica.getAllDocs();
+
+const allDocsWithAttachments = await replica.addAttachments(allDocs);
+```
+
+`allDocsWithAttachments` will be an array of all documents with an added
+`attachment` property. The type of this property will either be `DocAttachment`,
+`undefined`, or `ValidationError`.
+
+## Subscribing to replica changes
+
+There are many ways to subscribe to the many events a replica generates during
+its lifetime.
+
+If you want to subscribe to updates in order to update a UI, the most ergonomic
+API is `ReplicaCache`:
+
+```ts
+import { ReplicaCache } from "earthstar";
+
+const replicaCache = new ReplicaCache(myReplica);
+
+const allDocs = replicaCache.getAllDocs();
+```
+
+The caveat is that the first time a query method is called, it _always_ returns
+an empty result. To get new updates, you must subscribe to changes. In the
+following example, we build a UI with a fictitious `renderDocListUI` function
+with the results of `ReplicaCache.getAllDocs`:
+
+```ts
+function triggerUIRender() {
+  const allDocs = replicaCache.getAllDocs();
+
+  renderDocListUI(allDocs);
+}
+
+replicaCache.onCacheUpdated(() => {
+  triggerUIRender();
+});
+
+triggerUIRender();
+```
+
+The important thing to remember is that the callback to `onCacheUpdated` will
+never trigger until the cache has been queried at least once.
+
+If you're not tracking changes for a UI, `Replica.getQueryStream` returns a
+`ReadableStream` of `QuerySourceEvent`, for documents matching a specific query.
+This API is great for creating indexes.
+
+```ts
+// Create a query stream for all docs with paths starting with /chat
+// And include all existing documents and all newly created or synced documents
+const chatMessagesStream = replica.getQueryStream({
+  filter: { pathStartsWith: "/chat" },
+}, "everything");
+
+chatMessagesStream.pipeTo(
+  new WritableStream({
+    write(event) {
+      if (event.kind === "success" || event.kind === "existing") {
+        console.log(event.doc.text);
+      }
+    },
+  }),
+);
+```
+
+Finally, `Replica.getEventStream` returns a `ReadableStream` of `ReplicaEvent`,
+which includes events for new document ingestions, document expirations,
+attachment ingestions, attachment prunes, and events for when the replica is
+about to close (and has closed).
+
+## Using common settings between clients
+
+There are a number of configurations which most Earthstar applications will want
+to persist between runs:
+
+- The shares used
+- An author to using for signing documents
+- Servers to sync with
+
+Earthstar offers a `ClientSettings` API which persists settings for these
+between sessions in all runtimes supporting the WebStorage APIs:
+
+```ts
+const settings = new ClientSettings();
+
+settings.author = authorKeypair;
+settings.addShare(myShareAddress);
+console.log(settings.servers);
+```
+
+It also offers a method which instantiates a new `Peer` with replicas for all
+shares already added:
+
+```ts
+const settings = new ClientSettings();
+
+// Create a peer with all saved shares and sync once with all saved servers.
+const peer = settings.getPeer({
+  sync: "once",
+  onCreateReplica: (addr, secret) => {
+    return new Replica({
+      driver: new ReplicaDriverMemory(addr),
+      shareSecret: secret,
+    });
+  },
+});
+```
+
+## Checking for errors
+
+Many functions in Earthstar return errors like `ValidationError`. These errors
+are not thrown, so it's good to check for them:
+
+```ts
+import { isErr } from "earthstar";
+
+const result = replica.set(authorKeypair, {
+  path: "/hey",
+  text: "Hello",
+});
+
+if (isErr(result)) {
+  console.error(
+    "Something went wrong when you tried to write some data!",
+    result,
+  );
 }
 ```
 
-You can use markdown inside of JSDoc block. While markdown supports HTML tags,
-it is forbidden in JSDoc blocks.
+## Changing the cryptographic driver
 
-Code string literals should be braced with the back-tick (\`) instead of quotes.
-For example:
-
-```ts
-/** Import something from the `earthstar` module. */
-```
-
-It's not necessary to document function arguments unless an extra explanation is
-warranted. Therefore `@param` should generally not be used. If `@param` is used,
-it should not include the `type` as TypeScript is already strongly typed.
+The Deno and browser versions of this module are configured by default to use
+the fastest cryptographic libraries available to them. The Node version is not,
+however.
 
 ```ts
-/**
- * Function with non obvious param.
- * @param nonObvious Description of non obvious parameter.
- */
+import { setGlobalCryptoDriver } from "earthstar";
+import { CryptoDriverChloride } from "earthstar/node";
+
+setGlobalCryptoDriver(CryptoDriverChloride);
 ```
-
-Code examples should utilize markdown format, like so:
-
-````ts
-/** A straight forward comment and an example:
- * ```ts
- * import { Crypto } from "stone-soup";
- * const keypair = Crypto.generateAuthorKeypair("suzy");
- * ```
- */
-````
-
-Code examples should not contain additional comments and must not be indented.
-It is already inside a comment. If it needs further comments it is not a good
-example.
-
-Exported functions should use the `function` keyword, and not be defined as
-inline functions assigned to variables. The main reason for this being that they
-are then correctly categorised as functions.
-
-### Publishing to NPM
-
-1. Run `make VERSION="version.number.here" npm`, where `version.number.here` is
-   the desired version number for the package.
-2. `cd npm`
-3. `npm publish`
-
-## Changes from Earthstar v1
-
-### Splitting `Storage` into `Replica` and `ReplicaDriver` classes
-
-Think of this as `IStorageNiceAPIFullOfComplexity` and
-`IStorageSimpleLowLevelDriver`.
-
-I want to make it easier to add new kinds of storage so I'm splitting IStorage
-into two parts:
-
-The Storage does:
-
-- the complex annoying stuff we only want to write once
-- `set():` sign and add a document
-- `ingest():` validate and accept a document from the outside
-- user-friendly helper functions, getters, setters
-- an event bus that other things can subscribe to, like QueryFollowers
-
-The StorageDriver does:
-
-- simple stuff, so we can make lots of drivers
-- query for documents (this is actually pretty complicated)
-- maintain indexes for querying (hopefully provided by the underlying storage
-  technology)
-- simple upsert of a document with no smartness
-
-Possibly even you can have multiple Storages for one Driver, for example when
-you're using multiple tabs with indexedDb or localStorage.
-
-### "Reliable indexing / streaming"
-
-This shows an implementation of the "reliable indexing" idea discussed in
-[this issue](https://github.com/earthstar-project/earthstar/issues/66).
-
-#### The problem
-
-We have livestreaming now, over the network and also to local subscribers, all
-based on `onWrite` events.
-
-If you miss some events, you can't recover -- you have to do a full batch
-download of every document.
-
-Events also don't tell you what was overwritten, which you might need to know to
-update a Layer or index.
-
-#### The solution: `localIndex`
-
-Each Storage keeps track of the order that it receives documents, and assignes
-each doc a `localIndex` value which starts at 1 and increments from there with
-every newly written doc.
-
-This puts the documents in a nice stable linear order that can be used to
-reliably stream, and resume streaming, from the Storage.
-
-When we get a new version of a document, it gets a new `localIndex` and goes at
-the end of the sequence, and the old version vanishes, leaving a gap in the
-sequence. It's ok that there are gaps.
-
-The `localIndex` is particular to a certain IStorage. It's kept in the `Doc`
-object but it's not really part of it; it's not included in the signature. It's
-this IStorage's metadata about that document. When syncing, it's sent as one of
-the "extra fields"
-[(newly added to the specification)](https://earthstar-docs.netlify.app/docs/reference/earthstar-specification/#extra-fields-for-syncing),
-observed by the receiving peer, then discarded and overwritten with the
-receiving peer's own latest `localIndex` number.
-
-#### Use cases
-
-1. Streaming sync between peers, which can be interrupted and resumed
-1. Layers and indexes that use a QueryFollower to subscribe to changes in a
-   Storage. These might store their indexes in localStorage, for example, and
-   would therefore want to resume indexing instead of starting over from
-   scratch.
-1. React components that need to know when to re-render
-
-For use cases where the listener will never have any downtime, they don't really
-need to be able to resume, they can just listen for events from the Storage
-instead and it may be more efficient. For example a React component could listen
-for events about a particular document instead of making a whole QueryFollower
-that has to go through every single change to find changes to that particular
-document.
-
-#### Properties of the `localIndex` sequence
-
-The docs, sorted by `localIndex` on a particular peer, have these properties:
-
-**Properties**
-
-1. The docs are in a stable order that does not change, except:
-1. Newly added or changed docs go at the end, increasing the highest
-   `localIndex` by 1.
-1. When a doc is updated (same author and same path, but newer timestamp), we
-   discard the old version. So we leave a gap in the sequence where the old
-   verison used to be, and the new version goes on the end of the sequence.
-1. The first doc has a `localIndex` of zero, unless it was later changed, in
-   which case there will be a gap at zero.
-
-Why do all this? The goal is to be able to catch up to changes since the last
-time we looked at a Storage. We can do that by remembering the highest
-`localIndex` we saw last time, and now getting all the docs later than that in
-the sequence. We always read this sequence from old to new (in increasing order
-of `localIndex`.
-
-There are not really any other nice properties about this sequence:
-
-**Downsides**
-
-1. The `localIndex` order is not sorted by `path`, `timestamp`, `author`, or any
-   other useful property. The order is jumbled because docs can be received in
-   any order during a sync, perhaps with multiple other peers simultaneously,
-   perhaps some using Sync Filters to only get some docs...
-1. The order is different on every peer (that's why it's "local").
-1. The history docs for a certain path will be in a jumbled order in the
-   `localIndex` sequence. The Latest doc for a path can be before or after the
-   other history docs. User of QueryFollowers will need some bookeeping to
-   remember which version is the Latest for each path, if they care (e.g. if
-   it's being used as an index and not just a sync mechanism between peers).
-1. When a doc is modified and the old one is deleted, leaving a gap, you do not
-   get notified about the gap. There is no pointer back to the gap, or anything.
-   Users of QueryFollowers are expected to have some kind of index so they can
-   notice that the new doc overwrites the old one, and delete the old one.
-1. When an ephemeral doc expires, it leaves a gap in the sequence but nothing is
-   added to the end of the sequence. Users of QueryFollowers are expected to pay
-   attention to expiration dates and delete ephemeral docs themselves. We may
-   also add an event on the Storage when a doc expires, but you could miss this
-   event if you were not listening at that moment, so you'll still have to check
-   for your own expired docs from time to time.
-1. QueryFollowers should always progress in the direction of increasing
-   `localIndex`. (They can start at 0, or the latest number, or anywhere in
-   between). This makes it simple to keep track of where to resume next time.
-   However this means we always process the oldest-received docs first, but the
-   user probably cares more about the recently-received docs.
-   - It would be possible with fancier bookeeping to make QueryFollowers that
-     track which intervals of the sequence they've visited, so they can work
-     from newest-to-oldest. But sometimes the oldest-received docs are the most
-     important (like usernames)...
-
-#### Querying by `localIndex`
-
-This lets you easily resume where you left off. You can get batches of N docs at
-a time if you want, using the `limit` option.
-
-```ts
-storage.getDocsSinceLocalIndex(
-    startAt: LocalIndex,
-    limit?: number): Doc[];
-```
-
-This is also how you tell a QueryFollower where to start in the sequence.
-QueryFollowers ignore the `limit` property though.
-
-(You can also still look up documents by path in the usual old way.)
-
-### Reliable streaming over the network, when syncing
-
-(Not implemented in this code yet)
-
-When we send docs over the network we will send the `localIndex` to help the
-other side track where they are in our own sequence. The other side will then
-discard the property and put their own `localIndex` on the document when they
-store it.
-
-Peers will remember, for each other peer, which is the latest `localIndex`
-they've seen from that peer, so they can resume syncing from there.
-
-This is similar to how append-only logs are synced in Scuttlebutt and Hyper,
-except our logs have gaps.
-
-### Slightly different querying
-
-Querying has been made more organized -- see the Query type in `types.ts`. It
-looks a bit more like an SQL query but the pieces are written in the order they
-actually happen, so it's easier to understand.
-
-The order is:
-
-- history (all or latest only)
-- orderBy
-- startAt (continue from a certain point)
-- filter - the same options, timestamp, pathStartswith, etc etc
-- limit
-
-Also, the `cleanUpQuery` function is fancier and will also figure out if the
-query will match `all`, `some`, or `nothing` documents. This helps with
-optimizations elsewhere.
-
-## Problems left to solve
-
-- Ephemeral documents disappear without leaving a trace, do we need events for
-  that?
-- An IStorage might significantly change or start over, by deleting most of its
-  local documents and choosing a different sync query. Then we'd need to tell
-  subscribers and peers that we're effectively a different IStorage now.
-  - localIndex could be a tuple `[generation, localIndex]` where generation is
-    an integer that increments on each big change like that
-  - or give each IStorage a UUID which gets randomly changed when big changes
-    happen. This would be helpful for other reasons too (to prevent echoing back
-    documents to the storage that just gave them back to us, we need to track
-    who gave them to us)
-- Syncing by `localIndex` doesn't work very well when you also have a sync
-  query, because you have to scan the entire sequence to find the couple of docs
-  you care about. We probably still want another way of efficient syncing that
-  goes in path order and uses hashing in some clever way, sort of like a Merkle
-  tree but not.
-
-## Other small improvements
-
-- The `Document` type is now named `Doc` to avoid collision with an existing
-  built-in Typescript type

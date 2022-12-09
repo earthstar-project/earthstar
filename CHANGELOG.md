@@ -1,40 +1,88 @@
 # Changelog
 
-## Next
+## v10.0.0
 
-- BREAKING: IReplicaDriver is now used for a class with both `docDriver` and
-  `attachmentDriver` properties
-- BREAKING: IReplicaDriver is now IReplicaDocDriver, classes have changed names
-  so ReplicaDriverMemory is now DocDriverMemory
-- Improvement: noble-ed25519 has been updated, and is now audited and 10 - 15%
-  faster.
-- BREAKING: `Peer` no longer has a `peerId` property.
-- BREAKING: `Peer.sync`'s type has changed. It now takes a boolean as its only
-  parameter, indicating whether the sync should be 'live' (connection kept open)
-  or not. It also now returns a syncer. In light of this, the `stopSyncing` and
-  `syncUntilCaughtUp` methods have also been removed.
-- Feature (experimental): Added a new `ReplicaDriverSqliteFfi`, which uses
-  native bindings to Sqlite. It has much better write performance than the
-  ordinary Sqlite driver, which makes it very suitable for replica servers. It
-  has worse read performance, however. Usage requires passing the `--unstable`
-  flag to Deno.
-- Improvement: ReplicaDriverMemory's performance for setting and querying has
-  been massively improved.
-- BREAKING: Syncer has been replaced by a completely new, faster implementation.
-  It is NOT able to sync with v7 - v9 peers.
-- BREAKING: LiveQueryEvent is now ReplicaEvent
-- BREAKING: Replica.ingest no longer returns an IngestEvent or ValidationError.
-  It now returns `true` (indicating success) or a ValidationError.
-- Feature: Added Replica.getEventStream which returns a ReadableStream of
-  replica events. By default it gets all events, but you can subscribe to
-  specific events by passing a channel name.
-- Feature: Added Replica.onEvent which will run a given callback every time a
-  replica event occurs.
-- BREAKING: Replica no longer has a subscribable `bus` property,
-- Feature: Added CryptoDriverSodium for Deno. This driver is several magnitudes
-  faster than the default crypto driver. Set it with `setGlobalCryptoDriver`.
-- BREAKING: Initialising a `Replica` is now simpler: you only need to provide a
-  driver.
+This is a major release which introduces attachments, share keypairs, efficient
+sync, and much much more. It is our biggest release _ever_.
+
+As such, this version breaks compatibility with previous versions of Earthstar.
+
+Here are the headline features:
+
+- **Attachments**. When a new document is written to a Replica you can attach
+  arbitary binary data to it. This can be used for sharing large images, music,
+  video, anything. There is no size limit.
+- **Shares with granular read / write access**. Share addresses are now the
+  public key of a share keypair. The public key grants discovery and read
+  access, the secret key grants write access to the replica.
+- **Efficient sync**. Syncing has been completely overhauled to use a new
+  efficient reconclition mechanism powered by
+  [range-reconcile](earthstar-project/range-reconcile) and
+  push-pull-push-multicast trees.
+
+In addition to new features, many APIs have been tweaked or changed entirely.
+Please see the API documentation and the README to see what these new API
+changes are like.
+
+## Peer
+
+- Added `Peer.onReplicasChange`
+- Added `Peer.onSyncersChange`
+
+## Replica
+
+- Significantly improved the performance of querying documents.
+- Replicas now can create documents with attachments with `Replica.set`
+- Added `Replica.ingestAttachment`
+- Added `Replica.getAttachment`
+- Added `Replica.addAttachments`
+- Added `Replica.wipeDocAtPath`
+- Added `Replica.getEventStream`
+- Added `Replica.getQueryStream`
+- Added `Replica.onEvent`
+- Added `MultiformatReplica`, a Replica which is able to read, write, and sync
+  documents of different formats.
+- Added `FormatEs5`, which supports share keypairs and attachments
+- Added `ReplicaDriverWeb`
+- Added `ReplicaDriverFs`
+- Added `RelpicaDriverMemory`
+- Added `DocDriverSqliteFFI`, which uses an FFI implemetation of Sqlite.
+  Requires the `--unstable` flag on Deno.
+- Updated `syncReplicaAndFsDir` to use attachments for large files.
+- `ReplicaCache` now has attachment methods
+
+## Syncing
+
+- Added `PartnerLocal`, for syncing with local peers.
+- Added `PartnerWebServer`, for syncing with servers.
+- Added `PartnerWebClient`, for syncing with web clients.
+
+- **Removed** earthstar_streaming_rpc as a dependency.
+
+## Queries
+
+- **Removed** the `contentLength` options on `QueryFilter`.
+- **Removed** `QueryFollower`. Use `Replica.getQueryStream` instead.
+
+- `queryByTemplateAsync` and `queryByGlobAsync` have had the redundant `async`
+  taken out of their name.
+
+## Cryptography
+
+- Added `Crypto.generateShareKeypair`
+- Added `CryptoDriverSodium` which uses a WASM version of libsodium for very
+  fast operations. This is now the default driver on Deno.
+- Updated `CryptoDriverNoble` to use a new, faster, audited version.
+
+## Other
+
+- Added a new `ClientSettings` class for easily saving and retrieving an author
+  keypair, shares and secrets, and favourite servers.
+- Added parseAuthorOrShareAddress
+- Added a new minified web bundle, available from CDN_LINK_HERE
+- Added ARCHITECTURE.md
+- Added CONTRIBUTING.md
+- Added CODE_OF_CONDUCT.md
 
 ## v9.3.2
 
