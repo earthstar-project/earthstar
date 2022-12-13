@@ -424,11 +424,11 @@ to persist between runs:
 - An author to using for signing documents
 - Servers to sync with
 
-Earthstar offers a `ClientSettings` API which persists settings for these
+Earthstar offers a `SharedSettings` API which persists settings for these
 between sessions in all runtimes supporting the WebStorage APIs:
 
 ```ts
-const settings = new ClientSettings();
+const settings = new SharedSettings();
 
 settings.author = authorKeypair;
 settings.addShare(myShareAddress);
@@ -439,7 +439,7 @@ It also offers a method which instantiates a new `Peer` with replicas for all
 shares already added:
 
 ```ts
-const settings = new ClientSettings();
+const settings = new SharedSettings();
 
 // Create a peer with all saved shares and sync once with all saved servers.
 const peer = settings.getPeer({

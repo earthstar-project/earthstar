@@ -41,4 +41,4 @@ export * from "../util/doc-types.ts";
 export * from "../util/errors.ts";
 export * from "../util/log.ts";
 export * from "../util/misc.ts";
-export * from "../util/client_settings.ts";
+export * from "../util/shared_settings.ts";

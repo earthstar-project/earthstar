@@ -1,6 +1,6 @@
 import { AuthorKeypair, ShareKeypair } from "../../crypto/crypto-types.ts";
 import { Crypto } from "../../crypto/crypto.ts";
-import { ClientSettings } from "../../util/client_settings.ts";
+import { SharedSettings } from "../../util/shared_settings.ts";
 import { isErr, notErr } from "../../util/errors.ts";
 import { assert, assertEquals } from "../asserts.ts";
 import { isNode } from "https://deno.land/x/which_runtime@0.2.0/mod.ts";
@@ -8,11 +8,11 @@ import { Replica } from "../../replica/replica.ts";
 import { ReplicaDriverMemory } from "../../replica/driver_memory.ts";
 
 Deno.test({
-  name: "ClientSettings",
+  name: "SharedSettings",
   // Don't run this on Node where it'll implode.
   ignore: isNode,
   fn: async (test) => {
-    const settings = new ClientSettings();
+    const settings = new SharedSettings();
 
     const shareAKeypair = await Crypto.generateShareKeypair(
       "apples",

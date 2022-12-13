@@ -13,7 +13,7 @@ const SHARES_KEY = "shares";
 const SHARE_SECRETS_KEY = "share_secrets";
 const SERVERS_KEY = "servers";
 
-type ClientSettingsOpts = {
+type SharedSettingsOpts = {
   /** A namespace to restrict these settings to. */
   namespace?: string;
   /** Whether to use session storage for these settings. */
@@ -24,11 +24,11 @@ type ClientSettingsOpts = {
  *
  * Uses the Storage API, so only clients on the same origin will share the same settings.
  */
-export class ClientSettings {
+export class SharedSettings {
   private namespace: string | undefined;
   private storage = localStorage;
 
-  constructor(opts?: ClientSettingsOpts) {
+  constructor(opts?: SharedSettingsOpts) {
     this.namespace = opts?.namespace;
 
     if (opts?.sessionOnly) {
@@ -335,7 +335,7 @@ export class ClientSettings {
   ): {
     /** A preconfigured Peer. */
     peer: Peer;
-    /** Stop changes to ClientSettings from propagating to the Peer. */
+    /** Stop changes to SharedSettings from propagating to the Peer. */
     unsubscribeFromSettings: () => void;
   } {
     const peer = new Peer();

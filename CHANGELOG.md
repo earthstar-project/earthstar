@@ -76,7 +76,7 @@ changes are like.
 
 ## Other
 
-- Added a new `ClientSettings` class for easily saving and retrieving an author
+- Added a new `SharedSettings` class for easily saving and retrieving an author
   keypair, shares and secrets, and favourite servers.
 - Added parseAuthorOrShareAddress
 - Added a new minified web bundle, available from CDN_LINK_HERE
