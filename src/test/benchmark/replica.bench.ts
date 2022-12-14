@@ -1,13 +1,13 @@
 import { Crypto } from "../../crypto/crypto.ts";
 import { setGlobalCryptoDriver } from "../../crypto/global-crypto-driver.ts";
 import { Replica } from "../../replica/replica.ts";
-import { AuthorKeypair } from "../../util/doc-types.ts";
 import { randomId } from "../../util/misc.ts";
 import { writeRandomDocs } from "../test-utils.ts";
 import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { AuthorKeypair } from "../../crypto/crypto-types.ts";
 
 const scenarios: MultiplyScenarioOutput<{
   "docDriver": ScenarioItem<typeof docDriverScenarios>;
