@@ -8,13 +8,13 @@ This is a reference implementation written in Typescript. You can use it to add
 Earthstar functionality to applications running on servers, browsers, the
 command line, or anywhere else JavaScript can be run.
 
-[Detailed API documentation for this module can be found here](TODO).
+[Detailed API documentation for this module can be found here](https://doc.deno.land/https://deno.land/x/earthstar@v10.0.0/mod.ts).
 
 This document is concerned with the usage of this module's APIs. To learn more
 about what Earthstar is, please see these links:
 
-- [What is Earthstar?](TODO)
-- [How does Earthstar work?](TODO)
+- [What is Earthstar?](https://earthstar-project.org/docs/what-is-it)
+- [How does Earthstar work?](https://earthstar-project.org/docs/how-it-works)
 
 To learn more about running Earthstar servers, see
 [README_SERVERS](README_SERVERS.md)
@@ -32,7 +32,7 @@ It can be imported via URL into a browser:
 
 ```html
 <script type="module">
-  import * as Earthstar from "https://cdn.earthstar-project.org/js/earthstar.bundle.v10.0.0.js";
+  import * as Earthstar from "https://cdn.earthstar-project.org/js/earthstar.web.v10.0.0.js";
 </script>
 ```
 
@@ -48,7 +48,7 @@ import * as Earthstar from "https://deno.land/x/earthstar@v10.0.0/mod.ts";`}
 or installed with NPM:
 
 ```bash
-{`npm install earthstar@${LATEST_EARTHSTAR_VERSION}`}
+{`npm install earthstar`}
 ```
 
 We recommend the browser and Deno versions. This module has been built with many
@@ -218,7 +218,8 @@ Here are all the querying methods on `Replica`:
 - `queryPaths`
 - `queryAuthors`
 
-Detailed API documentation for all of them can be found [here](TODO).
+Detailed API documentation for all of them can be found
+[here](https://doc.deno.land/https://deno.land/x/earthstar@v10.0.0/mod.ts).
 
 ## Using document contents
 

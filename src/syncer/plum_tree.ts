@@ -44,7 +44,7 @@ export class PlumTree {
     if (maybeTimeout) {
       clearTimeout(maybeTimeout);
       // TODO: stop here?
-      // return false
+      return false;
     }
 
     // Check the list of previously received eager messages for this ID.

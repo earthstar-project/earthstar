@@ -312,7 +312,7 @@ export class DocDriverSqlite implements IReplicaDocDriver {
     };
 
     this._maxLocalIndex += 1;
-    //  TODOM3: Fix this any type.
+
     this._db.prepare(UPSERT_DOC_QUERY).run(row);
 
     return { ...doc, _localIndex: row.localIndex };
