@@ -1,5 +1,6 @@
 import { DocAttachment } from "../../util/doc-types.ts";
 import {
+  EarthstarError,
   isErr,
   ReplicaIsClosedError,
   ValidationError,
@@ -75,16 +76,12 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
       // It's fine.
     }
 
-    await attachment.pipeThrough(attachmentStreamInfo).pipeTo(
-      new WritableStream({
-        async write(chunk) {
-          await Deno.writeFile(stagingPath, chunk, {
-            create: true,
-            append: true,
-          });
-        },
-      }),
-    );
+    try {
+      const file = await Deno.open(stagingPath, { create: true, write: true });
+      await attachment.pipeThrough(attachmentStreamInfo).pipeTo(file.writable);
+    } catch {
+      return new EarthstarError("Couldn't write data to the staging path");
+    }
 
     const hash = await attachmentStreamInfo.hash;
     const size = await attachmentStreamInfo.size;

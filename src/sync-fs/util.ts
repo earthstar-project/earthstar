@@ -195,16 +195,12 @@ export async function writeDocToDir(
       // It's fine if the pathToWrite isn't there yet
     }
 
-    await (await attachment.stream()).pipeTo(
-      new WritableStream({
-        async write(chunk) {
-          await Deno.writeFile(pathToWrite, chunk, {
-            create: true,
-            append: true,
-          });
-        },
-      }),
-    );
+    try {
+      const file = await Deno.open(pathToWrite, { create: true, write: true });
+      await (await attachment.stream()).pipeTo(file.writable);
+    } catch {
+      throw new EarthstarError("Could not write attachment to filesystem");
+    }
 
     const date = new Date(doc.timestamp / 1000);
     await Deno.utime(pathToWrite, date, date);
