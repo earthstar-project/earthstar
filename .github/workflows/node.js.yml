@@ -2,9 +2,9 @@ name: NPM + Node CI
 
 on:
   push:
-    branches: [main, esm-first]
+    branches: [main, squirrel]
   pull_request:
-    branches: [main, esm-first]
+    branches: [main, squirrel]
 
 jobs:
   build:
@@ -12,8 +12,8 @@ jobs:
 
     strategy:
       matrix:
-        node-version: ["14", "16"]
-        deno-version: ["1.18.0"]
+        node-version: ["16", "18"]
+        deno-version: ["1.25.1"]
 
     steps:
       - uses: actions/checkout@v2
@@ -27,4 +27,4 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           
-      - run: make npm
+      - run: deno task npm

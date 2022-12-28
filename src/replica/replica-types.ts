@@ -1,46 +1,23 @@
 import {
-  AuthorAddress,
-  AuthorKeypair,
-  Doc,
-  DocToSet,
-  LocalIndex,
-  Path,
+  DocAttachment,
+  DocBase,
+  FormatName,
   ShareAddress,
 } from "../util/doc-types.ts";
-import { HistoryMode, Query } from "../query/query-types.ts";
-import { IFormatValidator } from "../format-validators/format-validator-types.ts";
+import { Query } from "../query/query-types.ts";
 import { ValidationError } from "../util/errors.ts";
-import { Superbus } from "../../deps.ts";
+import { Replica } from "./replica.ts";
+import {
+  DefaultFormats,
+  FormatConfigType,
+  FormatsArg,
+  FormatsConfigRecord,
+} from "../formats/format_types.ts";
 
 //================================================================================
 // TYPES AND EVENTS
 
 export type ReplicaId = string;
-
-export type ReplicaBusChannel =
-  | "ingest"
-  | // 'write|/some/path.txt'  // note that write errors and no-ops are also sent here
-  "expire"
-  | "willClose"
-  | "didClose";
-
-export interface QueryResult {
-  // the docs from the query...
-  docs: Doc[];
-  // ...and the replica Driver's maxLocalIndex at the time
-  // just before and just after the query was done.
-  // This provided a lower and upper bound for the maxLocalIndex
-  // associated with the resulting docs.
-  // (This is the OVERALL max local index for
-  // the whole replica, not just for the resulting docs.)
-  maxLocalIndexBefore: number;
-  maxLocalIndexAfter: number;
-  // The max localIndex out of the returned docs.
-  // This could be much smaller than the overall maxLocalIndex
-  // if the docs have been filtered.
-  // If there are no matching docs, this is -1.
-  maxLocalIndexInResult: number;
-}
 
 // IngestEvents are returned from replica.set() and replica.ingest(),
 // and sent as events on the replica.bus 'ingest' channel.
@@ -48,34 +25,42 @@ export interface QueryResult {
 export interface IngestEventFailure {
   kind: "failure";
   reason: "write_error" | "invalid_document";
-  maxLocalIndex: number;
   err: Error | null;
 }
-export interface IngestEventNothingHappened {
+export interface IngestEventNothingHappened<
+  DocType extends DocBase<string>,
+> {
   kind: "nothing_happened";
   reason: "obsolete_from_same_author" | "already_had_it";
-  maxLocalIndex: number;
-  doc: Doc; // won't have a _localIndex because it was not actually ingested
+  doc: DocType; // won't have a _localIndex because it was not actually ingested
 }
-export interface IngestEventSuccess {
+export interface IngestEventSuccess<
+  DocType extends DocBase<string>,
+> {
   kind: "success";
   maxLocalIndex: number;
-  doc: Doc; // the just-written doc, frozen, with updated extra properties like _localIndex
+  doc: DocType; // the just-written doc, frozen, with updated extra properties like _localIndex
 
-  docIsLatest: boolean; // is it the latest at this path (for any author)?
+  /** Whether the doc is the latest at this path for any author. */
+  docIsLatest: boolean;
 
-  // the most recent doc from the same author, at this path, before the new doc was written.
-  prevDocFromSameAuthor: Doc | null;
+  /** The most recent doc from the same author, at this path, before the new doc was written. */
+  prevDocFromSameAuthor: DocType | null;
 
-  // the latest doc from any author at this path, before the new doc was written.
-  // note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
-  prevLatestDoc: Doc | null;
+  /** the latest doc from any author at this path, before the new doc was written.
+   * note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
+   */
+  prevLatestDoc: DocType | null;
+
+  /** An ID representing the source of this ingestion. 'local' means the doc was created locally. */
+  sourceId: "local" | string;
 }
-export interface DocAlreadyExists {
+export interface DocAlreadyExists<
+  DocType extends DocBase<string>,
+> {
   // for a doc that was previously ingested, when a live query is catching up.
   kind: "existing";
-  maxLocalIndex: number;
-  doc: Doc; // the just-written doc, frozen, with updated extra properties like _localIndex
+  doc: DocType; // the just-written doc, frozen, with updated extra properties like _localIndex
 
   //docIsLatest: boolean,  // is it the latest at this path (for any author)?
 
@@ -86,25 +71,34 @@ export interface DocAlreadyExists {
   //// note this is actually still the latest doc if the just-written doc is an older one (docIsLatest===false)
   //prevLatestDoc: Doc | null,
 }
+
 export interface ReplicaEventWillClose {
   kind: "willClose";
-  maxLocalIndex: number;
 }
+
 export interface ReplicaEventDidClose {
   kind: "didClose";
 }
 
-export interface QueryFollowerDidClose {
-  kind: "queryFollowerDidClose";
-}
-
-export interface IdleEvent {
-  kind: "idle";
-}
-
-export interface ExpireEvent {
+export interface ExpireEvent<
+  DocType extends DocBase<string>,
+> {
   kind: "expire";
-  path: string;
+  doc: DocType;
+}
+
+export interface AttachmentIngestEvent<DocType extends DocBase<string>> {
+  kind: "attachment_ingest";
+  doc: DocType;
+  hash: string;
+  size: number;
+  sourceId: "local" | string;
+}
+
+export interface AttachmentPruneEvent {
+  kind: "attachment_prune";
+  hash: string;
+  format: string;
 }
 
 /**
@@ -112,30 +106,66 @@ export interface ExpireEvent {
  * - IngestEventFailure — refused an invalid doc
  * - IngestEventNothingHappened — ingested an obsolete or duplicate doc
  */
-export type IngestEvent =
+export type IngestEvent<
+  DocType extends DocBase<string>,
+> =
   | IngestEventFailure
-  | IngestEventNothingHappened
-  | IngestEventSuccess;
+  | IngestEventNothingHappened<DocType>
+  | IngestEventSuccess<DocType>;
 
 /**
  * - DocAlreadyExists — processing an old doc as you catch up
- * - IdleEvent — reached the end of existing docs; waiting for new docs
  * - IngestEvent — the result of a replica ingesting a document
+ * - ExpireEvent - An ephemeral document has expired
+ * - AttachmentIngestEvent - A new attachment has been ingested
+ * - AttachmentPruneEvent - An attachment without a corresponding document has been pruned.
  * - ReplicaEventWillClose — the replica is about to close
  * - ReplicaEventDidClose — the replica has closed
- * - QueryFollowerDidClose — the query follower was closed (can happen on its own or after the replica closes)
  */
-export type LiveQueryEvent =
-  | DocAlreadyExists
-  | // catching up...
-  IdleEvent
-  | // waiting for an ingest to happen...
-  IngestEvent
-  | // an ingest happened
-  ExpireEvent
+export type ReplicaEvent<
+  DocType extends DocBase<string>,
+> =
+  | IngestEvent<DocType>
+  | ExpireEvent<DocType>
+  | AttachmentIngestEvent<DocType>
+  | AttachmentPruneEvent
   | ReplicaEventWillClose
-  | ReplicaEventDidClose
-  | QueryFollowerDidClose;
+  | ReplicaEventDidClose;
+
+//================================================================================
+
+// Query events
+
+/** An event representing when a QuerySource has processed all existing documents. */
+export type ProcessedAllExistingEvent = {
+  kind: "processed_all_existing";
+};
+
+/**
+ * - ExpireEvent - An ephemeral document has expired
+ * - IngestEvent — the result of a replica ingesting a document
+ * - DocAlreadyExists — processing an old doc as you catch up
+ */
+export type QuerySourceEvent<DocType extends DocBase<string>> =
+  | ExpireEvent<DocType>
+  | IngestEventSuccess<DocType>
+  | ProcessedAllExistingEvent
+  | DocAlreadyExists<DocType>;
+
+export type QuerySourceOpts<F> = {
+  replica: Replica;
+  formats?: FormatsArg<F>;
+  query: Omit<Query<string[]>, "formats">;
+  mode?: QuerySourceMode;
+};
+
+/**
+ * A mode representing what kind of docs are desired from a query stream.
+ * - `existing` - Only pre-existing documents.
+ * - `new` - Only documents written after the stream is initiated
+ * - `everything` - Both pre-existing and incoming documents.
+ */
+export type QuerySourceMode = "existing" | "new" | "everything";
 
 //================================================================================
 
@@ -152,131 +182,14 @@ export interface IReplicaConfig {
 }
 
 /**
- * A replica of a share's data, used to read, write, and synchronise data to.
- * Should be closed using the `close` method when no longer being used.
- * ```
- * const myReplica = new Replica("+a.a123", Es4Validatior, new ReplicaDriverMemory());
- * ```
+ * A document driver provides low-level access to a replica's documents. ReplicaDocDrivers are not meant to be used directly by users; let the Replica talk to it for you.
  */
-export interface IReplica extends IReplicaConfig {
-  replicaId: ReplicaId;
-  /** The address of the share this replica belongs to. */
-  share: ShareAddress;
-  /** The validator used to validate ingested documents. */
-  formatValidator: IFormatValidator;
-  replicaDriver: IReplicaDriver;
-  bus: Superbus<ReplicaBusChannel>;
-
-  //--------------------------------------------------
-  // LIFECYCLE
-
-  /** Returns whether the replica is closed or not. */
-  isClosed(): boolean;
-
-  /**
-   * Closes the replica, preventing new documents from being ingested or events being emitted.
-   * Any methods called after closing will return `ReplicaIsClosedError`.
-   * @param erase - Erase the contents of the replica. Defaults to `false`.
-   */
-  /*
-  More details:
-
-  * send ReplicaWillClose events and wait for event receivers to finish blocking.
-  * close the IReplica
-  * close the IReplicaDriver and possibly erase it
-  * send ReplicaDidClose events and do not wait for event receivers.
-
-  Any function called after the replica is closed will throw a ReplicaIsClosedError, except isClosed() is always allowed.
-
-  You cannot call close() if the replica is already closed (it will throw a ReplicaIsClosedError).
-
-  close() can happen while set() or ingest() are waiting for locks or have pending transactions.
-  In that case, the pending operations will fail and throw a ReplicaIsClosed.
-
-  If erase is true, actually delete and forget the local data (remove files, etc).
-  Erase defaults to false if not provided.
-  */
-  close(erase: boolean): Promise<void>;
-
-  //--------------------------------------------------
-  // GET
-
-  // this one is synchronous
-  /** Returns the max local index of all stored documents */
-  getMaxLocalIndex(): number;
-
-  // these should all return frozen docs
-  getDocsAfterLocalIndex(
-    historyMode: HistoryMode,
-    startAfter: LocalIndex,
-    limit?: number,
-  ): Promise<Doc[]>;
-  /** Returns all documents, including historical versions of documents by other identities. */
-  getAllDocs(): Promise<Doc[]>;
-  /** Returns latest document from every path. */
-  getLatestDocs(): Promise<Doc[]>;
-  /** Returns all versions of a document by different authors from a specific path. */
-  getAllDocsAtPath(path: Path): Promise<Doc[]>;
-  /** Returns the most recently written version of a document at a path. */
-  getLatestDocAtPath(path: Path): Promise<Doc | undefined>;
-
-  /** Returns an array of docs for a given query.
-  ```
-  const myQuery = {
-    filter: {
-      pathEndsWith: ".txt"
-    },
-    limit: 5,
-  };
-
-  const firstFiveTextDocs = await myReplica.queryDocs(myQuery);
-  ```
-  */
-  queryDocs(query?: Query): Promise<Doc[]>;
-
-  /** Returns an array of all unique paths of documents returned by a given query. */
-  queryPaths(query?: Query): Promise<Path[]>;
-
-  /** Returns an array of all unique authors of documents returned by a given query. */
-  queryAuthors(query?: Query): Promise<AuthorAddress[]>;
-
-  //--------------------------------------------------
-  // SET
-
-  /**
-   * Adds a new document to the replica. If a document signed by the same identity exists at the same path, it will be overwritten.
-   */
-  set(keypair: AuthorKeypair, docToSet: DocToSet): Promise<IngestEvent>;
-
-  /**
-   * Ingest an existing signed document to the replica.
-   */
-  // this should freeze the incoming doc if needed
-  ingest(doc: Doc): Promise<IngestEvent>;
-
-  /**
-   * Overwrite every document from this author, including history versions, with an empty doc.
-   */
-  // More:
-  // The new docs will have a timestamp of (oldDoc.timestamp + 1) to prevent them from
-  //  jumping to the front of the history and becoming Latest.
-  // Return the number of docs changed, or a ValidationError.
-  // Already-empty docs will not be overwritten.
-  // If an error occurs this will stop early.
-  overwriteAllDocsByAuthor(
-    keypair: AuthorKeypair,
-  ): Promise<number | ValidationError>;
-}
-
-/**
- * A replica driver provides low-level access to actual replica and is used by IReplica to actually load and save data. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
- */
-export interface IReplicaDriver extends IReplicaConfig {
+export interface IReplicaDocDriver extends IReplicaConfig {
   share: ShareAddress;
   //--------------------------------------------------
   // LIFECYCLE
 
-  /** Returns if the replica has been closed or not. */
+  /** Returns if the doc driver has been closed or not. */
   isClosed(): boolean;
 
   /**
@@ -293,13 +206,12 @@ export interface IReplicaDriver extends IReplicaConfig {
 
   /** The max local index used so far. */
   // The first doc will increment this and get index 1.
-  // This is synchronous because it's expected that the driver will
-  // load it once at startup and then keep it in memory.
-  getMaxLocalIndex(): number;
+  getMaxLocalIndex(): Promise<number>;
 
   /** Returns an array of Docs given a Query. */
   // these should return frozen docs
-  queryDocs(query: Query): Promise<Doc[]>; //    queryPaths(query: Query): Doc[];
+  queryDocs(query: Query<string[]>): Promise<DocBase<string>[]>;
+  //    queryPaths(query: Query): Doc[];
   // TODO: add a special getAllDocsAtPath for use by ingest?
 
   //--------------------------------------------------
@@ -310,8 +222,87 @@ export interface IReplicaDriver extends IReplicaConfig {
   // add a doc.  don't enforce any rules on it.
   // overwrite existing doc even if this doc is older.
   // return a copy of the doc, frozen, with _localIndex set.
-  upsert(doc: Doc): Promise<Doc>;
+  upsert<
+    N extends FormatName,
+    DocType extends DocBase<N>,
+  >(
+    doc: DocType,
+  ): Promise<DocType>;
 
   /** Erase all expired docs from the replica permanently, leaving no trace of the documents. Returns the paths of the expired documents. */
-  eraseExpiredDocs(): Promise<Path[]>;
+  eraseExpiredDocs(): Promise<DocBase<string>[]>;
+}
+
+/** Options for configuring a new replica.
+ * - `validators`: Validators for the kinds of documents this replica will replicate, e.g. FormatValidatorEs4.
+ * - `driver`: A driver the replica will use to read and persist documents.
+ */
+export interface MultiFormatReplicaOpts<F = DefaultFormats> {
+  driver: IReplicaDriver;
+  config: FormatsConfigRecord<F>;
+}
+
+/**
+ * An attachment driver provides low-level access to a replica's attachments. ReplicaAttachmentDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ */
+export interface IReplicaAttachmentDriver {
+  /** Returns an attachment for a given format and hash.*/
+  getAttachment(
+    formatName: string,
+    attachmentHash: string,
+  ): Promise<DocAttachment | undefined>;
+
+  /** Upserts the attachment to a staging area, and returns an object used to assess whether it is what we're expecting. */
+  stage(
+    formatName: string,
+    attachment: Uint8Array | ReadableStream<Uint8Array>,
+  ): Promise<
+    {
+      hash: string;
+      size: number;
+      /** Commit the staged attachment to storage. */
+      commit: () => Promise<void>;
+      /** Reject the staged attachment, erasing it. */
+      reject: () => Promise<void>;
+    } | ValidationError
+  >;
+
+  /** Erases an attachment for a given format and hash.*/
+  erase(
+    formatName: string,
+    attachmentHash: string,
+  ): Promise<true | ValidationError>;
+
+  /** Erase all stored attachments */
+  wipe(): Promise<void>;
+
+  /** Delete all stored attachments not included in the provided list of hashes and their formats.
+   * @returns An array of all erased hashes and their formats.
+   */
+  filter(
+    attachments: Record<string, Set<string>>,
+  ): Promise<{ format: string; hash: string }[]>;
+
+  /** Reject all attachments waiting in staging. */
+  clearStaging(): Promise<void>;
+
+  /**
+   * Close the replica Driver.
+   * The replica will call this.
+   * You cannot call close() if the replica is already closed (it will throw a ReplicaIsClosedError).
+   * If erase, actually delete and forget data locally.
+   * Erase defaults to false if not provided.
+   */
+  close(erase: boolean): Promise<void>;
+
+  /** Returns if the attachment driver has been closed or not. */
+  isClosed(): boolean;
+}
+
+/**
+ * A replica driver provides low-level access to a replica's documents and attachments. ReplicaDrivers are not meant to be used directly by users; let the Replica talk to it for you.
+ */
+export interface IReplicaDriver {
+  docDriver: IReplicaDocDriver;
+  attachmentDriver: IReplicaAttachmentDriver;
 }

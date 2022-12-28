@@ -1,25 +1,32 @@
-import { AuthorAddress, Path, Timestamp } from "../util/doc-types.ts";
+import {
+  AuthorAddress,
+  FormatName,
+  Path,
+  Timestamp,
+} from "../util/doc-types.ts";
 
 //================================================================================
 
 /** Filters a query by document attributes. */
 export interface QueryFilter {
+  /** Match an exact path. */
   path?: Path;
   pathStartsWith?: string;
   pathEndsWith?: string;
+  /** Match documents with a given author. */
   author?: AuthorAddress;
   timestamp?: Timestamp;
+  /** Match documents newer than the given timestamp. */
   timestampGt?: Timestamp;
+  /** Match documents older than the given timestamp. */
   timestampLt?: Timestamp;
-  contentLength?: number;
-  contentLengthGt?: number;
-  contentLengthLt?: number;
 }
 
+/** Represents fetching all historical versions of a document by authors, or just the latest versions. */
 export type HistoryMode = "latest" | "all";
 
 /** Describes a query for fetching documents from a replica. */
-export interface Query {
+export interface Query<FormatsType extends FormatName[]> {
   // for each property, the first option is the default if it's omitted
 
   // this is in the order that processing happens:
@@ -53,13 +60,15 @@ export interface Query {
   // stop iterating after this number of docs
   /** The maximum number of documents to return. */
   limit?: number;
-  // TODO: limitBytes
+
+  formats?: FormatsType;
 }
 
-export const DEFAULT_QUERY: Query = {
+export const DEFAULT_QUERY: Query<["es.5"]> = {
   historyMode: "latest",
   orderBy: "path ASC",
   startAfter: undefined,
   limit: undefined,
   filter: undefined,
+  formats: ["es.5"],
 };

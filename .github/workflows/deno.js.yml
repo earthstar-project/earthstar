@@ -2,9 +2,9 @@ name: Deno CI
 
 on:
   push:
-    branches: [main, esm-first]
+    branches: [main, squirrel]
   pull_request:
-    branches: [main, esm-first]
+    branches: [main, squirrel]
 
 jobs:
   build:
@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        deno-version: ["1.18.0"]
+        deno-version: ["1.25.1"]
 
     steps:
       - uses: actions/checkout@v2
@@ -21,4 +21,4 @@ jobs:
         with:
           deno-version: ${{ matrix.deno-version}}
 
-      - run: make test
+      - run: deno task test

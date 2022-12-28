@@ -1,23 +1,21 @@
-import { Doc } from "../util/doc-types.ts";
+import { DocBase } from "../util/doc-types.ts";
 import { DEFAULT_QUERY, Query, QueryFilter } from "./query-types.ts";
-
-import { deepEqual } from "../util/misc.ts";
-import { stringLengthInBytes } from "../util/bytes.ts";
 
 //--------------------------------------------------
 
 import { Logger } from "../util/log.ts";
+import { shallowEqualObjects } from "../../deps.ts";
 const logger = new Logger("query", "green");
 
 //================================================================================
 
 export type WillMatch = "all" | "all-latest" | "some" | "nothing";
 export interface CleanUpQueryResult {
-  query: Query;
+  query: Query<string[]>;
   isValid: boolean;
   willMatch: WillMatch;
 }
-export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
+export function cleanUpQuery(inputQuery: Query<string[]>): CleanUpQueryResult {
   // check for invalid queries and return null
   // canonicalize and optimize queries
   // check for filters that obviously result in nothing and return a canonical empty query: { limit: 0 }
@@ -105,12 +103,14 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
   let willMatch: WillMatch = query.historyMode === "all" ? "all" : "all-latest";
 
   // if there are filters, match some
-  if (query.filter !== undefined && !deepEqual(query.filter, {})) {
+  if (query.filter !== undefined && !shallowEqualObjects(query.filter, {})) {
     willMatch = "some";
   }
 
   // a startAfter makes us match some
-  if (query.startAfter !== undefined && !deepEqual(query.startAfter, {})) {
+  if (
+    query.startAfter !== undefined && !shallowEqualObjects(query.startAfter, {})
+  ) {
     willMatch = "some";
   }
 
@@ -153,6 +153,8 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
     ) {
       willMatch = "nothing";
     }
+
+    /*
     if (
       filter.contentLength && filter.contentLengthGt &&
       !(filter.contentLength > filter.contentLengthGt)
@@ -171,6 +173,7 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
     ) {
       willMatch = "nothing";
     }
+    */
   }
 
   if (willMatch === "nothing") {
@@ -196,7 +199,10 @@ export function cleanUpQuery(inputQuery: Query): CleanUpQueryResult {
   };
 }
 
-export function docMatchesFilter(doc: Doc, filter: QueryFilter): boolean {
+export function docMatchesFilter<
+  FormatType extends string,
+  DocType extends DocBase<FormatType>,
+>(doc: DocType, filter: QueryFilter): boolean {
   // Does the doc match the filters?
   if (filter.path !== undefined && doc.path !== filter.path) return false;
   if (
@@ -229,6 +235,8 @@ export function docMatchesFilter(doc: Doc, filter: QueryFilter): boolean {
   ) {
     return false;
   }
+
+  /*
   const contentLength = stringLengthInBytes(doc.content);
   if (
     filter.contentLength !== undefined &&
@@ -248,16 +256,21 @@ export function docMatchesFilter(doc: Doc, filter: QueryFilter): boolean {
   ) {
     return false;
   }
+  */
+
   return true;
 }
 
 /** Return whether a document is expired or not */
-export function docIsExpired(doc: Doc, now?: number) {
-  const nowToUse = now || Date.now() * 1000;
-
-  if (doc.deleteAfter === null) {
+export function docIsExpired<
+  FormatType extends string,
+  DocType extends DocBase<FormatType>,
+>(doc: DocType, now?: number) {
+  if (doc.deleteAfter === null || doc.deleteAfter === undefined) {
     return false;
   }
+
+  const nowToUse = now || Date.now() * 1000;
 
   return nowToUse > doc.deleteAfter;
 }

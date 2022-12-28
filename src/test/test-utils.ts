@@ -1,16 +1,23 @@
-import { assert } from "./asserts.ts";
+import { assert, equal } from "./asserts.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair, Doc } from "../util/doc-types.ts";
-import { deepEqual, randomId } from "../util/misc.ts";
+import { DocBase, DocWithAttachment } from "../util/doc-types.ts";
+import { randomId } from "../util/misc.ts";
+import { DocDriverMemory } from "../replica/doc_drivers/memory.ts";
+
+import { DocEs5, DocInputEs5, FormatEs5 } from "../formats/format_es5.ts";
+import { AttachmentDriverMemory } from "../replica/attachment_drivers/memory.ts";
 import { isErr } from "../util/errors.ts";
-import { FormatValidatorEs4 } from "../format-validators/format-validator-es4.ts";
-import { ReplicaDriverMemory } from "../replica/replica-driver-memory.ts";
+
+import { bytesEquals, shallowEqualObjects } from "../../deps.ts";
+import { AuthorKeypair, ShareKeypair } from "../crypto/crypto-types.ts";
+import { Crypto } from "../crypto/crypto.ts";
+import { ReplicaDriverMemory } from "../replica/driver_memory.ts";
 
 // for testing unicode
-export let snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
-export let snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
+export const snowmanString = "\u2603"; // ☃ \u2603  [0xe2, 0x98, 0x83] -- 3 bytes
+export const snowmanBytes = Uint8Array.from([0xe2, 0x98, 0x83]);
 
-export let throws = async (fn: () => Promise<any>, msg: string) => {
+export const throws = async (fn: () => Promise<any>, msg: string) => {
   try {
     await fn();
     assert(false, "failed to throw: " + msg);
@@ -19,7 +26,7 @@ export let throws = async (fn: () => Promise<any>, msg: string) => {
   }
 };
 
-export let doesNotThrow = async (
+export const doesNotThrow = async (
   fn: () => Promise<any>,
   msg: string,
 ) => {
@@ -31,46 +38,60 @@ export let doesNotThrow = async (
   }
 };
 
-export function makeReplica(addr: string) {
-  return new Replica(addr, FormatValidatorEs4, new ReplicaDriverMemory(addr));
+export function makeReplica(addr: string, shareSecret: string) {
+  return new Replica({
+    driver: {
+      docDriver: new DocDriverMemory(addr),
+      attachmentDriver: new AttachmentDriverMemory(),
+    },
+    shareSecret,
+  });
 }
 
-export function makeNReplicas(addr: string, number: number) {
-  return Array.from({ length: number }, () => makeReplica(addr));
+export function makeNReplicas(addr: string, secret: string, number: number) {
+  return Array.from({ length: number }, () => makeReplica(addr, secret));
 }
 
-function stripLocalIndexFromDoc({ _localIndex, ...rest }: Doc) {
+function stripLocalIndexFromDoc(
+  { _localIndex, ...rest }: DocBase<string>,
+) {
   return { ...rest };
 }
 
-export function docsAreEquivalent(docsA: Doc[], docsB: Doc[]) {
+function sortByPathThenAuthor(
+  docA: DocBase<string>,
+  docB: DocBase<string>,
+) {
+  const { path: pathA, author: authorA } = docA;
+  const { path: pathB, author: authorB } = docB;
+
+  if (pathA < pathB) {
+    return -1;
+  }
+
+  if (pathA > pathB) {
+    return 1;
+  }
+
+  if (authorA < authorB) {
+    return -1;
+  }
+
+  if (authorA > authorB) {
+    return 1;
+  }
+
+  // Shouldn't happen.
+  return 0 as never;
+}
+
+export function docsAreEquivalent(
+  docsA: DocBase<string>[],
+  docsB: DocBase<string>[],
+) {
   if (docsA.length !== docsB.length) {
     return false;
   }
-
-  const sortByPathThenAuthor = (docA: Doc, docB: Doc) => {
-    const { path: pathA, author: authorA } = docA;
-    const { path: pathB, author: authorB } = docB;
-
-    if (pathA < pathB) {
-      return -1;
-    }
-
-    if (pathA > pathB) {
-      return 1;
-    }
-
-    if (authorA < authorB) {
-      return -1;
-    }
-
-    if (authorA > authorB) {
-      return 1;
-    }
-
-    // Shouldn't happen.
-    return 0 as never;
-  };
 
   const aStripped = docsA.map(stripLocalIndexFromDoc).sort(
     sortByPathThenAuthor,
@@ -79,55 +100,237 @@ export function docsAreEquivalent(docsA: Doc[], docsB: Doc[]) {
     sortByPathThenAuthor,
   );
 
-  return deepEqual(aStripped, bStripped);
+  return equal(aStripped, bStripped);
+}
+
+export async function docAttachmentsAreEquivalent(
+  docsA: DocWithAttachment<DocEs5>[],
+  docsB: DocWithAttachment<DocEs5>[],
+): Promise<boolean> {
+  if (docsA.length !== docsB.length) {
+    return false;
+  }
+
+  const aSorted = docsA.sort(
+    sortByPathThenAuthor,
+  );
+  const bSorted = docsB.sort(
+    sortByPathThenAuthor,
+  );
+
+  // Zip them and compare the attachments of each.
+
+  const zipped = aSorted.map((doc, i) => [doc, bSorted[i]]);
+
+  for (const [a, b] of zipped) {
+    if (
+      a.attachment && b.attachment && !isErr(a.attachment) &&
+      !isErr(b.attachment)
+    ) {
+      const aBytes = await a.attachment.bytes();
+      const bBytes = await b.attachment.bytes();
+
+      if (bytesEquals(aBytes, bBytes) === false) {
+        return false;
+      }
+    }
+
+    if (a.attachment === undefined && b.attachment !== undefined) {
+      return false;
+    }
+
+    if (b.attachment === undefined && a.attachment !== undefined) {
+      return false;
+    }
+
+    if (isErr(a.attachment) && !isErr(b.attachment)) {
+      return false;
+    }
+
+    if (isErr(b.attachment) && !isErr(a.attachment)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export function writeRandomDocs(
   keypair: AuthorKeypair,
   storage: Replica,
   n: number,
-): Promise<void[]> {
+) {
+  const fstRand = randomId();
+
+  const hasAttachment = Math.random() >= 0.8;
+
   const setPromises = Array.from({ length: n }, () => {
-    return new Promise<void>((resolve, reject) => {
-      storage.set(keypair, {
-        content: `${randomId()}`,
-        path: `/${randomId()}/${randomId()}.txt`,
-        format: "es.4",
-      }).then((result) => {
-        if (isErr(result)) {
-          reject(result);
-        }
-        resolve();
+    const rand = randomId();
+
+    if (hasAttachment) {
+      const bytes = crypto.getRandomValues(
+        new Uint8Array((Math.random() + 0.1) * 32 * 32 * 32),
+      );
+
+      return storage.set(keypair, {
+        text: `${rand}`,
+        path: `/${fstRand}/${rand}.txt`,
+        attachment: bytes,
       });
+    }
+
+    return storage.set(keypair, {
+      text: `${rand}`,
+      path: `/${fstRand}/${rand}`,
     });
   });
 
   return Promise.all(setPromises);
 }
 
-export async function storagesAreSynced(storages: Replica[]): Promise<boolean> {
-  const allDocsSets: Doc[][] = [];
+export async function overlappingDocSets(
+  authorKeypair: AuthorKeypair,
+  shareKeypair: ShareKeypair,
+  /** The amount of overlap between the two replicas, represented as a percentage. */
+  overlapPercentage: number,
+  totalSize: number,
+  numberOfSets: number,
+) {
+  const docs: {
+    doc: DocEs5;
+    attachment?: Uint8Array | ReadableStream<Uint8Array> | undefined;
+  }[] = [];
+
+  const overlap = Math.round((overlapPercentage / 100) * totalSize);
+
+  const docsToGenerate = (totalSize * numberOfSets) - overlap;
+
+  for (let i = 0; i < docsToGenerate; i++) {
+    const rand = randomId();
+
+    const input: DocInputEs5 = {
+      text: `${rand}`,
+      path: `/${rand}`,
+      format: "es.5",
+    };
+
+    const hasAttachment = Math.random() >= 0.8;
+
+    if (hasAttachment) {
+      const bytes = crypto.getRandomValues(
+        new Uint8Array((Math.random() + 0.1) * 32 * 32 * 32),
+      );
+
+      input.path = `/${rand}.txt`;
+      input.attachment = bytes;
+    }
+
+    const result = await FormatEs5.generateDocument({
+      input,
+      keypair: authorKeypair,
+      share: shareKeypair.shareAddress,
+      timestamp: Date.now() * 1000,
+      config: { shareSecret: shareKeypair.secret },
+    });
+
+    if (!isErr(result)) {
+      if (result.attachment) {
+        const updatedDoc = await FormatEs5.updateAttachmentFields(
+          authorKeypair,
+          result.doc,
+          (result.attachment as Uint8Array).byteLength,
+          await Crypto.sha256base32(result.attachment as Uint8Array),
+          { shareSecret: shareKeypair.secret },
+        );
+
+        if (!isErr(updatedDoc)) {
+          result.doc = updatedDoc;
+        }
+      }
+
+      docs.push(result);
+    }
+  }
+
+  const overlappingDocs = docs.slice(0, overlap);
+
+  const sets = [];
+
+  for (let i = 0; i < numberOfSets; i++) {
+    const start = i === 0 ? overlap : ((totalSize + overlap) * i);
+    const end = i === 0 ? totalSize : overlap + ((totalSize) * (i + 1));
+
+    const uniqueDocs = docs.slice(start, end);
+
+    const set = [...overlappingDocs, ...uniqueDocs];
+
+    sets.push(set);
+  }
+
+  return sets;
+}
+
+export async function replicaDocsAreSynced(
+  replicas: Replica[],
+): Promise<boolean> {
+  const allDocsSets: DocBase<string>[][] = [];
+
+  // Create an array where each element is a collection of all the docs from a storage.
+  for await (const replica of replicas) {
+    const allDocs = await replica.getAllDocs();
+    allDocsSets.push(allDocs);
+  }
+
+  const allDocsSynced = allDocsSets.reduce(
+    (isSynced: boolean, docs: DocBase<string>[], i: number) => {
+      if (i === 0) {
+        return isSynced;
+      }
+
+      // Get the set of docs from the previous element.
+      const prevDocs = allDocsSets[i - 1];
+
+      // See if they're equivalent with the current set.
+      return docsAreEquivalent(docs, prevDocs);
+    },
+    false as boolean,
+  );
+
+  return allDocsSynced;
+}
+
+export async function replicaAttachmentsAreSynced(
+  storages: Replica[],
+): Promise<boolean> {
+  const allDocsSets: DocWithAttachment<DocEs5>[][] = [];
 
   // Create an array where each element is a collection of all the docs from a storage.
   for await (const storage of storages) {
     const allDocs = await storage.getAllDocs();
-    allDocsSets.push(allDocs);
+
+    const docsWithAttachments = await storage.addAttachments(allDocs);
+
+    allDocsSets.push(docsWithAttachments);
   }
 
-  return allDocsSets.reduce((isSynced: boolean, docs: Doc[], i: number) => {
+  for (let i = 0; i < allDocsSets.length; i++) {
     if (i === 0) {
-      return isSynced;
+      continue;
     }
 
+    const docs = allDocsSets[i];
     // Get the set of docs from the previous element.
     const prevDocs = allDocsSets[i - 1];
 
-    const strippedDocs = docs.map(stripLocalIndexFromDoc);
-    const strippedPrevDocs = prevDocs.map(stripLocalIndexFromDoc);
-
     // See if they're equivalent with the current set.
-    return docsAreEquivalent(strippedPrevDocs, strippedDocs);
-  }, false as boolean);
+    const allSynced = await docAttachmentsAreEquivalent(docs, prevDocs);
+
+    if (allSynced === false) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 export async function storageHasAllStoragesDocs(
@@ -146,9 +349,57 @@ export async function storageHasAllStoragesDocs(
     }
 
     return strippedADocs.find((aDoc) => {
-      return deepEqual(doc, aDoc);
+      return shallowEqualObjects(doc, aDoc);
     }) !== undefined;
   }, true);
 
   return aHasAllB;
+}
+
+export function makeReplicasForShare(keypair: ShareKeypair, count: number) {
+  const replicas = [];
+
+  for (let i = 0; i < count; i++) {
+    const replica = new Replica({
+      driver: new ReplicaDriverMemory(keypair.shareAddress),
+      shareSecret: keypair.secret,
+    });
+
+    replicas.push(replica);
+  }
+
+  return replicas;
+}
+
+export async function makeOverlappingReplicaTuple(
+  authorKeypair: AuthorKeypair,
+  shareKeypair: ShareKeypair,
+  overlap: number,
+  tupleSize: number,
+  docSetSize: number,
+) {
+  const replicas = makeReplicasForShare(shareKeypair, tupleSize);
+
+  const docSets = await overlappingDocSets(
+    authorKeypair,
+    shareKeypair,
+    overlap,
+    docSetSize,
+    tupleSize,
+  );
+
+  for (let i = 0; i < tupleSize; i++) {
+    const replica = replicas[i];
+    const set = docSets[i];
+
+    for (const { doc, attachment } of set) {
+      await replica.ingest(FormatEs5, doc, "local");
+
+      if (attachment) {
+        await replica.ingestAttachment(FormatEs5, doc, attachment, "local");
+      }
+    }
+  }
+
+  return replicas;
 }

@@ -5,8 +5,6 @@ import {
 } from "../core-validators/characters.ts";
 import { isErr, ValidationError } from "./errors.ts";
 
-export { fast_deep_equal as deepEqual } from "../../deps.ts";
-
 //================================================================================
 // TIME
 
@@ -23,7 +21,8 @@ export function sleep(ms: number): Promise<void> {
 
 // TODO: better randomness here
 export function randomId(): string {
-  return "" + Math.random() + Math.random();
+  return "" + Math.floor(Math.random() * 1000) +
+    Math.floor(Math.random() * 1000);
 }
 
 // replace all occurrences of substring "from" with "to"
@@ -47,6 +46,9 @@ export function isObjectEmpty(obj: Object): Boolean {
 //================================================================================
 // Share
 
+/** Returns a valid share address generated using a given name.
+ * @returns A share address or a validation error resulting from the name given.
+ */
 export function generateShareAddress(name: string): string | ValidationError {
   const randomFromString = (str: string) => {
     return str[Math.floor(Math.random() * str.length)];

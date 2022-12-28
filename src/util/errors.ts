@@ -34,23 +34,7 @@ export class ReplicaCacheIsClosedError extends EarthstarError {
   }
 }
 
-/** A QueryFollower was used after close() was called on it. */
-export class QueryFollowerIsClosedError extends EarthstarError {
-  constructor(message?: string) {
-    super(message || "a QueryFollower was used after being closed");
-    this.name = "QueryFollowerIsClosedError";
-  }
-}
-
-export class NotFoundError extends EarthstarError {
-  constructor(message?: string) {
-    super(message || "not found");
-    this.name = "NotFoundError";
-  }
-}
-
-/** A pub URL is bad or the network is down */
-
+/** A server URL is bad or the network is down */
 export class NetworkError extends EarthstarError {
   constructor(message?: string) {
     super(message || "network error");
@@ -65,8 +49,7 @@ export class TimeoutError extends EarthstarError {
   }
 }
 
-/** A pub won't accept writes */
-
+/** A server won't accept writes */
 export class ConnectionRefusedError extends EarthstarError {
   constructor(message?: string) {
     super(message || "connection refused");
@@ -78,6 +61,13 @@ export class NotImplementedError extends EarthstarError {
   constructor(message?: string) {
     super(message || "not implemented yet");
     this.name = "NotImplementedError";
+  }
+}
+
+export class NotSupportedError extends EarthstarError {
+  constructor(message?: string) {
+    super(message || "Not supported");
+    this.name = "NotSupportedError";
   }
 }
 

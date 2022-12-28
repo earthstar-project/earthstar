@@ -1,17 +1,26 @@
-export { default as fast_deep_equal } from "https://esm.sh/fast-deep-equal@3.1.3";
-export { default as cloneDeep } from "https://deno.land/x/denodash@v0.1.3/src/lang/cloneDeep.ts";
+export {
+  shallowEqualArrays,
+  shallowEqualObjects,
+} from "https://deno.land/x/shallow_equal@v0.1.3/mod.ts";
 export { default as fast_json_stable_stringify } from "https://esm.sh/fast-json-stable-stringify@2.1.0";
 export * as rfc4648 from "https://esm.sh/rfc4648@1.5.0";
 export * as sha256_uint8array from "https://esm.sh/sha256-uint8array@0.10.3";
-export { Superbus } from "./src/superbus/superbus.ts";
-export { Simplebus } from "./src/superbus/simplebus.ts";
-export { SuperbusMap } from "./src/superbus_map/superbus_map.ts";
-export * as ed from "https://raw.githubusercontent.com/sgwilym/noble-ed25519/7af9329476ff2f2a0e524a9f78e36d09704efc63/mod.ts";
-export { Lock } from "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts";
+export * as ed from "https://raw.githubusercontent.com/sgwilym/noble-ed25519/153f9e7e9952ad22885f5abb3f6abf777bef4a4c/mod.ts";
+export { hash as xxhash64, XXH64 } from "./src/util/xxhash64.js";
 export {
-  type IConnection,
-  type ITransport,
-  TransportHttpClient,
-  TransportLocal,
-  TransportWebsocketClient,
-} from "./src/streaming_rpc/streaming_rpc.ts";
+  FingerprintTree,
+  RangeMessenger,
+} from "https://deno.land/x/range_reconcile@0.1.2/mod.ts";
+export type {
+  LiftingMonoid,
+  RangeMessengerConfig,
+} from "https://deno.land/x/range_reconcile@0.1.2/mod.ts";
+export { AsyncQueue } from "https://deno.land/x/for_awaitable_queue@1.0.0/mod.ts";
+
+// Deno std lib
+
+export {
+  type Deferred,
+  deferred,
+} from "https://deno.land/std@0.167.0/async/deferred.ts";
+export { equals as bytesEquals } from "https://deno.land/std@0.167.0/bytes/equals.ts";

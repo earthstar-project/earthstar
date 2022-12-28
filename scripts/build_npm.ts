@@ -1,4 +1,4 @@
-import { build } from "https://deno.land/x/dnt@0.21.0/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.32.1/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
@@ -8,77 +8,134 @@ await build({
     { name: "./node", path: "./src/entries/node.ts" },
     { name: "./browser", path: "./src/entries/browser.ts" },
   ],
-  testPattern: "**/!(fs-sync)/*.test.{ts,tsx,js,mjs,jsx}",
+  testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
   outDir: "./npm",
+  compilerOptions: {
+    lib: ["dom", "es2021"],
+  },
   shims: {
-    deno: {
-      test: "dev",
-    },
+    deno: "dev",
     timers: true,
     weakRef: true,
+    crypto: "dev",
+    custom: [
+      {
+        package: {
+          name: "isomorphic-blob",
+          version: "1.0.1",
+        },
+
+        globalNames: ["Blob"],
+      },
+      {
+        package: {
+          name: "isomorphic-undici-ponyfill",
+          version: "1.0.0",
+        },
+        globalNames: [
+          "Request",
+          "Response",
+          "Headers",
+        ],
+      },
+      {
+        package: {
+          name: "@sgwilym/isomorphic-streams",
+          version: "1.0.4",
+        },
+        globalNames: [
+          "WritableStream",
+          "TransformStream",
+          "ReadableStream",
+          "TransformStreamDefaultController",
+          { name: "UnderlyingSink", typeOnly: true },
+          "WritableStreamDefaultWriter",
+        ],
+      },
+      {
+        package: {
+          name: "isomorphic-ws",
+          version: "5.0.0",
+        },
+        globalNames: [{ name: "WebSocket", exportName: "default" }],
+      },
+      {
+        package: {
+          name: "textencoder-ponyfill",
+          version: "1.0.2",
+        },
+        globalNames: ["TextEncoder", "TextDecoder"],
+      },
+      {
+        package: {
+          name: "@sgwilym/urlpattern-polyfill",
+          version: "1.0.0-rc8",
+        },
+        globalNames: [{
+          name: "URLPattern",
+          exportName: "URLPattern",
+        }],
+      },
+    ],
   },
-  compilerOptions: {
-    // This is for Node v14 support
-    target: "ES2020",
-  },
-  // typeCheck: false,
+
   mappings: {
-    "https://esm.sh/earthstar-streaming-rpc@5.0.1": {
-      name: "earthstar-streaming-rpc",
-      version: "5.0.1",
-    },
-    "https://deno.land/x/earthstar_streaming_rpc@v5.0.1/src/entries/node.ts": {
-      name: "earthstar-streaming-rpc",
-      version: "5.0.1",
-      subPath: "node",
-    },
-    "./src/streaming_rpc/streaming_rpc.ts":
-      "./src/streaming_rpc/streaming_rpc.node.ts",
-    "https://esm.sh/express?dts": {
-      name: "express",
-      version: "4.17.2",
-    },
-    "https://cdn.skypack.dev/concurrency-friends@5.2.0?dts": {
-      name: "concurrency-friends",
-      version: "5.2.0",
-    },
+    "./src/test/scenarios/scenarios.ts":
+      "./src/test/scenarios/scenarios.node.ts",
+
     "./src/node/chloride.ts": {
       name: "chloride",
       version: "2.4.1",
     },
+
+    "./src/crypto/default_driver.ts": "./src/crypto/default_driver.npm.ts",
+
+    "./src/replica/driver_fs.ts": "./src/replica/driver_fs.node.ts",
     "https://esm.sh/better-sqlite3?dts": {
       name: "better-sqlite3",
       version: "7.5.0",
     },
-    "https://raw.githubusercontent.com/sgwilym/noble-ed25519/7af9329476ff2f2a0e524a9f78e36d09704efc63/mod.ts":
+    "https://raw.githubusercontent.com/sgwilym/noble-ed25519/153f9e7e9952ad22885f5abb3f6abf777bef4a4c/mod.ts":
       {
         name: "@noble/ed25519",
-        version: "1.4.0",
+        version: "1.6.0",
       },
-    "./src/replica/indexeddb-types.deno.d.ts":
-      "./src/replica/indexeddb-types.node.d.ts",
-    "./src/test/transport-scenarios/transport-scenarios.ts":
-      "./src/test/transport-scenarios/transport-scenarios.node.ts",
-    "./src/test/peer-sync-scenarios/peer-sync-scenarios.ts":
-      "./src/test/peer-sync-scenarios/peer-sync-scenarios.node.ts",
-    "./src/replica/replica-driver-sqlite.deno.ts":
-      "./src/replica/replica-driver-sqlite.node.ts",
-    "./src/test/test-deps.ts": "./src/test/test-deps.node.ts",
+    "https://esm.sh/path-to-regexp@6.2.1": {
+      name: "path-to-regexp",
+      version: "6.2.1",
+    },
+    "https://deno.land/std@0.154.0/node/fs/promises.ts": {
+      name: "node:fs/promises",
+    },
+    "https://deno.land/std@0.154.0/node/path.ts": {
+      name: "node:path",
+    },
+    "https://esm.sh/@nodelib/fs.walk@1.2.8": {
+      name: "@nodelib/fs.walk",
+      version: "1.2.8",
+    },
+    "https://esm.sh/ws@8.8.1": {
+      name: "ws",
+      version: "8.8.1",
+    },
+
+    "https://deno.land/std@0.167.0/node/http.ts": "node:http",
+    "https://deno.land/std@0.167.0/node/buffer.ts": "node:buffer",
   },
   package: {
     // package.json properties
     name: "earthstar",
     version: Deno.args[0],
-    "engines": {
-      "node": ">=14.19.1",
+    engines: {
+      node: ">=16.0.0",
     },
     description:
-      "Earthstar is a specification and Javascript library for building online tools you can truly call your own.",
+      "Earthstar is a tool for private, undiscoverable, offline-first networks.",
     license: "LGPL-3.0-only",
     homepage: "https://earthstar-project.org",
-    "funding": {
-      "type": "opencollective",
-      "url": "https://opencollective.com/earthstar",
+    funding: {
+      type: "opencollective",
+      url: "https://opencollective.com/earthstar",
     },
     repository: {
       type: "git",
@@ -89,9 +146,8 @@ await build({
     },
     devDependencies: {
       "@types/better-sqlite3": "7.4.2",
-      "@types/express": "4.17.13",
       "@types/chloride": "2.4.0",
-      "@types/node-fetch": "2.5.12",
+      "@types/ws": "8.5.3",
     },
   },
 });

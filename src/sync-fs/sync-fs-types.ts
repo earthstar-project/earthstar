@@ -1,5 +1,5 @@
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 import { Replica } from "../replica/replica.ts";
-import { AuthorKeypair } from "../util/doc-types.ts";
 
 /**
  * Options for syncing a replica with a filesystem directory.
@@ -30,9 +30,8 @@ export interface FileInfoEntry {
   dirName: string;
   path: string;
   abspath: string;
-  size: number;
-  contentsSize: number;
-  mtimeMs: number | null; // modified time (write)
-  birthtimeMs: number | null; // created time
-  hash: string;
+  exposedContentSize: number;
+  mtimeMs: number; // modified time (write)
+  birthtimeMs: number; // created time
+  exposedContentHash: string;
 }

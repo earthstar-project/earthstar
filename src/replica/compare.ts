@@ -1,5 +1,5 @@
+import { shallowEqualArrays, shallowEqualObjects } from "../../deps.ts";
 import { Cmp } from "./util-types.ts";
-import { deepEqual } from "../util/misc.ts";
 
 //================================================================================
 
@@ -11,8 +11,16 @@ export function sortedInPlace<T>(array: T[]): T[] {
 }
 
 // myStrings.sort(baseCompare)
-export function compareBasic(a: any, b: any, order: SortOrder = "ASC"): Cmp {
-  if (deepEqual(a, b)) return Cmp.EQ;
+export function compareBasic<T>(a: T, b: T, order: SortOrder = "ASC"): Cmp {
+  if (Array.isArray(a) && shallowEqualArrays(a, b)) {
+    return Cmp.EQ;
+  }
+
+  if (typeof a === "object" && shallowEqualObjects(a, b)) {
+    return Cmp.EQ;
+  }
+
+  if (a === b) return Cmp.EQ;
   if (order === "ASC" || order === undefined) {
     return (a < b) ? Cmp.LT : Cmp.GT;
   } else if (order === "DESC") {
@@ -61,9 +69,9 @@ export function compareBasic(a: any, b: any, order: SortOrder = "ASC"): Cmp {
  *  - [1],  // shorter array comes last, because of DESC in this column
  *  - [2],  // but first element is still sorted ASC
  */
-export function compareArrays(
-  a: any[],
-  b: any[],
+export function compareArrays<T>(
+  a: T[],
+  b: T[],
   sortOrders?: SortOrder[],
 ): Cmp {
   let minLen = Math.min(a.length, b.length);
@@ -91,9 +99,8 @@ export function compareByObjKey(key: string, sortOrder: SortOrder = "ASC") {
 }
 
 // myArray.sort(compareByFn((x) => x.signature + x.path));
-export function compareByFn(fn: (x: any) => any) {
-  return (a: Record<string, any>, b: Record<string, any>): Cmp =>
-    compareBasic(fn(a), fn(b));
+export function compareByFn<T, R extends Record<string, T>>(fn: (x: any) => T) {
+  return (a: R, b: R): Cmp => compareBasic(fn(a), fn(b));
 }
 
 // myArray.sort(compareByObjArrayFn((x) => [x.signature, x.path]));

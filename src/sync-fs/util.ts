@@ -1,4 +1,4 @@
-import { MANIFEST_FILE_NAME } from "./constants.ts";
+import { MANIFEST_FILE_NAME, MIN_TIMESTAMP_MS } from "./constants.ts";
 import {
   AbsenceEntry,
   FileInfoEntry,
@@ -8,18 +8,17 @@ import {
   dirname,
   extname,
   join,
-} from "https://deno.land/std@0.132.0/path/mod.ts";
-import {
-  decode,
-  encode,
-} from "https://deno.land/std@0.126.0/encoding/base64.ts";
-import { bytesExtensions } from "./constants.ts";
-import { ensureDir } from "https://deno.land/std@0.132.0/fs/mod.ts";
-import { AuthorKeypair, Doc } from "../util/doc-types.ts";
+  resolve,
+} from "https://deno.land/std@0.154.0/path/mod.ts";
+
+import { ensureDir } from "https://deno.land/std@0.154.0/fs/ensure_dir.ts";
 import { Replica } from "../replica/replica.ts";
+import { DocEs5 } from "../formats/format_es5.ts";
+import { EarthstarError, isErr } from "../util/errors.ts";
+import { AuthorKeypair } from "../crypto/crypto-types.ts";
 
 export function isAbsenceEntry(
-  o: AbsenceEntry | FileInfoEntry | Doc,
+  o: AbsenceEntry | FileInfoEntry | DocEs5,
 ): o is AbsenceEntry {
   if ("fileLastSeenMs" in o) {
     return true;
@@ -29,7 +28,7 @@ export function isAbsenceEntry(
 }
 
 export function isFileInfoEntry(
-  o: AbsenceEntry | FileInfoEntry | Doc,
+  o: AbsenceEntry | FileInfoEntry | DocEs5,
 ): o is FileInfoEntry {
   if ("abspath" in o) {
     return true;
@@ -39,8 +38,8 @@ export function isFileInfoEntry(
 }
 
 export function isDoc(
-  o: AbsenceEntry | FileInfoEntry | Doc,
-): o is Doc {
+  o: AbsenceEntry | FileInfoEntry | DocEs5,
+): o is DocEs5 {
   if ("signature" in o) {
     return true;
   }
@@ -60,6 +59,10 @@ export async function hasFilesButNoManifest(
     // SyncFsManifestis not present.
     const items = [];
     for await (const dirEntry of Deno.readDir(fsDirPath)) {
+      if (dirEntry.name === ".DS_Store") {
+        continue;
+      }
+
       items.push(dirEntry);
     }
 
@@ -149,30 +152,88 @@ export function getTupleWinners<TypeA, TypeB>(
   return winners;
 }
 
-export async function writeDocToDir(doc: Doc, dir: string) {
+export async function writeDocToDir(
+  doc: DocEs5,
+  replica: Replica,
+  dir: string,
+): Promise<FileInfoEntry | AbsenceEntry> {
   const pathToWrite = join(dir, doc.path);
-  const extension = extname(doc.path);
   const enclosingDir = dirname(pathToWrite);
+  const isAttachmentDoc = doc.attachmentHash !== undefined;
 
-  if (doc.content.length === 0) {
+  if (doc.text.length === 0) {
     try {
       await Deno.remove(join(dir, doc.path));
-      return removeEmptyDir(enclosingDir, dir);
+      await removeEmptyDir(enclosingDir, dir);
+
+      return {
+        path: doc.path,
+        fileLastSeenMs: MIN_TIMESTAMP_MS,
+      };
     } catch {
       // Document is gone from the FS already.
-      return;
+
+      return {
+        path: doc.path,
+        fileLastSeenMs: MIN_TIMESTAMP_MS,
+      };
     }
   }
 
   await ensureDir(enclosingDir);
 
-  if (bytesExtensions.includes(extension)) {
-    const contents = decode(doc.content);
+  if (isAttachmentDoc) {
+    const attachment = await replica.getAttachment(doc);
 
-    return Deno.writeFile(pathToWrite, contents);
+    if (isErr(attachment) || attachment === undefined) {
+      throw new EarthstarError("Do not have attachment for document");
+    }
+
+    try {
+      await Deno.truncate(pathToWrite);
+    } catch {
+      // It's fine if the pathToWrite isn't there yet
+    }
+
+    try {
+      const file = await Deno.open(pathToWrite, { create: true, write: true });
+      await (await attachment.stream()).pipeTo(file.writable);
+    } catch {
+      throw new EarthstarError("Could not write attachment to filesystem");
+    }
+
+    const date = new Date(doc.timestamp / 1000);
+    await Deno.utime(pathToWrite, date, date);
+
+    const stat = await Deno.lstat(pathToWrite);
+
+    return {
+      exposedContentHash: doc.attachmentHash as string,
+      exposedContentSize: doc.attachmentSize as number,
+      dirName: dirname(pathToWrite),
+      path: doc.path,
+      abspath: resolve(pathToWrite),
+      mtimeMs: stat.mtime?.getTime() || MIN_TIMESTAMP_MS,
+      birthtimeMs: stat.birthtime?.getTime() || MIN_TIMESTAMP_MS,
+    };
   }
 
-  return Deno.writeTextFile(pathToWrite, doc.content);
+  await Deno.writeTextFile(pathToWrite, doc.text);
+
+  const date = new Date(doc.timestamp / 1000);
+  await Deno.utime(pathToWrite, date, date);
+
+  const stat = await Deno.lstat(pathToWrite);
+
+  return {
+    exposedContentHash: doc.textHash as string,
+    exposedContentSize: new TextEncoder().encode(doc.text).byteLength,
+    dirName: dirname(pathToWrite),
+    path: doc.path,
+    abspath: resolve(pathToWrite),
+    mtimeMs: stat.mtime?.getTime() || MIN_TIMESTAMP_MS,
+    birthtimeMs: stat.birthtime?.getTime() || MIN_TIMESTAMP_MS,
+  };
 }
 
 export async function removeEmptyDir(dir: string, rootDir: string) {
@@ -201,11 +262,7 @@ export async function writeEntryToReplica(
       return;
     }
 
-    return replica.set(keypair, {
-      path: entry.path,
-      content: "",
-      format: "es.4",
-    });
+    return replica.wipeDocAtPath(keypair, entry.path);
   }
 
   const extension = extname(entry.path);
@@ -216,26 +273,38 @@ export async function writeEntryToReplica(
     return removeEmptyDir(entry.dirName, rootDir);
   }
 
-  if (!bytesExtensions.includes(extension)) {
-    const content = await Deno.readTextFile(entry.abspath);
+  // A doc without an attachment
+  if (extension === "") {
+    const text = await Deno.readTextFile(entry.abspath);
     const timestamp = entry.mtimeMs ? entry.mtimeMs * 1000 : undefined;
 
     return replica.set(keypair, {
       path: entry.path,
-      format: "es.4",
-      content,
-      deleteAfter,
+      text,
       timestamp,
+      deleteAfter,
     });
   }
 
-  const content = await Deno.readFile(entry.abspath);
-  const base64Content = encode(content);
+  if (correspondingDoc?.attachmentHash === entry.exposedContentHash) {
+    return Promise.resolve();
+  }
+
+  const file = await Deno.open(entry.abspath);
+
+  const text = entry.exposedContentSize === 0
+    ? ""
+    : correspondingDoc
+    ? correspondingDoc.text
+    : "Document generated by filesystem sync.";
+
+  const timestamp = entry.mtimeMs ? entry.mtimeMs * 1000 : undefined;
 
   return replica.set(keypair, {
+    text,
     path: entry.path,
-    format: "es.4",
-    content: base64Content,
     deleteAfter,
+    timestamp,
+    attachment: file.readable,
   });
 }

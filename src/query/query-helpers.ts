@@ -1,17 +1,20 @@
-import { Doc } from "../util/doc-types.ts";
 import { ValidationError } from "../util/errors.ts";
-import { IReplica } from "../replica/replica-types.ts";
 import { Query, QueryFilter } from "../query/query-types.ts";
 import { countChars, isObjectEmpty, replaceAll } from "../util/misc.ts";
 import { Logger, LogLevel, setLogLevel } from "../util/log.ts";
+import { Replica } from "../replica/replica.ts";
+import {
+  DefaultFormats,
+  FormatDocType,
+  FormatsArg,
+} from "../formats/format_types.ts";
 
 let logger = new Logger("query helpers", "gold");
 
 //================================================================================
 // HELPERS
 
-/*
- * Escape a string so it's safe to use in a regular expression.
+/** Escape a string so it's safe to use in a regular expression.
  * (Put a backslash in front of each special regex character
  *  so the string won't trigger any regex behavior).
  */
@@ -47,8 +50,7 @@ export let _matchAll = (re: RegExp, str: string): RegExpExecArray[] => {
 //================================================================================
 // GLOBS
 
-/*
- *  A helper used by globToQueryAndRegex -- see that function for details.
+/** A helper used by globToQueryAndRegex -- see that function for details.
  *
  *  This function simply turns a glob string into a regex.
  *  The other function calls this one, but sometimes discards the regex
@@ -86,8 +88,7 @@ export let globToRegex = (
   return regex;
 };
 
-/*
- * Helper for querying Earthstar docs using a glob-style query string.
+/** Helper for querying Earthstar docs using a glob-style query string.
  *
  * Given a glob string, return:
  *    - an earthstar Query
@@ -140,7 +141,7 @@ export let globToRegex = (
  */
 export let globToQueryAndRegex = (
   glob: string,
-): { query: Query; regex: string | null } => {
+): { query: Query<string[]>; regex: string | null } => {
   // Turn a glob into a query and an optional regex, if a regex is needed.
 
   // If no stars at all, this is just a direct path query.
@@ -156,7 +157,7 @@ export let globToQueryAndRegex = (
 
   // Put startsWith and endsWith into the filter if needed
   let filter: QueryFilter = {};
-  let query: Query = {};
+  let query: Query<string[]> = {};
 
   if (firstPart) filter.pathStartsWith = firstPart;
   if (lastPart) filter.pathEndsWith = lastPart;
@@ -185,8 +186,7 @@ export let globToQueryAndRegex = (
 //================================================================================
 // GLOB: USER-FACING API CALLS
 
-/*
- * Find documents whose path matches the glob string.
+/** Find documents whose path matches the glob string.
  * See documentation for globToQueryAndRegex for details on glob strings.
  *
  * You can specify additional query options by providing a `moreQueryOptions` object.
@@ -197,21 +197,22 @@ export let globToQueryAndRegex = (
  * `path`, `pathStartsWith` or `pathEndsWith` in your moreQueryOptions unless you
  * intend to override the glob's query.
  */
-export let queryByGlobAsync = async (
-  replica: IReplica,
+export async function queryByGlob<F = DefaultFormats>(
+  replica: Replica,
   glob: string,
-  moreQueryOptions: Query = {},
-): Promise<Doc[]> => {
+  moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
+  formats?: FormatsArg<F>,
+): Promise<FormatDocType<F>[]> {
   let { query, regex } = globToQueryAndRegex(glob);
   query = { ...query, ...moreQueryOptions };
-  let docs = await replica.queryDocs(query);
+  let docs = await replica.queryDocs(query, formats);
 
   if (regex !== null) {
     let re = new RegExp(regex);
     docs = docs.filter((doc) => re.test(doc.path));
   }
   return docs;
-};
+}
 
 //==========================================================================================
 // TEMPLATES
@@ -240,8 +241,7 @@ interface ParsedTemplate {
   glob: string; // the template with all the variables replaced by '*'
   namedCaptureRegex: string; // a regex string that will match paths and do named captures of the variables
 }
-/*
- *  This is a low-level helper for the template matching code; probably don't use it directly.
+/** This is a low-level helper for the template matching code; probably don't use it directly.
  *
  *  Given a template, parse it and return:
  *  - a list of variable names
@@ -264,7 +264,6 @@ interface ParsedTemplate {
  *  - A variable cannot be directly touching a star {likeThis}* or *{likeThis}.
  *
  *  If variable names don't match these rules, a ValidationError will be thrown.
- *
  */
 export function parseTemplate(template: string): ParsedTemplate {
   //--------------------------------------------------------------------------------
@@ -466,8 +465,7 @@ export let insertVariablesIntoTemplate = (
 //================================================================================
 // TEMPLATE: USER-FACING API CALLS
 
-/*
- * Given a template string like "/posts/{postId}.json",
+/** Given a template string like "/posts/{postId}.json",
  *  query the replica for docs with matching paths.
  *
  * See the docs for matchTemplateAndPath for details on template strings.
@@ -475,25 +473,27 @@ export let insertVariablesIntoTemplate = (
  * You can get the variables out of your document paths like this:
  *
  *      let template = '/posts/{postId}.json';
- *      let docs = await queryByTemplateAsync(myReplica, template);
+ *      let docs = await queryByTemplate(myReplica, template);
  *      for (let doc of docs) {
  *          // vars will be like { postId: 'abc' }
  *          let vars = extractTemplateVariablesFromPath(template, doc.path);
  *      }
  */
-export let queryByTemplateAsync = async (
-  replica: IReplica,
+
+export async function queryByTemplate<F = DefaultFormats>(
+  replica: Replica,
   template: string,
-  moreQueryOptions: Query = {},
-): Promise<Doc[]> => {
+  moreQueryOptions: Omit<Query<[string]>, "formats"> = {},
+  formats?: FormatsArg<F>,
+): Promise<FormatDocType<F>[]> {
   let { glob } = parseTemplate(template);
   let { query, regex } = globToQueryAndRegex(glob);
   query = { ...query, ...moreQueryOptions };
 
-  let docs = await replica.queryDocs(query);
+  let docs = await replica.queryDocs(query, formats);
   if (regex != null) {
     let re = new RegExp(regex);
     docs = docs.filter((doc) => re.test(doc.path));
   }
   return docs;
-};
+}
