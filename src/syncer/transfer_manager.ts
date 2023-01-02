@@ -85,7 +85,7 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
             const res = await agent.replica.getAttachment(event.doc, format);
 
             if (isErr(res)) {
-              // This doc can't have a attachment attached. Do nothing.
+              // This doc can't have an attachment attached. Do nothing.
               return;
             } else if (res === undefined) {
               await handleDownload(
