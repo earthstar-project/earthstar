@@ -20,9 +20,15 @@ Here are the headline features:
   [range-reconcile](earthstar-project/range-reconcile) and
   push-pull-push-multicast trees.
 
+The server APIs have also been moved into this repo.
+
 In addition to new features, many APIs have been tweaked or changed entirely.
 Please see the API documentation and the README to see what these new API
 changes are like.
+
+## Server
+
+- Moved existing server APIs into the core module, available as `Server`.
 
 ## Peer
 
@@ -79,7 +85,8 @@ changes are like.
 - Added a new `SharedSettings` class for easily saving and retrieving an author
   keypair, shares and secrets, and favourite servers.
 - Added parseAuthorOrShareAddress
-- Added a new minified web bundle, available from CDN_LINK_HERE
+- Added a new minified web bundle, available from
+  https://cdn.earthstar-project.org/js/earthstar.web.v10.0.0.js
 - Added ARCHITECTURE.md
 - Added CONTRIBUTING.md
 - Added CODE_OF_CONDUCT.md
