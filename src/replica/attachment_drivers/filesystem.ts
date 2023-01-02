@@ -77,7 +77,10 @@ export class AttachmentDriverFilesystem implements IReplicaAttachmentDriver {
     }
 
     try {
-      const file = await Deno.open(stagingPath, { create: true, write: true });
+      const file = await Deno.open(stagingPath, {
+        createNew: true,
+        write: true,
+      });
       await attachment.pipeThrough(attachmentStreamInfo).pipeTo(file.writable);
     } catch {
       return new EarthstarError("Couldn't write data to the staging path");

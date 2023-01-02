@@ -196,7 +196,11 @@ export async function writeDocToDir(
     }
 
     try {
-      const file = await Deno.open(pathToWrite, { create: true, write: true });
+      const file = await Deno.open(pathToWrite, {
+        create: true,
+        write: true,
+        truncate: true,
+      });
       await (await attachment.stream()).pipeTo(file.writable);
     } catch {
       throw new EarthstarError("Could not write attachment to filesystem");
