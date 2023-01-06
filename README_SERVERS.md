@@ -158,13 +158,12 @@ made.
 Your extension needs to implement the interface `IServerExtension`, which has
 two methods:
 
-- `register`: This will be called once when the server is initialised.
-  This is where your extension will get access to the server's `Peer`
-  instance.
-- `handler`: This is called whenever a request is made to the server,
-  and can be optionally handled by your extension if it does something with
-  server requests (e.g. syncing, serving web content). If it doesn't, you can
-  return `Promise<null>`, which will pass the request on to the next extension.
+- `register`: This will be called once when the server is initialised. This is
+  where your extension will get access to the server's `Peer` instance.
+- `handler`: This is called whenever a request is made to the server, and can be
+  optionally handled by your extension if it does something with server requests
+  (e.g. syncing, serving web content). If it doesn't, you can return
+  `Promise<null>`, which will pass the request on to the next extension.
 
 You can use your extension's constructor as a place for configuring the
 extension before it's registered.
@@ -223,7 +222,7 @@ host with a `known_share.json` and persists share data to a directory called
 `data`:
 
 ```docker
-FROM denoland/deno:1.28.3
+FROM denoland/deno:1.29.1
 
 EXPOSE 8080
 EXPOSE 443
@@ -269,4 +268,5 @@ const server = new Server([
 
 ### Templates
 
-TODO: Update the server templates.
+- [earthstar-server-glitch](https://github.com/earthstar-project/earthstar-server-glitch)
+  A server template for Glitch (provides one-click option)
