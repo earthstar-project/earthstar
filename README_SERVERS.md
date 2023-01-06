@@ -268,5 +268,7 @@ const server = new Server([
 
 ### Templates
 
-- [earthstar-server-glitch](https://github.com/earthstar-project/earthstar-server-glitch)
-  A server template for Glitch (provides one-click option)
+- [earthstar-server-fly](https://github.com/earthstar-project/earthstar-server-fly) -
+  A server template for Fly.io. Runs on Deno.
+- [earthstar-server-glitch](https://github.com/earthstar-project/earthstar-server-glitch) -
+  A server template for Glitch (provides one-click option). Runs on Node.
