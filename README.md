@@ -42,9 +42,9 @@ Or Deno:
 import * as Earthstar from "https://deno.land/x/earthstar@v10.0.0/mod.ts";`}
 ```
 
-> Earthstar's syncing does not work with version of Deno between 1.27.0 - 1.28.3
+> Earthstar's web syncing does not work with version of Deno between 1.27.0 - 1.29.3
 > (inclusive) due to a regression in these versions' WebSocket implementation.
-> **Use Deno 1.29.0 or higher.**
+> **Use Deno 1.26.2.**
 
 or installed with NPM:
 
