@@ -72,7 +72,15 @@ export class PartnerWebServer<
       this.incomingQueue.close();
     };
 
-    this.socket.onerror = () => {
+    this.socket.onerror = (event) => {
+      if ("error" in event) {
+        this.incomingQueue.close({
+          withError: event.error,
+        });
+
+        return;
+      }
+
       this.incomingQueue.close({
         withError: new EarthstarError("Websocket error."),
       });
