@@ -162,15 +162,25 @@ export function writeRandomDocs(
 ) {
   const fstRand = randomId();
 
-  const hasAttachment = Math.random() >= 0.8;
+  const hasAttachment = Math.random() >= 0.5;
 
   const setPromises = Array.from({ length: n }, () => {
     const rand = randomId();
 
     if (hasAttachment) {
-      const bytes = crypto.getRandomValues(
+      const randomBytes = crypto.getRandomValues(
         new Uint8Array((Math.random() + 0.1) * 32 * 32 * 32),
       );
+
+      const multiplicationFactor = Math.random() * 32;
+
+      const bytes = new Uint8Array(
+        randomBytes.length * multiplicationFactor,
+      );
+
+      for (let i = 0; i < multiplicationFactor - 1; i++) {
+        bytes.set(randomBytes, i * randomBytes.length);
+      }
 
       return storage.set(keypair, {
         text: `${rand}`,
