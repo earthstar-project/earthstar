@@ -100,6 +100,10 @@ export class AttachmentTransfer<F> {
               }
 
               if (isErr(result)) {
+                console.warn(
+                  `Couldn't ingest the attachment for ${doc.path} by ${doc.author}: ${result.message}`,
+                );
+
                 promise.reject(result);
                 return;
               }

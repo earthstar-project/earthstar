@@ -1,5 +1,9 @@
 # Changelog
 
+## NEXT
+
+- Warn in the console when a replica could not ingest an attachment during sync.
+
 ## v10.0.0
 
 This is a major release which introduces attachments, share keypairs, efficient
