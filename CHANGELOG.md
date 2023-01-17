@@ -2,7 +2,10 @@
 
 ## NEXT
 
-- Warn in the console when a replica could not ingest an attachment during sync.
+- (Improvement) - Warn in the console when a replica could not ingest an
+  attachment during sync.
+- (Improvement) - Better error messages for web syncing failures (e.g. 404,
+  wrong endpoint).
 
 ## v10.0.0
 
