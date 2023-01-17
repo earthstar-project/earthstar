@@ -17,5 +17,6 @@
     "files": {
       "exclude": ["npm", ".git", "earthstar.bundle.js", ".nova"]
     }
-  }
+  },
+  "lock": false
 }
