@@ -2,6 +2,8 @@ import { deferred } from "../../deps.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { DocBase, ShareAddress } from "../util/doc-types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
+import { BumpingTimeout } from "./bumping_timeout.ts";
+import { TIMEOUT_MS } from "./constants.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
 import {
   AttachmentTransferOpts,
@@ -64,6 +66,8 @@ export class AttachmentTransfer<F> {
         }
       };
 
+      let bumpingTimeout: BumpingTimeout | null = null;
+
       const counterStream = new ReadableStream<Uint8Array>({
         async start(controller) {
           const newReader = stream.getReader();
@@ -71,8 +75,15 @@ export class AttachmentTransfer<F> {
           // @ts-ignore Node's ReadableStream types does not like this for some reason.
           reader = newReader;
 
+          bumpingTimeout = new BumpingTimeout(() => {
+            controller.error("Attachment download timed out.");
+          }, TIMEOUT_MS);
+
           while (true) {
             const { done, value } = await newReader.read();
+
+            // Clear timeout here.
+            bumpingTimeout.bump();
 
             if (done) {
               break;
@@ -83,6 +94,7 @@ export class AttachmentTransfer<F> {
             controller.enqueue(value);
           }
 
+          bumpingTimeout.close();
           controller.close();
         },
       });

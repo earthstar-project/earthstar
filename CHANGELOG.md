@@ -2,6 +2,10 @@
 
 ## NEXT
 
+- (Improvement) - Syncer will cancel itself if it does not receive anything from
+  the other peer within a ten second window.
+- (Improvement) - Syncer will cancel an attachment transfer if it doesn't
+  receive anything from the other side within a ten second window.
 - (Improvement) - Warn in the console when a replica could not ingest an
   attachment during sync.
 - (Improvement) - Better error messages for web syncing failures (e.g. 404,
