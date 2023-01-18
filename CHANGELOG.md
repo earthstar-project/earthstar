@@ -1,6 +1,9 @@
 # Changelog
 
-## NEXT
+## v10.0.1
+
+This is a patch release focused on resolving errors encountered during syncing,
+and making other issues encountered during syncing easier to diagnose.
 
 - (Fix) - Peers will now only initiate a single transfer for many documents with
   the same attachment, fixing a case which could cause syncing to hang
