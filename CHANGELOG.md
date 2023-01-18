@@ -2,6 +2,15 @@
 
 ## NEXT
 
+- (Fix) - Peers will now only initiate a single transfer for many documents with
+  the same attachment, fixing a case which could cause syncing to hang
+  indefinitely.
+- (Fix) - Peers will now attempt to download attachments for documents which
+  they already possess prior to syncing but are missing attachments for.
+- (Improvement) - Syncer will cancel itself if it does not receive anything from
+  the other peer within a ten second window.
+- (Improvement) - Syncer will cancel an attachment transfer if it doesn't
+  receive anything from the other side within a ten second window.
 - (Improvement) - Warn in the console when a replica could not ingest an
   attachment during sync.
 - (Improvement) - Better error messages for web syncing failures (e.g. 404,

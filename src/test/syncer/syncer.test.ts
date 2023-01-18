@@ -20,6 +20,7 @@ import {
 } from "../test-utils.ts";
 import DefaultCryptoDriver from "../../crypto/default_driver.ts";
 import { sleep } from "../../util/misc.ts";
+import { notErr } from "../../util/errors.ts";
 
 setGlobalCryptoDriver(DefaultCryptoDriver);
 
@@ -48,6 +49,153 @@ const scenarios: MultiplyScenarioOutput<{
 }, {
   description: "overlap",
   scenarios: setOverlap,
+});
+
+Deno.test("Sync a single document", async (test) => {
+  const authorKeypair = await Crypto.generateAuthorKeypair(
+    "test",
+  ) as AuthorKeypair;
+
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "apples",
+  ) as ShareKeypair;
+
+  for (const driverScenario of syncDriverScenarios) {
+    await test.step({
+      name: `Finishes and syncs (${driverScenario.name})`,
+      fn: async () => {
+        const replicaA = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        const replicaB = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        await replicaA.set(authorKeypair, {
+          path: "/test/path",
+          text: "Hello",
+        });
+
+        const peerA = new Peer();
+        peerA.addReplica(replicaA);
+
+        const peerB = new Peer();
+        peerB.addReplica(replicaB);
+
+        const syncDriverScenario = driverScenario.item(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        await Promise.all([syncerA.isDone(), syncerB.isDone()]);
+
+        // Check that all replicas fully synced.
+
+        await syncDriverScenario.teardown();
+
+        assert(
+          await replicaDocsAreSynced([replicaA, replicaB]),
+          `+a docs are in sync`,
+        );
+
+        assert(
+          await replicaAttachmentsAreSynced([replicaA, replicaB]),
+          `+a attachments are in sync`,
+        );
+
+        await replicaA.close(true);
+        await replicaB.close(true);
+      },
+    });
+  }
+});
+
+Deno.test("Sync a single document (with attachment)", async (test) => {
+  const authorKeypair = await Crypto.generateAuthorKeypair(
+    "test",
+  ) as AuthorKeypair;
+
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "apples",
+  ) as ShareKeypair;
+
+  for (const driverScenario of syncDriverScenarios) {
+    await test.step({
+      name: `Finishes and syncs (${driverScenario.name})`,
+      fn: async () => {
+        const replicaA = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        const replicaB = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        const randomBytes = crypto.getRandomValues(
+          new Uint8Array(32 * 32 * 32),
+        );
+
+        const multiplicationFactor = 32;
+
+        const bytes = new Uint8Array(
+          randomBytes.length * multiplicationFactor,
+        );
+
+        for (let i = 0; i < multiplicationFactor - 1; i++) {
+          bytes.set(randomBytes, i * randomBytes.length);
+        }
+
+        await replicaA.set(authorKeypair, {
+          path: "/test/path.txt",
+          text: "Hello",
+          attachment: bytes,
+        });
+
+        const peerA = new Peer();
+        peerA.addReplica(replicaA);
+
+        const peerB = new Peer();
+        peerB.addReplica(replicaB);
+
+        const syncDriverScenario = driverScenario.item(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        await Promise.all([syncerA.isDone(), syncerB.isDone()]);
+
+        // Check that all replicas fully synced.
+
+        await syncDriverScenario.teardown();
+
+        assert(
+          await replicaDocsAreSynced([replicaA, replicaB]),
+          `+a docs are in sync`,
+        );
+
+        assert(
+          await replicaAttachmentsAreSynced([replicaA, replicaB]),
+          `+a attachments are in sync`,
+        );
+
+        await replicaA.close(true);
+        await replicaB.close(true);
+      },
+    });
+  }
 });
 
 Deno.test("Syncing (appetite 'once')", async (test) => {
@@ -565,4 +713,197 @@ Deno.test({
       });
     }
   },
+});
+
+Deno.test("Syncs attachments for docs which were synced in previous sessions", async (test) => {
+  const authorKeypair = await Crypto.generateAuthorKeypair(
+    "test",
+  ) as AuthorKeypair;
+
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "apples",
+  ) as ShareKeypair;
+
+  for (const driverScenario of syncDriverScenarios) {
+    await test.step({
+      name: `Finishes and syncs (${driverScenario.name})`,
+      fn: async () => {
+        const replicaA = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        const replicaB = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        const randomBytes = crypto.getRandomValues(
+          new Uint8Array(32 * 32 * 32),
+        );
+
+        const multiplicationFactor = 32;
+
+        const bytes = new Uint8Array(
+          randomBytes.length * multiplicationFactor,
+        );
+
+        for (let i = 0; i < multiplicationFactor - 1; i++) {
+          bytes.set(randomBytes, i * randomBytes.length);
+        }
+
+        // Create a new document with an attachment
+        const newDocRes = await FormatEs5.generateDocument({
+          share: shareKeypair.shareAddress,
+          config: {
+            shareSecret: shareKeypair.secret,
+          },
+          keypair: authorKeypair,
+          timestamp: Date.now() * 1000,
+          input: {
+            text: "Test attachment",
+            attachment: bytes,
+            format: "es.5",
+            path: "/test-attachment",
+          },
+        });
+
+        assert(notErr(newDocRes));
+        assert(newDocRes.attachment instanceof Uint8Array);
+
+        // Give replica A the doc AND attachment to ingest
+        await replicaA.ingest(FormatEs5, newDocRes.doc, "local");
+        await replicaA.ingestAttachment(
+          FormatEs5,
+          newDocRes.doc,
+          newDocRes.attachment,
+          "local",
+        );
+
+        // Only give replica B the doc WITHOUT the attachment
+        await replicaB.ingest(FormatEs5, newDocRes.doc, "local");
+
+        const peerA = new Peer();
+        peerA.addReplica(replicaA);
+
+        const peerB = new Peer();
+        peerB.addReplica(replicaB);
+
+        const syncDriverScenario = driverScenario.item(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        await Promise.all([syncerA.isDone(), syncerB.isDone()]);
+
+        // Check that all replicas fully synced.
+
+        await syncDriverScenario.teardown();
+
+        assert(
+          await replicaDocsAreSynced([replicaA, replicaB]),
+          `+a docs are in sync`,
+        );
+
+        assert(
+          await replicaAttachmentsAreSynced([replicaA, replicaB]),
+          `+a attachments are in sync`,
+        );
+
+        await replicaA.close(true);
+        await replicaB.close(true);
+      },
+    });
+  }
+});
+
+Deno.test("Only initiates a single attachment transfer for two documents with the same attachment", async (test) => {
+  const authorKeypair = await Crypto.generateAuthorKeypair(
+    "test",
+  ) as AuthorKeypair;
+
+  const shareKeypair = await Crypto.generateShareKeypair(
+    "apples",
+  ) as ShareKeypair;
+
+  for (const driverScenario of syncDriverScenarios) {
+    await test.step({
+      name: `Finishes and syncs (${driverScenario.name})`,
+      fn: async () => {
+        const replicaA = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        const replicaB = new Replica({
+          driver: new ReplicaDriverMemory(shareKeypair.shareAddress),
+          shareSecret: shareKeypair.secret,
+        });
+
+        const randomBytes = crypto.getRandomValues(
+          new Uint8Array(32 * 32 * 32),
+        );
+
+        const multiplicationFactor = 32;
+
+        const bytes = new Uint8Array(
+          randomBytes.length * multiplicationFactor,
+        );
+
+        for (let i = 0; i < multiplicationFactor - 1; i++) {
+          bytes.set(randomBytes, i * randomBytes.length);
+        }
+
+        await replicaA.set(authorKeypair, {
+          path: "/test/path.txt",
+          text: "Hello",
+          attachment: bytes,
+        });
+
+        await replicaA.set(authorKeypair, {
+          path: "/test/path2.txt",
+          text: "Hello again!",
+          attachment: bytes,
+        });
+
+        const peerA = new Peer();
+        peerA.addReplica(replicaA);
+
+        const peerB = new Peer();
+        peerB.addReplica(replicaB);
+
+        const syncDriverScenario = driverScenario.item(
+          [FormatEs5],
+          "once",
+        );
+
+        // Initiate sync for each peer using the driver.
+        const [syncerA, syncerB] = await syncDriverScenario.setup(peerA, peerB);
+
+        // Check that the sync finishes.
+        await Promise.all([syncerA.isDone(), syncerB.isDone()]);
+
+        // Check that all replicas fully synced.
+
+        await syncDriverScenario.teardown();
+
+        assert(
+          await replicaDocsAreSynced([replicaA, replicaB]),
+          `+a docs are in sync`,
+        );
+
+        assert(
+          await replicaAttachmentsAreSynced([replicaA, replicaB]),
+          `+a attachments are in sync`,
+        );
+
+        await replicaA.close(true);
+        await replicaB.close(true);
+      },
+    });
+  }
 });

@@ -23,6 +23,8 @@ import { TransferManager } from "./transfer_manager.ts";
 import { MultiDeferred } from "./multi_deferred.ts";
 import { AsyncQueue, deferred } from "../../deps.ts";
 import { SyncerManager } from "./syncer_manager.ts";
+import { BumpingTimeout } from "./bumping_timeout.ts";
+import { TIMEOUT_MS } from "./constants.ts";
 
 /** Syncs the data of a Peer's replicas with that of another peer.
  *
@@ -56,6 +58,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private partnerIsFulfilled = deferred<true>();
   private isDoneMultiDeferred = new MultiDeferred();
   private heartbeatInterval: number;
+  // Used to timeout when we haven't heard from the other peer in a while.
+  private bumpingTimeout: BumpingTimeout;
 
   constructor(opts: SyncerOpts<FormatsType, IncomingTransferSourceType>) {
     // Have to do this because we'll be using these values in a context where 'this' is different
@@ -124,6 +128,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
       await this.partner.closeConnection();
 
+      this.bumpingTimeout.close();
+
       this.isDoneMultiDeferred.resolve();
     });
 
@@ -158,6 +164,12 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
         });
       });
     });
+
+    this.bumpingTimeout = new BumpingTimeout(() => {
+      this.cancel(
+        "No communication from the other peer in the last three seconds.",
+      );
+    }, TIMEOUT_MS);
   }
 
   private addShare(
@@ -226,6 +238,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
   /** Handle inbound events from the other peer. */
   private async handleIncomingEvent(event: SyncerEvent) {
+    this.bumpingTimeout.bump();
+
     switch (event.kind) {
       // Handle an incoming salted handsake
       case "DISCLOSE": {
@@ -349,6 +363,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
   /** Stop syncing. */
   async cancel(reason?: Error | string) {
+    this.bumpingTimeout.close();
+
     this.isDoneMultiDeferred.reject(reason);
 
     for (const [_addr, agent] of this.syncAgents) {

@@ -5,7 +5,6 @@ import {
   FormatsArg,
 } from "../formats/format_types.ts";
 import { getFormatLookup } from "../formats/util.ts";
-import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
@@ -62,44 +61,6 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
 
   // pass a syncagent's isDone to this
   registerSyncAgent(agent: SyncAgent<FormatsType>) {
-    // create a sealed thing for when all syncagents are done syncing docs.
-
-    const existingDocsStream = agent.replica.getQueryStream(
-      { orderBy: "localIndex ASC" },
-      "existing",
-      this.formats,
-    );
-
-    const { formatsLookup } = this;
-    const handleDownload = this.handleDownload.bind(this);
-
-    const pipedExistingDocsToManager = existingDocsStream.pipeTo(
-      new WritableStream<
-        QuerySourceEvent<FormatDocType<FormatsType>>
-      >({
-        async write(event) {
-          if (event.kind === "existing" || event.kind === "success") {
-            // Get the right format here...
-            const format = formatsLookup[event.doc.format];
-
-            const res = await agent.replica.getAttachment(event.doc, format);
-
-            if (isErr(res)) {
-              // This doc can't have an attachment attached. Do nothing.
-              return;
-            } else if (res === undefined) {
-              await handleDownload(
-                event.doc,
-                agent.replica,
-                agent.counterpartId,
-              );
-            }
-          }
-        },
-      }),
-    );
-
-    this.madeAllAttachmentRequestsEnroller.enrol(pipedExistingDocsToManager);
     this.madeAllAttachmentRequestsEnroller.enrol(agent.isDone());
   }
 
@@ -110,10 +71,15 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   }
 
   registerExpectedTransfer(share: ShareAddress, hash: string) {
-    const promise = deferred<void>();
     const key = `${share}_${hash}`;
-    this.expectedTransferPromises.set(key, promise);
 
+    if (this.expectedTransferPromises.has(key)) {
+      // We're already expecting this transfer, no need to add another promise.
+      return;
+    }
+
+    const promise = deferred<void>();
+    this.expectedTransferPromises.set(key, promise);
     this.receivedAllExpectedTransfersEnroller.enrol(promise);
   }
 
@@ -150,14 +116,16 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       attachmentHash: attachmentInfo.hash,
     });
 
+    // The partner doesn't have it.
     if (result === undefined) {
+      /* I don't think this is needed...
       const key = `${replica.share}_${attachmentInfo.hash}`;
       const promise = deferred<void>();
       this.expectedTransferPromises.set(key, promise);
 
       promise.resolve();
+      */
 
-      // The sync agent will send a blob req.
       return "no_attachment";
     }
 
