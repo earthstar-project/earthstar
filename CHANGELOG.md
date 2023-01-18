@@ -2,6 +2,9 @@
 
 ## NEXT
 
+- (Fix) - Peers will now only initiate a single transfer for many documents with
+  the same attachment, fixing a case which could cause syncing to hang
+  indefinitely.
 - (Fix) - Peers will now attempt to download attachments for documents which
   they already possess prior to syncing but are missing attachments for.
 - (Improvement) - Syncer will cancel itself if it does not receive anything from

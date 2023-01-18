@@ -5,7 +5,6 @@ import {
   FormatsArg,
 } from "../formats/format_types.ts";
 import { getFormatLookup } from "../formats/util.ts";
-import { QuerySourceEvent } from "../replica/replica-types.ts";
 import { Replica } from "../replica/replica.ts";
 import { BlockingBus } from "../streams/stream_utils.ts";
 import { AuthorAddress, Path, ShareAddress } from "../util/doc-types.ts";
@@ -72,10 +71,15 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   }
 
   registerExpectedTransfer(share: ShareAddress, hash: string) {
-    const promise = deferred<void>();
     const key = `${share}_${hash}`;
-    this.expectedTransferPromises.set(key, promise);
 
+    if (this.expectedTransferPromises.has(key)) {
+      // We're already expecting this transfer, no need to add another promise.
+      return;
+    }
+
+    const promise = deferred<void>();
+    this.expectedTransferPromises.set(key, promise);
     this.receivedAllExpectedTransfersEnroller.enrol(promise);
   }
 
@@ -112,12 +116,15 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       attachmentHash: attachmentInfo.hash,
     });
 
+    // The partner doesn't have it.
     if (result === undefined) {
+      /* I don't think this is needed...
       const key = `${replica.share}_${attachmentInfo.hash}`;
       const promise = deferred<void>();
       this.expectedTransferPromises.set(key, promise);
 
       promise.resolve();
+      */
 
       return "no_attachment";
     }
