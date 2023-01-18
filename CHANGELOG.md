@@ -2,6 +2,8 @@
 
 ## NEXT
 
+- (Fix) - Peers will now attempt to download attachments for documents which
+  they already possess prior to syncing but are missing attachments for.
 - (Improvement) - Syncer will cancel itself if it does not receive anything from
   the other peer within a ten second window.
 - (Improvement) - Syncer will cancel an attachment transfer if it doesn't

@@ -19,6 +19,7 @@ import { SyncerManager } from "./syncer_manager.ts";
 import { TransferManager } from "./transfer_manager.ts";
 import { isErr } from "../util/errors.ts";
 import { MultiformatReplica } from "../replica/multiformat_replica.ts";
+import { QuerySourceEvent } from "../replica/replica-types.ts";
 
 /** Mediates synchronisation on behalf of a `Replica`.
  */
@@ -39,6 +40,7 @@ export class SyncAgent<F> {
 
   private hasPrepared = deferred();
   private hasReconciled = deferred();
+  private hasCheckedAllExistingDocsForAttachments = deferred();
 
   private requestedCount = 0;
   private sentDocsCount = 0;
@@ -111,6 +113,16 @@ export class SyncAgent<F> {
       }
     })();
 
+    const existingDocAttachmentChecker = new ExistingDocAttachmentChecker({
+      outboundEventQueue: this.outboundEventQueue,
+      formats: opts.formats,
+      replica: opts.replica,
+      counterpartId: this.counterpartId,
+      transferManager: opts.transferManager,
+      hasCheckedAllExistingDocsForAttachments:
+        this.hasCheckedAllExistingDocsForAttachments,
+    });
+
     const wantTracker = new WantTracker();
 
     const reconciler = new SyncAgentReconciler({
@@ -160,7 +172,10 @@ export class SyncAgent<F> {
       },
     });
 
-    gossiper.isDone.then(() => {
+    // Resolves when this gossiper has everything it wants and its counterpart is fulfilled. Never resolves if appetite is 'continuous'.
+    gossiper.isDone.then(async () => {
+      await this.hasCheckedAllExistingDocsForAttachments;
+
       this.isDoneMultiDeferred.resolve();
     });
 
@@ -700,6 +715,88 @@ class SyncAgentReconciler<F> {
 
     rangeMessenger.isDone().then(() => {
       this.isDone.resolve(this.communicationRoundsCount);
+    });
+  }
+}
+
+type ExistingDocAttachmentCheckerOpts<F> = {
+  outboundEventQueue: AsyncQueue<SyncAgentEvent>;
+  formats: FormatsArg<F> | undefined;
+  replica: MultiformatReplica;
+  counterpartId: string;
+  transferManager: TransferManager<F, unknown>;
+  hasCheckedAllExistingDocsForAttachments: Deferred<unknown>;
+};
+
+class ExistingDocAttachmentChecker<F> {
+  constructor(opts: ExistingDocAttachmentCheckerOpts<F>) {
+    const existingDocsStream = opts.replica.getQueryStream(
+      { orderBy: "localIndex ASC" },
+      "existing",
+      opts.formats,
+    );
+
+    const formatLookup = getFormatLookup(opts.formats);
+    const handleDownload = opts.transferManager.handleDownload.bind(
+      opts.transferManager,
+    );
+
+    existingDocsStream.pipeTo(
+      new WritableStream<
+        QuerySourceEvent<FormatDocType<F>>
+      >({
+        start(controller) {
+          opts.replica.onEvent((event) => {
+            if (event.kind === "willClose") {
+              controller.error();
+            }
+          });
+        },
+        async write(event) {
+          if (event.kind === "existing" || event.kind === "success") {
+            // Get the right format here...
+            const format = formatLookup[event.doc.format];
+
+            const res = await opts.replica.getAttachment(event.doc, format);
+
+            if (isErr(res)) {
+              // This doc can't have an attachment attached. Do nothing.
+              return;
+            } else if (res === undefined) {
+              const downloadResult = await handleDownload(
+                event.doc,
+                opts.replica,
+                opts.counterpartId,
+              );
+
+              // Direct download not supported, send an upload request instead.
+              if (isErr(downloadResult)) {
+                const attachmentInfo = format.getAttachmentInfo(
+                  event.doc,
+                ) as { size: number; hash: string };
+
+                opts.transferManager.registerExpectedTransfer(
+                  opts.replica.share,
+                  attachmentInfo.hash,
+                );
+
+                opts.outboundEventQueue.push({
+                  kind: "WANT_ATTACHMENT",
+                  attachmentHash: attachmentInfo.hash,
+                  doc: event.doc,
+                  shareAddress: opts.replica.share,
+                });
+              }
+            }
+          }
+        },
+      }),
+    ).then(() => {
+      // We are done checking existing docs
+      opts.hasCheckedAllExistingDocsForAttachments.resolve();
+    }).catch(() => {
+      // The replica was closed (probably because syncing was cancelled).
+      opts.hasCheckedAllExistingDocsForAttachments.resolve();
     });
   }
 }
