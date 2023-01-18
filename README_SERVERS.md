@@ -39,7 +39,7 @@ those credentials were never there to begin with.
 For Deno:
 
 ```ts
-import { Server } from "https://deno.land/x/earthstar@v10.0.0/mod.ts";
+import { Server } from "https://deno.land/x/earthstar/mod.ts";
 ```
 
 > Earthstar's syncing does not work with version of Deno between 1.27.0 - 1.28.1
@@ -65,7 +65,7 @@ import {
   ExtensionKnownShares,
   ExtensionSyncWeb,
   Server,
-} from "https://deno.land/x/earthstar@v10.0.0/mod.ts";
+} from "https://deno.land/x/earthstar/mod.ts";
 
 const server = new Server([
   new ExtensionKnownShares({
@@ -249,7 +249,7 @@ import {
   ExtensionKnownShares,
   ExtensionSyncWeb,
   Server,
-} from "https://deno.land/x/earthstar@v10.0.0/mod.ts";
+} from "https://deno.land/x/earthstar/mod.ts";
 
 const server = new Server([
   new ExtensionKnownShares({

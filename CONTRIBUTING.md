@@ -107,8 +107,8 @@ when they are widely supported!
 ### Documentation and comments
 
 We use JSDoc for user documentation. You can view docs for the whole codebase at
-https://doc.deno.land/https://deno.land/x/stone_soup@v10.0.0/mod.ts, or by
-running the following from the root of the project:
+https://doc.deno.land/https://deno.land/x/earthstar/mod.ts, or by running the
+following from the root of the project:
 
 ```
 deno doc mod.ts

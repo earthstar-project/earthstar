@@ -38,7 +38,7 @@
  * ExtensionKnownShares,
  * ExtensionSyncWeb,
  * Server,
- * } from "https://deno.land/x/earthstar@v10.0.0/mod.ts";
+ * } from "https://deno.land/x/earthstar/mod.ts";
  *
  * const server = new Server([
  * new ExtensionKnownShares({
