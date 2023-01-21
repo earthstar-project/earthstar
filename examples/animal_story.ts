@@ -115,7 +115,7 @@ assert(!Earthstar.isErr(frogsSecondDoc));
 
 logReplica("@frog wrote more indulgent prose at /story_part_2");
 console.group();
-console.log(frogsFirstDoc);
+console.log(frogsSecondDoc);
 console.groupEnd();
 
 nextPartPrompt();
