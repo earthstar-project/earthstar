@@ -1,6 +1,7 @@
 // import * as Earthstar from "./mod.ts";
 import * as Earthstar from "https://deno.land/x/earthstar@v10.0.1/mod.ts";
 import { assert } from "https://deno.land/std@0.154.0/testing/asserts.ts";
+import { delay } from 'https://deno.land/x/delay@v0.2.0/mod.ts';
 
 // In which the story begins and we generate some keypairs.
 // =======================================================================
@@ -323,10 +324,67 @@ logRabbit("Yeah!");
 
 nextPartPrompt();
 
-logNarrator("To be continued...");
-
 // In which Rabbit writes an ephemeral doc
 // =======================================================================
+
+logRabbit("Dear Frog, I will share with you a secret I never shared with anyone else for about ten seconds.");
+
+const rabbitsStatusSecret = 'I accidentally stepped on the strawberries.';
+const TIME_IN_MICROSECONDS = 10 * 1E12; // 10 * 1_000_000_000_000
+
+const rabbitsConfession = await replicaRabbit.set(rabbitKeypair, {
+  path: `/~${rabbitKeypair.address}/secret!`,
+  text: rabbitsStatusSecret,
+  deleteAfter: Date.now() * 1000 + TIME_IN_MICROSECONDS
+});
+
+logReplica("Your secret is save with me.");
+
+console.group();
+console.log(rabbitsConfession);
+console.groupEnd();
+
+logRabbit(
+  "Wow, sharing really makes you feel better.",
+);
+
+const rabbitsConfessionDoc = await replicaRabbit.getAllDocsAtPath(`/~${rabbitKeypair.address}/secret!`);
+
+assert(!Earthstar.isErr(rabbitsConfessionDoc));
+
+logReplica("Here it is again.");
+
+console.group();
+console.log(rabbitsConfessionDoc);
+console.groupEnd();
+
+logFrog("Thank you for trusting me Bunn. My lips are sealed.");
+logRabbit("Now that I spilled my heart out to you Frog, I better make sure my secret stays with me.");
+
+await delay(10 * 1E3);
+
+logNarrator("About ten seconds later...");
+
+const rabbitsSecretDoc = await replicaRabbit.getAllDocsAtPath(`/~${rabbitKeypair.address}/secret!`);
+
+assert(!Earthstar.isErr(rabbitsSecretDoc));
+
+logReplica("Hmm, I don't seem to have this document any more!");
+
+console.group();
+console.log(rabbitsSecretDoc);
+console.groupEnd();
+
+logFrog("I feel we're getting even better friends now. Can I share a painting I made of you somehow too?");
+logRabbit(
+  "Let's find out!",
+);
+
+
+nextPartPrompt();
+
+
+logNarrator("To be continued...");
 
 // In which Frog saves some attachments
 // =======================================================================
