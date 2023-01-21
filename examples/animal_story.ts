@@ -330,21 +330,22 @@ nextPartPrompt();
 logRabbit("Dear Frog, I will share with you a secret I never shared with anyone else for about ten seconds.");
 
 const rabbitsStatusSecret = 'I accidentally stepped on the strawberries.';
-const TIME_IN_MICROSECONDS = 10 * 1E12; // 10 * 1_000_000_000_000
+const TIME_IN_SECONDS = 10 * 1E3;
 
 const rabbitsConfession = await replicaRabbit.set(rabbitKeypair, {
-  path: `/~${rabbitKeypair.address}/secret!`,
+  path: `/~${rabbitKeypair.address}/!secret`,
+  // path: `/!secret`,
   text: rabbitsStatusSecret,
-  deleteAfter: Date.now() * 1000 + TIME_IN_MICROSECONDS
+  deleteAfter: (Date.now() + TIME_IN_SECONDS) * 1000
 });
 
-logReplica(`Your secret is safe with me. I will keep it in storage until ${new Date(Date.now() + TIME_IN_MICROSECONDS / 1E12).toISOString()}`);
+logReplica(`Your secret is safe with me. I will keep it in storage until ${new Date(Date.now() + TIME_IN_SECONDS / 1E12).toISOString()}`);
 
 console.group();
 console.log(rabbitsConfession);
 console.groupEnd();
 
-const rabbitsConfessionDoc = await replicaRabbit.getAllDocsAtPath(`/~${rabbitKeypair.address}/secret!`);
+const rabbitsConfessionDoc = await replicaRabbit.getLatestDocAtPath(`/~${rabbitKeypair.address}/!secret`);
 
 assert(!Earthstar.isErr(rabbitsConfessionDoc));
 
@@ -355,17 +356,18 @@ console.log(rabbitsConfessionDoc);
 console.groupEnd();
 
 logFrog("Thank you for trusting me Bunn. My lips are sealed.");
-logRabbit("I really spilled my heart out to you Frog. You are a true friend.");
+logRabbit("I trust you Frog. You are a true friend.");
 
 logNarrator("The friends just sit there. Enjoying each other's presence for a while.");
 
-await delay(15 * 1E3);
+await delay(TIME_IN_SECONDS + 500);
 
-logNarrator("About ten seconds later, Rabbit checks if her secrets are no longer shared. For plausible deniability, you know...");
+logNarrator(`About ten seconds later, ${new Date(Date.now()).toISOString()}, Bunn checks if her secrets are no longer shared. For plausible deniability, you know...`);
 
-const rabbitsSecretDoc = await replicaRabbit.getAllDocsAtPath(`/~${rabbitKeypair.address}/secret!`);
+const rabbitsSecretDoc = await replicaRabbit.getLatestDocAtPath(`/~${rabbitKeypair.address}/!secret`);
 
 assert(!Earthstar.isErr(rabbitsSecretDoc));
+assert(!rabbitsSecretDoc);
 
 logReplica("Hmm, I don't seem to have this document any more!");
 
@@ -379,9 +381,10 @@ logRabbit(
 
 logFrog("I feel we're getting even better friends now. Can I share a painting I made of you somehow too?");
 logRabbit(
-  "Let's find out!",
+  "Let's find out how to do this here.",
 );
 
+logNarrator("Frog prepares a digital photograph of a painting he made of Bunn some time ago and gets it ready for sharing it.");
 
 nextPartPrompt();
 
