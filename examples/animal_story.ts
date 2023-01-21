@@ -116,7 +116,7 @@ assert(!Earthstar.isErr(frogsSecondDoc));
 
 logReplica("@frog wrote more indulgent prose at /story_part_2");
 console.group();
-console.log(frogsFirstDoc);
+console.log(frogsSecondDoc);
 console.groupEnd();
 
 nextPartPrompt();
@@ -338,32 +338,30 @@ const rabbitsConfession = await replicaRabbit.set(rabbitKeypair, {
   deleteAfter: Date.now() * 1000 + TIME_IN_MICROSECONDS
 });
 
-logReplica("Your secret is save with me.");
+logReplica(`Your secret is safe with me. I will keep it in storage until ${new Date(Date.now() + TIME_IN_MICROSECONDS / 1E12).toISOString()}`);
 
 console.group();
 console.log(rabbitsConfession);
 console.groupEnd();
 
-logRabbit(
-  "Wow, sharing really makes you feel better.",
-);
-
 const rabbitsConfessionDoc = await replicaRabbit.getAllDocsAtPath(`/~${rabbitKeypair.address}/secret!`);
 
 assert(!Earthstar.isErr(rabbitsConfessionDoc));
 
-logReplica("Here it is again.");
+logReplica("It's been less than the given expiration time, so here is the doc again.");
 
 console.group();
 console.log(rabbitsConfessionDoc);
 console.groupEnd();
 
 logFrog("Thank you for trusting me Bunn. My lips are sealed.");
-logRabbit("Now that I spilled my heart out to you Frog, I better make sure my secret stays with me.");
+logRabbit("I really spilled my heart out to you Frog. You are a true friend.");
 
-await delay(10 * 1E3);
+logNarrator("The friends just sit there. Enjoying each other's presence for a while.");
 
-logNarrator("About ten seconds later...");
+await delay(15 * 1E3);
+
+logNarrator("About ten seconds later, Rabbit checks if her secrets are no longer shared. For plausible deniability, you know...");
 
 const rabbitsSecretDoc = await replicaRabbit.getAllDocsAtPath(`/~${rabbitKeypair.address}/secret!`);
 
@@ -374,6 +372,10 @@ logReplica("Hmm, I don't seem to have this document any more!");
 console.group();
 console.log(rabbitsSecretDoc);
 console.groupEnd();
+
+logRabbit(
+  "Sharing secrets really takes a load off, but I am glad this truth is no longer out there.",
+);
 
 logFrog("I feel we're getting even better friends now. Can I share a painting I made of you somehow too?");
 logRabbit(
