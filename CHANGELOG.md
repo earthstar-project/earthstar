@@ -1,5 +1,12 @@
 # Changelog
 
+## NEXT
+
+- (Fix) `DocDriverSqliteFfi` has been updated to use
+  `https://deno.land/x/sqlite3@0.7.3` which has compatibility with Deno 1.30.0.
+  This driver uses unstable APIs and will not work with previous versions of
+  Deno.
+
 ## v10.0.1
 
 This is a patch release focused on resolving errors encountered during syncing,
