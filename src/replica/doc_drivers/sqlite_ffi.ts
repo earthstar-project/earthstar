@@ -22,7 +22,7 @@ import {
   UPSERT_CONFIG_QUERY,
   UPSERT_DOC_QUERY,
 } from "./sqlite.shared.ts";
-import * as Sqlite from "https://deno.land/x/sqlite3@0.5.3/mod.ts";
+import * as Sqlite from "https://deno.land/x/sqlite3@0.7.3/mod.ts";
 
 //--------------------------------------------------
 
@@ -168,9 +168,15 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
       MAX_LOCAL_INDEX_QUERY,
     );
 
-    const maxLocalIndexResult = statement.get<[number | null]>();
+    const maxLocalIndexResult = statement.get<
+      { "MAX(localIndex)": number | null }
+    >();
 
-    const maxLocalIndex = maxLocalIndexResult ? maxLocalIndexResult[0] : -1;
+    console.log(maxLocalIndexResult);
+
+    const maxLocalIndex = maxLocalIndexResult
+      ? maxLocalIndexResult["MAX(localIndex)"]
+      : -1;
 
     // We have to do this because the maxLocalIndexDb could be 0, which is falsy.
     this._maxLocalIndex = maxLocalIndex !== null ? maxLocalIndex : -1;
@@ -253,10 +259,10 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
   _getConfigSync(key: string): string | undefined {
     const statement = this._db.prepare(SELECT_CONFIG_CONTENT_QUERY);
 
-    const result = statement.get<[string]>({ key });
+    const result = statement.get<{ "content": string }>({ key });
 
     if (result) {
-      return result[0];
+      return result["content"];
     }
   }
 
@@ -409,9 +415,9 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
 
     // make sure sqlite is using utf-8
     this._db.exec(SET_ENCODING_QUERY);
-    const encodingRes = this._db.prepare(GET_ENCODING_QUERY).get<[string]>();
+    const encodingRes = this._db.prepare(GET_ENCODING_QUERY).get();
 
-    if (encodingRes && encodingRes[0] !== "UTF-8") {
+    if (encodingRes && encodingRes["encoding"] !== "UTF-8") {
       throw new Error(
         `sqlite encoding is stubbornly set to ${
           encodingRes[0]
