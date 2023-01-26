@@ -54,7 +54,6 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
         new DocDriverLocalStorage(addr, variant),
     },
   },
-  /* TODO: Re-add to tests when we're no longer stuck on Deno 1.26.2
   {
     name: "Sqlite FFI",
     item: {
@@ -68,7 +67,6 @@ export const docDriverScenarios: Scenario<DocDriverScenario>[] = [
         }),
     },
   },
-  */
   {
     name: "Sqlite",
     item: {
