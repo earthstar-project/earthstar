@@ -222,7 +222,7 @@ host with a `known_share.json` and persists share data to a directory called
 `data`:
 
 ```docker
-FROM denoland/deno:1.29.1
+FROM denoland/deno:1.30.0
 
 EXPOSE 8080
 EXPOSE 443

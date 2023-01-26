@@ -44,7 +44,7 @@ import * as Earthstar from "https://deno.land/x/earthstar/mod.ts";`}
 
 > Earthstar's web syncing does not work with version of Deno between 1.27.0 -
 > 1.29.3 (inclusive) due to a regression in these versions' WebSocket
-> implementation. **Use Deno 1.26.2.**
+> implementation. **Use Deno 1.30.0. or later**, or Deno 1.26.2.
 
 or installed with NPM:
 
