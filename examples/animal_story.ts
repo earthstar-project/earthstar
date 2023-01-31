@@ -1,6 +1,7 @@
 // import * as Earthstar from "./mod.ts";
 import * as Earthstar from "https://deno.land/x/earthstar@v10.0.1/mod.ts";
 import { assert } from "https://deno.land/std@0.154.0/testing/asserts.ts";
+import { delay } from 'https://deno.land/x/delay@v0.2.0/mod.ts';
 
 // In which the story begins and we generate some keypairs.
 // =======================================================================
@@ -323,10 +324,72 @@ logRabbit("Yeah!");
 
 nextPartPrompt();
 
-logNarrator("To be continued...");
-
 // In which Rabbit writes an ephemeral doc
 // =======================================================================
+
+logRabbit("Dear Frog, I will share with you a secret I never shared with anyone else for about ten seconds.");
+
+const rabbitsStatusSecret = 'I accidentally stepped on the strawberries.';
+const TIME_IN_SECONDS = 10 * 1E3;
+
+const rabbitsConfession = await replicaRabbit.set(rabbitKeypair, {
+  path: `/~${rabbitKeypair.address}/!secret`,
+  // path: `/!secret`,
+  text: rabbitsStatusSecret,
+  deleteAfter: (Date.now() + TIME_IN_SECONDS) * 1000
+});
+
+logReplica(`Your secret is safe with me. I will keep it in storage until ${new Date(Date.now() + TIME_IN_SECONDS / 1E12).toISOString()}`);
+
+console.group();
+console.log(rabbitsConfession);
+console.groupEnd();
+
+const rabbitsConfessionDoc = await replicaRabbit.getLatestDocAtPath(`/~${rabbitKeypair.address}/!secret`);
+
+assert(!Earthstar.isErr(rabbitsConfessionDoc));
+
+logReplica("It's been less than the given expiration time, so here is the doc again.");
+
+console.group();
+console.log(rabbitsConfessionDoc);
+console.groupEnd();
+
+logFrog("Thank you for trusting me Bunn. My lips are sealed.");
+logRabbit("I trust you Frog. You are a true friend.");
+
+logNarrator("The friends just sit there. Enjoying each other's presence for a while.");
+
+await delay(TIME_IN_SECONDS + 500);
+
+logNarrator(`About ten seconds later, ${new Date(Date.now()).toISOString()}, Bunn checks if her secrets are no longer shared. For plausible deniability, you know...`);
+
+const rabbitsSecretDoc = await replicaRabbit.getLatestDocAtPath(`/~${rabbitKeypair.address}/!secret`);
+
+assert(!Earthstar.isErr(rabbitsSecretDoc));
+assert(!rabbitsSecretDoc);
+
+logReplica("Hmm, I don't seem to have this document any more!");
+
+console.group();
+console.log(rabbitsSecretDoc);
+console.groupEnd();
+
+logRabbit(
+  "Sharing secrets really takes a load off, but I am glad this truth is no longer out there.",
+);
+
+logFrog("I feel we're getting even better friends now. Can I share a painting I made of you somehow too?");
+logRabbit(
+  "Let's find out how to do this here.",
+);
+
+logNarrator("Frog prepares a digital photograph of a painting he made of Bunn some time ago and gets it ready for sharing it.");
+
+nextPartPrompt();
+
+
+logNarrator("To be continued...");
 
 // In which Frog saves some attachments
 // =======================================================================
