@@ -5,7 +5,7 @@
     "bench": "deno bench --allow-all --unstable --no-check src/test/benchmark",
     "bundle": "deno run --allow-all scripts/build_web_bundle.ts",
     "npm": "deno run --allow-all scripts/build_npm.ts",
-    "example": "deno run ./example-app.ts",
+    "example": "deno run examples/animal_story.ts",
     "coverage": "deno task test-coverage && deno task show-coverage",
     "test-coverage": "deno test --no-check --coverage=cov_profile src",
     "show-coverage": "deno coverage cov_profile --lcov > cov.lcov && genhtml -o cov_html cov.lcov",
