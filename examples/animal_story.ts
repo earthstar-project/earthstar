@@ -1,7 +1,7 @@
 // import * as Earthstar from "./mod.ts";
 import * as Earthstar from "https://deno.land/x/earthstar@v10.0.1/mod.ts";
 import { assert } from "https://deno.land/std@0.154.0/testing/asserts.ts";
-import { delay } from 'https://deno.land/x/delay@v0.2.0/mod.ts';
+import { delay } from "https://deno.land/x/delay@v0.2.0/mod.ts";
 
 // In which the story begins and we generate some keypairs.
 // =======================================================================
@@ -39,7 +39,9 @@ logNarrator(
   `They needed a spot to keep their data, and came up with an address they shared between themselves:`,
 );
 
-const shareKeyPair = await Earthstar.Crypto.generateShareKeypair("wimbleywoods");
+const shareKeyPair = await Earthstar.Crypto.generateShareKeypair(
+  "wimbleywoods",
+);
 
 assert(!Earthstar.isErr(shareKeyPair));
 
@@ -61,8 +63,13 @@ logNarrator(
 
 logRabbit(`Says here this thing needs a 'driver'...`);
 
-const driverRabbit = new Earthstar.ReplicaDriverMemory(shareKeyPair.shareAddress);
-const replicaRabbit = new Earthstar.Replica({ driver: driverRabbit, shareSecret: shareKeyPair.secret });
+const driverRabbit = new Earthstar.ReplicaDriverMemory(
+  shareKeyPair.shareAddress,
+);
+const replicaRabbit = new Earthstar.Replica({
+  driver: driverRabbit,
+  shareSecret: shareKeyPair.secret,
+});
 
 logReplica(`Greetings, User! I am ${replicaRabbit.replicaId}!`);
 
@@ -71,7 +78,10 @@ logNarrator("...");
 logFrog("I wonder if there are other kinds of driver?");
 
 const driverFrog = new Earthstar.ReplicaDriverMemory(shareKeyPair.shareAddress);
-const replicaFrog = new Earthstar.Replica({ driver: driverFrog, shareSecret: shareKeyPair.secret });
+const replicaFrog = new Earthstar.Replica({
+  driver: driverFrog,
+  shareSecret: shareKeyPair.secret,
+});
 
 logReplica(`Greetings, User! I am ${replicaFrog.replicaId}!`);
 
@@ -91,32 +101,32 @@ logNarrator(
 logFrog("Right. Let's break this thing in...");
 logFrog("So I have to choose a path to write my data to?");
 
-const frogsFirstDoc = await replicaFrog.set(frogKeypair, {
+const frogsFirstDocResult = await replicaFrog.set(frogKeypair, {
   path: "/test",
   text:
     "I twisted the key. The 300 horsepower engine purred to life as I rested my webbed hand on the gearstick. Without hesitation I let the handbrake loose and roared into the distance. What awaited me over that horizon? Who can say...",
 });
 
-assert(!Earthstar.isErr(frogsFirstDoc));
+assert(frogsFirstDocResult.kind !== "failure");
 
 logReplica("@frog wrote indulgent prose at /test");
 console.group();
-console.log(frogsFirstDoc);
+console.log(frogsFirstDocResult);
 console.groupEnd();
 
 logFrog("Now I'm in the flow...");
 
-const frogsSecondDoc = await replicaFrog.set(frogKeypair, {
+const frogsSecondDocResult = await replicaFrog.set(frogKeypair, {
   path: "/story_part_2",
   text:
     "\"I'm strictly liquor, love, and lies\" said the scaly beauty before me. I'd bitten off more than I could chew, that much was clear. Any other amphibian would have slid away like they tadpole they were. But me? I had plans. I took the plans out of my bag,",
 });
 
-assert(!Earthstar.isErr(frogsSecondDoc));
+assert(frogsSecondDocResult.kind !== "failure");
 
 logReplica("@frog wrote more indulgent prose at /story_part_2");
 console.group();
-console.log(frogsSecondDoc);
+console.log(frogsSecondDocResult);
 console.groupEnd();
 
 nextPartPrompt();
@@ -130,30 +140,30 @@ logRabbit(
   `Any data I write needs to be at a particular 'path'...`,
 );
 
-const rabbitsFirstDoc = await replicaRabbit.set(rabbitKeypair, {
+const rabbitsFirstDocResult = await replicaRabbit.set(rabbitKeypair, {
   path: "/test",
   text: "testy test...",
 });
 
-assert(!Earthstar.isErr(rabbitsFirstDoc));
+assert(!Earthstar.isErr(rabbitsFirstDocResult));
 
 logReplica("@bunn wrote some test data at /test");
 console.group();
-console.log(rabbitsFirstDoc);
+console.log(rabbitsFirstDocResult);
 console.groupEnd();
 
 logRabbit("How about something else?");
 
-const rabbitsSecondDoc = await replicaRabbit.set(rabbitKeypair, {
+const rabbitsSecondDocResult = await replicaRabbit.set(rabbitKeypair, {
   path: "/carrot_soup",
   text:
     "My wonderful recipe for carrot soup. Selecting the right carrots is of the utmost importance. Call your attention to the bushiness of their leaves...",
 });
 
-assert(!Earthstar.isErr(frogsFirstDoc));
+assert(Earthstar.notErr(frogsFirstDocResult));
 logReplica("@bunn wrote a recipe at /carrot_soup");
 console.group();
-console.log(rabbitsSecondDoc);
+console.log(rabbitsSecondDocResult);
 console.groupEnd();
 
 logNarrator(
@@ -288,29 +298,29 @@ logFrog(
   "Looks like if you include your keypair's address in the path, prefixed by a tilde...",
 );
 
-const frogsOwnedDoc = await replicaFrog.set(frogKeypair, {
+const frogsOwnedDocResult = await replicaFrog.set(frogKeypair, {
   path: `/~${frogKeypair.address}/stories/pt1`,
-  text: frogsFirstDoc.doc.text,
+  text: frogsFirstDocResult.doc.text,
 });
 
 console.group();
-console.log(frogsOwnedDoc);
+console.log(frogsOwnedDocResult);
 console.groupEnd();
 
-assert(!Earthstar.isErr(frogsOwnedDoc));
+assert(!Earthstar.isErr(frogsOwnedDocResult));
 
 logReplica("@frog re-wrote his story to an owned path!");
 logRabbit("We should test this...");
 
 const rabbitsAttempt = await replicaRabbit.set(rabbitKeypair, {
   path: `/~${frogKeypair.address}/stories/pt1`,
-  text: frogsFirstDoc.doc.text,
+  text: frogsFirstDocResult.doc.text,
 });
 
 try {
   assert(Earthstar.isErr(rabbitsAttempt));
 } catch (error) {
-  if (error == 'AssertionError') {
+  if (error == "AssertionError") {
     logReplica("Error! @bunn tried to write to a path owned by @frog!");
   } else {
     logReplica("Error: " + error);
@@ -327,29 +337,39 @@ nextPartPrompt();
 // In which Rabbit writes an ephemeral doc
 // =======================================================================
 
-logRabbit("Dear Frog, I will share with you a secret I never shared with anyone else for about ten seconds.");
+logRabbit(
+  "Dear Frog, I will share with you a secret I never shared with anyone else for about ten seconds.",
+);
 
-const rabbitsStatusSecret = 'I accidentally stepped on the strawberries.';
+const rabbitsStatusSecret = "I accidentally stepped on the strawberries.";
 const TIME_IN_SECONDS = 10 * 1E3;
 
 const rabbitsConfession = await replicaRabbit.set(rabbitKeypair, {
   path: `/~${rabbitKeypair.address}/!secret`,
   // path: `/!secret`,
   text: rabbitsStatusSecret,
-  deleteAfter: (Date.now() + TIME_IN_SECONDS) * 1000
+  deleteAfter: (Date.now() + TIME_IN_SECONDS) * 1000,
 });
 
-logReplica(`Your secret is safe with me. I will keep it in storage until ${new Date(Date.now() + TIME_IN_SECONDS / 1E12).toISOString()}`);
+logReplica(
+  `Your secret is safe with me. I will keep it in storage until ${
+    new Date(Date.now() + TIME_IN_SECONDS / 1E12).toISOString()
+  }`,
+);
 
 console.group();
 console.log(rabbitsConfession);
 console.groupEnd();
 
-const rabbitsConfessionDoc = await replicaRabbit.getLatestDocAtPath(`/~${rabbitKeypair.address}/!secret`);
+const rabbitsConfessionDoc = await replicaRabbit.getLatestDocAtPath(
+  `/~${rabbitKeypair.address}/!secret`,
+);
 
 assert(!Earthstar.isErr(rabbitsConfessionDoc));
 
-logReplica("It's been less than the given expiration time, so here is the doc again.");
+logReplica(
+  "It's been less than the given expiration time, so here is the doc again.",
+);
 
 console.group();
 console.log(rabbitsConfessionDoc);
@@ -358,13 +378,21 @@ console.groupEnd();
 logFrog("Thank you for trusting me Bunn. My lips are sealed.");
 logRabbit("I trust you Frog. You are a true friend.");
 
-logNarrator("The friends just sit there. Enjoying each other's presence for a while.");
+logNarrator(
+  "The friends just sit there. Enjoying each other's presence for a while.",
+);
 
 await delay(TIME_IN_SECONDS + 500);
 
-logNarrator(`About ten seconds later, ${new Date(Date.now()).toISOString()}, Bunn checks if her secrets are no longer shared. For plausible deniability, you know...`);
+logNarrator(
+  `About ten seconds later, ${
+    new Date(Date.now()).toISOString()
+  }, Bunn checks if her secrets are no longer shared. For plausible deniability, you know...`,
+);
 
-const rabbitsSecretDoc = await replicaRabbit.getLatestDocAtPath(`/~${rabbitKeypair.address}/!secret`);
+const rabbitsSecretDoc = await replicaRabbit.getLatestDocAtPath(
+  `/~${rabbitKeypair.address}/!secret`,
+);
 
 assert(!Earthstar.isErr(rabbitsSecretDoc));
 assert(!rabbitsSecretDoc);
@@ -379,15 +407,18 @@ logRabbit(
   "Sharing secrets really takes a load off, but I am glad this truth is no longer out there.",
 );
 
-logFrog("I feel we're getting even better friends now. Can I share a painting I made of you somehow too?");
+logFrog(
+  "I feel we're getting even better friends now. Can I share a painting I made of you somehow too?",
+);
 logRabbit(
   "Let's find out how to do this here.",
 );
 
-logNarrator("Frog prepares a digital photograph of a painting he made of Bunn some time ago and gets it ready for sharing it.");
+logNarrator(
+  "Frog prepares a digital photograph of a painting he made of Bunn some time ago and gets it ready for sharing it.",
+);
 
 nextPartPrompt();
-
 
 logNarrator("To be continued...");
 
