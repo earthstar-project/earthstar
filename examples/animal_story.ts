@@ -1,4 +1,5 @@
-import * as Earthstar from "./mod.ts";
+// import * as Earthstar from "./mod.ts";
+import * as Earthstar from "https://deno.land/x/earthstar@v10.0.1/mod.ts";
 import { assert } from "https://deno.land/std@0.154.0/testing/asserts.ts";
 
 // In which the story begins and we generate some keypairs.
@@ -37,11 +38,12 @@ logNarrator(
   `They needed a spot to keep their data, and came up with an address they shared between themselves:`,
 );
 
-const shareAddress = Earthstar.generateShareAddress("wimbleywoods");
+const shareKeyPair = await Earthstar.Crypto.generateShareKeypair("wimbleywoods");
 
-assert(!Earthstar.isErr(shareAddress));
+assert(!Earthstar.isErr(shareKeyPair));
 
-logRabbit(`Pssst... our share address is ${shareAddress}`);
+logRabbit(`Pssst... our share address is ${shareKeyPair.shareAddress}`);
+logRabbit(`And the secret is ${shareKeyPair.secret}`);
 logFrog("Cool, got it.");
 logRabbit(`See you later!`);
 
@@ -53,13 +55,13 @@ nextPartPrompt();
 // =======================================================================
 
 logNarrator(
-  `When they got home, they each created their own 'Replica', their own personal copy of all the data kept in ${shareAddress}.`,
+  `When they got home, they each created their own 'Replica', their own personal copy of all the data kept in ${shareKeyPair.shareAddress}.`,
 );
 
 logRabbit(`Says here this thing needs a 'driver'...`);
 
-const driverRabbit = new Earthstar.ReplicaDriverMemory(shareAddress);
-const replicaRabbit = new Earthstar.Replica({ driver: driverRabbit });
+const driverRabbit = new Earthstar.ReplicaDriverMemory(shareKeyPair.shareAddress);
+const replicaRabbit = new Earthstar.Replica({ driver: driverRabbit, shareSecret: shareKeyPair.secret });
 
 logReplica(`Greetings, User! I am ${replicaRabbit.replicaId}!`);
 
@@ -67,8 +69,8 @@ logNarrator("...");
 
 logFrog("I wonder if there are other kinds of driver?");
 
-const driverFrog = new Earthstar.ReplicaDriverMemory(shareAddress);
-const replicaFrog = new Earthstar.Replica({ driver: driverFrog });
+const driverFrog = new Earthstar.ReplicaDriverMemory(shareKeyPair.shareAddress);
+const replicaFrog = new Earthstar.Replica({ driver: driverFrog, shareSecret: shareKeyPair.secret });
 
 logReplica(`Greetings, User! I am ${replicaFrog.replicaId}!`);
 
@@ -113,7 +115,7 @@ assert(!Earthstar.isErr(frogsSecondDoc));
 
 logReplica("@frog wrote more indulgent prose at /story_part_2");
 console.group();
-console.log(frogsFirstDoc);
+console.log(frogsSecondDoc);
 console.groupEnd();
 
 nextPartPrompt();
@@ -287,7 +289,7 @@ logFrog(
 
 const frogsOwnedDoc = await replicaFrog.set(frogKeypair, {
   path: `/~${frogKeypair.address}/stories/pt1`,
-  text: frogsFirstDoc.text,
+  text: frogsFirstDoc.doc.text,
 });
 
 console.group();
@@ -301,12 +303,19 @@ logRabbit("We should test this...");
 
 const rabbitsAttempt = await replicaRabbit.set(rabbitKeypair, {
   path: `/~${frogKeypair.address}/stories/pt1`,
-  text: frogsFirstDoc.text,
+  text: frogsFirstDoc.doc.text,
 });
 
-assert(Earthstar.isErr(rabbitsAttempt));
+try {
+  assert(Earthstar.isErr(rabbitsAttempt));
+} catch (error) {
+  if (error == 'AssertionError') {
+    logReplica("Error! @bunn tried to write to a path owned by @frog!");
+  } else {
+    logReplica("Error: " + error);
+  }
+}
 
-logReplica("Error! @bunn tried to write to a path owned by @frog!");
 logFrog("It worked! What other stuff can we do?");
 logPeer("How about auto-destructing documents?");
 logFrog("Yeah!");
