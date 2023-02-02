@@ -172,8 +172,6 @@ export class DocDriverSqliteFfi implements IReplicaDocDriver {
       { "MAX(localIndex)": number | null }
     >();
 
-    console.log(maxLocalIndexResult);
-
     const maxLocalIndex = maxLocalIndexResult
       ? maxLocalIndexResult["MAX(localIndex)"]
       : -1;
