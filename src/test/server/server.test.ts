@@ -11,7 +11,6 @@ import {
   replicaDocsAreSynced,
 } from "../test-utils.ts";
 import { assert } from "../asserts.ts";
-import { sleep } from "../../util/misc.ts";
 
 class ExtensionTest implements IServerExtension {
   private peer = deferred<Peer>();
