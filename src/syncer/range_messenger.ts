@@ -3,6 +3,16 @@ import { bigIntFromHex, bigIntToHex } from "../util/bigint.ts";
 import { DocThumbnailTree } from "./doc_thumbnail_tree.ts";
 import { DocThumbnail, RangeMessage } from "./syncer_types.ts";
 
+const TYPE_MAPPINGS = {
+  "EMPTY_SET": "emptySet" as const,
+  "LOWER_BOUND": "lowerBound" as const,
+  "PAYLOAD": "payload" as const,
+  "EMPTY_PAYLOAD": "emptyPayload" as const,
+  "DONE": "done" as const,
+  "FINGERPRINT": "fingerprint" as const,
+  "TERMINAL": "terminal" as const,
+};
+
 const encoding: RangeMessengerConfig<
   RangeMessage,
   DocThumbnail,
@@ -40,6 +50,9 @@ const encoding: RangeMessengerConfig<
     }),
   },
   decode: {
+    getType: (obj) => {
+      return TYPE_MAPPINGS[obj.type];
+    },
     emptySet: (obj) => {
       if (obj.type === "EMPTY_SET") {
         return obj.canRespond;
