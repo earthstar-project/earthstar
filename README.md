@@ -39,7 +39,7 @@ It can be imported via URL into a browser:
 Or Deno:
 
 ```ts
-import * as Earthstar from "https://deno.land/x/earthstar/mod.ts";`}
+import * as Earthstar from "https://deno.land/x/earthstar/mod.ts";
 ```
 
 > Earthstar's web syncing does not work with version of Deno between 1.27.0 -
@@ -50,6 +50,15 @@ or installed with NPM:
 
 ```bash
 {`npm install earthstar`}
+```
+
+```ts
+import * as Earthstar from "earthstar";
+
+// Node and browser APIs are namespaced in the NPM distribution:
+import { ReplicaDriverWeb } from "earthstar/browser";
+import { ReplicaDriverSqlite } from "earthstar/node";
+
 ```
 
 We recommend the browser and Deno versions. This module has been built with many
