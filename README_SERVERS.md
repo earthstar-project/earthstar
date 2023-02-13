@@ -48,7 +48,7 @@ import { Server } from "https://deno.land/x/earthstar/mod.ts";
 For NPM:
 
 ```
-npm install @earthstar-project/server
+npm install earthstar
 ```
 
 ```ts

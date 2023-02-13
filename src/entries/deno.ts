@@ -1,3 +1,8 @@
+/**
+ * Earthstar APIs which run in the Deno runtime.
+ * @module
+ */
+
 export { ReplicaDriverFs } from "../replica/driver_fs.ts";
 export { DocDriverLocalStorage } from "../replica/doc_drivers/localstorage.ts";
 export { DocDriverSqlite } from "../replica/doc_drivers/sqlite.deno.ts";
