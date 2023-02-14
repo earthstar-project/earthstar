@@ -48,6 +48,7 @@ export function isObjectEmpty(obj: Object): Boolean {
 
 /** Returns a valid share address generated using a given name.
  * @returns A share address or a validation error resulting from the name given.
+ * @deprecated This function only generates valid es.4 addresses. Use Crypto.generateShareKeypair to generate es.5 share addresses.
  */
 export function generateShareAddress(name: string): string | ValidationError {
   const randomFromString = (str: string) => {
@@ -60,12 +61,6 @@ export function generateShareAddress(name: string): string | ValidationError {
 
   const suffix = `${firstLetter}${rest}`;
   const address = `+${name}.${suffix}`;
-
-  const isValid = checkShareIsValid(address);
-
-  if (isErr(isValid)) {
-    return isValid;
-  }
 
   return address;
 }
