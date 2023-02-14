@@ -17,6 +17,8 @@ import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { Crypto } from "../../crypto/crypto.ts";
+import { ShareKeypair } from "../../crypto/crypto-types.ts";
 
 const loggerTest = new Logger("test", "lightsalmon");
 const loggerTestCb = new Logger("test cb", "salmon");
@@ -60,22 +62,24 @@ function runPeerTests(
     const initialCryptoDriver = GlobalCryptoDriver;
 
     const shares = [
-      "+one.ws",
-      "+two.ws",
-      "+three.ws",
-    ];
-    const storages = shares.map((ws) => makeStorage(ws, ""));
+      await Crypto.generateShareKeypair("one"),
+      await Crypto.generateShareKeypair("two"),
+      await Crypto.generateShareKeypair("three"),
+    ] as ShareKeypair[];
+    const storages = shares.map((ws) => makeStorage(ws.shareAddress, ""));
 
-    const sortedShares = sortedInPlace([...shares]);
+    const sortedShares = sortedInPlace([
+      ...shares.map((kepair) => kepair.shareAddress),
+    ]);
     const sortedStorages = [...storages];
     sortedStorages.sort(compareByFn((storage) => storage.share));
 
     const peer = new Peer();
 
     assertEquals(
-      peer.hasShare("+two.ws"),
+      peer.hasShare(shares[1].shareAddress),
       false,
-      "does not yet have +two.ws",
+      "does not yet have +two",
     );
     assertEquals(peer.shares(), [], "has no shares");
     assertEquals(peer.replicas(), [], "has no replicas");
@@ -96,9 +100,9 @@ function runPeerTests(
       "does not have +nope.ws share",
     );
     assertEquals(
-      peer.hasShare("+two.ws"),
+      peer.hasShare(shares[1].shareAddress),
       true,
-      "now it does have +two.ws",
+      "now it does have +two",
     );
 
     assertEquals(
@@ -113,10 +117,10 @@ function runPeerTests(
     );
     assertEquals(peer.size(), 3, "size is 3");
 
-    await peer.removeReplicaByShare("+one.ws");
+    await peer.removeReplicaByShare(shares[0].shareAddress);
     assertEquals(
       peer.shares(),
-      ["+three.ws", "+two.ws"],
+      [shares[2].shareAddress, shares[1].shareAddress],
       "removed by share address",
     );
     assertEquals(peer.size(), 2, "size is 2");
@@ -124,7 +128,7 @@ function runPeerTests(
     await peer.removeReplica(storages[1]); // that's two.ws
     assertEquals(
       peer.shares(),
-      ["+three.ws"],
+      [shares[2].shareAddress],
       "removed storage instance",
     );
     assertEquals(peer.size(), 1, "size is 1");

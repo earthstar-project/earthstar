@@ -1,4 +1,4 @@
-import { assertEquals } from "../asserts.ts";
+import { assert, assertEquals } from "../asserts.ts";
 import { throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
 import { IReplicaDocDriver } from "../../replica/replica-types.ts";
@@ -15,6 +15,8 @@ import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { Logger, LogLevel, setLogLevel } from "../../util/log.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
+import { Crypto } from "../../crypto/crypto.ts";
+import { notErr } from "../../util/errors.ts";
 const loggerTest = new Logger("test", "lightsalmon");
 const loggerTestCb = new Logger("test cb", "salmon");
 const J = JSON.stringify;
@@ -67,7 +69,11 @@ let _runStorageConfigTests = (
     setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
     let initialCryptoDriver = GlobalCryptoDriver;
 
-    let share = "+gardening.abcde";
+    const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+    assert(notErr(shareKeypair));
+
+    let share = shareKeypair.shareAddress;
     let storage = makeStorageOrDriver(share);
 
     // methods in common between Storage and StorageDriver:
@@ -181,7 +187,11 @@ let _runStorageConfigTests = (
       setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
       let initialCryptoDriver = GlobalCryptoDriver;
 
-      let share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      let share = shareKeypair.shareAddress;
       let storage1 = makeStorageOrDriver(share);
 
       // set an item
@@ -226,7 +236,11 @@ let _runStorageConfigTests = (
       setGlobalCryptoDriver(scenario.subscenarios.cryptoDriver);
       let initialCryptoDriver = GlobalCryptoDriver;
 
-      let share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      let share = shareKeypair.shareAddress;
       let storage1 = makeStorageOrDriver(share);
 
       // set an item
