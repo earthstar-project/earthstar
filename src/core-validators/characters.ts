@@ -42,8 +42,8 @@ export const authorAddressChars = authorNameChars + b32chars + "@.";
 
 /** All characters allowed in a share's name. */
 export const workspaceNameChars = alphaLower + digits;
-/** All charaters allowed in a share's key. */
-export const workspaceKeyChars = alphaLower + digits;
+/** All characters allowed in a share's key. */
+export const workspaceKeyChars = b32chars;
 /** All characters allowed in a share's address. */
 export const workspaceAddressChars = workspaceNameChars + b32chars + "+.";
 

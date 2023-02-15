@@ -1,12 +1,20 @@
 # Changelog
 
+## NEXT
+
+- (Fix) `parseShareAddress` now validates share addresses more strictly so as to
+  ensure their suffix is a pubkey.
+- (Fix) Deprecate `generateShareAddress`
+
 ## v10.0.2
 
 - (Fix) `DocDriverSqliteFfi` has been updated to use
   `https://deno.land/x/sqlite3@0.7.3` which has compatibility with Deno 1.30.0.
   This driver uses unstable APIs and will not work with previous versions of
   Deno.
-- (Chore) Upgraded [range-reconcile](https://github.com/earthstar-project/range-reconcile) to version 1.0.1.
+- (Chore) Upgraded
+  [range-reconcile](https://github.com/earthstar-project/range-reconcile) to
+  version 1.0.1.
 
 ## v10.0.1
 
