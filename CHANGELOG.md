@@ -1,5 +1,15 @@
 # Changelog
 
+<<<<<<< ours
+=======
+## NEXT
+
+- (Feature) Added `createInvitationURL` and `parseInvitationURL` utilities for
+  creating and parsing Earthstar invitation URLs.
+- (Fix) `parseShareAddress` now validates share addresses more strictly so as to
+  ensure their suffix is a pubkey.
+
+>>>>>>> theirs
 ## v10.0.2
 
 - (Fix) `DocDriverSqliteFfi` has been updated to use

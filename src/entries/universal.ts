@@ -96,6 +96,7 @@ export * from "../replica/driver_memory.ts";
 export * from "../util/bytes.ts";
 export * from "../util/doc-types.ts";
 export * from "../util/errors.ts";
+export * from "../util/invite.ts";
 export * from "../util/log.ts";
 export * from "../util/misc.ts";
 export * from "../util/shared_settings.ts";
