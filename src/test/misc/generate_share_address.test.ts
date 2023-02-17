@@ -14,7 +14,4 @@ Deno.test("generateShareAddress", () => {
 
   const suffix = (address as string).split(".")[1];
   assertEquals(suffix.length, 12, "suffix is 12 chars long");
-
-  const badAddress = generateShareAddress("FAILING_BAD");
-  assert(isErr(badAddress), "returns an error when given an invalid name");
 });

@@ -2,7 +2,7 @@ import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { doesNotThrow, throws } from "../test-utils.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
 import { ReplicaEvent } from "../../replica/replica-types.ts";
-import { isErr } from "../../util/errors.ts";
+import { isErr, notErr } from "../../util/errors.ts";
 import { microsecondNow, sleep } from "../../util/misc.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import {
@@ -76,7 +76,11 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
     async () => {
       const initialCryptoDriver = GlobalCryptoDriver;
 
-      const share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const share = shareKeypair.shareAddress;
       const storage = makeReplica(share, "");
       const events: string[] = [];
       const streamEvents: string[] = [];
@@ -366,7 +370,11 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
   Deno.test(
     SUBTEST_NAME + ": queryAuthors + queryPaths",
     async (tester) => {
-      const share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const share = shareKeypair.shareAddress;
       const replica = makeReplica(share, "");
 
       const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
@@ -453,7 +461,11 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
     async () => {
       const initialCryptoDriver = GlobalCryptoDriver;
 
-      const share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const share = shareKeypair.shareAddress;
       const storage = makeReplica(share, "");
 
       const keypair1 = await Crypto.generateAuthorKeypair("aaaa");
@@ -634,7 +646,11 @@ export function runRelpicaTests(scenario: typeof scenarios[number]) {
   Deno.test(
     SUBTEST_NAME + ": validates addresses",
     async () => {
-      const validShare = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const validShare = shareKeypair.shareAddress;
       const invalidShare = "PEANUTS.123";
 
       assertThrows(() => {

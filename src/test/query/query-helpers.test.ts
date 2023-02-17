@@ -2,7 +2,7 @@ import { assert, assertEquals, assertThrows } from "../asserts.ts";
 import { Crypto } from "../../crypto/crypto.ts";
 import { Query } from "../../query/query-types.ts";
 import { Replica } from "../../replica/replica.ts";
-import { ValidationError } from "../../util/errors.ts";
+import { notErr, ValidationError } from "../../util/errors.ts";
 import { ShareAddress } from "../../util/doc-types.ts";
 import { microsecondNow } from "../../util/misc.ts";
 
@@ -422,7 +422,11 @@ let runQueryHelpersTests = async (
   ];
 
   await test.step(SUBTEST_NAME + ": queryByGlob", async () => {
-    let share = "+gardening.abcde";
+    const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+    assert(notErr(shareKeypair));
+
+    let share = shareKeypair.shareAddress;
     let storage = makeStorage(share);
     let now = microsecondNow();
     let keypair1 = await Crypto.generateAuthorKeypair("aut1") as AuthorKeypair;
@@ -833,7 +837,11 @@ let runQueryHelpersTests = async (
   ];
 
   await test.step(SUBTEST_NAME + ": queryByTemplate", async () => {
-    let share = "+gardening.abcde";
+    const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+    assert(notErr(shareKeypair));
+
+    let share = shareKeypair.shareAddress;
     let storage = makeStorage(share);
     let now = microsecondNow();
 

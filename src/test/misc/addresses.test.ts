@@ -312,57 +312,18 @@ Deno.test("parseShareAddress", () => {
       },
       note: "normal address with long b32 pubkey",
     },
+
     {
       valid: true,
-      address: "+gardening.bxxxx",
+      address:
+        "+aaaaabbbbbccccc.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       parsed: {
-        address: "+gardening.bxxxx",
-        name: "gardening",
-        pubkey: "bxxxx",
-      },
-      note: "normal address with short random b32",
-    },
-    {
-      valid: true,
-      address: "+a.b",
-      parsed: {
-        address: "+a.b",
-        name: "a",
-        pubkey: "b",
-      },
-      note:
-        "normal address with 1 character name and 1 character key starting with b",
-    },
-    {
-      valid: true,
-      address: "+a.x",
-      parsed: {
-        address: "+a.x",
-        name: "a",
-        pubkey: "x",
-      },
-      note:
-        "normal address with 1 character name and 1 character key not starting with b",
-    },
-    {
-      valid: true,
-      address: "+aaaaabbbbbccccc.bxxxx",
-      parsed: {
-        address: "+aaaaabbbbbccccc.bxxxx",
+        address:
+          "+aaaaabbbbbccccc.bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
         name: "aaaaabbbbbccccc",
-        pubkey: "bxxxx",
+        pubkey: "bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
       },
       note: "normal address with 15 character name",
-    },
-    {
-      valid: true,
-      address: "+gardening.r0cks", // note that zero is not in the b32 character set
-      parsed: {
-        address: "+gardening.r0cks",
-        name: "gardening",
-        pubkey: "r0cks",
-      },
-      note: "normal address with word after period (non-b32)",
     },
     {
       valid: true,
@@ -376,6 +337,28 @@ Deno.test("parseShareAddress", () => {
       },
       note:
         "normal address with long pubkey, name contains number but does not start with number",
+    },
+    {
+      valid: false,
+      address: "+gardening.r0cks", // note that zero is not in the b32 character set
+      note: "normal address with word after period (non-b32)",
+    },
+    {
+      valid: false,
+      address: "+gardening.bxxxx",
+      note: "normal address with short random b32",
+    },
+    {
+      valid: false,
+      address: "+a.b",
+      note:
+        "normal address with 1 character name and 1 character key starting with b",
+    },
+    {
+      valid: false,
+      address: "+a.x",
+      note:
+        "normal address with 1 character name and 1 character key not starting with b",
     },
     { valid: false, address: "", note: "empty string" },
     { valid: false, address: "+", note: "just a +" },
@@ -536,6 +519,7 @@ Deno.test("parseShareAddress", () => {
         v.parsed,
         "should be parsable: " + (v.note || v.address),
       );
+
       assert(
         notErr(checkShareIsValid(v.address)),
         "should be valid:    " + (v.note || v.address),

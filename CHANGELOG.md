@@ -8,6 +8,7 @@
   creating and parsing Earthstar invitation URLs.
 - (Fix) `parseShareAddress` now validates share addresses more strictly so as to
   ensure their suffix is a pubkey.
+- (Fix) Deprecate `generateShareAddress`
 
 ## v10.0.2
 

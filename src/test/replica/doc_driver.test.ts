@@ -14,6 +14,8 @@ import { cryptoScenarios, docDriverScenarios } from "../scenarios/scenarios.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { DocEs4 } from "../../formats/format_es4.ts";
 import { DocEs5 } from "../../formats/format_es5.ts";
+import { Crypto } from "../../crypto/crypto.ts";
+import { notErr } from "../../util/errors.ts";
 
 const scenarios: MultiplyScenarioOutput<{
   "replicaDriver": ScenarioItem<typeof docDriverScenarios>;
@@ -35,7 +37,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
 
   Deno.test(`${SUBTEST_NAME}: validates addresses`, async () => {
     if (scenario.subscenarios.replicaDriver.persistent) {
-      const validShare = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const validShare = shareKeypair.shareAddress;
       const invalidShare = "PEANUTS.123";
 
       assertThrows(() => {
@@ -54,7 +60,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
   });
 
   Deno.test(`${SUBTEST_NAME}: maxLocalIndex`, async () => {
-    const share = "+gardening.abcde";
+    const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+    assert(notErr(shareKeypair));
+
+    const share = shareKeypair.shareAddress;
     const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
     assertEquals(
@@ -63,16 +73,16 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       "Initial maxLocalIndex is -1",
     );
 
-    const doc: DocEs4 = {
-      format: "es.4",
+    const doc: DocEs5 = {
+      format: "es.5",
       author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
-      content: "Hello 0",
-      contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
-      deleteAfter: null,
+      text: "Hello 0",
+      textHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
       path: "/posts/post-0000.txt",
       timestamp: 1619627796035000,
-      workspace: "+gardening.abc",
+      share: shareKeypair.shareAddress,
       signature: "whatever0", // upsert does not check signature or validate doc
+      shareSignature: "whatever1",
     };
 
     await driver.upsert(doc);
@@ -107,7 +117,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
   Deno.test(`${SUBTEST_NAME}: empty storage, close`, async () => {
     const initialCryptoDriver = GlobalCryptoDriver;
 
-    const share = "+gardening.abcde";
+    const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+    assert(notErr(shareKeypair));
+
+    const share = shareKeypair.shareAddress;
     const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
     assertEquals(
@@ -149,7 +163,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
   Deno.test(`${SUBTEST_NAME}: config`, async () => {
     const initialCryptoDriver = GlobalCryptoDriver;
 
-    const share = "+gardening.abcde";
+    const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+    assert(notErr(shareKeypair));
+
+    const share = shareKeypair.shareAddress;
     const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
     // empty...
@@ -218,7 +236,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     async () => {
       const initialCryptoDriver = GlobalCryptoDriver;
 
-      const share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const share = shareKeypair.shareAddress;
       const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
       const doc0: DocEs5 = {
@@ -228,7 +250,7 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
         textHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
         path: "/posts/post-0000.txt",
         timestamp: 1619627796035000,
-        share: "+gardening.abc",
+        share: share,
         signature: "whatever0", // upsert does not check signature or validate doc
         shareSignature: "whatever1",
       };
@@ -615,7 +637,11 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
   Deno.test(
     `${SUBTEST_NAME}: filtering out expired docs`,
     async (test) => {
-      const share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const share = shareKeypair.shareAddress;
       const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
       const now = Date.now() * 1000;
@@ -623,18 +649,18 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
       await test.step({
         name: "inserting expiring doc and checking presence",
         fn: async () => {
-          const expiredDoc0: DocEs4 = {
-            format: "es.4",
+          const expiredDoc0: DocEs5 = {
+            format: "es.5",
             author:
               "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
-            content: "Hello 0",
-            contentHash:
-              "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+            text: "Hello 0",
+            textHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
             deleteAfter: now + 1000,
             path: "/posts/!post-0000.txt",
             timestamp: now,
-            workspace: "+gardening.abc",
+            share: share,
             signature: "whatever0", // upsert does not check signature or validate doc
+            shareSignature: "whatever1",
           };
 
           await driver.upsert(expiredDoc0);
@@ -658,45 +684,52 @@ export function runReplicaDriverTests(scenario: typeof scenarios[number]) {
     async (test) => {
       const initialCryptoDriver = GlobalCryptoDriver;
 
-      const share = "+gardening.abcde";
+      const shareKeypair = await Crypto.generateShareKeypair("gardening");
+
+      assert(notErr(shareKeypair));
+
+      const share = shareKeypair.shareAddress;
       const driver = scenario.subscenarios.replicaDriver.makeDriver(share);
 
       const now = Date.now() * 1000;
 
-      const expiredDoc0: DocEs4 = {
-        format: "es.4",
+      const expiredDoc0: DocEs5 = {
+        format: "es.5",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
-        content: "Hello 0",
-        contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+        text: "Hello 0",
+        textHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
         deleteAfter: now + 1000,
         path: "/posts/!post-0000.txt",
         timestamp: now,
-        workspace: "+gardening.abc",
+        share: "+gardening.abc",
         signature: "whatever0", // upsert does not check signature or validate doc
+        shareSignature: "whatever1",
       };
 
-      const expiredDoc1: DocEs4 = {
-        format: "es.4",
+      const expiredDoc1: DocEs5 = {
+        format: "es.5",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
-        content: "Hello 1",
-        contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+        text: "Hello 1",
+        textHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
         deleteAfter: now + now, // Really far in the future.
         path: "/posts/!post-0001.txt",
         timestamp: now,
-        workspace: "+gardening.abc",
+        share: share,
         signature: "whatever0", // upsert does not check signature or validate doc
+        shareSignature: "whatever1",
       };
 
-      const normalDoc0: DocEs4 = {
-        format: "es.4",
+      const normalDoc0: DocEs5 = {
+        format: "es.5",
         author: "@suzy.bolxx3bc6gmoa43rr5qfgv6r65zbqjwtzcnr7zyef2hvpftw45clq",
-        content: "Hello 2",
-        contentHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
-        deleteAfter: null,
+        text: "Hello 2",
+        textHash: "bnkc2f3fbdfpfeanwcgbid4t2lanmtq2obsvijhsagmn3x652h57a",
+
         path: "/posts/post-0002.txt",
         timestamp: now,
-        workspace: "+gardening.abc",
+        share: share,
         signature: "whatever0", // upsert does not check signature or validate doc
+        shareSignature: "whatever1",
       };
 
       await driver.upsert(expiredDoc0);

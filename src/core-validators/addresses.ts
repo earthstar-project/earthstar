@@ -94,7 +94,7 @@ export function parseShareAddress(
     separator: ".",
     minNameLength: 1,
     maxNameLength: 15,
-    minPubkeyLength: 1,
+    minPubkeyLength: 53,
     maxPubkeyLength: 53,
     allowedNameCharacters: workspaceNameChars,
     allowedPubkeyCharacters: workspaceKeyChars,
