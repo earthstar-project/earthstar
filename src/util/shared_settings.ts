@@ -6,6 +6,7 @@ import { isErr, ValidationError } from "./errors.ts";
 import { Replica } from "../replica/replica.ts";
 import { Peer } from "../peer/peer.ts";
 import { ConfigEs5 } from "../formats/format_es5.ts";
+import { parseInvitationURL } from "./invite.ts";
 
 const EARTHSTAR_KEY = "earthstar";
 const AUTHOR_KEY = "current_author";
@@ -482,6 +483,27 @@ export class SharedSettings {
     for (const cb of this.serversChangedCbs) {
       cb(servers);
     }
+  }
+
+  /** Add a new share (and possibly secret) and servers using an Earthstar invitation URL. */
+  async redeemInvitationURL(url: string): Promise<true | ValidationError> {
+    const parsed = await parseInvitationURL(url);
+
+    if (isErr(parsed)) {
+      return parsed;
+    }
+
+    this.addShare(parsed.shareAddress);
+
+    for (const server of parsed.servers) {
+      this.addServer(server);
+    }
+
+    if (parsed.secret) {
+      this.addSecret(parsed.shareAddress, parsed.secret);
+    }
+
+    return true;
   }
 }
 
