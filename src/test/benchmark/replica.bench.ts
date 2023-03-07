@@ -8,6 +8,8 @@ import { MultiplyScenarioOutput, ScenarioItem } from "../scenarios/types.ts";
 import { multiplyScenarios } from "../scenarios/utils.ts";
 import { AttachmentDriverMemory } from "../../replica/attachment_drivers/memory.ts";
 import { AuthorKeypair } from "../../crypto/crypto-types.ts";
+import { notErr } from "../../util/errors.ts";
+import { assert } from "../asserts.ts";
 
 const scenarios: MultiplyScenarioOutput<{
   "docDriver": ScenarioItem<typeof docDriverScenarios>;
@@ -24,8 +26,14 @@ for (const scenario of scenarios) {
   const replicaDriver = scenario.subscenarios.docDriver;
   const crypto = scenario.subscenarios.crypto;
 
-  const SHARE_ADDR = "+test.a123";
-  const driverToClose = replicaDriver.makeDriver(SHARE_ADDR, scenario.name);
+  const shareKeypair = await Crypto.generateShareKeypair("test");
+
+  assert(notErr(shareKeypair));
+
+  const driverToClose = replicaDriver.makeDriver(
+    shareKeypair.shareAddress,
+    scenario.name,
+  );
 
   const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
   const keypairB = await Crypto.generateAuthorKeypair("nest") as AuthorKeypair;
@@ -38,7 +46,10 @@ for (const scenario of scenarios) {
   });
 
   await replicaToClose.close(true);
-  const driver = replicaDriver.makeDriver(SHARE_ADDR, scenario.name);
+  const driver = replicaDriver.makeDriver(
+    shareKeypair.shareAddress,
+    scenario.name,
+  );
   const replica = new Replica({
     driver: {
       docDriver: driver,
