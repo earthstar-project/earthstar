@@ -29,6 +29,7 @@ export class ExtensionServerSettings implements IServerExtension {
   private onCreateReplica: (
     configurationShareAddress: string,
   ) => Replica;
+  private peer: Peer | null = null;
 
   constructor(opts: ExtensionServerSettingsOpts) {
     this.configReplica = opts.onCreateReplica(opts.settingsShare);
@@ -36,9 +37,11 @@ export class ExtensionServerSettings implements IServerExtension {
   }
 
   register(peer: Peer): Promise<void> {
+    this.peer = peer;
     peer.addReplica(this.configReplica);
 
     const onCreateReplica = this.onCreateReplica;
+    const removeShareWithHash = this.removeShareWithHash.bind(this);
 
     const { glob } = parseTemplate(HOSTED_SHARE_TEMPLATE);
     const { query, regex } = globToQueryAndRegex(glob);
@@ -77,33 +80,15 @@ export class ExtensionServerSettings implements IServerExtension {
                 notErr(parseShareAddress(event.doc.text)) &&
                 !peer.hasShare(event.doc.text)
               ) {
-                // Add
+                // Add the share
                 const replica = onCreateReplica(event.doc.text);
 
                 peer.addReplica(replica);
 
                 console.log("Server settings:", `now hosting ${replica.share}`);
               } else if (event.doc.text.length === 0) {
-                let replicaToClose;
-
-                for (const replica of peer.replicas()) {
-                  const rShareHash = await Crypto.sha256base32(
-                    replica.share,
-                  );
-
-                  if (rShareHash === shareHash) {
-                    replicaToClose = replica;
-                  }
-                }
-
-                if (replicaToClose) {
-                  await replicaToClose.close(true);
-                  peer.removeReplica(replicaToClose);
-                  console.log(
-                    "Server settings:",
-                    `stopped hosting ${replicaToClose.share}`,
-                  );
-                }
+                // Remove the share
+                await removeShareWithHash(shareHash);
               }
             }
           }
@@ -113,7 +98,7 @@ export class ExtensionServerSettings implements IServerExtension {
               regex != null &&
               new RegExp(regex).test(event.doc.path)
             ) {
-              // Remove
+              // Remove the share
               const pathVariables = extractTemplateVariablesFromPath(
                 HOSTED_SHARE_TEMPLATE,
                 event.doc.path,
@@ -123,18 +108,9 @@ export class ExtensionServerSettings implements IServerExtension {
                 return;
               }
 
-              const shareAddress = pathVariables["shareAddress"];
+              const shareHash = pathVariables["shareHash"];
 
-              const replicaToClose = peer.getReplica(shareAddress);
-
-              if (replicaToClose) {
-                await replicaToClose.close(true);
-                peer.removeReplica(replicaToClose);
-                console.log(
-                  "Server settings:",
-                  `stopped hosting ${replicaToClose.share}`,
-                );
-              }
+              await removeShareWithHash(shareHash);
             }
           }
         },
@@ -146,5 +122,58 @@ export class ExtensionServerSettings implements IServerExtension {
 
   handler(_req: Request): Promise<Response | null> {
     return Promise.resolve(null);
+  }
+
+  async removeShareWithHash(hash: string) {
+    const maybeReplicaForHash = await this.findReplicaForHash(hash);
+
+    if (!maybeReplicaForHash) {
+      return;
+    }
+
+    // Now we find all docs with this hash.
+    // If any of them have text defined on them, we bail.
+
+    const ephemeralDoc = await this.configReplica.queryDocs({
+      filter: {
+        pathStartsWith: "/server-settings/1.",
+        pathEndsWith: `/shares/${hash}/host!`,
+      },
+    });
+
+    const nonEphemeralDoc = await this.configReplica.queryDocs({
+      filter: {
+        pathStartsWith: "/server-settings/1.",
+        pathEndsWith: `/shares/${hash}/host`,
+      },
+    });
+
+    if (ephemeralDoc[0] && ephemeralDoc[0].text.length > 0) {
+      return;
+    }
+
+    if (nonEphemeralDoc[0] && nonEphemeralDoc[0].text.length > 0) {
+      return;
+    }
+
+    // Now we know all docs for this share are empty. Remove.
+    await maybeReplicaForHash.close(true);
+    this.peer?.removeReplica(maybeReplicaForHash);
+    console.log(
+      "Server settings:",
+      `stopped hosting ${maybeReplicaForHash.share}`,
+    );
+  }
+
+  async findReplicaForHash(hash: string): Promise<Replica | undefined> {
+    for (const replica of this.peer?.replicas() || []) {
+      const rHash = await Crypto.sha256base32(
+        replica.share,
+      );
+
+      if (rHash === hash) {
+        return replica;
+      }
+    }
   }
 }
