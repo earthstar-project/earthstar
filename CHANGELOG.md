@@ -9,6 +9,8 @@
 - (Fix) `parseShareAddress` now validates share addresses more strictly so as to
   ensure their suffix is a pubkey.
 - (Fix) Deprecate `generateShareAddress`
+- (Chore) Update `range_reconcile` to 1.0.2, which makes sync slightly more
+  efficient.
 
 ## v10.0.2
 
