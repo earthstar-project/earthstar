@@ -1,6 +1,6 @@
 # Changelog
 
-## NEXT
+## v10.1.0
 
 - (Feature) Added `SharedSettings#redeemInvitationURL`, which adds the share,
   secret, and servers from an Earthstar invitation URL.
