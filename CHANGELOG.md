@@ -9,6 +9,8 @@
 - (Fix) `parseShareAddress` now validates share addresses more strictly so as to
   ensure their suffix is a pubkey.
 - (Fix) Deprecate `generateShareAddress`
+- (Fix) Fixed some issues `ExtensionServerSettings` when ephemeral and
+  non-ephemeral settings for a hosted share existed at the same time.
 - (Chore) Update `range_reconcile` to 1.0.2, which makes sync slightly more
   efficient.
 
