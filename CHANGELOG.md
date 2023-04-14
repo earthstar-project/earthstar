@@ -11,6 +11,8 @@
 - (Fix) Deprecate `generateShareAddress`
 - (Fix) Fixed some issues `ExtensionServerSettings` when ephemeral and
   non-ephemeral settings for a hosted share existed at the same time.
+- (Chore) Update `range_reconcile` to 1.0.2, which makes sync slightly more
+  efficient.
 
 ## v10.0.2
 

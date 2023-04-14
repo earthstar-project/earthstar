@@ -10,11 +10,11 @@ export { hash as xxhash64, XXH64 } from "./src/util/xxhash64.js";
 export {
   FingerprintTree,
   RangeMessenger,
-} from "https://deno.land/x/range_reconcile@1.0.1/mod.ts";
+} from "https://deno.land/x/range_reconcile@1.0.2/mod.ts";
 export type {
   LiftingMonoid,
   RangeMessengerConfig,
-} from "https://deno.land/x/range_reconcile@1.0.1/mod.ts";
+} from "https://deno.land/x/range_reconcile@1.0.2/mod.ts";
 
 export { AsyncQueue } from "https://deno.land/x/for_awaitable_queue@1.0.0/mod.ts";
 
