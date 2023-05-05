@@ -29,11 +29,11 @@ import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/inde
 import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
 import { deferred } from "../../../deps.ts";
 import { SyncAppetite } from "../../syncer/syncer_types.ts";
-import { randomId } from "../../util/misc.ts";
 import { getFreePort } from "https://deno.land/x/free_port@v1.2.0/mod.ts";
 import { Server } from "../../server/server.ts";
 import { IServerExtension } from "../../server/extensions/extension.ts";
 import { ExtensionSyncWeb } from "../../server/extensions/sync_web.ts";
+import { LANSession } from "../../discovery/discovery_lan.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -141,14 +141,13 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
 
         const syncer = await serverSyncerPromise;
 
-        const { shareAddress, formatName, path, author, kind } =
-          transferMatch.pathname.groups;
+        const { path, kind } = transferMatch.pathname.groups;
 
         syncer.handleTransferRequest({
-          shareAddress,
-          formatName,
+          shareAddress: transferMatch.pathname.groups["shareAddress"]!,
+          formatName: transferMatch.pathname.groups["formatName"]!,
           path: `/${path}`,
-          author,
+          author: transferMatch.pathname.groups["author"]!,
           kind: kind as "download" | "upload",
           source: socket,
         });
@@ -204,15 +203,95 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
   }
 }
 
+export class PartnerScenarioTCP<F> implements SyncPartnerScenario<F> {
+  private abortController: AbortController;
+  formats: FormatsArg<F>;
+  appetite: SyncAppetite;
+
+  constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
+    this.formats = formats;
+    this.appetite = appetite;
+    this.abortController = new AbortController();
+  }
+
+  async setup(peerA: IPeer, peerB: IPeer) {
+    const lanSessionA = deferred<LANSession>();
+    const lanSessionB = deferred<LANSession>();
+
+    // Set up listeners...
+    const portA = await getFreePort(17171);
+    const portB = await getFreePort(17172);
+
+    const listenerA = Deno.listen({ port: portA });
+    const listenerB = Deno.listen({ port: portB });
+
+    this.abortController.signal.onabort = () => {
+      listenerA.close();
+      listenerB.close();
+    };
+
+    (async () => {
+      for await (const conn of listenerA) {
+        const session = await lanSessionA;
+
+        await session.addConn(conn);
+      }
+    })();
+
+    (async () => {
+      for await (const conn of listenerB) {
+        const session = await lanSessionB;
+
+        await session.addConn(conn);
+      }
+    })();
+
+    lanSessionA.resolve(
+      new LANSession(false, peerA, this.appetite, {
+        hostname: "127.0.0.1",
+        port: portB,
+        name: "Peer B",
+      }),
+    );
+
+    lanSessionB.resolve(
+      new LANSession(true, peerB, this.appetite, {
+        hostname: "127.0.0.1",
+        port: portA,
+        name: "Peer A",
+      }),
+    );
+
+    const syncerA = await (await lanSessionA).syncer;
+    const syncerB = await (await lanSessionB).syncer;
+
+    return [syncerA, syncerB] as [
+      Syncer<unknown, F>,
+      Syncer<unknown, F>,
+    ];
+  }
+
+  teardown() {
+    this.abortController.abort();
+
+    return Promise.resolve();
+  }
+}
+
 export const syncDriverScenarios: Scenario<
   <F>(
     formats: FormatsArg<F>,
     appetite: SyncAppetite,
   ) => SyncPartnerScenario<F>
->[] = [...universalPartners, {
+>[] = [
+  ...universalPartners, {
   name: "Web",
   item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
-}];
+}, {
+    name: "TCP",
+    item: (formats, appetite) => new PartnerScenarioTCP(formats, appetite),
+  },
+];
 
 export class WebServerScenario implements ServerScenario {
   private port: number;

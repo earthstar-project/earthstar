@@ -84,8 +84,9 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   }
 
   private async queueTransfer(transfer: AttachmentTransfer<unknown>) {
-    // Check if we already queued it from the queue
     if (this.queue.hasQueuedTransfer(transfer.hash, transfer.kind)) {
+      transfer.abort();
+
       return;
     }
 

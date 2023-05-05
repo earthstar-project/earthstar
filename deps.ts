@@ -25,3 +25,4 @@ export {
   deferred,
 } from "https://deno.land/std@0.167.0/async/deferred.ts";
 export { equals as bytesEquals } from "https://deno.land/std@0.167.0/bytes/equals.ts";
+export { concat } from "https://deno.land/std@0.167.0/bytes/concat.ts";
