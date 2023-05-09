@@ -9,6 +9,8 @@ import {
   DecryptStream,
 } from "../syncer/message_crypto.ts";
 import { SyncAppetite } from "../syncer/syncer_types.ts";
+import { TcpProvider } from "./tcp_provider.ts";
+import { ITcpConn } from "./types.ts";
 
 type DiscoveryLANOpts = {
   peer: IPeer;
@@ -20,7 +22,9 @@ type DiscoveryLANOpts = {
 export class DiscoveryLAN {
   private abortController = new AbortController();
   private multicastInterface = new MulticastInterface();
-  private listener = Deno.listen({ port: 3999 });
+
+  private tcpProvider = new TcpProvider();
+  private listener = this.tcpProvider.listen({ port: 3999 });
 
   //  IP address.
   private sessions = new Map<string, LANSession>();
@@ -48,10 +52,6 @@ export class DiscoveryLAN {
 
     (async () => {
       for await (const conn of this.listener) {
-        if (conn.remoteAddr.transport !== "tcp") {
-          continue;
-        }
-
         const key = `${conn.remoteAddr.hostname}:${conn.remoteAddr.port}`;
         const existingSession = this.sessions.get(key);
 
@@ -115,7 +115,8 @@ export class LANSession {
   description: string;
   private peer: IPeer;
   private appetite: SyncAppetite;
-  syncer = deferred<Syncer<Deno.Conn, unknown>>();
+  private tcpProvider = new TcpProvider();
+  syncer = deferred<Syncer<ITcpConn, unknown>>();
 
   // ECDH
   private keypair = deferred<CryptoKeyPair>();
@@ -148,7 +149,7 @@ export class LANSession {
 
     if (initiator) {
       // Open keyexchange connection
-      Deno.connect({
+      this.tcpProvider.connect({
         hostname: target.hostname,
         port: target.port,
       }).then((conn) => {
@@ -156,7 +157,7 @@ export class LANSession {
       });
 
       // Open messaging connection
-      Deno.connect({
+      this.tcpProvider.connect({
         hostname: target.hostname,
         port: target.port,
       }).then((conn) => {
@@ -165,7 +166,7 @@ export class LANSession {
     }
   }
 
-  async addConn(conn: Deno.Conn) {
+  async addConn(conn: ITcpConn) {
     const connKind = await identifyConn(conn);
 
     if (this.initiator && connKind !== ConnKind.Attachment) {
@@ -190,7 +191,7 @@ export class LANSession {
     }
   }
 
-  async addKeyExchangeConn(conn: Deno.Conn) {
+  async addKeyExchangeConn(conn: ITcpConn) {
     const ourKeypair = await this.keypair;
 
     if (this.initiator) {
@@ -244,7 +245,7 @@ export class LANSession {
     this.derivedSecret.resolve(derivedKey);
   }
 
-  async addMessageConn(conn: Deno.Conn) {
+  async addMessageConn(conn: ITcpConn) {
     if (this.syncer.state === "fulfilled") {
       return;
     }
@@ -276,7 +277,7 @@ export class LANSession {
     this.syncer.resolve(syncer);
   }
 
-  async addAttachmentConn(conn: Deno.Conn) {
+  async addAttachmentConn(conn: ITcpConn) {
     const derivedSecret = await this.derivedSecret;
 
     const transferDetails = deferred<{
@@ -364,7 +365,7 @@ enum ConnKind {
   KeyExchange,
 }
 
-async function identifyConn(conn: Deno.Conn): Promise<ConnKind> {
+async function identifyConn(conn: ITcpConn): Promise<ConnKind> {
   const firstByte = new Uint8Array(1);
 
   await conn.read(firstByte);

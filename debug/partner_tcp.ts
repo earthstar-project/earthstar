@@ -1,4 +1,3 @@
-import { delay } from "https://deno.land/std@0.129.0/async/delay.ts";
 import { deferred } from "../deps.ts";
 import {
   AttachmentDriverMemory,
@@ -12,6 +11,7 @@ import {
   ShareKeypair,
 } from "../mod.ts";
 import { LANSession } from "../src/discovery/discovery_lan.ts";
+import { TcpProvider } from "../src/discovery/tcp_provider.ts";
 import { writeRandomDocs } from "../src/test/test-utils.ts";
 
 const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
@@ -50,9 +50,11 @@ peerB.addReplica(replicaB);
 const lanSessionA = deferred<LANSession>();
 const lanSessionB = deferred<LANSession>();
 
+const tcpProvider = new TcpProvider();
+
 // Set up listeners...
-const listenerA = Deno.listen({ port: 17171 });
-const listenerB = Deno.listen({ port: 17172 });
+const listenerA = tcpProvider.listen({ port: 17171 });
+const listenerB = tcpProvider.listen({ port: 17172 });
 
 (async () => {
   for await (const conn of listenerA) {

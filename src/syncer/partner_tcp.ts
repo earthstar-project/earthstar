@@ -1,4 +1,5 @@
 import { AsyncQueue, concat } from "../../deps.ts";
+import { ITcpConn } from "../discovery/types.ts";
 import { NotSupportedError } from "../util/errors.ts";
 import { DecryptLengthDelimitStream, DecryptStream } from "./message_crypto.ts";
 import {
@@ -9,14 +10,13 @@ import {
 } from "./syncer_types.ts";
 
 export class PartnerTcp<
-  FormatsType,
-  IncomingTransferSourceType extends Deno.Conn,
+  IncomingTransferSourceType extends ITcpConn,
 > implements ISyncPartner<IncomingTransferSourceType> {
   concurrentTransfers = 1024;
   payloadThreshold = 1;
   rangeDivision = 2;
   syncAppetite: SyncAppetite;
-  private messageConn: Deno.Conn;
+  private messageConn: ITcpConn;
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
   private incomingQueue = new AsyncQueue<SyncerEvent>();
@@ -24,7 +24,7 @@ export class PartnerTcp<
   private port: number;
 
   constructor(
-    conn: Deno.Conn,
+    conn: ITcpConn,
     appetite: SyncAppetite,
     encryptionKey: CryptoKey,
     port: number,
@@ -175,7 +175,7 @@ export class PartnerTcp<
 
     const newConn = await Deno.connect({
       port: this.port,
-      hostname: (this.messageConn.remoteAddr as Deno.NetAddr).hostname,
+      hostname: this.messageConn.remoteAddr.hostname,
     });
 
     // Send the byte identifying this connection as an attachment transfer
@@ -221,7 +221,7 @@ export class PartnerTcp<
   }
 
   handleTransferRequest(
-    source: Deno.Conn,
+    source: ITcpConn,
     kind: "upload" | "download",
   ): Promise<
     | NotSupportedError

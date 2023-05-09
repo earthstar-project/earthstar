@@ -1,8 +1,20 @@
-import { Syncer } from "../syncer/syncer.ts";
-import { ISyncPartner } from "../syncer/syncer_types.ts";
+export interface ITcpConn {
+  read(bytes: Uint8Array): Promise<number | null>;
+  write(bytes: Uint8Array): Promise<number | null>;
+  readable: ReadableStream<Uint8Array>;
+  writable: WritableStream<Uint8Array>;
+  close(): void;
+  remoteAddr: {
+    hostname: string;
+    port: number;
+  };
+}
 
-export interface DiscoveryService<I> {
-  discovered(): AsyncIterable<[string, ISyncPartner<I>]>;
-  addSyncer<F>(syncer: Syncer<I, F>): void;
-  stop(): void;
+export interface ITcpListener extends AsyncIterable<ITcpConn> {
+  close(): void;
+}
+
+export interface ITcpProvider {
+  listen(opts: { port: number }): ITcpListener;
+  connect(opts: { port: number; hostname: string }): Promise<ITcpConn>;
 }

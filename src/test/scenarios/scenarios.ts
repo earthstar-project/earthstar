@@ -34,6 +34,7 @@ import { Server } from "../../server/server.ts";
 import { IServerExtension } from "../../server/extensions/extension.ts";
 import { ExtensionSyncWeb } from "../../server/extensions/sync_web.ts";
 import { LANSession } from "../../discovery/discovery_lan.ts";
+import { TcpProvider } from "../../discovery/tcp_provider.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -222,8 +223,10 @@ export class PartnerScenarioTCP<F> implements SyncPartnerScenario<F> {
     const portA = await getFreePort(17171);
     const portB = await getFreePort(17172);
 
-    const listenerA = Deno.listen({ port: portA });
-    const listenerB = Deno.listen({ port: portB });
+    const tcpProvider = new TcpProvider();
+
+    const listenerA = tcpProvider.listen({ port: portA });
+    const listenerB = tcpProvider.listen({ port: portB });
 
     this.abortController.signal.onabort = () => {
       listenerA.close();
@@ -284,10 +287,12 @@ export const syncDriverScenarios: Scenario<
     appetite: SyncAppetite,
   ) => SyncPartnerScenario<F>
 >[] = [
-  ...universalPartners, {
-  name: "Web",
-  item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
-}, {
+  ...universalPartners,
+  {
+    name: "Web",
+    item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
+  },
+  {
     name: "TCP",
     item: (formats, appetite) => new PartnerScenarioTCP(formats, appetite),
   },
