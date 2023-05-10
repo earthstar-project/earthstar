@@ -1,4 +1,5 @@
 import { AsyncQueue, concat } from "../../deps.ts";
+import { TcpProvider } from "../discovery/tcp_provider.ts";
 import { ITcpConn } from "../discovery/types.ts";
 import { NotSupportedError } from "../util/errors.ts";
 import { DecryptLengthDelimitStream, DecryptStream } from "./message_crypto.ts";
@@ -173,7 +174,9 @@ export class PartnerTcp<
 
     transferDescBytes.set(pathBytes, position);
 
-    const newConn = await Deno.connect({
+    const tcpProvider = new TcpProvider();
+
+    const newConn = await tcpProvider.connect({
       port: this.port,
       hostname: this.messageConn.remoteAddr.hostname,
     });
@@ -190,18 +193,24 @@ export class PartnerTcp<
 
     const derivedKey = this.derivedKey;
 
-    const readable = new ReadableStream({
+    const readable = new ReadableStream<Uint8Array>({
       async start(controller) {
         await newConn.readable
+          // @ts-ignore Node is upset about something here, although it works.
           .pipeThrough(new DecryptLengthDelimitStream(derivedKey))
+          // And here.
+          // @ts-ignore And here.
           .pipeThrough(new DecryptStream(derivedKey))
           .pipeTo(
+            // @ts-ignore Node incorrectly thinks Writable streams should have a close method on them.
             new WritableStream({
-              write(chunk) {
+              write(chunk: Uint8Array) {
                 controller.enqueue(chunk);
               },
             }),
-          );
+          ).catch((err) => {
+            console.log(err);
+          });
 
         try {
           newConn.close();

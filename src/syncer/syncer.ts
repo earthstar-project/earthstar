@@ -240,6 +240,14 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private async handleIncomingEvent(event: SyncerEvent) {
     this.bumpingTimeout.bump();
 
+    const isDone = this.isDone();
+
+    isDone.catch(() => {/*  Catch in case done*/});
+
+    if (isDone.state !== "pending") {
+      //return;
+    }
+
     switch (event.kind) {
       // Handle an incoming salted handsake
       case "DISCLOSE": {

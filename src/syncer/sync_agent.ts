@@ -197,7 +197,7 @@ export class SyncAgent<F> {
       return;
     }
 
-    this.isDoneMultiDeferred.reject();
+    this.isDoneMultiDeferred.reject(reason || "Cancelled");
 
     await this.statusBus.send(this.getStatus());
 
@@ -701,6 +701,8 @@ class SyncAgentReconciler<F> {
         if (message.type === "TERMINAL") {
           this.communicationRoundsCount++;
         }
+
+        console.log(message);
 
         const responses = rangeMessenger.respond(message);
 
