@@ -41,6 +41,7 @@ export interface SyncPartnerScenario<F> {
     peerB: IPeer,
   ): Promise<[Syncer<unknown, F>, Syncer<unknown, F>]>;
   teardown(): Promise<void>;
+  syncContinuousWait: number;
 }
 
 export interface ServerScenario {

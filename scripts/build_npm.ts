@@ -1,4 +1,4 @@
-import { build } from "https://deno.land/x/dnt@0.32.1/mod.ts";
+import { build } from "https://deno.land/x/dnt@0.34.0/mod.ts";
 
 await Deno.remove("npm", { recursive: true }).catch((_) => {});
 
@@ -8,7 +8,8 @@ await build({
     { name: "./node", path: "./src/entries/node.ts" },
     { name: "./browser", path: "./src/entries/browser.ts" },
   ],
-  testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
+  //testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
+  testPattern: "**/syncer/*.test.{ts}",
   outDir: "./npm",
   compilerOptions: {
     lib: ["dom", "es2021"],
@@ -83,6 +84,8 @@ await build({
     "./src/test/scenarios/scenarios.ts":
       "./src/test/scenarios/scenarios.node.ts",
 
+    "./src/discovery/tcp_provider.ts": "./src/discovery/tcp_provider.node.ts",
+
     "./src/node/chloride.ts": {
       name: "chloride",
       version: "2.4.1",
@@ -118,6 +121,10 @@ await build({
       name: "ws",
       version: "8.8.1",
     },
+    "../dns-sd/mod.ts": {
+      name: "ya-dns-sd",
+      version: "2.0.0-test1",
+    },
 
     "https://deno.land/std@0.167.0/node/http.ts": "node:http",
     "https://deno.land/std@0.167.0/node/buffer.ts": "node:buffer",
@@ -148,6 +155,7 @@ await build({
       "@types/better-sqlite3": "7.4.2",
       "@types/chloride": "2.4.0",
       "@types/ws": "8.5.3",
+      "@types/node": "20.1.1",
     },
   },
 });

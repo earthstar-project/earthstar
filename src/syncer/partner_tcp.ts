@@ -1,4 +1,5 @@
 import { AsyncQueue, concat } from "../../deps.ts";
+import { TcpProvider } from "../discovery/tcp_provider.ts";
 import { ITcpConn } from "../discovery/types.ts";
 import { NotSupportedError } from "../util/errors.ts";
 import { DecryptLengthDelimitStream, DecryptStream } from "./message_crypto.ts";
@@ -12,9 +13,9 @@ import {
 export class PartnerTcp<
   IncomingTransferSourceType extends ITcpConn,
 > implements ISyncPartner<IncomingTransferSourceType> {
-  concurrentTransfers = 1024;
-  payloadThreshold = 1;
-  rangeDivision = 2;
+  concurrentTransfers = 128;
+  payloadThreshold = 4;
+  rangeDivision = 8;
   syncAppetite: SyncAppetite;
   private messageConn: ITcpConn;
   private encoder = new TextEncoder();
@@ -173,7 +174,9 @@ export class PartnerTcp<
 
     transferDescBytes.set(pathBytes, position);
 
-    const newConn = await Deno.connect({
+    const tcpProvider = new TcpProvider();
+
+    const newConn = await tcpProvider.connect({
       port: this.port,
       hostname: this.messageConn.remoteAddr.hostname,
     });
@@ -190,24 +193,37 @@ export class PartnerTcp<
 
     const derivedKey = this.derivedKey;
 
-    const readable = new ReadableStream({
+    let cancelled = false;
+
+    const readable = new ReadableStream<Uint8Array>({
       async start(controller) {
         await newConn.readable
+          // @ts-ignore Node is upset about something here, although it works.
           .pipeThrough(new DecryptLengthDelimitStream(derivedKey))
+          // And here.
+          // @ts-ignore And here.
           .pipeThrough(new DecryptStream(derivedKey))
           .pipeTo(
+            // @ts-ignore Node incorrectly thinks Writable streams should have a close method on them.
             new WritableStream({
-              write(chunk) {
-                controller.enqueue(chunk);
+              write(chunk: Uint8Array) {
+                if (!cancelled) {
+                  controller.enqueue(chunk);
+                }
               },
             }),
-          );
+          ).catch((err) => {
+            console.log(err);
+          });
 
         try {
           newConn.close();
         } catch {
           // Closed by other side
         }
+      },
+      cancel() {
+        cancelled = true;
       },
     });
 

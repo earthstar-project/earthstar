@@ -43,6 +43,7 @@ export const universalReplicaAttachmentDrivers: Scenario<
 export class SyncScenarioLocal<F> implements SyncPartnerScenario<F> {
   formats: FormatsArg<F>;
   appetite: SyncAppetite;
+  syncContinuousWait = 800;
 
   constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
     this.formats = formats;

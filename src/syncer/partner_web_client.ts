@@ -24,7 +24,7 @@ type SyncerDriverWebServerOpts = {
 export class PartnerWebClient<
   IncomingTransferSourceType extends WebSocket,
 > implements ISyncPartner<IncomingTransferSourceType> {
-  concurrentTransfers = 16;
+  concurrentTransfers = 24;
   payloadThreshold = 8;
   rangeDivision = 8;
   syncAppetite: SyncAppetite;

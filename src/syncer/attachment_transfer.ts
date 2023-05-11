@@ -135,6 +135,7 @@ export class AttachmentTransfer<F> {
               promise.resolve();
             },
           ).catch((err) => {
+            console.log(err);
             promise.reject(err);
           });
 
