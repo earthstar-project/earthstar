@@ -24,7 +24,7 @@ export class PartnerWebServer<
   IncomingTransferSourceType extends undefined,
 > implements ISyncPartner<undefined> {
   syncAppetite: SyncAppetite;
-  concurrentTransfers = 16;
+  concurrentTransfers = 24;
   payloadThreshold = 8;
   rangeDivision = 8;
 
