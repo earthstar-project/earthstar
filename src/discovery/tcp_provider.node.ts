@@ -3,7 +3,7 @@
 import { ITcpConn, ITcpListener, ITcpProvider } from "./types.ts";
 import { createConnection, createServer, Server, Socket } from "node:net";
 
-import { concat, Deferred, deferred } from "../../deps.ts";
+import { AsyncQueue, Deferred, deferred } from "../../deps.ts";
 
 export class TcpProvider implements ITcpProvider {
   listen(opts: { port: number }): TcpListener {
@@ -25,8 +25,14 @@ export class TcpProvider implements ITcpProvider {
 class TcpListener implements ITcpListener {
   server: Server;
 
+  private connQueue = new AsyncQueue<Socket>();
+
   constructor(server: Server) {
     this.server = server;
+
+    this.server.on("connection", (socket: Socket) => {
+      this.connQueue.push(socket);
+    });
   }
 
   close(): void {
@@ -34,19 +40,7 @@ class TcpListener implements ITcpListener {
   }
 
   async *[Symbol.asyncIterator]() {
-    let socketPromise = deferred<Socket>();
-
-    this.server.on("connection", (socket: Socket) => {
-      socketPromise.resolve(socket);
-    });
-
-    while (true) {
-      // console.log("waiting for connection...");
-      const socket = await socketPromise;
-      // console.log("got connection");
-
-      socketPromise = deferred<Socket>();
-
+    for await (const socket of this.connQueue) {
       yield new TcpConn(socket);
     }
   }
@@ -54,68 +48,55 @@ class TcpListener implements ITcpListener {
 
 // A thing where you make a request for some number of bytes.
 
-class ByteFeeder {
+class SocketReader {
   private promiseQueue: {
-    desiredLength: number;
+    desiredLength: number | undefined;
     promise: Deferred<Uint8Array>;
   }[] = [];
 
-  private buffer = new Uint8Array(0);
+  private socket: Socket;
 
-  addBytes(bytes: Uint8Array) {
-    // console.group("Received bytes", bytes.byteLength);
+  constructor(socket: Socket) {
+    this.socket = socket;
 
-    let remainingBytes = concat(this.buffer, bytes);
+    socket.on("readable", () => {
+      this.runQueue();
+    });
 
+    socket.on("end", () => {
+      this.flush();
+    });
+  }
+
+  runQueue() {
     while (this.promiseQueue.length > 0) {
       const item = this.promiseQueue[0]!;
 
-      // console.log("Checking for bytes for item...", item.desiredLength);
+      const bytes = this.socket.read(item.desiredLength) as Uint8Array;
 
-      if (item.desiredLength === -1 && remainingBytes.byteLength > 0) {
-        // console.log("Fulfilled greedy request", remainingBytes.byteLength);
-
+      if (bytes) {
+        //console.log("resolved bytes", bytes.byteLength);
+        item.promise.resolve(bytes);
         this.promiseQueue.shift();
-        item.promise.resolve(remainingBytes);
-
-        remainingBytes = new Uint8Array(0);
-
-        break;
-      } else if (
-        item.desiredLength > 0 &&
-        remainingBytes.byteLength >= item.desiredLength
-      ) {
-        /*
-        console.log(
-          "Fulfilled limited request",
-          item.desiredLength,
-          remainingBytes,
-        );
-        */
-
-        const fulfilledBytes = remainingBytes.subarray(0, item.desiredLength);
-
-        remainingBytes = remainingBytes.subarray(item.desiredLength);
-
-        this.promiseQueue.shift();
-        item.promise.resolve(fulfilledBytes);
       } else {
-        /*
-       console.log(
-          "Not enough bytes for this...",
-          item.desiredLength,
-          ">",
-          remainingBytes.byteLength,
-        );
-        */
-
         break;
       }
     }
+  }
 
-    // console.groupEnd();
+  flush() {
+    const [head] = this.promiseQueue!;
 
-    this.buffer = remainingBytes;
+    const bytes = this.socket.read(undefined) as Uint8Array;
+
+    if (bytes) {
+      // console.log("flushed", bytes.byteLength);
+      head.promise.resolve(bytes);
+    } else {
+      for (const item of this.promiseQueue) {
+        // item.promise.reject("No data");
+      }
+    }
   }
 
   getBytes(len?: number): Promise<Uint8Array> {
@@ -123,13 +104,11 @@ class ByteFeeder {
     const promise = deferred<Uint8Array>();
 
     this.promiseQueue.push({
-      desiredLength: len || -1,
+      desiredLength: len || undefined,
       promise,
     });
 
-    // console.log("Got request for bytes", len || -1);
-
-    this.addBytes(new Uint8Array(0));
+    this.runQueue();
 
     return promise;
   }
@@ -140,17 +119,23 @@ class TcpConn implements ITcpConn {
 
   writable: WritableStream<Uint8Array>;
 
-  isReady = deferred();
+  //  isReady = deferred();
 
-  private byteFeeder = new ByteFeeder();
+  private socketReader: SocketReader;
 
   id = Math.random();
 
   constructor(socket: Socket) {
     this.socket = socket;
 
-    console.log(socket.readyState);
+    this.socketReader = new SocketReader(socket);
 
+    socket.on("error", () => {
+      this.writable.abort();
+      this.readable.cancel();
+    });
+
+    /*
     if (socket.readyState === "open") {
       this.isReady.resolve();
     }
@@ -158,24 +143,13 @@ class TcpConn implements ITcpConn {
     socket.on("ready", () => {
       this.isReady.resolve();
     });
+    */
 
-    socket.on("data", (chunk: Uint8Array) => {
-      this.byteFeeder.addBytes(chunk);
-    });
-
-    socket.on("end", () => {
-      this.byteFeeder.addBytes(new Uint8Array(0));
-    });
-
-    this.isReady.then(() => {
-      this.byteFeeder.addBytes(new Uint8Array(0));
-    });
-
-    const isReady = (() => this.isReady).bind(this);
+    // const isReady = (() => this.isReady).bind(this);
 
     this.writable = new WritableStream({
       async write(chunk) {
-        await isReady();
+        //   await isReady();
 
         const hasWritten = deferred();
 
@@ -196,14 +170,14 @@ class TcpConn implements ITcpConn {
 
   // This is a getter (rather than constructed when TcpProvider is instantiated) because we want the controller to only start pulling when the readable is called for.
   get readable() {
-    const getBytes = this.byteFeeder.getBytes.bind(this.byteFeeder);
+    const getBytes = this.socketReader.getBytes.bind(this.socketReader);
     const socket = this.socket;
 
-    const isReady = (() => this.isReady).bind(this);
+    //  const isReady = (() => this.isReady).bind(this);
 
     return new ReadableStream<Uint8Array>({
       async pull(controller) {
-        await isReady();
+        // await isReady();
 
         const bytes = await getBytes();
 
@@ -218,9 +192,9 @@ class TcpConn implements ITcpConn {
   }
 
   async read(bytes: Uint8Array): Promise<number | null> {
-    await this.isReady;
+    //    await this.isReady;
 
-    const result = await this.byteFeeder.getBytes(bytes.byteLength);
+    const result = await this.socketReader.getBytes(bytes.byteLength);
 
     bytes.set(result, 0);
 
@@ -228,7 +202,7 @@ class TcpConn implements ITcpConn {
   }
 
   async write(bytes: Uint8Array): Promise<number | null> {
-    await this.isReady;
+    //   await this.isReady;
 
     const wrotePromise = deferred<number>();
 
@@ -240,7 +214,7 @@ class TcpConn implements ITcpConn {
   }
 
   close() {
-    // return this.socket.destroy();
+    return this.socket.destroy();
   }
 
   get remoteAddr() {

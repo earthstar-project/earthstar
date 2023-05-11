@@ -268,6 +268,18 @@ Deno.test("Syncing (appetite 'once')", async (test) => {
 
         await syncDriverScenario.teardown();
 
+        for (const share in syncerA.getStatus()) {
+          const status = syncerA.getStatus()[share];
+
+          //console.log(status.attachments);
+        }
+
+        for (const share in syncerB.getStatus()) {
+          const status = syncerB.getStatus()[share];
+
+          //console.log(status.attachments);
+        }
+
         assert(await replicaDocsAreSynced([ra1, ra2]), `+a docs are in sync`);
         assert(await replicaDocsAreSynced([rb1, rb2]), `+b docs are in sync`);
         assert(await replicaDocsAreSynced([rc2, rc2]), `+c docs are in sync`);
@@ -515,7 +527,7 @@ Deno.test({
           ]);
 
           // Check that that things have synced... eventually.
-          await sleep(800);
+          await sleep(syncDriverScenario1.syncContinuousWait);
 
           try {
             syncerA.cancel("Test finished");
@@ -659,7 +671,7 @@ Deno.test({
           // +coconuts should sync because now both peers have it.
           peerB.addReplica(rc2);
 
-          await sleep(800);
+          await sleep(syncDriverScenario1.syncContinuousWait);
 
           try {
             syncerA.cancel("Test finished");

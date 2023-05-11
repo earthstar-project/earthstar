@@ -120,6 +120,7 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
 
   formats: FormatsArg<F>;
   appetite: SyncAppetite;
+  syncContinuousWait = 800;
 
   constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
     this.formats = formats;
@@ -208,6 +209,7 @@ export class PartnerScenarioTCP<F> implements SyncPartnerScenario<F> {
   private abortController: AbortController;
   formats: FormatsArg<F>;
   appetite: SyncAppetite;
+  syncContinuousWait = 800;
 
   constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
     this.formats = formats;
@@ -292,6 +294,7 @@ export const syncDriverScenarios: Scenario<
     name: "Web",
     item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
   },
+
   {
     name: "TCP",
     item: (formats, appetite) => new PartnerScenarioTCP(formats, appetite),

@@ -228,7 +228,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     (async () => {
       for await (const event of agent.events()) {
-        this.partner.sendEvent({
+        await this.partner.sendEvent({
           to: address,
           ...event,
         });
@@ -240,12 +240,8 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   private async handleIncomingEvent(event: SyncerEvent) {
     this.bumpingTimeout.bump();
 
-    const isDone = this.isDone();
-
-    isDone.catch(() => {/*  Catch in case done*/});
-
-    if (isDone.state !== "pending") {
-      //return;
+    if (this.isDoneMultiDeferred.state !== "pending") {
+      return;
     }
 
     switch (event.kind) {
@@ -398,7 +394,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       kind: "upload" | "download";
     },
   ) {
-    if (this.isDoneMultiDeferred.state === "rejected") {
+    if (this.isDoneMultiDeferred.state !== "pending") {
       return;
     }
 

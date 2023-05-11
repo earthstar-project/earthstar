@@ -13,9 +13,9 @@ import {
 export class PartnerTcp<
   IncomingTransferSourceType extends ITcpConn,
 > implements ISyncPartner<IncomingTransferSourceType> {
-  concurrentTransfers = 1024;
-  payloadThreshold = 1;
-  rangeDivision = 2;
+  concurrentTransfers = 128;
+  payloadThreshold = 4;
+  rangeDivision = 8;
   syncAppetite: SyncAppetite;
   private messageConn: ITcpConn;
   private encoder = new TextEncoder();
@@ -193,6 +193,8 @@ export class PartnerTcp<
 
     const derivedKey = this.derivedKey;
 
+    let cancelled = false;
+
     const readable = new ReadableStream<Uint8Array>({
       async start(controller) {
         await newConn.readable
@@ -205,7 +207,9 @@ export class PartnerTcp<
             // @ts-ignore Node incorrectly thinks Writable streams should have a close method on them.
             new WritableStream({
               write(chunk: Uint8Array) {
-                controller.enqueue(chunk);
+                if (!cancelled) {
+                  controller.enqueue(chunk);
+                }
               },
             }),
           ).catch((err) => {
@@ -217,6 +221,9 @@ export class PartnerTcp<
         } catch {
           // Closed by other side
         }
+      },
+      cancel() {
+        cancelled = true;
       },
     });
 
