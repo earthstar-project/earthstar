@@ -11,20 +11,23 @@ import {
 import { SyncAppetite } from "../syncer/syncer_types.ts";
 import { TcpProvider } from "./tcp_provider.ts";
 import { ITcpConn } from "./types.ts";
+import { sleep } from "../util/misc.ts";
 
 type DiscoveryLANOpts = {
   peer: IPeer;
   name: string;
   advertise?: boolean;
-  appetite: SyncAppetite;
+  appetite?: SyncAppetite;
 };
+
+const ES_PORT = 17171;
 
 export class DiscoveryLAN {
   private abortController = new AbortController();
   private multicastInterface = new MulticastInterface();
 
   private tcpProvider = new TcpProvider();
-  private listener = this.tcpProvider.listen({ port: 3999 });
+  private listener = this.tcpProvider.listen({ port: 17171 });
 
   //  IP address.
   private sessions = new Map<string, LANSession>();
@@ -34,15 +37,20 @@ export class DiscoveryLAN {
   constructor(opts: DiscoveryLANOpts) {
     // Need to set up a listener here that can create partners...
 
-    if (opts.advertise) {
+    const shouldAdvertise = opts.advertise === undefined
+      ? true
+      : opts.advertise;
+
+    if (shouldAdvertise) {
       advertise({
         multicastInterface: this.multicastInterface,
         service: {
           name: opts.name,
-          port: 3999,
+          port: ES_PORT,
           protocol: "tcp",
           txt: {
             version: new TextEncoder().encode("10"),
+            appetite: new TextEncoder().encode(opts.appetite || "once"),
           },
           type: "earthstar",
         },
@@ -52,7 +60,7 @@ export class DiscoveryLAN {
 
     (async () => {
       for await (const conn of this.listener) {
-        const key = `${conn.remoteAddr.hostname}:${conn.remoteAddr.port}`;
+        const key = `${conn.remoteAddr.hostname}`;
         const existingSession = this.sessions.get(key);
 
         if (existingSession) {
@@ -61,12 +69,15 @@ export class DiscoveryLAN {
           const session = new LANSession(
             false,
             opts.peer,
-            opts.appetite,
+            opts.appetite || "once",
             // Hopefully this works well enough.
             {
               hostname: conn.remoteAddr.hostname,
-              port: conn.remoteAddr.port,
               name: this.serviceNames.get(key),
+            },
+            () => {
+              this.sessions.delete(key);
+              this.serviceNames.delete(key);
             },
           );
           this.sessions.set(key, session);
@@ -86,19 +97,35 @@ export class DiscoveryLAN {
           },
         })
       ) {
-        const key = `${service.host}:${service.port}`;
+        const key = `${service.host}`;
 
         this.serviceNames.set(key, service.name);
 
         if (!this.sessions.has(key)) {
-          // TODO: Wait some random amount of time.
+          const parsedAppetite = service.txt["appetite"] instanceof Uint8Array
+            ? new TextDecoder().decode(service.txt["appetite"])
+            : "once";
 
-          const session = new LANSession(true, opts.peer, opts.appetite, {
-            hostname: service.host,
-            port: service.port,
-            name: service.name,
-          });
-          const key = `${service.host}:${service.port}`;
+          if (parsedAppetite !== "once" && parsedAppetite !== "continuous") {
+            return;
+          }
+
+          await sleep(Math.random() * (120 - 20) + 20);
+
+          const session = new LANSession(
+            true,
+            opts.peer,
+            parsedAppetite,
+            {
+              hostname: service.host,
+              name: service.name,
+            },
+            () => {
+              this.sessions.delete(key);
+              this.serviceNames.delete(key);
+            },
+          );
+
           this.sessions.set(key, session);
         }
       }
@@ -122,19 +149,21 @@ export class LANSession {
   private keypair = deferred<CryptoKeyPair>();
   private derivedSecret = deferred<CryptoKey>();
 
-  private targetPort: number;
+  //
+  private onComplete: () => void;
 
   constructor(
     initiator: boolean,
     peer: IPeer,
     appetite: SyncAppetite,
-    target: { hostname: string; port: number; name?: string },
+    target: { hostname: string; name?: string },
+    onComplete: () => void,
   ) {
     this.initiator = initiator;
     this.peer = peer;
-    this.description = target.name || `${target.hostname}:${target.port}`;
+    this.description = target.name || `${target.hostname}`;
     this.appetite = appetite;
-    this.targetPort = target.port;
+    this.onComplete = onComplete;
 
     crypto.subtle.generateKey(
       {
@@ -151,7 +180,7 @@ export class LANSession {
       // Open keyexchange connection
       this.tcpProvider.connect({
         hostname: target.hostname,
-        port: target.port,
+        port: ES_PORT,
       }).then((conn) => {
         this.addKeyExchangeConn(conn);
       });
@@ -159,11 +188,17 @@ export class LANSession {
       // Open messaging connection
       this.tcpProvider.connect({
         hostname: target.hostname,
-        port: target.port,
+        port: ES_PORT,
       }).then((conn) => {
         this.addMessageConn(conn);
       });
     }
+
+    this.syncer.then((syncer) => {
+      syncer.isDone().finally(() => {
+        this.onComplete();
+      });
+    });
   }
 
   async addConn(conn: ITcpConn) {
@@ -266,7 +301,7 @@ export class LANSession {
       conn,
       this.appetite,
       derivedKey,
-      this.targetPort,
+      ES_PORT,
     );
 
     const syncer = this.peer.addSyncPartner(

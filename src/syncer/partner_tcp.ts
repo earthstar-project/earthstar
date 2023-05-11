@@ -1,6 +1,6 @@
 import { AsyncQueue, concat } from "../../deps.ts";
-import { TcpProvider } from "../discovery/tcp_provider.ts";
-import { ITcpConn } from "../discovery/types.ts";
+import { TcpProvider } from "../lan/tcp_provider.ts";
+import { ITcpConn } from "../lan/types.ts";
 import { NotSupportedError } from "../util/errors.ts";
 import { DecryptLengthDelimitStream, DecryptStream } from "./message_crypto.ts";
 import {

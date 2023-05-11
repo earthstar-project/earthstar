@@ -10,8 +10,8 @@ import {
   setGlobalCryptoDriver,
   ShareKeypair,
 } from "../mod.ts";
-import { LANSession } from "../src/discovery/discovery_lan.ts";
-import { TcpProvider } from "../src/discovery/tcp_provider.ts";
+import { LANSession } from "../src/lan/discovery_lan.ts";
+import { TcpProvider } from "../src/lan/tcp_provider.ts";
 import { writeRandomDocs } from "../src/test/test-utils.ts";
 
 const keypair = await Crypto.generateAuthorKeypair("test") as AuthorKeypair;
