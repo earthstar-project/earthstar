@@ -1,41 +1,44 @@
 import { advertise, browse, MulticastInterface } from "../../../dns-sd/mod.ts";
-import { deferred } from "../../deps.ts";
+import { AsyncQueue, deferred } from "../../deps.ts";
 import { ValidationError } from "../util/errors.ts";
 import { PartnerTcp } from "../syncer/partner_tcp.ts";
-import { IPeer } from "../peer/peer-types.ts";
 import { Syncer } from "../syncer/syncer.ts";
 import {
   DecryptLengthDelimitStream,
   DecryptStream,
 } from "../syncer/message_crypto.ts";
-import { SyncAppetite } from "../syncer/syncer_types.ts";
-import { TcpProvider } from "./tcp_provider.ts";
-import { ITcpConn } from "./types.ts";
+import { ISyncPartner, SyncAppetite } from "../syncer/syncer_types.ts";
+import { TcpListener, TcpProvider } from "./tcp_provider.ts";
+import { DiscoveryService, DiscoveryServiceEvent, ITcpConn } from "./types.ts";
 import { sleep } from "../util/misc.ts";
 
 type DiscoveryLANOpts = {
-  peer: IPeer;
   name: string;
   advertise?: boolean;
-  appetite?: SyncAppetite;
+  port?: number;
 };
 
 const ES_PORT = 17171;
 
-export class DiscoveryLAN {
+export class DiscoveryLAN implements DiscoveryService<ITcpConn> {
   private abortController = new AbortController();
   private multicastInterface = new MulticastInterface();
 
   private tcpProvider = new TcpProvider();
-  private listener = this.tcpProvider.listen({ port: 17171 });
+  private listener: TcpListener;
 
   //  IP address.
   private sessions = new Map<string, LANSession>();
   // A map of IP addresses to service names.
   private serviceNames = new Map<string, string>();
 
+  private eventQueue = new AsyncQueue<DiscoveryServiceEvent<ITcpConn>>();
+
   constructor(opts: DiscoveryLANOpts) {
     // Need to set up a listener here that can create partners...
+    const listener = this.tcpProvider.listen({ port: opts.port || ES_PORT });
+
+    this.listener = listener;
 
     const shouldAdvertise = opts.advertise === undefined
       ? true
@@ -46,11 +49,10 @@ export class DiscoveryLAN {
         multicastInterface: this.multicastInterface,
         service: {
           name: opts.name,
-          port: ES_PORT,
+          port: opts.port || ES_PORT,
           protocol: "tcp",
           txt: {
             version: new TextEncoder().encode("10"),
-            appetite: new TextEncoder().encode(opts.appetite || "once"),
           },
           type: "earthstar",
         },
@@ -59,29 +61,45 @@ export class DiscoveryLAN {
     }
 
     (async () => {
-      for await (const conn of this.listener) {
+      for await (const conn of listener) {
         const key = `${conn.remoteAddr.hostname}`;
         const existingSession = this.sessions.get(key);
 
         if (existingSession) {
           existingSession.addConn(conn);
         } else {
-          const session = new LANSession(
-            false,
-            opts.peer,
-            opts.appetite || "once",
-            // Hopefully this works well enough.
-            {
-              hostname: conn.remoteAddr.hostname,
-              name: this.serviceNames.get(key),
+          this.eventQueue.push({
+            kind: "PEER_INITIATED_SYNC",
+            description: this.serviceNames.get(key) || key,
+            begin: async (peer) => {
+              const session = new LANSession(
+                {
+                  onComplete: () => {
+                    this.sessions.delete(key);
+                    this.serviceNames.delete(key);
+                  },
+                  target: {
+                    hostname: conn.remoteAddr.hostname,
+                    name: this.serviceNames.get(key),
+                  },
+                  ourPort: opts.port || ES_PORT,
+                },
+              );
+              this.sessions.set(key, session);
+              session.addConn(conn);
+
+              const partner = await session.partner;
+
+              const syncer = peer.addSyncPartner(
+                partner,
+                this.serviceNames.get(key) || key,
+              );
+
+              session.syncer.resolve(syncer);
+
+              return syncer;
             },
-            () => {
-              this.sessions.delete(key);
-              this.serviceNames.delete(key);
-            },
-          );
-          this.sessions.set(key, session);
-          session.addConn(conn);
+          });
         }
       }
     })();
@@ -101,49 +119,87 @@ export class DiscoveryLAN {
 
         this.serviceNames.set(key, service.name);
 
-        if (!this.sessions.has(key)) {
-          const parsedAppetite = service.txt["appetite"] instanceof Uint8Array
-            ? new TextDecoder().decode(service.txt["appetite"])
-            : "once";
+        if (service.isActive === false) {
+          this.eventQueue.push({
+            kind: "PEER_EXITED",
+            description: service.name,
+          });
 
-          if (parsedAppetite !== "once" && parsedAppetite !== "continuous") {
-            return;
-          }
-
-          await sleep(Math.random() * (120 - 20) + 20);
-
-          const session = new LANSession(
-            true,
-            opts.peer,
-            parsedAppetite,
-            {
-              hostname: service.host,
-              name: service.name,
-            },
-            () => {
-              this.sessions.delete(key);
-              this.serviceNames.delete(key);
-            },
-          );
-
-          this.sessions.set(key, session);
+          continue;
         }
+
+        this.eventQueue.push({
+          kind: "PEER_DISCOVERED",
+          description: service.name,
+          begin: async (peer, appetite) => {
+            if (this.sessions.has(key)) {
+              throw new Error(
+                "A syncer for this peer has already been started",
+              );
+            }
+
+            await sleep(Math.random() * (120 - 20) + 20);
+
+            const session = new LANSession(
+              {
+                initiator: { appetite, port: service.port },
+                onComplete: () => {
+                  this.sessions.delete(key);
+                  this.serviceNames.delete(key);
+                },
+                target: {
+                  hostname: service.host,
+                  name: service.name,
+                },
+                ourPort: opts.port || ES_PORT,
+              },
+            );
+
+            this.sessions.set(key, session);
+
+            const partner = await session.partner;
+
+            const syncer = peer.addSyncPartner(
+              partner,
+              this.serviceNames.get(key) || key,
+            );
+
+            session.syncer.resolve(syncer);
+
+            return syncer;
+          },
+        });
       }
     })();
   }
 
+  get events() {
+    return this.eventQueue;
+  }
+
   stop() {
     this.abortController.abort();
+
+    this.eventQueue.push({
+      kind: "SERVICE_STOPPED",
+    });
+
+    this.eventQueue.close();
   }
 }
 
+type LANSessionOpts = {
+  initiator?: { appetite: SyncAppetite; port: number };
+  target: { hostname: string; name?: string };
+  ourPort: number;
+  onComplete: () => void;
+};
+
 export class LANSession {
-  initiator: boolean;
+  initiator: { appetite: SyncAppetite } | undefined;
   description: string;
-  private peer: IPeer;
-  private appetite: SyncAppetite;
+
   private tcpProvider = new TcpProvider();
-  syncer = deferred<Syncer<ITcpConn, unknown>>();
 
   // ECDH
   private keypair = deferred<CryptoKeyPair>();
@@ -151,19 +207,20 @@ export class LANSession {
 
   //
   private onComplete: () => void;
+  private targetPort = deferred<number>();
+  private ourPort: number;
+
+  partner = deferred<ISyncPartner<ITcpConn>>();
+  syncer = deferred<Syncer<ITcpConn, unknown>>();
 
   constructor(
-    initiator: boolean,
-    peer: IPeer,
-    appetite: SyncAppetite,
-    target: { hostname: string; name?: string },
-    onComplete: () => void,
+    opts: LANSessionOpts,
   ) {
-    this.initiator = initiator;
-    this.peer = peer;
-    this.description = target.name || `${target.hostname}`;
-    this.appetite = appetite;
-    this.onComplete = onComplete;
+    this.initiator = opts.initiator;
+    this.ourPort = opts.ourPort;
+
+    this.description = opts.target.name || `${opts.target.hostname}`;
+    this.onComplete = opts.onComplete;
 
     crypto.subtle.generateKey(
       {
@@ -176,26 +233,30 @@ export class LANSession {
       this.keypair.resolve(keypair);
     });
 
-    if (initiator) {
+    if (opts.initiator) {
+      this.targetPort.resolve(opts.initiator?.port);
+
       // Open keyexchange connection
       this.tcpProvider.connect({
-        hostname: target.hostname,
-        port: ES_PORT,
+        hostname: opts.target.hostname,
+        port: opts.initiator.port,
       }).then((conn) => {
         this.addKeyExchangeConn(conn);
       });
 
       // Open messaging connection
       this.tcpProvider.connect({
-        hostname: target.hostname,
-        port: ES_PORT,
+        hostname: opts.target.hostname,
+        port: opts.initiator.port,
       }).then((conn) => {
         this.addMessageConn(conn);
       });
     }
 
     this.syncer.then((syncer) => {
-      syncer.isDone().finally(() => {
+      syncer.isDone().then(() => {
+        this.onComplete();
+      }).catch(() => {
         this.onComplete();
       });
     });
@@ -285,6 +346,8 @@ export class LANSession {
       return;
     }
 
+    let appetite = this.initiator?.appetite;
+
     // If we're the initiator, send the identifying byte.
     if (this.initiator) {
       const idByte = new Uint8Array(1);
@@ -292,6 +355,41 @@ export class LANSession {
       idView.setUint8(0, ConnKind.Messages);
 
       await conn.write(idByte);
+
+      // and don't forget the appetite byte
+      const appetiteByte = new Uint8Array(1);
+      const appetiteView = new DataView(appetiteByte.buffer);
+      appetiteView.setUint8(0, this.initiator.appetite === "once" ? 0 : 1);
+
+      await conn.write(appetiteByte);
+
+      // And don't forget the port byte.
+      const portBytes = new Uint8Array(2);
+      const portView = new DataView(portBytes.buffer);
+      portView.setUint16(0, this.ourPort);
+
+      await conn.write(portBytes);
+    }
+
+    if (!appetite) {
+      // Read the conn for the appetite byte...
+      const appetiteByte = new Uint8Array(1);
+
+      await conn.read(appetiteByte);
+
+      const appetiteView = new DataView(appetiteByte.buffer);
+
+      appetite = appetiteView.getUint8(0) === 0 ? "once" : "continuous";
+    }
+
+    if (!this.initiator) {
+      const portBytes = new Uint8Array(2);
+
+      await conn.read(portBytes);
+
+      const portView = new DataView(portBytes.buffer);
+
+      this.targetPort.resolve(portView.getUint16(0));
     }
 
     // Create a new TCP partner here.
@@ -299,17 +397,12 @@ export class LANSession {
 
     const partner = new PartnerTcp(
       conn,
-      this.appetite,
+      appetite,
       derivedKey,
-      ES_PORT,
+      await this.targetPort,
     );
 
-    const syncer = this.peer.addSyncPartner(
-      partner,
-      this.description,
-    );
-
-    this.syncer.resolve(syncer);
+    this.partner.resolve(partner);
   }
 
   async addAttachmentConn(conn: ITcpConn) {

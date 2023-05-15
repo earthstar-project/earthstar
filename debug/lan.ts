@@ -7,6 +7,7 @@ import {
   Peer,
   Replica,
   setGlobalCryptoDriver,
+  Syncer,
 } from "../mod.ts";
 import { DiscoveryLAN } from "../src/lan/discovery_lan.ts";
 import { writeRandomDocs } from "../src/test/test-utils.ts";
@@ -29,39 +30,59 @@ const replicaA = new Replica({
   shareSecret: shareKeypair.secret,
 });
 
-await writeRandomDocs(keypair, replicaA, 1000);
+await writeRandomDocs(keypair, replicaA, 100);
 
 const peer = new Peer();
 
 peer.addReplica(replicaA);
 
 const disco = new DiscoveryLAN({
-  name: "Gala",
-  peer,
+  name: "LAN Peer",
 });
 
 console.log("Discovering...");
 
-peer.onSyncersChange((syncerMap) => {
-  for (const [_id, { syncer, description }] of syncerMap) {
-    console.log("Started syncing with", description);
+for await (const event of peer.discover(disco)) {
+  switch (event.kind) {
+    case "PEER_DISCOVERED": {
+      try {
+        const syncer = await event.sync();
 
-    syncer.onStatusChange((status) => {
-      for (const share in status) {
-        const report = status[share];
+        console.log(`Discovered ${event.description}`);
 
-        console.log(
-          `Got ${report.docs.receivedCount} / ${report.docs.requestedCount} | Sent ${report.docs.sentCount} | Transfers: ${
-            report.attachments.filter((transfer) =>
-              transfer.status === "complete"
-            ).length
-          } / ${report.attachments.length}`,
-        );
+        logSyncer(syncer, event.description);
+      } catch {
+        // already had a session active
       }
-    });
 
-    syncer.isDone().then(() => {
-      console.log("Finished syncing with", description);
-    });
+      break;
+    }
+    case "PEER_INITIATED_SYNC": {
+      console.log(`Was discovered by ${event.description}`);
+
+      logSyncer(event.syncer, event.description);
+    }
   }
-});
+}
+
+function logSyncer(syncer: Syncer<unknown, unknown>, description: string) {
+  console.log("Started syncing with", description);
+
+  syncer.isDone().then(() => {
+    console.log("Finished syncing with", description);
+
+    const status = syncer.getStatus();
+
+    for (const share in status) {
+      const report = status[share];
+
+      console.log(
+        `Got ${report.docs.receivedCount} / ${report.docs.requestedCount} | Sent ${report.docs.sentCount} | Transfers: ${
+          report.attachments.filter((transfer) =>
+            transfer.status === "complete"
+          ).length
+        } / ${report.attachments.length}`,
+      );
+    }
+  });
+}

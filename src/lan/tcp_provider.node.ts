@@ -22,7 +22,7 @@ export class TcpProvider implements ITcpProvider {
   }
 }
 
-class TcpListener implements ITcpListener {
+export class TcpListener implements ITcpListener {
   server: Server;
 
   private connQueue = new AsyncQueue<Socket>();

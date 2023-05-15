@@ -33,8 +33,8 @@ import { getFreePort } from "https://deno.land/x/free_port@v1.2.0/mod.ts";
 import { Server } from "../../server/server.ts";
 import { IServerExtension } from "../../server/extensions/extension.ts";
 import { ExtensionSyncWeb } from "../../server/extensions/sync_web.ts";
-import { LANSession } from "../../discovery/discovery_lan.ts";
-import { TcpProvider } from "../../discovery/tcp_provider.ts";
+import { LANSession } from "../../lan/discovery_lan.ts";
+import { TcpProvider } from "../../lan/tcp_provider.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -218,8 +218,8 @@ export class PartnerScenarioTCP<F> implements SyncPartnerScenario<F> {
   }
 
   async setup(peerA: IPeer, peerB: IPeer) {
-    const lanSessionA = deferred<LANSession>();
-    const lanSessionB = deferred<LANSession>();
+    const lanSessionPromiseA = deferred<LANSession>();
+    const lanSessionPromiseB = deferred<LANSession>();
 
     // Set up listeners...
     const portA = await getFreePort(17171);
@@ -237,7 +237,7 @@ export class PartnerScenarioTCP<F> implements SyncPartnerScenario<F> {
 
     (async () => {
       for await (const conn of listenerA) {
-        const session = await lanSessionA;
+        const session = await lanSessionPromiseA;
 
         await session.addConn(conn);
       }
@@ -245,30 +245,54 @@ export class PartnerScenarioTCP<F> implements SyncPartnerScenario<F> {
 
     (async () => {
       for await (const conn of listenerB) {
-        const session = await lanSessionB;
+        const session = await lanSessionPromiseB;
 
         await session.addConn(conn);
       }
     })();
 
-    lanSessionA.resolve(
-      new LANSession(false, peerA, this.appetite, {
-        hostname: "127.0.0.1",
-        port: portB,
-        name: "Peer B",
+    lanSessionPromiseA.resolve(
+      new LANSession(
+        {
+          target: {
+            hostname: "127.0.0.1",
+            name: "Peer B",
+          },
+          onComplete: () => {},
+          ourPort: portA,
+        },
+      ),
+    );
+
+    lanSessionPromiseB.resolve(
+      new LANSession({
+        initiator: {
+          appetite: this.appetite,
+          port: portA,
+        },
+        target: {
+          hostname: "127.0.0.1",
+          name: "Peer A",
+        },
+        ourPort: portB,
+        onComplete: () => {},
       }),
     );
 
-    lanSessionB.resolve(
-      new LANSession(true, peerB, this.appetite, {
-        hostname: "127.0.0.1",
-        port: portA,
-        name: "Peer A",
-      }),
+    const lanSessionA = await lanSessionPromiseA;
+    const lanSessionB = await lanSessionPromiseB;
+
+    const syncerA = peerA.addSyncPartner(
+      await lanSessionA.partner,
+      "Peer B",
+    );
+    const syncerB = peerB.addSyncPartner(
+      await lanSessionB.partner,
+      "Peer A",
     );
 
-    const syncerA = await (await lanSessionA).syncer;
-    const syncerB = await (await lanSessionB).syncer;
+    lanSessionA.syncer.resolve(syncerA);
+    lanSessionB.syncer.resolve(syncerB);
 
     return [syncerA, syncerB] as [
       Syncer<unknown, F>,
@@ -294,7 +318,6 @@ export const syncDriverScenarios: Scenario<
     name: "Web",
     item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
   },
-
   {
     name: "TCP",
     item: (formats, appetite) => new PartnerScenarioTCP(formats, appetite),

@@ -11,7 +11,7 @@ export class TcpProvider implements ITcpProvider {
   }
 }
 
-class TcpListener implements ITcpListener {
+export class TcpListener implements ITcpListener {
   listener: Deno.Listener;
 
   constructor(listener: Deno.Listener) {
@@ -29,7 +29,7 @@ class TcpListener implements ITcpListener {
   }
 }
 
-class TcpConn implements ITcpConn {
+export class TcpConn implements ITcpConn {
   private conn: Deno.Conn;
 
   constructor(conn: Deno.Conn) {

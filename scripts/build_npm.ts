@@ -18,7 +18,7 @@ await build({
     deno: "dev",
     timers: true,
     weakRef: true,
-    crypto: "dev",
+    crypto: true,
     custom: [
       {
         package: {
@@ -84,7 +84,7 @@ await build({
     "./src/test/scenarios/scenarios.ts":
       "./src/test/scenarios/scenarios.node.ts",
 
-    "./src/discovery/tcp_provider.ts": "./src/discovery/tcp_provider.node.ts",
+    "./src/lan/tcp_provider.ts": "./src/lan/tcp_provider.node.ts",
 
     "./src/node/chloride.ts": {
       name: "chloride",
