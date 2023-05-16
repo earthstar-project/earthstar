@@ -1,4 +1,8 @@
-import { advertise, browse, MulticastInterface } from "../../../dns-sd/mod.ts";
+import {
+  advertise,
+  browse,
+  MulticastInterface,
+} from "https://deno.land/x/dns_sd@2.0.0/mod.ts";
 import { AsyncQueue, deferred } from "../../deps.ts";
 import { ValidationError } from "../util/errors.ts";
 import { PartnerTcp } from "../syncer/partner_tcp.ts";
@@ -8,37 +12,41 @@ import {
   DecryptStream,
 } from "../syncer/message_crypto.ts";
 import { ISyncPartner, SyncAppetite } from "../syncer/syncer_types.ts";
-import { TcpListener, TcpProvider } from "./tcp_provider.ts";
-import { DiscoveryService, DiscoveryServiceEvent, ITcpConn } from "./types.ts";
+
+import { DiscoveryService, DiscoveryServiceEvent } from "./types.ts";
 import { sleep } from "../util/misc.ts";
+import { TcpProvider } from "../tcp/tcp_provider.ts";
+import { ITcpConn } from "../tcp/types.ts";
 
 type DiscoveryLANOpts = {
+  /** The name we wish to use to identify ourselves to other peers on the network. */
   name: string;
+  /** Whether to advertise our presence on the network or not. Defaults to true. */
   advertise?: boolean;
+  /** The port to listen for incoming connections on. Defaults to 17171. */
   port?: number;
 };
 
 const ES_PORT = 17171;
 
-export class DiscoveryLAN implements DiscoveryService<ITcpConn> {
+/** A discovery service for finding peers on the local network, to be used with `Peer.discover`.
+ */
+export class DiscoveryLAN implements DiscoveryService {
   private abortController = new AbortController();
   private multicastInterface = new MulticastInterface();
 
   private tcpProvider = new TcpProvider();
-  private listener: TcpListener;
 
   //  IP address.
   private sessions = new Map<string, LANSession>();
   // A map of IP addresses to service names.
   private serviceNames = new Map<string, string>();
 
-  private eventQueue = new AsyncQueue<DiscoveryServiceEvent<ITcpConn>>();
+  private eventQueue = new AsyncQueue<DiscoveryServiceEvent>();
 
   constructor(opts: DiscoveryLANOpts) {
     // Need to set up a listener here that can create partners...
     const listener = this.tcpProvider.listen({ port: opts.port || ES_PORT });
-
-    this.listener = listener;
 
     const shouldAdvertise = opts.advertise === undefined
       ? true

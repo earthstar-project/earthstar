@@ -23,5 +23,5 @@ export * from "../server/extensions/server_settings.ts";
 export * from "../server/extensions/sync_web.ts";
 export * from "../server/extensions/serve_content.ts";
 
-// LAN Discovery
-export * from "../lan/discovery_lan.ts";
+// LAN Discovery, uncomment when UDP APIs are stable.
+// export * from "../discovery/discovery_lan.ts";

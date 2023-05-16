@@ -14,7 +14,7 @@ import { PartnerLocal } from "../syncer/partner_local.ts";
 import { FormatsArg } from "../formats/format_types.ts";
 import { SyncerManager } from "../syncer/syncer_manager.ts";
 import { ISyncPartner } from "../syncer/syncer_types.ts";
-import { DiscoveryEvent, DiscoveryService } from "../lan/types.ts";
+import { DiscoveryEvent, DiscoveryService } from "../discovery/types.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
@@ -186,8 +186,12 @@ export class Peer implements IPeer {
 
   //----------------------------------------------
   // Discovery stuff
-  discover<I>(
-    service: DiscoveryService<I>,
+  /** Discover other Earthstar peers using a discovery service, for example other peers on the local network.
+   *
+   * Returns an asynchronous iterable of `DiscoveryEvent`, which describe finding a Peer, another peer initiating sync with you, etc. Some of these events have callbacks which let you initiate sync with the discovered peer.
+   */
+  discover(
+    service: DiscoveryService,
   ): AsyncIterable<DiscoveryEvent> {
     const peer = this;
 

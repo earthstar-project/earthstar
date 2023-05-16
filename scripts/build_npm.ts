@@ -8,8 +8,7 @@ await build({
     { name: "./node", path: "./src/entries/node.ts" },
     { name: "./browser", path: "./src/entries/browser.ts" },
   ],
-  //testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
-  testPattern: "**/syncer/*.test.{ts}",
+  testPattern: "**/!(sync_fs)/*.test.{ts,tsx,js,mjs,jsx}",
   outDir: "./npm",
   compilerOptions: {
     lib: ["dom", "es2021"],
@@ -84,7 +83,7 @@ await build({
     "./src/test/scenarios/scenarios.ts":
       "./src/test/scenarios/scenarios.node.ts",
 
-    "./src/lan/tcp_provider.ts": "./src/lan/tcp_provider.node.ts",
+    "./src/tcp/tcp_provider.ts": "./src/tcp/tcp_provider.node.ts",
 
     "./src/node/chloride.ts": {
       name: "chloride",
@@ -121,9 +120,9 @@ await build({
       name: "ws",
       version: "8.8.1",
     },
-    "../dns-sd/mod.ts": {
+    "https://deno.land/x/dns_sd@2.0.0/mod.ts": {
       name: "ya-dns-sd",
-      version: "2.0.0-test1",
+      version: "2.0.0",
     },
 
     "https://deno.land/std@0.167.0/node/http.ts": "node:http",

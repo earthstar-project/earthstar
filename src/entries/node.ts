@@ -22,4 +22,4 @@ export * from "../server/extensions/sync_web.node.ts";
 export * from "../server/extensions/serve_content.ts";
 
 // LAN discovery
-export * from "../lan/discovery_lan.ts";
+export * from "../discovery/discovery_lan.ts";

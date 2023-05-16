@@ -32,8 +32,8 @@ import { Server } from "../../server/server.node.ts";
 import { IServerExtension } from "../../server/extensions/extension.ts";
 import { ExtensionSyncWeb } from "../../server/extensions/sync_web.node.ts";
 import { createServer } from "https://deno.land/std@0.167.0/node/http.ts";
-import { LANSession } from "../../lan/discovery_lan.ts";
-import { TcpProvider } from "../../lan/tcp_provider.ts";
+import { LANSession } from "../../discovery/discovery_lan.ts";
+import { TcpProvider } from "../../tcp/tcp_provider.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
