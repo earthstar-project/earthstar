@@ -1,6 +1,9 @@
 # Changelog
 
-## next
+## v10.2.0
+
+This is a feature release adding APIs to **automatically discover and sync with
+peers on the local network**.
 
 - (Feature) Added `Peer.discover`, a new method for automatically discovering
   other peers. How it does that it left to the `DiscoveryService` you provide

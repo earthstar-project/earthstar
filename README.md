@@ -58,7 +58,6 @@ import * as Earthstar from "earthstar";
 // Node and browser APIs are namespaced in the NPM distribution:
 import { ReplicaDriverWeb } from "earthstar/browser";
 import { ReplicaDriverSqlite } from "earthstar/node";
-
 ```
 
 We recommend the browser and Deno versions. This module has been built with many
@@ -360,6 +359,28 @@ const allDocsWithAttachments = await replica.addAttachments(allDocs);
 `allDocsWithAttachments` will be an array of all documents with an added
 `attachment` property. The type of this property will either be `DocAttachment`,
 `undefined`, or `ValidationError`.
+
+## Discovering other peers on the local network
+
+Earthstar is able to automatically discover other Earthstar peers on the same
+network, and in turn advertise itself to others.
+
+```ts
+const discoveryLan = new DiscoveryLAN({ name: "My Computer" });
+
+for await (const discoveryEvent of peer.discover(discoveryLan)) {
+  if (discoveryEvent.kind === "PEER DISCOVERED") {
+    discoveryEvent.sync();
+  }
+}
+```
+
+> On Node, the `DiscoveryLAN` API is exported from "earthstar/node".
+>
+> On Deno, this feature uses unstable APIs and is not included with the default
+> module exports. It can be imported from
+> `https://deno.land/x/earthstar/src/discovery/discovery_lan.ts`. Usage also
+> requires the `--unstable` flag.
 
 ## Subscribing to replica changes
 
