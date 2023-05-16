@@ -200,7 +200,8 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
   }
 
   async teardown() {
-    await sleep(500);
+    // Need this to pass on CI.
+    await sleep(100);
 
     this.abortController.abort();
 
@@ -347,6 +348,9 @@ export class WebServerScenario implements ServerScenario {
   }
 
   async close() {
+    // Need this for CI
+    await sleep(100)
+    
     const server = await this.server;
 
     return server.close();
