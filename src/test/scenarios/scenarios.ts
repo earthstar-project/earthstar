@@ -35,6 +35,7 @@ import { IServerExtension } from "../../server/extensions/extension.ts";
 import { ExtensionSyncWeb } from "../../server/extensions/sync_web.ts";
 import { LANSession } from "../../discovery/discovery_lan.ts";
 import { TcpProvider } from "../../tcp/tcp_provider.ts";
+import { sleep } from "../../util/misc.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -198,7 +199,9 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
     );
   }
 
-  teardown() {
+  async teardown() {
+    await sleep(500);
+
     this.abortController.abort();
 
     return this.serve as Promise<void>;
