@@ -228,7 +228,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
 
     (async () => {
       for await (const event of agent.events()) {
-        this.partner.sendEvent({
+        await this.partner.sendEvent({
           to: address,
           ...event,
         });
@@ -239,6 +239,10 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
   /** Handle inbound events from the other peer. */
   private async handleIncomingEvent(event: SyncerEvent) {
     this.bumpingTimeout.bump();
+
+    if (this.isDoneMultiDeferred.state !== "pending") {
+      return;
+    }
 
     switch (event.kind) {
       // Handle an incoming salted handsake
@@ -390,7 +394,7 @@ export class Syncer<IncomingTransferSourceType, FormatsType = DefaultFormats> {
       kind: "upload" | "download";
     },
   ) {
-    if (this.isDoneMultiDeferred.state === "rejected") {
+    if (this.isDoneMultiDeferred.state !== "pending") {
       return;
     }
 

@@ -133,7 +133,7 @@ export class DocDriverMemory implements IReplicaDocDriver {
   }
   async deleteConfig(key: string): Promise<boolean> {
     if (this._isClosed) throw new ReplicaIsClosedError();
-    let had = (key in this._configKv);
+    let had = key in this._configKv;
     delete this._configKv[key];
     return had;
   }

@@ -13,6 +13,8 @@ export class TransferQueue {
 
   private transfersRequestedByUsEnroller = new PromiseEnroller(true);
 
+  private closed = false;
+
   // This status is going to be modified a LOT so it's better to mutate than recreate from scratch.
   private reports: Record<string, Record<string, AttachmentTransferReport>> =
     {};
@@ -61,6 +63,11 @@ export class TransferQueue {
   }
 
   async addTransfer(transfer: AttachmentTransfer<unknown>) {
+    if (this.closed) {
+      transfer.abort();
+      return;
+    }
+
     transfer.onProgress(() => {
       this.updateTransferStatus(transfer);
     });
@@ -81,6 +88,8 @@ export class TransferQueue {
   }
 
   cancel() {
+    this.closed = true;
+
     this.transfersRequestedByUsEnroller.seal();
 
     for (const transfer of this.active) {

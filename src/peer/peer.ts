@@ -14,6 +14,7 @@ import { PartnerLocal } from "../syncer/partner_local.ts";
 import { FormatsArg } from "../formats/format_types.ts";
 import { SyncerManager } from "../syncer/syncer_manager.ts";
 import { ISyncPartner } from "../syncer/syncer_types.ts";
+import { DiscoveryEvent, DiscoveryService } from "../discovery/types.ts";
 
 const logger = new Logger("peer", "orangeRed");
 const J = JSON.stringify;
@@ -181,5 +182,56 @@ export class Peer implements IPeer {
     ) => void | Promise<void>,
   ): () => void {
     return this.syncerManager.onSyncersChange(callback);
+  }
+
+  //----------------------------------------------
+  // Discovery stuff
+  /** Discover other Earthstar peers using a discovery service, for example other peers on the local network.
+   *
+   * Returns an asynchronous iterable of `DiscoveryEvent`, which describe finding a Peer, another peer initiating sync with you, etc. Some of these events have callbacks which let you initiate sync with the discovered peer.
+   */
+  discover(
+    service: DiscoveryService,
+  ): AsyncIterable<DiscoveryEvent> {
+    const peer = this;
+
+    return {
+      async *[Symbol.asyncIterator]() {
+        for await (const event of service.events) {
+          if (event.kind === "SERVICE_STOPPED") {
+            break;
+          }
+
+          if (event.kind === "PEER_EXITED") {
+            yield event;
+            continue;
+          }
+
+          if (event.kind === "PEER_INITIATED_SYNC") {
+            const syncer = await event.begin(peer);
+
+            yield {
+              kind: "PEER_INITIATED_SYNC",
+              description: event.description,
+              syncer: syncer,
+            };
+            continue;
+          }
+
+          yield {
+            kind: "PEER_DISCOVERED",
+            description: event.description,
+            sync: async (opts) => {
+              const syncer = await event.begin(
+                peer,
+                opts?.syncContinuously ? "continuous" : "once",
+              );
+
+              return syncer;
+            },
+          };
+        }
+      },
+    };
   }
 }

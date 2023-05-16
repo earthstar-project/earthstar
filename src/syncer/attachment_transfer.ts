@@ -66,43 +66,55 @@ export class AttachmentTransfer<F> {
         }
       };
 
-      let bumpingTimeout: BumpingTimeout | null = null;
+      const getLoaded = () => {
+        return this.loaded;
+      };
 
-      const counterStream = new ReadableStream<Uint8Array>({
-        async start(controller) {
-          const newReader = stream.getReader();
+      const makeCounterStream = () =>
+        new ReadableStream<Uint8Array>({
+          async start(controller) {
+            const newReader = stream.getReader();
 
-          // @ts-ignore Node's ReadableStream types does not like this for some reason.
-          reader = newReader;
+            // @ts-ignore Node's ReadableStream types does not like this for some reason.
+            reader = newReader;
 
-          bumpingTimeout = new BumpingTimeout(() => {
-            controller.error("Attachment download timed out.");
-          }, TIMEOUT_MS);
+            const bumpingTimeout = new BumpingTimeout(() => {
+              controller.error("Attachment download timed out.");
+            }, TIMEOUT_MS);
 
-          while (true) {
-            const { done, value } = await newReader.read();
+            while (true) {
+              const { done, value } = await newReader.read();
 
-            // Clear timeout here.
-            bumpingTimeout.bump();
+              // Clear timeout here.
+              bumpingTimeout.bump();
 
-            if (done) {
-              break;
+              if (done) {
+                break;
+              }
+
+              updateLoaded(value.byteLength);
+
+              controller.enqueue(value);
+
+              if (getLoaded() >= attachmentInfo.size) {
+                break;
+              }
             }
 
-            updateLoaded(value.byteLength);
-
-            controller.enqueue(value);
-          }
-
-          bumpingTimeout.close();
-          controller.close();
-        },
-      });
+            bumpingTimeout.close();
+            controller.close();
+          },
+        });
 
       this.transferOp.resolve(() => {
         const promise = deferred<void>();
 
-        replica.ingestAttachment(format, doc, counterStream, counterpartId)
+        replica.ingestAttachment(
+          format,
+          doc,
+          makeCounterStream(),
+          counterpartId,
+        )
           .then(
             (result) => {
               if (isErr(result) && this.loaded === 0) {
@@ -123,6 +135,7 @@ export class AttachmentTransfer<F> {
               promise.resolve();
             },
           ).catch((err) => {
+            console.log(err);
             promise.reject(err);
           });
 
@@ -162,6 +175,8 @@ export class AttachmentTransfer<F> {
         this.transferOp.resolve(() =>
           attachmentRes.stream().then((readable) => {
             return readable.pipeThrough(counterTransform).pipeTo(stream);
+          }).catch((err) => {
+            console.log(err);
           })
         );
       });

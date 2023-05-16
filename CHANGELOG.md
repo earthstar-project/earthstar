@@ -1,5 +1,14 @@
 # Changelog
 
+## next
+
+- (Feature) Added `Peer.discover`, a new method for automatically discovering
+  other peers. How it does that it left to the `DiscoveryService` you provide
+  it.
+- (Feature) Added `DiscoveryLAN`, a discovery service for finding and
+  advertising yourself to other peers on the local network. Works for both Node
+  and Deno, requires `--unstable` on Deno.
+
 ## v10.1.0
 
 - (Feature) Added `SharedSettings#redeemInvitationURL`, which adds the share,

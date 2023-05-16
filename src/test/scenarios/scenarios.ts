@@ -29,11 +29,13 @@ import { AttachmentDriverIndexedDB } from "../../replica/attachment_drivers/inde
 import { DocDriverIndexedDB } from "../../replica/doc_drivers/indexeddb.ts";
 import { deferred } from "../../../deps.ts";
 import { SyncAppetite } from "../../syncer/syncer_types.ts";
-import { randomId } from "../../util/misc.ts";
 import { getFreePort } from "https://deno.land/x/free_port@v1.2.0/mod.ts";
 import { Server } from "../../server/server.ts";
 import { IServerExtension } from "../../server/extensions/extension.ts";
 import { ExtensionSyncWeb } from "../../server/extensions/sync_web.ts";
+import { LANSession } from "../../discovery/discovery_lan.ts";
+import { TcpProvider } from "../../tcp/tcp_provider.ts";
+import { sleep } from "../../util/misc.ts";
 
 export const cryptoScenarios: Scenario<ICryptoDriver>[] = [
   ...universalCryptoDrivers,
@@ -119,6 +121,7 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
 
   formats: FormatsArg<F>;
   appetite: SyncAppetite;
+  syncContinuousWait = 800;
 
   constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
     this.formats = formats;
@@ -141,14 +144,13 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
 
         const syncer = await serverSyncerPromise;
 
-        const { shareAddress, formatName, path, author, kind } =
-          transferMatch.pathname.groups;
+        const { path, kind } = transferMatch.pathname.groups;
 
         syncer.handleTransferRequest({
-          shareAddress,
-          formatName,
+          shareAddress: transferMatch.pathname.groups["shareAddress"]!,
+          formatName: transferMatch.pathname.groups["formatName"]!,
           path: `/${path}`,
-          author,
+          author: transferMatch.pathname.groups["author"]!,
           kind: kind as "download" | "upload",
           source: socket,
         });
@@ -197,10 +199,115 @@ export class PartnerScenarioWeb<F> implements SyncPartnerScenario<F> {
     );
   }
 
-  teardown() {
+  async teardown() {
+    // Need this to pass on CI.
+    await sleep(100);
+
     this.abortController.abort();
 
     return this.serve as Promise<void>;
+  }
+}
+
+export class PartnerScenarioTCP<F> implements SyncPartnerScenario<F> {
+  private abortController: AbortController;
+  formats: FormatsArg<F>;
+  appetite: SyncAppetite;
+  syncContinuousWait = 800;
+
+  constructor(formats: FormatsArg<F>, appetite: SyncAppetite) {
+    this.formats = formats;
+    this.appetite = appetite;
+    this.abortController = new AbortController();
+  }
+
+  async setup(peerA: IPeer, peerB: IPeer) {
+    const lanSessionPromiseA = deferred<LANSession>();
+    const lanSessionPromiseB = deferred<LANSession>();
+
+    // Set up listeners...
+    const portA = await getFreePort(17171);
+    const portB = await getFreePort(17172);
+
+    const tcpProvider = new TcpProvider();
+
+    const listenerA = tcpProvider.listen({ port: portA });
+    const listenerB = tcpProvider.listen({ port: portB });
+
+    this.abortController.signal.onabort = () => {
+      listenerA.close();
+      listenerB.close();
+    };
+
+    (async () => {
+      for await (const conn of listenerA) {
+        const session = await lanSessionPromiseA;
+
+        await session.addConn(conn);
+      }
+    })();
+
+    (async () => {
+      for await (const conn of listenerB) {
+        const session = await lanSessionPromiseB;
+
+        await session.addConn(conn);
+      }
+    })();
+
+    lanSessionPromiseA.resolve(
+      new LANSession(
+        {
+          target: {
+            hostname: "127.0.0.1",
+            name: "Peer B",
+          },
+          onComplete: () => {},
+          ourPort: portA,
+        },
+      ),
+    );
+
+    lanSessionPromiseB.resolve(
+      new LANSession({
+        initiator: {
+          appetite: this.appetite,
+          port: portA,
+        },
+        target: {
+          hostname: "127.0.0.1",
+          name: "Peer A",
+        },
+        ourPort: portB,
+        onComplete: () => {},
+      }),
+    );
+
+    const lanSessionA = await lanSessionPromiseA;
+    const lanSessionB = await lanSessionPromiseB;
+
+    const syncerA = peerA.addSyncPartner(
+      await lanSessionA.partner,
+      "Peer B",
+    );
+    const syncerB = peerB.addSyncPartner(
+      await lanSessionB.partner,
+      "Peer A",
+    );
+
+    lanSessionA.syncer.resolve(syncerA);
+    lanSessionB.syncer.resolve(syncerB);
+
+    return [syncerA, syncerB] as [
+      Syncer<unknown, F>,
+      Syncer<unknown, F>,
+    ];
+  }
+
+  teardown() {
+    this.abortController.abort();
+
+    return Promise.resolve();
   }
 }
 
@@ -209,10 +316,17 @@ export const syncDriverScenarios: Scenario<
     formats: FormatsArg<F>,
     appetite: SyncAppetite,
   ) => SyncPartnerScenario<F>
->[] = [...universalPartners, {
-  name: "Web",
-  item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
-}];
+>[] = [
+  ...universalPartners,
+  {
+    name: "Web",
+    item: (formats, appetite) => new PartnerScenarioWeb(formats, appetite),
+  },
+  {
+    name: "TCP",
+    item: (formats, appetite) => new PartnerScenarioTCP(formats, appetite),
+  },
+];
 
 export class WebServerScenario implements ServerScenario {
   private port: number;
@@ -234,6 +348,9 @@ export class WebServerScenario implements ServerScenario {
   }
 
   async close() {
+    // Need this for CI
+    await sleep(100)
+    
     const server = await this.server;
 
     return server.close();

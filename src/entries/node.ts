@@ -20,3 +20,6 @@ export * from "../server/extensions/known_shares.node.ts";
 export * from "../server/extensions/server_settings.ts";
 export * from "../server/extensions/sync_web.node.ts";
 export * from "../server/extensions/serve_content.ts";
+
+// LAN discovery
+export * from "../discovery/discovery_lan.ts";

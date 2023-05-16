@@ -48,10 +48,11 @@ export class ExtensionSyncWeb<F> implements IServerExtension {
     const transferMatch = transferPattern.exec(req.url);
 
     if (transferMatch) {
-      const { syncerId, shareAddress, formatName, path, author, kind } =
-        transferMatch.pathname.groups;
+      const { path, kind } = transferMatch.pathname.groups;
 
-      const syncer = this.syncers.get(syncerId);
+      const syncer = this.syncers.get(
+        transferMatch.pathname.groups["syncerId"]!,
+      );
 
       if (!syncer) {
         return new Response("Not found", {
@@ -63,10 +64,10 @@ export class ExtensionSyncWeb<F> implements IServerExtension {
 
       //  We don't await this, as we need to return the response.
       syncer.handleTransferRequest({
-        shareAddress,
-        formatName,
+        shareAddress: transferMatch.pathname.groups["shareAddress"]!,
+        formatName: transferMatch.pathname.groups["formatName"]!,
         path: `/${path}`,
-        author,
+        author: transferMatch.pathname.groups["author"]!,
         kind: kind as "download" | "upload",
         source: socket,
       });

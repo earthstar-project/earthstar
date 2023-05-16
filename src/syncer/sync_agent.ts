@@ -197,7 +197,7 @@ export class SyncAgent<F> {
       return;
     }
 
-    this.isDoneMultiDeferred.reject();
+    this.isDoneMultiDeferred.reject(reason || "Cancelled");
 
     await this.statusBus.send(this.getStatus());
 
@@ -624,34 +624,7 @@ class SyncAgentReconciler<F> {
     if (opts.initiateMessaging) {
       treeIsReady.then(() => {
         for (
-          const msg of rangeMessenger.initialMessages((items) => {
-            // Find first item with timestamp gte last week, split there.
-
-            const lastWeek = Date.now() - (7 * 24 * 60 * 60 * 1000);
-
-            const firstItemLastWeekIndex = items.findIndex((item) => {
-              const [timestamp] = item.split(" ");
-
-              const timestampInt = parseInt(timestamp);
-
-              return timestampInt / 1000 > lastWeek;
-            });
-
-            if (
-              firstItemLastWeekIndex > 0 &&
-              firstItemLastWeekIndex > items.length / 2
-            ) {
-              return [
-                items.slice(0, firstItemLastWeekIndex),
-                items.slice(firstItemLastWeekIndex),
-              ];
-            }
-
-            // If items in the last week are bigger than all time, just split in half.
-            const halfway = Math.round(items.length / 2);
-
-            return [items.slice(0, halfway), items.slice(halfway)];
-          })
+          const msg of rangeMessenger.initialMessages()
         ) {
           opts.outboundEventQueue.push({
             "kind": "RANGE_MSG",

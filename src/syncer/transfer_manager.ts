@@ -84,7 +84,6 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
   }
 
   private async queueTransfer(transfer: AttachmentTransfer<unknown>) {
-    // Check if we already queued it from the queue
     if (this.queue.hasQueuedTransfer(transfer.hash, transfer.kind)) {
       return;
     }
@@ -107,6 +106,10 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
       throw new EarthstarError(
         "TransferManager: attempted to download doc with no attachment.",
       );
+    }
+
+    if (this.queue.hasQueuedTransfer(attachmentInfo.hash, "download")) {
+      return "queued";
     }
 
     const result = await this.partner.getDownload({
@@ -151,6 +154,10 @@ export class TransferManager<FormatsType, IncomingAttachmentSourceType> {
     transferOpts: Omit<GetTransferOpts, "syncerId">,
     replica: Replica,
   ): Promise<boolean> {
+    if (this.queue.hasQueuedTransfer(transferOpts.attachmentHash, "upload")) {
+      return false;
+    }
+
     const format = this.formatsLookup[transferOpts.doc.format];
 
     const attachment = await replica.getAttachment(

@@ -10,7 +10,7 @@
       "--unstable",
       "--allow-all"
     ],
-    "scriptPath" : "example.ts",
+    "scriptPath" : "debug\/partner_tcp.ts",
     "stopOnEntry" : true
   },
   "openLogOnRun" : "fail"

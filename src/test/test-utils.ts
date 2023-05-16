@@ -162,9 +162,9 @@ export function writeRandomDocs(
 ) {
   const fstRand = randomId();
 
-  const hasAttachment = Math.random() >= 0.5;
-
   const setPromises = Array.from({ length: n }, () => {
+    const hasAttachment = Math.random() >= 0.5;
+
     const rand = randomId();
 
     if (hasAttachment) {

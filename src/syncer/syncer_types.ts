@@ -208,6 +208,7 @@ export interface ISyncPartner<IncomingAttachmentSourceType> {
   /** Handles an out-of-band request from the other peer to start a transfer.
    * @returns A `Readable<Uint8Array>` for a download, A `WritableStream<Uint8Array>` for an upload, `undefined` if a download request was made an we have no attachment to serve, or `NotSupportedError` in the case we do not expect to handle external requests (e.g. in the case of a browser syncing with a server).
    */
+  // TODO: This method should be the one responsible for determining the transfer options (path, share, author, etc...). Right now that is done by an additional server layer.
   handleTransferRequest(
     source: IncomingAttachmentSourceType,
     kind: "upload" | "download",
