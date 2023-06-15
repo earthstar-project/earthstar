@@ -98,7 +98,7 @@ export function parseShareAddress(
     maxPubkeyLength: 53,
     allowedNameCharacters: workspaceNameChars,
     allowedPubkeyCharacters: workspaceKeyChars,
-    pubkeyMustStartWithB: false,
+    pubkeyMustStartWithB: true,
   });
 }
 
