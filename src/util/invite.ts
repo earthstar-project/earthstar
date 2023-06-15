@@ -61,7 +61,12 @@ export async function parseInvitationURL(
   try {
     const url = new URL(invitationURL);
 
-    const isValidShareAddress = parseShareAddress(url.hostname);
+    // Firefox and Chrome do not parse the share component as a path name and put it in the pathname instead. Bummer.
+    const shareAddress = url.hostname.length > 0
+      ? url.hostname
+      : url.pathname.replaceAll("/", "");
+
+    const isValidShareAddress = parseShareAddress(shareAddress);
 
     if (isErr(isValidShareAddress)) {
       return new ValidationError(
@@ -104,19 +109,19 @@ export async function parseInvitationURL(
 
     if (secret) {
       const isValid = await Crypto.checkKeypairIsValid({
-        shareAddress: url.hostname,
+        shareAddress: shareAddress,
         secret: secret,
       });
 
       if (isErr(isValid)) {
         return new ValidationError(
-          `Invitation contains the wrong secret for share ${url.hostname}.`,
+          `Invitation contains the wrong secret for share ${shareAddress}.`,
         );
       }
     }
 
     return {
-      shareAddress: url.hostname,
+      shareAddress: shareAddress,
       secret: secret || undefined,
       servers: servers,
     };
