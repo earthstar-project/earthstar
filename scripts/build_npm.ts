@@ -95,7 +95,7 @@ await build({
     "./src/replica/driver_fs.ts": "./src/replica/driver_fs.node.ts",
     "https://esm.sh/better-sqlite3?dts": {
       name: "better-sqlite3",
-      version: "7.5.0",
+      version: "8.5.0",
     },
     "https://raw.githubusercontent.com/sgwilym/noble-ed25519/153f9e7e9952ad22885f5abb3f6abf777bef4a4c/mod.ts":
       {
