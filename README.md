@@ -1,5 +1,9 @@
 # Earthstar
 
+> **This version of Earthstar does not yet use
+> [Willow](https://willowprotocol.org). The next version will, and is being
+> worked on! **
+
 [Earthstar](https://earthstar-project.org) is a small and resilient distributed
 storage protocol designed with a strong focus on simplicity and versatility,
 with the social realities of peer-to-peer computing kept in mind.

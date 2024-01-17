@@ -1,4 +1,27 @@
 {
+  "co.gwil.deno.config.cacheOnSave" : "true",
+  "co.gwil.deno.config.documentPreloadLimit" : 256,
   "co.gwil.deno.config.formatOnSave" : "null",
-  "co.gwil.deno.config.tsconfig" : "deno.json"
+  "co.gwil.deno.config.tsconfig" : "deno.json",
+  "deno.disablePaths" : [
+    "npm"
+  ],
+  "deno.enablePaths" : [
+    "src-willow",
+    "deps.ts"
+  ],
+  "eablokker.tabsSidebar.config.customKindGroupsOrder" : [
+    "typescript"
+  ],
+  "eablokker.tabsSidebar.config.customTabOrder" : [
+    "\/Users\/gwil\/Projects\/earthstar\/src-willow\/crypto\/types.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/src\/crypto\/updatable_hash.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/src-willow\/crypto\/crypto.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/src-willow\/crypto\/keypair.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/src-willow\/core_validators\/addresses.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/deps.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/src\/util\/misc.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/src-willow\/crypto\/drivers\/webcrypto.ts",
+    "\/Users\/gwil\/Projects\/earthstar\/src\/crypto\/crypto-driver-chloride.ts"
+  ]
 }

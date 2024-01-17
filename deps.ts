@@ -1,3 +1,13 @@
+export * as Willow from "../willow-js/mod.universal.ts";
+export * as Meadowcap from "../meadowcap/mod.ts";
+export {
+  decodeBase32 as stdDecodeBase32,
+  encodeBase32 as stdEncodeBase32,
+} from "https://deno.land/std@0.203.0/encoding/base32.ts";
+export { crypto } from "https://deno.land/std@0.203.0/crypto/crypto.ts";
+
+// Oldies.
+
 export {
   shallowEqualArrays,
   shallowEqualObjects,
