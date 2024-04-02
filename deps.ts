@@ -1,13 +1,21 @@
 export * as Willow from "../willow-js/mod.universal.ts";
+//export * from "https://deno.land/x/willow_utils@0.4.0/mod.ts";
+export * from "../willow_utils/mod.ts";
 export * as Meadowcap from "../meadowcap/mod.ts";
 export {
   decodeBase32 as stdDecodeBase32,
   encodeBase32 as stdEncodeBase32,
 } from "https://deno.land/std@0.203.0/encoding/base32.ts";
 export { crypto } from "https://deno.land/std@0.203.0/crypto/crypto.ts";
+export { concat } from "https://deno.land/std@0.203.0/bytes/concat.ts";
+export {
+  decodeBase64Url,
+  encodeBase64Url,
+} from "https://deno.land/std@0.203.0/encoding/base64url.ts";
 
 // Oldies.
 
+/*
 export {
   shallowEqualArrays,
   shallowEqualObjects,
@@ -35,4 +43,4 @@ export {
   deferred,
 } from "https://deno.land/std@0.167.0/async/deferred.ts";
 export { equals as bytesEquals } from "https://deno.land/std@0.167.0/bytes/equals.ts";
-export { concat } from "https://deno.land/std@0.167.0/bytes/concat.ts";
+*/

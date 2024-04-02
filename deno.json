@@ -1,7 +1,6 @@
 {
   "imports": {
-    "$std/": "https://deno.land/std@0.203.0/",
-    "$willow": "../willow-js/"
+    "$std/": "https://deno.land/std@0.203.0/"
   },
   "tasks": {
     "test": "deno test --allow-all --unstable src",

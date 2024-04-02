@@ -32,7 +32,7 @@ export const digits = "0123456789";
 export const b32chars = alphaLower + "234567";
 
 /** All characters allowed in an identity's short name. */
-export const authorNameChars = alphaLower + digits;
+export const authorNameChars = digits + alphaLower;
 /** All characters allowed in an identity's pub key. */
 export const authorKeyChars = b32chars;
 /** All characters allowed in an identity's public address. */

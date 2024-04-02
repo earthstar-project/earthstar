@@ -34,7 +34,7 @@ export function assembleShareAddress(
   encodedPubkey: Base32String,
 ): ShareAddress // This doesn't check if it's valid; to do that, parse it and see if parsing has an error.
 {
-  return `${communal ? "-" : "+"}${name}.${encodedPubkey}`;
+  return `${communal ? "+" : "-"}${name}.${encodedPubkey}`;
 }
 
 /** Check that an identity address is valid. */
@@ -90,7 +90,7 @@ export function parseShareAddress(
   address: ShareAddress,
 ): ParsedAddress | ValidationError {
   return parseAddress(address, {
-    sigils: ["+"],
+    sigils: ["+", "-"],
     separator: ".",
     minNameLength: 1,
     maxNameLength: 15,
@@ -188,4 +188,18 @@ export function parseAddress(
     name,
     pubkey,
   };
+}
+
+export function successorShortName(shortname: string): string | null {
+  const [first, second, third, last] = shortname;
+
+  const pos = authorNameChars.indexOf(last);
+
+  const nextLast = authorNameChars[pos + 1];
+
+  if (!nextLast) {
+    return null;
+  }
+
+  return first + second + third + nextLast;
 }

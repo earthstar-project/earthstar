@@ -4,10 +4,11 @@
   "co.gwil.deno.config.formatOnSave" : "null",
   "co.gwil.deno.config.tsconfig" : "deno.json",
   "deno.disablePaths" : [
-    "npm"
+
   ],
   "deno.enablePaths" : [
     "src-willow",
+    "debug",
     "deps.ts"
   ],
   "eablokker.tabsSidebar.config.customKindGroupsOrder" : [

@@ -1,3 +1,4 @@
+import { decodeBase64Url, encodeBase64Url } from "../../../deps.ts";
 import { CryptoDriver } from "../types.ts";
 
 export class CryptoDriverWebNonExtractable implements CryptoDriver<CryptoKey> {
@@ -50,9 +51,9 @@ export class CryptoDriverWebNonExtractable implements CryptoDriver<CryptoKey> {
   }
 }
 
-export class CryptoDriverWebExtractable implements CryptoDriver<JsonWebKey> {
+export class CryptoDriverWebExtractable implements CryptoDriver<Uint8Array> {
   async generateKeypair(): Promise<
-    { publicKey: Uint8Array; privateKey: JsonWebKey }
+    { publicKey: Uint8Array; privateKey: Uint8Array }
   > {
     const { publicKey, privateKey } = await crypto.subtle.generateKey(
       "Ed25519",
@@ -63,16 +64,25 @@ export class CryptoDriverWebExtractable implements CryptoDriver<JsonWebKey> {
     const pubkeyBuffer = await crypto.subtle.exportKey("raw", publicKey);
     const privateKeyJwk = await crypto.subtle.exportKey("jwk", privateKey);
 
+    // This is the secret key
+    const privateKeyFromJkw = decodeBase64Url(privateKeyJwk.d!);
+
     return {
       publicKey: new Uint8Array(pubkeyBuffer),
-      privateKey: privateKeyJwk,
+      privateKey: privateKeyFromJkw,
     };
   }
 
-  async sign(bytes: Uint8Array, privateKey: JsonWebKey): Promise<Uint8Array> {
+  async sign(bytes: Uint8Array, privateKey: Uint8Array): Promise<Uint8Array> {
     const imported = await crypto.subtle.importKey(
       "jwk",
-      privateKey,
+      {
+        kty: "OKP",
+        crv: "Ed25519",
+        key_ops: ["sign"],
+        ext: true,
+        d: encodeBase64Url(privateKey),
+      },
       { name: "Ed25519" },
       true,
       ["sign"],
@@ -96,8 +106,8 @@ export class CryptoDriverWebExtractable implements CryptoDriver<JsonWebKey> {
       "raw",
       publicKey,
       { name: "Ed25519" },
-      true, /* extractable */
-      ["deriveKey", "deriveBits"],
+      true,
+      ["verify"],
     );
 
     return crypto.subtle.verify(

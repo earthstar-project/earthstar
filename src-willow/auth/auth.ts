@@ -1,3 +1,4 @@
 import { Meadowcap } from "../../deps.ts";
+import { meadowcapParams } from "../parameters/schemes.ts";
 
-// Meadowcap instance.
+export const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);

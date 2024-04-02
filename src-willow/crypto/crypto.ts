@@ -64,6 +64,18 @@ export class Crypto<PrivateKey> {
     return keypair;
   }
 
+  generateCommunalNamespaceAddress(
+    name: string,
+  ): ShareAddress {
+    let pubkey = crypto.getRandomValues(new Uint8Array(32));
+
+    while ((pubkey[pubkey.byteLength - 1] & 0x1) === 0x1) {
+      pubkey = crypto.getRandomValues(new Uint8Array(32));
+    }
+
+    return assembleShareAddress(true, name, encodeBase32(pubkey));
+  }
+
   /**
    * Generate a new *owned* share keypair — a keypair of public and private keys as strings encoded in base32.
    *
@@ -79,12 +91,22 @@ export class Crypto<PrivateKey> {
   ): Promise<OwnedNamespaceKeypair<PrivateKey> | ValidationError> {
     const { publicKey, privateKey } = await this.driver.generateKeypair();
 
+    let candidatePubKey = publicKey;
+    let candidatePrivateKey = privateKey;
+
+    while ((candidatePubKey[candidatePubKey.byteLength - 1] & 0x1) !== 0x1) {
+      const { publicKey, privateKey } = await this.driver.generateKeypair();
+
+      candidatePubKey = publicKey;
+      candidatePrivateKey = privateKey;
+    }
+
     // Encode the pubkey and secret.
-    const pubkeyBase32 = encodeBase32(publicKey);
+    const pubkeyBase32 = encodeBase32(candidatePubKey);
 
     const keypair = {
       shareAddress: assembleShareAddress(false, name, pubkeyBase32),
-      privateKey,
+      privateKey: candidatePrivateKey,
     };
 
     const isValidRes = checkShareIsValid(keypair.shareAddress);
