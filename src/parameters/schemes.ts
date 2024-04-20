@@ -1,3 +1,4 @@
+import { equalsBytes } from "../../../willow_utils/deps.ts";
 import {
   bigintToBytes,
   concat,
@@ -110,6 +111,8 @@ export const namespaceScheme: Willow.NamespaceScheme<ShareAddress> = {
   isEqual: (a, b) => {
     return a === b;
   },
+  defaultNamespaceId:
+    "@0.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 };
 
 export const subspaceScheme: Willow.SubspaceScheme<IdentityAddress> = {
@@ -200,7 +203,7 @@ export const subspaceScheme: Willow.SubspaceScheme<IdentityAddress> = {
     return orderBytes(pubKeyA, pubKeyB);
   },
   minimalSubspaceId:
-    `$0000.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`,
+    `@a000.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`,
 };
 
 export const pathScheme: PathScheme = {
@@ -215,12 +218,15 @@ export const payloadScheme: Willow.PayloadScheme<ArrayBuffer> = {
   },
   encodedLength: () => 32,
   decode: (encoded) => {
-    return encoded.subarray(0, 32).buffer;
+    return encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + 32);
   },
   decodeStream: async (bytes) => {
     await bytes.nextAbsolute(32);
 
-    const digest = bytes.array.slice(0, 32).buffer;
+    const digest = bytes.array.buffer.slice(
+      bytes.array.byteOffset,
+      bytes.array.byteOffset + 32,
+    );
 
     bytes.prune(32);
 
@@ -232,6 +238,40 @@ export const payloadScheme: Willow.PayloadScheme<ArrayBuffer> = {
   fromBytes: (bytes) => {
     return crypto.subtle.digest("SHA-256", bytes);
   },
+  defaultDigest: new Uint8Array([
+    227,
+    176,
+    196,
+    66,
+    152,
+    252,
+    28,
+    20,
+    154,
+    251,
+    244,
+    200,
+    153,
+    111,
+    185,
+    36,
+    39,
+    174,
+    65,
+    228,
+    100,
+    155,
+    147,
+    76,
+    164,
+    149,
+    153,
+    27,
+    120,
+    82,
+    184,
+    85,
+  ]),
 };
 
 const cryptoDriver = new CryptoDriverWebExtractable();
@@ -386,7 +426,7 @@ export const authorisationScheme: Willow.AuthorisationScheme<
       );
     },
     decode: (encoded) => {
-      const signature = encoded.subarray(0, 32);
+      const signature = encoded.subarray(0, 64);
       const capability = Meadowcap.decodeMcCapability({
         encodingNamespace: namespaceScheme,
         encodingNamespaceSig:
@@ -395,7 +435,7 @@ export const authorisationScheme: Willow.AuthorisationScheme<
         encodingUserSig: meadowcapParams.userScheme.encodings.signature,
         orderSubspace: subspaceScheme.order,
         pathScheme: pathScheme,
-      }, encoded.subarray(32));
+      }, encoded.subarray(64));
 
       return {
         capability,
@@ -459,5 +499,26 @@ export const fingerprintScheme: Willow.FingerprintScheme<
   },
   fingerprintCombine: (a, b) => {
     return addBytes(new Uint8Array(a), new Uint8Array(b), 32);
+  },
+  isEqual: (a, b) => {
+    return equalsBytes(new Uint8Array(a), new Uint8Array(b));
+  },
+  encoding: {
+    encode: (fp) => {
+      return new Uint8Array(fp);
+    },
+    decode: (bytes) => {
+      return bytes.subarray(0, 32);
+    },
+    decodeStream: async (bytes) => {
+      await bytes.nextAbsolute(32);
+
+      const fingerprint = bytes.array.slice(0, 32);
+
+      bytes.prune(32);
+
+      return fingerprint;
+    },
+    encodedLength: () => 32,
   },
 };

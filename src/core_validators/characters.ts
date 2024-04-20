@@ -79,6 +79,6 @@ export const workspaceAddressChars = workspaceNameChars + b32chars + "+.";
 //
 
 /** All special characters permitted in a document's path. */
-export const pathPunctuation = "/'()-._~!$&+,:=@%"; // note double quotes are not included
+export const pathPunctuation = "'()-._~!$&+,:=@%"; // note double quotes are not included
 /** All characters permitted in a document's path. */
 export const pathChars = alphaLower + alphaUpper + digits + pathPunctuation;
