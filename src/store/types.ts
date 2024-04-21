@@ -5,15 +5,25 @@ import { Base32String } from "../encoding/types.ts";
 
 export type Path = string[];
 
+export type Payload = Willow.Payload;
+
 export type Document = {
+  /** The share this document belongs to. */
   share: ShareAddress;
+  /** The identity associated with this document. */
   identity: IdentityAddress;
-  path: string[];
+  /** The path this document corresponds to. */
+  path: Path;
+  /** When the document was written. */
   timestamp: bigint;
+  /** The size of the document's payload in bytes. */
   size: bigint;
+  /** The SHA-256 digest of the payload, encoded in base 32. */
   digest: Base32String;
+  /** The identity used to authorise this document's creation. */
   signedBy: IdentityAddress;
-  payload: Willow.Payload | undefined;
+  /** The data associated with this document. */
+  payload: Payload | undefined;
 };
 
 export type StoreDriverOpts = "memory" | {
@@ -28,7 +38,7 @@ export type StoreDriverOpts = "memory" | {
 
 export type Query = {
   /** A path all documents must be prefixed by. */
-  pathPrefix?: string[];
+  pathPrefix?: Path;
   /** The identity which wrote the document. */
   identity?: IdentityAddress;
   /** The earliest point at which a document was written, in microseconds. */

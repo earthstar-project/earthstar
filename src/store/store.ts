@@ -39,7 +39,7 @@ import { Path } from "./types.ts";
  * const doc = await store.get({
  *   identity: "@suzy.b3kxcquuxuckzqcovqhtk32ncj6aiixk46zg6pkfocdkhpst4selq",
  *   path: ['greetings', 'earth'],
- * })
+ * });
  * ```
  */
 export class Store extends EventTarget {
