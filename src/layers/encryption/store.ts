@@ -20,9 +20,10 @@ import { parse } from "jsr:@std/yaml";
 export type EncryptionRule = {
   // from: TODO
   // to: TODO
-  key: string;
+  algorithm: 'base64' | 'none';
+  kdf: 'path-based' | 'per-key' | 'static';
+  keyName: string;
   recursive: boolean;
-  type: 'base64' | 'none' | 'path-based' | 'per-key' | 'static';
 }
 
 export type EncryptionSetting = {
@@ -74,9 +75,10 @@ export class Store {
     let foundPath: Path = [];
     let settings: EncryptionSetting = {
       rules: [{
-        key: '',
+        algorithm: 'none',
+        kdf: 'static',
+        keyName: '',
         recursive: true,
-        type: 'none',
       }],
     }
 
@@ -119,6 +121,24 @@ export class Store {
     return settings;
   }
 
+  async deriveKey(
+    identity: IdentityAddress,
+    path: Path,
+    rule: EncryptionRule,
+  ): Promise<string> {
+    switch(rule.kdf) {
+      case "path-based": {
+        return "FIXME";
+      }
+      case "per-key": {
+        return "FIXME";
+      }
+      case "static": {
+        return "FIXME";
+      }
+    }
+  }
+
   async encryptPath(
     identity: IdentityAddress,
     path: Path,
@@ -133,23 +153,19 @@ export class Store {
       const elemSettings = await this.getEncryptionSettingsForPath(identity, tmpPath, "path");
       let elem: string;
       const plain = tmpPath.slice(-1)[0];
-      switch(elemSettings.rules[0].type) {
+
+      const key = this.deriveKey(
+        identity,
+        tmpPath,
+        elemSettings.rules[0],
+      )
+      switch(elemSettings.rules[0].algorithm) {
         case "none": {
           elem = plain;
           break;
         }
         case "base64": {
           elem = btoa(plain);
-          break;
-        }
-        case "static": {
-          // FIXME implement algorithm
-          elem = "FIXME";
-          break;
-        }
-        default: {
-          // FIXME panic
-          elem = "FIXME";
           break;
         }
       }
@@ -170,7 +186,7 @@ export class Store {
 
     const elemSettings = await this.getEncryptionSettingsForPath(identity, path, "payload");
 
-    switch(elemSettings.rules[0].type) {
+    switch(elemSettings.rules[0].algorithm) {
       case "none": {
         return payload;
       }
@@ -180,16 +196,7 @@ export class Store {
         : new Uint8Array(await Willow.collectUint8Arrays(payload));
         return new TextEncoder().encode(btoa(String.fromCharCode(...bytes)));
       }
-      case "static": {
-        // FIXME implement algorithm
-      }
-      default: {
-        // FIXME panic
-      }
     }
-
-    // FIXME hack
-    return payload;
   }
 
   async decryptPath(
@@ -206,23 +213,13 @@ export class Store {
       const elemSettings = await this.getEncryptionSettingsForPath(identity, tmpPath, "path");
       let elem: string;
       const encrypted = tmpPath.slice(-1)[0];
-      switch(elemSettings.rules[0].type) {
+      switch(elemSettings.rules[0].algorithm) {
         case "none": {
           elem = encrypted;
           break;
         }
         case "base64": {
           elem = atob(encrypted);
-          break;
-        }
-        case "static": {
-          // FIXME implement algorithm
-          elem = "FIXME";
-          break;
-        }
-        default: {
-          // FIXME panic
-          elem = "FIXME";
           break;
         }
       }
@@ -243,7 +240,7 @@ export class Store {
 
     const elemSettings = await this.getEncryptionSettingsForPath(identity, path, "payload");
 
-    switch(elemSettings.rules[0].type) {
+    switch(elemSettings.rules[0].algorithm) {
       case "none": {
         return payload;
       }
@@ -254,16 +251,7 @@ export class Store {
         const ret = new TextEncoder().encode(atob(new TextDecoder().decode(bytes)));
         return ret;
       }
-      case "static": {
-        // FIXME implement algorithm
-      }
-      default: {
-        // FIXME panic
-      }
     }
-
-    // FIXME hack
-    return payload;
   }
 
   async decryptDocument(
