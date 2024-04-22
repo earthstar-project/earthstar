@@ -47,19 +47,49 @@ Deno.test("Store.getAllEncryptionSettings", async () => {
   await store.set({
     identity: identity.identityAddress,
     path: ["encryption", "1.0", "payload.yaml"],
+    payload: new TextEncoder().encode(stringify({
+      rules: [{
+        algorithm: "none",
+        kdf: "static",
+        keyName: "",
+        pathPattern: ["**"],
+        type: "payload",
+      }],
+    })),
+  }, auth);
+
+  await store.set({
+    identity: identity.identityAddress,
+    path: ["encryption", "1.0", "invalid", "payload.yaml"],
     payload: new TextEncoder().encode("Hello world"),
   }, auth);
 
   await store.set({
     identity: identity.identityAddress,
     path: ["encryption", "1.0", "foo", "bar", "payload.yaml"],
-    payload: new TextEncoder().encode("Hello world"),
+    payload: new TextEncoder().encode(stringify({
+      rules: [{
+        algorithm: "none",
+        kdf: "static",
+        keyName: "",
+        pathPattern: ["foo", "bar", "**"],
+        type: "payload",
+      }],
+    })),
   }, auth);
 
   await store.set({
     identity: identity.identityAddress,
     path: ["other", "encryption", "1.0", "foo", "bar", "payload.yaml"],
-    payload: new TextEncoder().encode("Hello world"),
+    payload: new TextEncoder().encode(stringify({
+      rules: [{
+        algorithm: "none",
+        kdf: "static",
+        keyName: "",
+        pathPattern: ["foo", "bar", "**"],
+        type: "payload",
+      }],
+    })),
   }, auth);
 
   const result = await store.getAllEncryptionSettings(
@@ -80,7 +110,8 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
         algorithm: "base64",
         kdf: "static",
         keyName: "",
-        recursive: true,
+        pathPattern: ["**"],
+        type: "payload",
       }],
     })),
   }, auth);
@@ -93,7 +124,8 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
         algorithm: "none",
         kdf: "static",
         keyName: "",
-        recursive: true,
+        pathPattern: ["foo", "bar", "**"],
+        type: "payload",
       }],
     })),
   }, auth);
@@ -104,9 +136,8 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
     "payload",
   )
 
-  assertEquals(result.rules.length, 1);
-  assertEquals(result.rules[0].keyName, '');
-  assertEquals(result.rules[0].algorithm, 'base64');
+  assertEquals(result.keyName, '');
+  assertEquals(result.algorithm, 'base64');
 
   result = await store.getEncryptionSettingsForPath(
     identity.identityAddress,
@@ -114,9 +145,8 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
     "payload",
   )
 
-  assertEquals(result.rules.length, 1);
-  assertEquals(result.rules[0].keyName, '');
-  assertEquals(result.rules[0].algorithm, 'base64');
+  assertEquals(result.keyName, '');
+  assertEquals(result.algorithm, 'base64');
 
   result = await store.getEncryptionSettingsForPath(
     identity.identityAddress,
@@ -124,9 +154,8 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
     "payload",
   )
 
-  assertEquals(result.rules.length, 1);
-  assertEquals(result.rules[0].keyName, '');
-  assertEquals(result.rules[0].algorithm, 'none');
+  assertEquals(result.keyName, '');
+  assertEquals(result.algorithm, 'none');
 });
 
 Deno.test("Store.encryptPath / base64", async () => {
@@ -138,8 +167,9 @@ Deno.test("Store.encryptPath / base64", async () => {
     payload: new TextEncoder().encode(stringify({
       rules: [{
         algorithm: "base64",
-        recursive: true,
         kdf: "static",
+        pathPattern: ["**"],
+        type: "path",
       }],
     })),
   }, auth);
@@ -162,8 +192,9 @@ Deno.test("Store.decryptPath / base64", async () => {
     payload: new TextEncoder().encode(stringify({
       rules: [{
         algorithm: "base64",
-        recursive: true,
         kdf: "static",
+        pathPattern: ["**"],
+        type: "path",
       }],
     })),
   }, auth);
@@ -186,8 +217,9 @@ Deno.test("Store.roundtrip / base64", async () => {
     payload: new TextEncoder().encode(stringify({
       rules: [{
         algorithm: "base64",
-        recursive: true,
         kdf: "static",
+        pathPattern: ["**"],
+        type: "path",
       }],
     })),
   }, auth);
@@ -198,8 +230,9 @@ Deno.test("Store.roundtrip / base64", async () => {
     payload: new TextEncoder().encode(stringify({
       rules: [{
         algorithm: "base64",
-        recursive: true,
         kdf: "static",
+        pathPattern: ["**"],
+        type: "payload",
       }],
     })),
   }, auth);
@@ -279,8 +312,9 @@ Deno.test("Store.encryptPath / scalarmult-hkdf / hkdf", async () => {
       payload: new TextEncoder().encode(stringify({
         rules: [{
           algorithm: "hkdf",
-          recursive: false,
           kdf: "scalarmult-hkdf",
+          pathPattern: ["scalarmult", "*"],
+          type: "path",
         }],
       })),
     }, auth);

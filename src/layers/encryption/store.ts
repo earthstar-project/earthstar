@@ -25,13 +25,16 @@ import { decodeKeypairAddressToBytes } from "../../crypto/keypair.ts";
 import { parseIdentityAddress } from "../../core_validators/addresses.ts";
 import { decodeBase32 } from "../../encoding/base32.ts";
 
+import { minimatch } from 'npm:minimatch'
+
 export type EncryptionRule = {
   // from: TODO
   // to: TODO
   algorithm: 'aes-gcm-siv' | 'base64' | 'hkdf' | 'none';
   kdf: 'path-based' | 'scalarmult-hkdf' | 'static';
   keyName: string;
-  recursive: boolean;
+  pathPattern: string[];
+  type: 'path' | 'payload';
 }
 
 export type EncryptionSetting = {
@@ -78,73 +81,68 @@ export class Store {
   // This implementation is pretty meh without that, but eh, PoC.
   async getAllEncryptionSettings(
     identity: IdentityAddress,
-  ) {
+  ): Promise<EncryptionRule[]> {
     const documents = await Array.fromAsync(this.baseStore.queryDocs({
       identity: identity,
       pathPrefix: ["encryption", "1.0"]
     }));
 
-    return documents;
-  }
+    // return documents;
 
-  async getEncryptionSettingsForPath(
-    identity: IdentityAddress,
-    path: Path,
-    type: 'path' | 'payload'
-  ) {
-    console.log(`getEncryptionSettingsForPath: ${identity}/${path}: ${type}`)
-
-    const desiredPath = path.slice(0, -1); // The settings for /a/b/c live at /a/b/{type}.yaml
-
-    const documents = await this.getAllEncryptionSettings(identity);
-
-    let foundPath: Path = [];
-    let settings: EncryptionSetting = {
-      rules: [{
-        algorithm: 'none',
-        kdf: 'static',
-        keyName: '',
-        recursive: true,
-      }],
-    }
+    const rules: EncryptionRule[] = [];
 
     for (const doc of documents) {
-      if (!doc.path.slice(-1)[0].endsWith(`${type}.yaml`)) {
-        // Wrong sort of document, ignore
-        continue;
-      }
-
-      const docPath = doc.path.slice(2, -1); // Remove encryption/1.0 and path.yaml or payload.yaml
       if (!doc.payload) {
         continue;
       }
       const bytes = await doc.payload.bytes();
       const docSettings = parse(bytesToString(bytes)) as EncryptionSetting;
 
-      if (!desiredPath.join("/").startsWith(docPath.join("/"))) {
-        // This document does not have a path that's a prefix of the one we're interested in, so the settings won't apply
-        continue;
-      }
-
       if (!docSettings.rules) {
         console.log(`Invalid encryption document found at ${identity}/${doc.path}`)
         continue;
       }
 
-      if (!docSettings.rules[0].recursive && desiredPath.join("/") != docPath.join("/")) {
-        // We're not at that specific level of the path and the settings aren't recursive, so ignore
+      rules.push(...docSettings.rules);
+    }
+
+    // sort rules with longest patterns first
+    rules.sort((a, b) => b.pathPattern.length - a.pathPattern.length)
+    return rules;
+  }
+
+  async getEncryptionSettingsForPath(
+    identity: IdentityAddress,
+    path: Path,
+    type: 'path' | 'payload'
+  ): Promise<EncryptionRule> {
+    console.log(`getEncryptionSettingsForPath: ${identity}/${path}: ${type}`)
+
+    const desiredPath = path.slice(0, -1); // The settings for /a/b/c live at /a/b/{type}.yaml
+
+    const rules = await this.getAllEncryptionSettings(identity);
+
+    let rule
+
+    for (const rule of rules) {
+      if (rule.type != type) {
+        // Wrong rule type
         continue;
       }
-
-      if (docPath.length >= foundPath.length) {
-        // This document applies, and is more specific than the previous one we've found
-        foundPath = docPath;
-
-        settings = docSettings;
+      if (minimatch(path.join("/"), rule.pathPattern.join("/"))) {
+        // Found rule
+        // Rules should be sorted with most specific first, so this is the right one
+        return rule;
       }
     }
 
-    return settings;
+    return {
+      algorithm: 'none',
+      kdf: 'static',
+      keyName: '',
+      pathPattern: ["**"],
+      type: type,
+    }
   }
 
   async deriveKey(
@@ -215,12 +213,12 @@ export class Store {
       let elem: string;
       const plain = tmpPath.slice(-1)[0];
 
-      switch(elemSettings.rules[0].algorithm) {
+      switch(elemSettings.algorithm) {
         case "aes-gcm-siv": {
           const key = await this.deriveKey(
             identity,
             tmpPath,
-            elemSettings.rules[0],
+            elemSettings,
           )
           const stream = siv(key, new Uint8Array(12))
           // TODO is base64 appropriate here? Can we be less wasteful in bytes?
@@ -232,7 +230,7 @@ export class Store {
           const key = await this.deriveKey(
             identity,
             tmpPath,
-            elemSettings.rules[0],
+            elemSettings,
           )
           const elemKey = hkdf(
             sha256,
@@ -273,7 +271,7 @@ export class Store {
 
     const elemSettings = await this.getEncryptionSettingsForPath(identity, path, "payload");
 
-    switch(elemSettings.rules[0].algorithm) {
+    switch(elemSettings.algorithm) {
       case "none": {
         return payload;
       }
@@ -300,12 +298,12 @@ export class Store {
       const elemSettings = await this.getEncryptionSettingsForPath(identity, tmpPath, "path");
       let elem: string;
       const encrypted = tmpPath.slice(-1)[0];
-      switch(elemSettings.rules[0].algorithm) {
+      switch(elemSettings.algorithm) {
         case "aes-gcm-siv": {
           const key = await this.deriveKey(
             identity,
             tmpPath,
-            elemSettings.rules[0],
+            elemSettings,
           )
           const stream = siv(key, new Uint8Array(12))
           // TODO is base64 appropriate here? Can we be less wasteful in bytes?
@@ -342,7 +340,7 @@ export class Store {
 
     const elemSettings = await this.getEncryptionSettingsForPath(identity, path, "payload");
 
-    switch(elemSettings.rules[0].algorithm) {
+    switch(elemSettings.algorithm) {
       case "none": {
         return payload;
       }
