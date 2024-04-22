@@ -18,6 +18,9 @@ const addr = cryptoEs.generateCommunalNamespaceAddress("gardening");
 const identity = await cryptoEs.generateIdentityKeypair(
   "suzy",
 ) as IdentityKeypair<Uint8Array>;
+const janeIdentity = await cryptoEs.generateIdentityKeypair(
+  "jane",
+) as IdentityKeypair<Uint8Array>;
 
 const capability = meadowcap.createCapCommunal({
   accessMode: "write",
@@ -31,7 +34,11 @@ const auth = {
 };
 
 function newStore() {
-  return new Store(new BaseStore(addr));
+  return new Store(new BaseStore(addr), identity);
+}
+
+function newJaneStore() {
+  return new Store(new BaseStore(addr), janeIdentity);
 }
 
 Deno.test("Store.getAllEncryptionSettings", async () => {
@@ -218,4 +225,76 @@ Deno.test("Store.roundtrip / base64", async () => {
 
   assert(encryptedResult.payload)
   assertEquals(new TextDecoder().decode(await encryptedResult.payload.bytes()), "YmFy");
+});
+
+// Deno.test("Store.roundtrip / aws-gcm-siv", async () => {
+//   const store = newStore();
+
+//   // AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+
+//   await store.set({
+//     identity: identity.identityAddress,
+//     path: ["encryption", "1.0", "path.yaml"],
+//     payload: new TextEncoder().encode(stringify({
+//       rules: [{
+//         algorithm: "aws-gcm-siv",
+//         recursive: true,
+//         kdf: "static",
+//       }],
+//     })),
+//   }, auth);
+
+//   await store.set({
+//     identity: identity.identityAddress,
+//     path: ["foo"],
+//     payload: new TextEncoder().encode("bar"),
+//   }, auth);
+
+//   const result = await store.get(
+//     identity.identityAddress,
+//     ["foo"],
+//   ) as Document
+
+//   assert(result.payload)
+//   assertEquals(new TextDecoder().decode(await result.payload.bytes()), "bar");
+
+//   const encryptedResult = await store.baseStore.get(
+//     identity.identityAddress,
+//     ["Zm9v"],
+//   ) as Document
+
+//   assert(encryptedResult.payload)
+//   assertEquals(new TextDecoder().decode(await encryptedResult.payload.bytes()), "YmFy");
+// });
+
+Deno.test("Store.encryptPath / scalarmult-hkdf / hkdf", async () => {
+  const suzyStore = newStore();
+  const janeStore = newJaneStore();
+
+  for (const store of [suzyStore, janeStore]) {
+    // Insert the same setup document into both stores, under Suzy's identity
+    await store.set({
+      identity: identity.identityAddress,
+      path: ["encryption", "1.0", "scalarmult", "path.yaml"],
+      payload: new TextEncoder().encode(stringify({
+        rules: [{
+          algorithm: "hkdf",
+          recursive: false,
+          kdf: "scalarmult-hkdf",
+        }],
+      })),
+    }, auth);
+  }
+
+  const suzyResult = await suzyStore.encryptPath(
+    identity.identityAddress,
+    ["scalarmult", janeIdentity.identityAddress],
+  )
+
+  const janeResult = await janeStore.encryptPath(
+    identity.identityAddress,
+    ["scalarmult", janeIdentity.identityAddress],
+  )
+
+  assertEquals(suzyResult, janeResult);
 });

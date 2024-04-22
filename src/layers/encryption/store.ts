@@ -16,12 +16,20 @@ import { Store as BaseStore } from '../../store/store.ts';
 import { bytesToString } from "https://deno.land/x/earthstar@v10.2.2/mod.ts";
 
 import { parse } from "jsr:@std/yaml";
+import { siv } from 'npm:@noble/ciphers@0.5.2/aes';
+import { ed25519, x25519, edwardsToMontgomeryPub, edwardsToMontgomeryPriv } from 'npm:@noble/curves@1.4.0/ed25519';
+import { hkdf } from 'npm:@noble/hashes@1.4.0/hkdf';
+import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
+import { IdentityKeypair } from "../../crypto/types.ts";
+import { decodeKeypairAddressToBytes } from "../../crypto/keypair.ts";
+import { parseIdentityAddress } from "../../core_validators/addresses.ts";
+import { decodeBase32 } from "../../encoding/base32.ts";
 
 export type EncryptionRule = {
   // from: TODO
   // to: TODO
-  algorithm: 'base64' | 'none';
-  kdf: 'path-based' | 'per-key' | 'static';
+  algorithm: 'aes-gcm-siv' | 'base64' | 'hkdf' | 'none';
+  kdf: 'path-based' | 'scalarmult-hkdf' | 'static';
   keyName: string;
   recursive: boolean;
 }
@@ -30,7 +38,22 @@ export type EncryptionSetting = {
   rules: EncryptionRule[]; // Isn't really needed without from/to support tbh
 };
 
-/** A layer for implementing the /encryption/ spec on an underlying Store
+async function uint8ArrayToBase64(
+  input: Uint8Array | AsyncIterable<Uint8Array>,
+): Promise<string> {
+  const bytes = input instanceof Uint8Array
+  ? input
+  : new Uint8Array(await Willow.collectUint8Arrays(input));
+  return btoa(String.fromCharCode(...bytes));
+}
+
+async function base64ToUint8Array(
+  input: string,
+): Promise<Uint8Array> {
+  return new TextEncoder().encode(atob(input));
+}
+
+/** A layer for implementing the /encryption/ & /keys/ spec on an underlying Store
  *
  * The interface for this is the same as for Store
  *
@@ -40,11 +63,14 @@ export type EncryptionSetting = {
 export class Store {
   /** The underlying Earthstar `Store`, made accessible for advanced usage and shenanigans. */
   baseStore: BaseStore;
+  myIdentity: IdentityKeypair<Uint8Array>;
 
   constructor(
     store: BaseStore,
+    myIdentity: IdentityKeypair<Uint8Array>,
   ) {
     this.baseStore = store;
+    this.myIdentity = myIdentity;
   }
 
   // TODO: Watch events on underlying store, and update a cached encryption settings type thing
@@ -105,7 +131,7 @@ export class Store {
         continue;
       }
 
-      if (!docSettings.rules[0].recursive && desiredPath.join("/") != doc.path.join("/")) {
+      if (!docSettings.rules[0].recursive && desiredPath.join("/") != docPath.join("/")) {
         // We're not at that specific level of the path and the settings aren't recursive, so ignore
         continue;
       }
@@ -125,16 +151,51 @@ export class Store {
     identity: IdentityAddress,
     path: Path,
     rule: EncryptionRule,
-  ): Promise<string> {
+  ): Promise<Uint8Array> {
+    console.log(`deriveKey: ${identity} : ${path} : ${rule}`)
     switch(rule.kdf) {
       case "path-based": {
-        return "FIXME";
+        throw new Error("Not Implemented");
       }
-      case "per-key": {
-        return "FIXME";
+      case "scalarmult-hkdf": {
+        // Need to figure out who we are vs the subspace!
+        // Owner or not etc
+        const pathIdentityAddress = path.slice(-1)[0];
+        const parsedPathIdentityAddress = parseIdentityAddress(pathIdentityAddress);
+
+        if (isErr(parsedPathIdentityAddress)) {
+          throw parsedPathIdentityAddress;
+        }
+
+        const pathPubKey = decodeBase32(parsedPathIdentityAddress.pubkey);
+
+        const privateKey = this.myIdentity.privateKey;
+        let publicKey: Uint8Array;
+        if (this.myIdentity.identityAddress == identity) {
+          // This is my subspace, so the public key is the one in the path
+          publicKey = pathPubKey;
+        } else {
+          // This is someone else's subspace, so the public key is the subspace owner
+          const parsedSubspaceIdentityAddress = parseIdentityAddress(identity);
+          if (isErr(parsedSubspaceIdentityAddress)) {
+            throw parsedSubspaceIdentityAddress;
+          }
+          publicKey = decodeBase32(parsedSubspaceIdentityAddress.pubkey);
+        }
+        const montgomeryPrivateKey = edwardsToMontgomeryPriv(privateKey);
+        const montgomeryPublicKey = edwardsToMontgomeryPub(publicKey);
+        const sharedSecret = x25519.getSharedSecret(montgomeryPrivateKey, montgomeryPublicKey);
+        const info = `scalarmult-hkdf#${this.baseStore.willow.namespace}#${identity}#${path.join("/")}`
+        return hkdf(
+          sha256,
+          sharedSecret,
+          undefined,
+          info,
+          32,
+        )
       }
       case "static": {
-        return "FIXME";
+        throw new Error("Not Implemented");
       }
     }
   }
@@ -154,12 +215,35 @@ export class Store {
       let elem: string;
       const plain = tmpPath.slice(-1)[0];
 
-      const key = this.deriveKey(
-        identity,
-        tmpPath,
-        elemSettings.rules[0],
-      )
       switch(elemSettings.rules[0].algorithm) {
+        case "aes-gcm-siv": {
+          const key = await this.deriveKey(
+            identity,
+            tmpPath,
+            elemSettings.rules[0],
+          )
+          const stream = siv(key, new Uint8Array(12))
+          // TODO is base64 appropriate here? Can we be less wasteful in bytes?
+          // is slash forbidden?
+          elem = await uint8ArrayToBase64(stream.encrypt(new TextEncoder().encode(plain)))
+          break;
+        }
+        case "hkdf": {
+          const key = await this.deriveKey(
+            identity,
+            tmpPath,
+            elemSettings.rules[0],
+          )
+          const elemKey = hkdf(
+            sha256,
+            key,
+            undefined,
+            "path",
+            32,
+          )
+          elem = await uint8ArrayToBase64(elemKey);
+          break;
+        }
         case "none": {
           elem = plain;
           break;
@@ -167,6 +251,9 @@ export class Store {
         case "base64": {
           elem = btoa(plain);
           break;
+        }
+        default: {
+          throw new Error("Algorithm not allowed in this context");
         }
       }
       encryptedPath.push(elem);
@@ -191,10 +278,10 @@ export class Store {
         return payload;
       }
       case "base64": {
-        const bytes = payload instanceof Uint8Array
-        ? payload
-        : new Uint8Array(await Willow.collectUint8Arrays(payload));
-        return new TextEncoder().encode(btoa(String.fromCharCode(...bytes)));
+        return new TextEncoder().encode(await uint8ArrayToBase64(payload));
+      }
+      default: {
+        throw new Error("Algorithm not allowed in this context");
       }
     }
   }
@@ -214,6 +301,18 @@ export class Store {
       let elem: string;
       const encrypted = tmpPath.slice(-1)[0];
       switch(elemSettings.rules[0].algorithm) {
+        case "aes-gcm-siv": {
+          const key = await this.deriveKey(
+            identity,
+            tmpPath,
+            elemSettings.rules[0],
+          )
+          const stream = siv(key, new Uint8Array(12))
+          // TODO is base64 appropriate here? Can we be less wasteful in bytes?
+          // Also it might have slashes which aren't allowed
+          elem = new TextDecoder().decode(stream.decrypt(await base64ToUint8Array(encrypted)));
+          break;
+        }
         case "none": {
           elem = encrypted;
           break;
@@ -221,6 +320,9 @@ export class Store {
         case "base64": {
           elem = atob(encrypted);
           break;
+        }
+        default: {
+          throw new Error("Algorithm not allowed in this context");
         }
       }
       decryptedPath.push(elem);
@@ -248,8 +350,10 @@ export class Store {
         const bytes = payload instanceof Uint8Array
         ? payload
         : new Uint8Array(await Willow.collectUint8Arrays(payload));
-        const ret = new TextEncoder().encode(atob(new TextDecoder().decode(bytes)));
-        return ret;
+        return base64ToUint8Array(new TextDecoder().decode(bytes));
+      }
+      default: {
+        throw new Error("Algorithm not allowed in this context");
       }
     }
   }
