@@ -107,7 +107,7 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
     path: ["encryption", "1.0", "payload.yaml"],
     payload: new TextEncoder().encode(stringify({
       rules: [{
-        algorithm: "base64",
+        algorithm: "base32",
         kdf: "static",
         keyName: "",
         pathPattern: ["**"],
@@ -137,7 +137,7 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
   )
 
   assertEquals(result.keyName, '');
-  assertEquals(result.algorithm, 'base64');
+  assertEquals(result.algorithm, 'base32');
 
   result = await store.getEncryptionSettingsForPath(
     identity.identityAddress,
@@ -146,7 +146,7 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
   )
 
   assertEquals(result.keyName, '');
-  assertEquals(result.algorithm, 'base64');
+  assertEquals(result.algorithm, 'base32');
 
   result = await store.getEncryptionSettingsForPath(
     identity.identityAddress,
@@ -158,7 +158,7 @@ Deno.test("Store.getEncryptionSettingsForPath", async () => {
   assertEquals(result.algorithm, 'none');
 });
 
-Deno.test("Store.encryptPath / base64", async () => {
+Deno.test("Store.encryptPath / base32", async () => {
   const store = newStore();
 
   await store.set({
@@ -166,7 +166,7 @@ Deno.test("Store.encryptPath / base64", async () => {
     path: ["encryption", "1.0", "path.yaml"],
     payload: new TextEncoder().encode(stringify({
       rules: [{
-        algorithm: "base64",
+        algorithm: "base32",
         kdf: "static",
         pathPattern: ["**"],
         type: "path",
@@ -180,10 +180,10 @@ Deno.test("Store.encryptPath / base64", async () => {
   )
 
   assertEquals(result.length, 2);
-  assertEquals(result, ["Zm9v", "YmFy"]);
+  assertEquals(result, ["bmzxw6", "bmjqxe"]);
 });
 
-Deno.test("Store.decryptPath / base64", async () => {
+Deno.test("Store.decryptPath / base32", async () => {
   const store = newStore();
 
   await store.set({
@@ -191,7 +191,7 @@ Deno.test("Store.decryptPath / base64", async () => {
     path: ["encryption", "1.0", "path.yaml"],
     payload: new TextEncoder().encode(stringify({
       rules: [{
-        algorithm: "base64",
+        algorithm: "base32",
         kdf: "static",
         pathPattern: ["**"],
         type: "path",
@@ -201,14 +201,14 @@ Deno.test("Store.decryptPath / base64", async () => {
 
   const result = await store.decryptPath(
     identity.identityAddress,
-    ["Zm9v", "YmFy"],
+    ["bmzxw6", "bmjqxe"],
   )
 
   assertEquals(result.length, 2);
   assertEquals(result, ["foo", "bar"]);
 });
 
-Deno.test("Store.roundtrip / base64", async () => {
+Deno.test("Store.roundtrip / base32", async () => {
   const store = newStore();
 
   await store.set({
@@ -216,7 +216,7 @@ Deno.test("Store.roundtrip / base64", async () => {
     path: ["encryption", "1.0", "path.yaml"],
     payload: new TextEncoder().encode(stringify({
       rules: [{
-        algorithm: "base64",
+        algorithm: "base32",
         kdf: "static",
         pathPattern: ["**"],
         type: "path",
@@ -229,7 +229,7 @@ Deno.test("Store.roundtrip / base64", async () => {
     path: ["encryption", "1.0", "payload.yaml"],
     payload: new TextEncoder().encode(stringify({
       rules: [{
-        algorithm: "base64",
+        algorithm: "base32",
         kdf: "static",
         pathPattern: ["**"],
         type: "payload",
@@ -253,11 +253,11 @@ Deno.test("Store.roundtrip / base64", async () => {
 
   const encryptedResult = await store.baseStore.get(
     identity.identityAddress,
-    ["Zm9v"],
+    ["bmzxw6"],
   ) as Document
 
   assert(encryptedResult.payload)
-  assertEquals(new TextDecoder().decode(await encryptedResult.payload.bytes()), "YmFy");
+  assertEquals(new TextDecoder().decode(await encryptedResult.payload.bytes()), "bmjqxe");
 });
 
 // Deno.test("Store.roundtrip / aws-gcm-siv", async () => {
@@ -293,14 +293,14 @@ Deno.test("Store.roundtrip / base64", async () => {
 
 //   const encryptedResult = await store.baseStore.get(
 //     identity.identityAddress,
-//     ["Zm9v"],
+//     ["bmzxw6"],
 //   ) as Document
 
 //   assert(encryptedResult.payload)
-//   assertEquals(new TextDecoder().decode(await encryptedResult.payload.bytes()), "YmFy");
+//   assertEquals(new TextDecoder().decode(await encryptedResult.payload.bytes()), "bmjqxe");
 // });
 
-Deno.test("Store.encryptPath / scalarmult-hkdf / hkdf", async () => {
+Deno.test("Store.encryptPath / scalarmult-hkdf / scalarmult-hkdf", async () => {
   const suzyStore = newStore();
   const janeStore = newJaneStore();
 
@@ -310,12 +310,20 @@ Deno.test("Store.encryptPath / scalarmult-hkdf / hkdf", async () => {
       identity: identity.identityAddress,
       path: ["encryption", "1.0", "scalarmult", "path.yaml"],
       payload: new TextEncoder().encode(stringify({
-        rules: [{
-          algorithm: "hkdf",
-          kdf: "scalarmult-hkdf",
-          pathPattern: ["scalarmult", "*"],
-          type: "path",
-        }],
+        rules: [
+          {
+            algorithm: "scalarmult-hkdf",
+            kdf: "scalarmult-hkdf",
+            pathPattern: ["scalarmult", "*"],
+            type: "path",
+          },
+          {
+            algorithm: "aes-gcm-siv",
+            kdf: "from-parent",
+            pathPattern: ["scalarmult", "*", "**"],
+            type: "path",
+          }
+        ],
       })),
     }, auth);
   }
@@ -331,4 +339,23 @@ Deno.test("Store.encryptPath / scalarmult-hkdf / hkdf", async () => {
   )
 
   assertEquals(suzyResult, janeResult);
+
+  const decryptResult = await janeStore.decryptPath(
+    identity.identityAddress,
+    suzyResult,
+  )
+
+  assertEquals(decryptResult, ["scalarmult", janeIdentity.identityAddress]);
+
+  const subPathResult = await suzyStore.encryptPath(
+    identity.identityAddress,
+    ["scalarmult", janeIdentity.identityAddress, "test"],
+  )
+
+  const decryptSubPathResult = await janeStore.decryptPath(
+    identity.identityAddress,
+    subPathResult,
+  )
+
+  assertEquals(decryptSubPathResult, ["scalarmult", janeIdentity.identityAddress, "test"]);
 });

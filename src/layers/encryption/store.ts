@@ -20,19 +20,25 @@ import { siv } from 'npm:@noble/ciphers@0.5.2/aes';
 import { ed25519, x25519, edwardsToMontgomeryPub, edwardsToMontgomeryPriv } from 'npm:@noble/curves@1.4.0/ed25519';
 import { hkdf } from 'npm:@noble/hashes@1.4.0/hkdf';
 import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
+import { xchacha20poly1305 } from 'npm:@noble/ciphers@0.5.2/chacha';
+import { managedNonce } from 'npm:@noble/ciphers@0.5.2/webcrypto';
 import { IdentityKeypair } from "../../crypto/types.ts";
 import { decodeKeypairAddressToBytes } from "../../crypto/keypair.ts";
 import { parseIdentityAddress } from "../../core_validators/addresses.ts";
-import { decodeBase32 } from "../../encoding/base32.ts";
+import { decodeBase32, encodeBase32 } from "../../encoding/base32.ts";
 
 import { minimatch } from 'npm:minimatch'
+
+const wxchacha20poly1305 = managedNonce(xchacha20poly1305);
 
 export type EncryptionRule = {
   // from: TODO
   // to: TODO
-  algorithm: 'aes-gcm-siv' | 'base64' | 'hkdf' | 'none';
-  kdf: 'path-based' | 'scalarmult-hkdf' | 'static';
+  algorithm: 'aes-gcm-siv' | 'base32' | 'scalarmult-hkdf' | 'none' | 'wxchacha20poly1305';
+  kdf: 'from-parent' | 'scalarmult-hkdf' | 'static';
   keyName: string;
+  // pathPattern '*' can match an encrypted or plaintext element
+  // others can only match plaintext elements
   pathPattern: string[];
   type: 'path' | 'payload';
 }
@@ -40,21 +46,6 @@ export type EncryptionRule = {
 export type EncryptionSetting = {
   rules: EncryptionRule[]; // Isn't really needed without from/to support tbh
 };
-
-async function uint8ArrayToBase64(
-  input: Uint8Array | AsyncIterable<Uint8Array>,
-): Promise<string> {
-  const bytes = input instanceof Uint8Array
-  ? input
-  : new Uint8Array(await Willow.collectUint8Arrays(input));
-  return btoa(String.fromCharCode(...bytes));
-}
-
-async function base64ToUint8Array(
-  input: string,
-): Promise<Uint8Array> {
-  return new TextEncoder().encode(atob(input));
-}
 
 /** A layer for implementing the /encryption/ & /keys/ spec on an underlying Store
  *
@@ -118,11 +109,7 @@ export class Store {
   ): Promise<EncryptionRule> {
     console.log(`getEncryptionSettingsForPath: ${identity}/${path}: ${type}`)
 
-    const desiredPath = path.slice(0, -1); // The settings for /a/b/c live at /a/b/{type}.yaml
-
     const rules = await this.getAllEncryptionSettings(identity);
-
-    let rule
 
     for (const rule of rules) {
       if (rule.type != type) {
@@ -145,33 +132,48 @@ export class Store {
     }
   }
 
+  // deriveKey gives you a key for a Path
+  // You often need to know the decrypted Path for n-1
+  // For encrypting a path element, you'll typically use the key for the parent
   async deriveKey(
     identity: IdentityAddress,
     path: Path,
     rule: EncryptionRule,
   ): Promise<Uint8Array> {
-    console.log(`deriveKey: ${identity} : ${path} : ${rule}`)
+    console.log("deriveKey", {"me": this.myIdentity.identityAddress, identity, path, rule})
     switch(rule.kdf) {
-      case "path-based": {
-        throw new Error("Not Implemented");
+      case "from-parent": {
+        const parentSettings = await this.getEncryptionSettingsForPath(identity, path.slice(0, -1), "path");
+
+        const key = await this.deriveKey(
+          identity,
+          path.slice(0, -1), // Key from parent
+          parentSettings,
+        )
+        return hkdf(
+          sha256,
+          key,
+          undefined,
+          `subpath`,
+          32,
+        )
       }
       case "scalarmult-hkdf": {
         // Need to figure out who we are vs the subspace!
         // Owner or not etc
-        const pathIdentityAddress = path.slice(-1)[0];
-        const parsedPathIdentityAddress = parseIdentityAddress(pathIdentityAddress);
-
-        if (isErr(parsedPathIdentityAddress)) {
-          throw parsedPathIdentityAddress;
-        }
-
-        const pathPubKey = decodeBase32(parsedPathIdentityAddress.pubkey);
-
+        // FIXME doesn't work for encryptedpath for our own subspace
         const privateKey = this.myIdentity.privateKey;
         let publicKey: Uint8Array;
         if (this.myIdentity.identityAddress == identity) {
           // This is my subspace, so the public key is the one in the path
-          publicKey = pathPubKey;
+          const pathIdentityAddress = path.slice(-1)[0];
+          const parsedPathIdentityAddress = parseIdentityAddress(pathIdentityAddress);
+
+          if (isErr(parsedPathIdentityAddress)) {
+            throw parsedPathIdentityAddress;
+          }
+
+          publicKey = decodeBase32(parsedPathIdentityAddress.pubkey);
         } else {
           // This is someone else's subspace, so the public key is the subspace owner
           const parsedSubspaceIdentityAddress = parseIdentityAddress(identity);
@@ -183,14 +185,16 @@ export class Store {
         const montgomeryPrivateKey = edwardsToMontgomeryPriv(privateKey);
         const montgomeryPublicKey = edwardsToMontgomeryPub(publicKey);
         const sharedSecret = x25519.getSharedSecret(montgomeryPrivateKey, montgomeryPublicKey);
-        const info = `scalarmult-hkdf#${this.baseStore.willow.namespace}#${identity}#${path.join("/")}`
-        return hkdf(
+        const info = `scalarmult-hkdf#${this.baseStore.willow.namespace}#${identity}#${path.slice(0, -1).join("/")}`
+        const final = hkdf(
           sha256,
           sharedSecret,
           undefined,
           info,
           32,
         )
+        console.log("deriveKey", {"me": this.myIdentity.identityAddress, identity, path, final})
+        return final;
       }
       case "static": {
         throw new Error("Not Implemented");
@@ -221,12 +225,10 @@ export class Store {
             elemSettings,
           )
           const stream = siv(key, new Uint8Array(12))
-          // TODO is base64 appropriate here? Can we be less wasteful in bytes?
-          // is slash forbidden?
-          elem = await uint8ArrayToBase64(stream.encrypt(new TextEncoder().encode(plain)))
+          elem = encodeBase32(stream.encrypt(new TextEncoder().encode(plain)))
           break;
         }
-        case "hkdf": {
+        case "scalarmult-hkdf": {
           const key = await this.deriveKey(
             identity,
             tmpPath,
@@ -236,18 +238,18 @@ export class Store {
             sha256,
             key,
             undefined,
-            "path",
+            "path-disclosed-hkdf-not-secret-now",
             32,
           )
-          elem = await uint8ArrayToBase64(elemKey);
+          elem = encodeBase32(elemKey);
           break;
         }
         case "none": {
           elem = plain;
           break;
         }
-        case "base64": {
-          elem = btoa(plain);
+        case "base32": {
+          elem = encodeBase32(new TextEncoder().encode(plain));
           break;
         }
         default: {
@@ -275,8 +277,22 @@ export class Store {
       case "none": {
         return payload;
       }
-      case "base64": {
-        return new TextEncoder().encode(await uint8ArrayToBase64(payload));
+      case "base32": {
+        const bytes = payload instanceof Uint8Array
+        ? payload
+        : new Uint8Array(await Willow.collectUint8Arrays(payload));
+        return new TextEncoder().encode(encodeBase32(bytes));
+      }
+      case "wxchacha20poly1305": {
+        const key = await this.deriveKey(
+          identity,
+          path,
+          elemSettings,
+        )
+        const bytes = payload instanceof Uint8Array
+        ? payload
+        : new Uint8Array(await Willow.collectUint8Arrays(payload));
+        return wxchacha20poly1305(key).encrypt(bytes);
       }
       default: {
         throw new Error("Algorithm not allowed in this context");
@@ -306,17 +322,41 @@ export class Store {
             elemSettings,
           )
           const stream = siv(key, new Uint8Array(12))
-          // TODO is base64 appropriate here? Can we be less wasteful in bytes?
-          // Also it might have slashes which aren't allowed
-          elem = new TextDecoder().decode(stream.decrypt(await base64ToUint8Array(encrypted)));
+          elem = new TextDecoder().decode(stream.decrypt(decodeBase32(encrypted)));
+          break;
+        }
+        case "scalarmult-hkdf": {
+          // This is a bit magic. We can't really "decrypt" so much as
+          // guess if this is right, and if so, return it
+          // if not... we need error handling for failed decryption?
+          const key = await this.deriveKey(
+            identity,
+            tmpPath,
+            elemSettings,
+          )
+          const elemKey = hkdf(
+            sha256,
+            key,
+            undefined,
+            "path-disclosed-hkdf-not-secret-now",
+            32,
+          )
+          const candidate = encodeBase32(elemKey);
+          if (candidate == encrypted) {
+            // Tada, this is what we were expecting!
+            // FIXME this only works for decrypting someone elses subspace
+            elem = this.myIdentity.identityAddress
+          } else {
+            throw new Error("Cannot decrypt");
+          }
           break;
         }
         case "none": {
           elem = encrypted;
           break;
         }
-        case "base64": {
-          elem = atob(encrypted);
+        case "base32": {
+          elem = new TextDecoder().decode(decodeBase32(encrypted));
           break;
         }
         default: {
@@ -344,11 +384,22 @@ export class Store {
       case "none": {
         return payload;
       }
-      case "base64": {
+      case "base32": {
         const bytes = payload instanceof Uint8Array
         ? payload
         : new Uint8Array(await Willow.collectUint8Arrays(payload));
-        return base64ToUint8Array(new TextDecoder().decode(bytes));
+        return decodeBase32(new TextDecoder().decode(bytes));
+      }
+      case "wxchacha20poly1305": {
+        const key = await this.deriveKey(
+          identity,
+          path,
+          elemSettings,
+        )
+        const bytes = payload instanceof Uint8Array
+        ? payload
+        : new Uint8Array(await Willow.collectUint8Arrays(payload));
+        return wxchacha20poly1305(key).decrypt(bytes);
       }
       default: {
         throw new Error("Algorithm not allowed in this context");
