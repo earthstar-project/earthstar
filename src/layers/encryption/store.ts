@@ -28,6 +28,9 @@ import { parseIdentityAddress } from "../../core_validators/addresses.ts";
 import { decodeBase32, encodeBase32 } from "../../encoding/base32.ts";
 
 import { minimatch } from 'npm:minimatch'
+import { notErr } from "../../util/errors.ts";
+import { pathChars } from "../../core_validators/characters.ts";
+import { payloadScheme } from "../../parameters/schemes.ts";
 
 const wxchacha20poly1305 = managedNonce(xchacha20poly1305);
 
@@ -35,7 +38,7 @@ export type EncryptionRule = {
   // from: TODO
   // to: TODO
   algorithm: 'aes-gcm-siv' | 'base32' | 'scalarmult-hkdf' | 'none' | 'wxchacha20poly1305';
-  kdf: 'from-parent' | 'scalarmult-hkdf' | 'static';
+  kdf: 'from-parent' | 'from-path' | 'scalarmult-hkdf' | 'static' | 'writer-identity';
   keyName: string;
   // pathPattern '*' can match an encrypted or plaintext element
   // others can only match plaintext elements
@@ -46,6 +49,13 @@ export type EncryptionRule = {
 export type EncryptionSetting = {
   rules: EncryptionRule[]; // Isn't really needed without from/to support tbh
 };
+
+export type Key = {
+  bytes: Uint8Array; // Arbitrary key bytes
+  id: string; // Key ID; typically randomly generated
+  identity: IdentityAddress;
+  share: ShareAddress;
+}
 
 /** A layer for implementing the /encryption/ & /keys/ spec on an underlying Store
  *
@@ -67,6 +77,48 @@ export class Store {
     this.myIdentity = myIdentity;
   }
 
+  // Find all available keys for this subspace
+  async getAllKeys(
+    identity: IdentityAddress,
+  ): Promise<Record<string, Key>> {
+    const subpath = identity == this.myIdentity.identityAddress ? "mine" : "distribution";
+    const documents = await Array.fromAsync(this.queryDocs({
+      identity: identity,
+      pathPrefix: ["keys", "1.0", subpath]
+    }));
+
+    const keys: Record<string, Key> = {};
+
+    for (const doc of documents) {
+      if (!doc.payload) {
+        continue;
+      }
+      const bytes = await doc.payload.bytes();
+      const docKey = parse(bytesToString(bytes)) as Key;
+
+      if (!docKey.bytes) {
+        console.log(`Invalid key document found at ${identity}/${doc.path}`)
+        continue;
+      }
+
+      if (docKey.identity != identity) {
+        // Not bound to this identity
+        console.log(`key document not bound to this identity found at ${identity}/${doc.path}`)
+        continue;
+      }
+
+      if (docKey.share != this.baseStore.willow.namespace) {
+        // Not bound to this identity
+        console.log(`key document not bound to this share found at ${identity}/${doc.path}`)
+        continue;
+      }
+
+      keys[docKey.id] = docKey;
+    }
+
+    return keys;
+  }
+
   // TODO: Watch events on underlying store, and update a cached encryption settings type thing
   // when relevant changes happen
   // This implementation is pretty meh without that, but eh, PoC.
@@ -78,7 +130,7 @@ export class Store {
       pathPrefix: ["encryption", "1.0"]
     }));
 
-    // return documents;
+    // console.log(documents);
 
     const rules: EncryptionRule[] = [];
 
@@ -99,7 +151,56 @@ export class Store {
 
     // sort rules with longest patterns first
     rules.sort((a, b) => b.pathPattern.length - a.pathPattern.length)
-    return rules;
+
+    // Magic defaults
+    const defaultRules: EncryptionRule[] = [
+      // For distribution to others
+      {
+        algorithm: 'aes-gcm-siv',
+        kdf: 'from-parent',
+        keyName: '',
+        pathPattern: ["keys", "1.0", "distribution", "*", "**"],
+        type: 'path',
+      },
+      {
+        algorithm: 'wxchacha20poly1305',
+        kdf: 'from-path',
+        keyName: '',
+        pathPattern: ["keys", "1.0", "distribution", "*", "**"],
+        type: 'payload',
+      },
+      {
+        algorithm: 'scalarmult-hkdf',
+        kdf: 'scalarmult-hkdf',
+        keyName: '',
+        pathPattern: ["keys", "1.0", "distribution", "*"],
+        type: 'path',
+      },
+      // For me
+      {
+        algorithm: 'aes-gcm-siv',
+        kdf: 'from-parent',
+        keyName: '',
+        pathPattern: ["keys", "1.0", "mine", "**"],
+        type: 'path',
+      },
+      {
+        algorithm: 'wxchacha20poly1305',
+        kdf: 'from-path',
+        keyName: '',
+        pathPattern: ["keys", "1.0", "mine", "**"],
+        type: 'payload',
+      },
+      {
+        algorithm: 'none',
+        kdf: 'writer-identity',
+        keyName: '',
+        pathPattern: ["keys", "1.0", "mine"],
+        type: 'path',
+      },
+    ]
+    defaultRules.sort((a, b) => b.pathPattern.length - a.pathPattern.length)
+    return [...rules, ...defaultRules];
   }
 
   async getEncryptionSettingsForPath(
@@ -119,9 +220,12 @@ export class Store {
       if (minimatch(path.join("/"), rule.pathPattern.join("/"))) {
         // Found rule
         // Rules should be sorted with most specific first, so this is the right one
+        console.log(`getEncryptionSettingsForPath: ${identity}/${path}: ${type}`, rule)
         return rule;
       }
     }
+
+    console.log(`getEncryptionSettingsForPath: ${identity}/${path}: ${type}`, "default-settings")
 
     return {
       algorithm: 'none',
@@ -155,6 +259,22 @@ export class Store {
           key,
           undefined,
           `subpath`,
+          32,
+        )
+      }
+      case "from-path": {
+        const pathSettings = await this.getEncryptionSettingsForPath(identity, path, "path");
+
+        const key = await this.deriveKey(
+          identity,
+          path, // Key from path, for same path
+          pathSettings,
+        )
+        return hkdf(
+          sha256,
+          key,
+          undefined,
+          `payload#${[path.slice(0, -1)[0]]}`,
           32,
         )
       }
@@ -193,11 +313,24 @@ export class Store {
           info,
           32,
         )
-        console.log("deriveKey", {"me": this.myIdentity.identityAddress, identity, path, final})
+        console.log("deriveKey/scalarmult-hkdf", {"me": this.myIdentity.identityAddress, identity, path, final})
         return final;
       }
       case "static": {
-        throw new Error("Not Implemented");
+        const key = (await this.getAllKeys(identity))[rule.keyName];
+        if (key) {
+          return key.bytes;
+        }
+        throw new Error("Key not found");
+      }
+      case "writer-identity": {
+        return hkdf(
+          sha256,
+          this.myIdentity.privateKey,
+          undefined,
+          `writer-identity#${[path.slice(0, -1).join("/")]}`,
+          32,
+        )
       }
     }
   }
@@ -453,6 +586,13 @@ export class Store {
     permitPruning?: boolean,
   ): Promise<SetEvent> {
 
+    console.log("set", {
+      inputPath: input.path,
+      encryptedPath: await this.encryptPath(input.identity, input.path),
+      inputPayload: input.payload,
+      encryptedPayload: await this.encryptPayload(input.identity, input.path, input.payload),
+    })
+
     return this.baseStore.set({
       path: await this.encryptPath(input.identity, input.path),
       identity: input.identity,
@@ -507,7 +647,10 @@ export class Store {
   }
 
   async *queryDocs(query: Query): AsyncIterable<Document> {
-    // TODO
+    // TODO what if we try to query for an encrypted path?
+    for await (const doc of this.baseStore.queryDocs(query)) {
+      yield this.decryptDocument(doc)
+    }
   }
 
   async *queryPaths(query: Query): AsyncIterable<Path> {

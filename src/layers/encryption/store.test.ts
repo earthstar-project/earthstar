@@ -1,6 +1,6 @@
 import { CryptoES } from "../../crypto/crypto_es.ts";
 import { CryptoDriverWebExtractable } from "../../crypto/drivers/webcrypto.ts";
-import { Store } from "./store.ts";
+import { Key, Store } from "./store.ts";
 import { Store as BaseStore } from '../../store/store.ts';
 import { meadowcap } from "../../auth/auth.ts";
 import { IdentityKeypair } from "../../crypto/types.ts";
@@ -12,6 +12,10 @@ import {
 
 import { stringify } from "jsr:@std/yaml";
 import { Document } from "../../store/types.ts";
+
+import { randomBytes } from 'npm:@noble/ciphers@0.5.2/webcrypto';
+import { notErr } from "../../util/errors.ts";
+import { assertNotEquals } from "$std/assert/assert_not_equals.ts";
 
 const cryptoEs = new CryptoES(new CryptoDriverWebExtractable());
 const addr = cryptoEs.generateCommunalNamespaceAddress("gardening");
@@ -96,7 +100,9 @@ Deno.test("Store.getAllEncryptionSettings", async () => {
     identity.identityAddress,
   )
 
-  assertEquals(result.length, 2);
+  console.log(result)
+
+  assertEquals(result.length, 8);
 });
 
 Deno.test("Store.getEncryptionSettingsForPath", async () => {
@@ -358,4 +364,92 @@ Deno.test("Store.encryptPath / scalarmult-hkdf / scalarmult-hkdf", async () => {
   )
 
   assertEquals(decryptSubPathResult, ["scalarmult", janeIdentity.identityAddress, "test"]);
+});
+
+Deno.test("Store.key distribution e2e", async () => {
+  const suzyStore = newStore();
+  const janeStore = newJaneStore();
+
+  await suzyStore.set({
+    identity: identity.identityAddress,
+    path: ["encryption", "1.0", "test.yaml"],
+    payload: new TextEncoder().encode(stringify({
+      rules: [{
+        algorithm: "wxchacha20poly1305",
+        kdf: "static",
+        keyName: "test-key",
+        pathPattern: ["test"],
+        type: "payload",
+      }],
+    })),
+  }, auth);
+
+  const key: Key = {
+    bytes: randomBytes(32),
+    id: "test-key",
+    identity: identity.identityAddress,
+    share: addr,
+  };
+
+  const setMyResult = await suzyStore.set({
+    identity: identity.identityAddress,
+    path: ["keys", "1.0", "mine", "test-key"],
+    payload: new TextEncoder().encode(stringify(key)),
+  }, auth);
+
+  assertEquals(setMyResult.kind, 'success')
+
+  const setResult = await suzyStore.set({
+    identity: identity.identityAddress,
+    path: ["keys", "1.0", "distribution", janeIdentity.identityAddress, "test-key"],
+    payload: new TextEncoder().encode(stringify(key)),
+  }, auth);
+
+  assertEquals(setResult.kind, 'success')
+
+  // Needs own store scalarmult decryption support... TODO
+  // const localRoundTripKey = (await suzyStore.get(
+  //   identity.identityAddress,
+  //   ["keys", "1.0", "distribution", janeIdentity.identityAddress, "test-key"],
+  // ));
+
+  // console.log(localRoundTripKey);
+
+  // assert(notErr(localRoundTripKey))
+  // assert(localRoundTripKey)
+  // assert(localRoundTripKey.payload)
+  // assertEquals(await localRoundTripKey.payload.bytes(), key)
+
+
+  const usingKeySetResult = await suzyStore.set({
+    identity: identity.identityAddress,
+    path: ["test"],
+    payload: new TextEncoder().encode("Hello World!"),
+  }, auth);
+
+  assertEquals(usingKeySetResult.kind, 'success')
+
+  // Check encrypted
+  assertNotEquals(
+    new TextDecoder().decode(await (await suzyStore.get(identity.identityAddress, ["test"]) as Document).payload!.bytes()),
+    new TextDecoder().decode(await (await suzyStore.baseStore.get(identity.identityAddress, ["test"]) as Document).payload!.bytes()),
+  )
+
+  // copy stuff to jane's store
+  for await (const doc of suzyStore.baseStore.documents()) {
+    console.log(doc);
+    if (doc.payload) {
+      await janeStore.baseStore.set({
+        identity: identity.identityAddress,
+        path: doc.path,
+        payload: await doc.payload.bytes(),
+      }, auth)
+    }
+  }
+
+  assertEquals(
+    new TextDecoder().decode(await (await janeStore.get(identity.identityAddress, ["test"]) as Document).payload!.bytes()),
+    "Hello World!"
+  )
+
 });
