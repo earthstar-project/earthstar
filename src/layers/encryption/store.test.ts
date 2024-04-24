@@ -370,6 +370,8 @@ Deno.test("Store.key distribution e2e", async () => {
   const suzyStore = newStore();
   const janeStore = newJaneStore();
 
+  const key = await suzyStore.generateAndStoreKey(identity.identityAddress, auth)
+
   await suzyStore.set({
     identity: identity.identityAddress,
     path: ["encryption", "1.0", "test.yaml"],
@@ -377,35 +379,21 @@ Deno.test("Store.key distribution e2e", async () => {
       rules: [{
         algorithm: "wxchacha20poly1305",
         kdf: "static",
-        keyName: "test-key",
+        keyName: key.id,
         pathPattern: ["test"],
         type: "payload",
       }],
     })),
   }, auth);
 
-  const key: Key = {
-    bytes: randomBytes(32),
-    id: "test-key",
-    identity: identity.identityAddress,
-    share: addr,
-  };
+  const distributeResult = await suzyStore.distributeKey(
+    identity.identityAddress,
+    key,
+    janeIdentity.identityAddress,
+    auth,
+  )
 
-  const setMyResult = await suzyStore.set({
-    identity: identity.identityAddress,
-    path: ["keys", "1.0", "mine", "test-key"],
-    payload: new TextEncoder().encode(stringify(key)),
-  }, auth);
-
-  assertEquals(setMyResult.kind, 'success')
-
-  const setResult = await suzyStore.set({
-    identity: identity.identityAddress,
-    path: ["keys", "1.0", "distribution", janeIdentity.identityAddress, "test-key"],
-    payload: new TextEncoder().encode(stringify(key)),
-  }, auth);
-
-  assertEquals(setResult.kind, 'success')
+  assertEquals(distributeResult.kind, 'success')
 
   // Needs own store scalarmult decryption support... TODO
   // const localRoundTripKey = (await suzyStore.get(

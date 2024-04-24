@@ -21,7 +21,7 @@ import { ed25519, x25519, edwardsToMontgomeryPub, edwardsToMontgomeryPriv } from
 import { hkdf } from 'npm:@noble/hashes@1.4.0/hkdf';
 import { sha256 } from 'npm:@noble/hashes@1.4.0/sha256';
 import { xchacha20poly1305 } from 'npm:@noble/ciphers@0.5.2/chacha';
-import { managedNonce } from 'npm:@noble/ciphers@0.5.2/webcrypto';
+import { managedNonce, randomBytes } from 'npm:@noble/ciphers@0.5.2/webcrypto';
 import { IdentityKeypair } from "../../crypto/types.ts";
 import { decodeKeypairAddressToBytes } from "../../crypto/keypair.ts";
 import { parseIdentityAddress } from "../../core_validators/addresses.ts";
@@ -31,6 +31,7 @@ import { minimatch } from 'npm:minimatch'
 import { notErr } from "../../util/errors.ts";
 import { pathChars } from "../../core_validators/characters.ts";
 import { payloadScheme } from "../../parameters/schemes.ts";
+import { stringify } from "jsr:@std/yaml";
 
 const wxchacha20poly1305 = managedNonce(xchacha20poly1305);
 
@@ -538,6 +539,49 @@ export class Store {
         throw new Error("Algorithm not allowed in this context");
       }
     }
+  }
+
+  async generateKey(
+    identity: IdentityAddress,
+  ): Promise<Key> {
+    return {
+      bytes: randomBytes(32),
+      id: encodeBase32(randomBytes(32)),
+      identity: identity,
+      share: this.baseStore.willow.namespace,
+    }
+  }
+
+  async generateAndStoreKey(
+    identity: IdentityAddress,
+    authorisation: { capability: Capability; secret: Uint8Array },
+  ): Promise<Key> {
+    const key = await this.generateKey(identity);
+
+    const result = await this.set({
+      identity: identity,
+      path: ["keys", "1.0", "mine", key.id],
+      payload: new TextEncoder().encode(stringify(key)),
+    }, authorisation)
+
+    if (result.kind != "success") {
+      throw new Error("Key storage failed")
+    }
+
+    return key
+  }
+
+  async distributeKey(
+    identity: IdentityAddress,
+    key: Key,
+    targetIdentity: IdentityAddress,
+    authorisation: { capability: Capability; secret: Uint8Array },
+  ): Promise<SetEvent> {
+    return this.set({
+      identity: identity,
+      path: ["keys", "1.0", "distribution", targetIdentity, key.id],
+      payload: new TextEncoder().encode(stringify(key)),
+    }, authorisation)
   }
 
   async decryptDocument(
