@@ -1,66 +1,32 @@
-import { checkShareIsValid } from "../core-validators/addresses.ts";
-import {
-  alphaLower,
-  workspaceKeyChars,
-} from "../core-validators/characters.ts";
-import { isErr, ValidationError } from "./errors.ts";
+import { encodeBase32 } from "../encoding/base32.ts";
 
-//================================================================================
-// TIME
-
-export function microsecondNow() {
-  return Date.now() * 1000;
+export function randomId() {
+  const randomBytes = crypto.getRandomValues(new Uint8Array(8));
+  return encodeBase32(randomBytes);
 }
 
-/** Returns a promise which is fulfilled after a given number of milliseconds. */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((res) => {
-    setTimeout(res, ms);
-  });
-}
-
-// TODO: better randomness here
-export function randomId(): string {
-  return "" + Math.floor(Math.random() * 1000) +
-    Math.floor(Math.random() * 1000);
-}
-
-// replace all occurrences of substring "from" with "to"
-export function replaceAll(str: string, from: string, to: string): string {
-  return str.split(from).join(to);
-}
-
-// how many times does the character occur in the string?
-
-export function countChars(str: string, char: string) {
-  if (char.length != 1) {
-    throw new Error("char must have length 1 but is " + JSON.stringify(char));
+export function addBytes(a: Uint8Array, b: Uint8Array, length: number) {
+  if (
+    a.byteLength < length ||
+    b.byteLength < length
+  ) {
+    throw new Error("i'm not doing that");
   }
-  return str.split(char).length - 1;
-}
 
-export function isObjectEmpty(obj: Object): Boolean {
-  return Object.keys(obj).length === 0;
-}
+  const bytes = new Uint8Array(length);
 
-//================================================================================
-// Share
+  let carried = 0;
 
-/** Returns a valid share address generated using a given name.
- * @returns A share address or a validation error resulting from the name given.
- * @deprecated This function only generates valid es.4 addresses. Use Crypto.generateShareKeypair to generate es.5 share addresses.
- */
-export function generateShareAddress(name: string): string | ValidationError {
-  const randomFromString = (str: string) => {
-    return str[Math.floor(Math.random() * str.length)];
-  };
+  for (let i = 0; i < length; i++) {
+    const byteA = a[a.byteLength - 1 - i];
+    const byteB = b[b.byteLength - 1 - i];
 
-  const firstLetter = randomFromString(alphaLower);
-  const rest = Array.from(Array(11), () => randomFromString(workspaceKeyChars))
-    .join("");
+    const added = carried + byteA + byteB;
 
-  const suffix = `${firstLetter}${rest}`;
-  const address = `+${name}.${suffix}`;
+    carried = added >> 8;
 
-  return address;
+    bytes.set([added % 256], length - 1 - i);
+  }
+
+  return bytes;
 }

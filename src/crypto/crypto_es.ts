@@ -18,7 +18,7 @@ import {
 } from "./types.ts";
 import { crypto } from "../../deps.ts";
 
-export class Crypto<PrivateKey> {
+export class CryptoES<PrivateKey> {
   constructor(readonly driver: CryptoDriver<PrivateKey>) {
   }
 

@@ -7,9 +7,9 @@
 
   ],
   "deno.enablePaths" : [
-    "src-willow",
     "debug",
-    "deps.ts"
+    "deps.ts",
+    "src"
   ],
   "eablokker.tabsSidebar.config.customKindGroupsOrder" : [
     "typescript"
