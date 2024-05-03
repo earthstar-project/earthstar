@@ -111,9 +111,9 @@ export const subspaceScheme: Willow.SubspaceScheme<IdentityPublicKey> = {
 };
 
 export const pathScheme: PathScheme = {
-  maxPathLength: 255,
-  maxComponentCount: 31,
-  maxComponentLength: 255,
+  maxPathLength: 1024,
+  maxComponentCount: 16,
+  maxComponentLength: 64,
 };
 
 export const payloadScheme: Willow.PayloadScheme<Uint8Array> = {
