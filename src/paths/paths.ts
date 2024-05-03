@@ -7,12 +7,16 @@ function isValidPathComponent(component: string): true | ValidationError {
     const asciiCode = component.charCodeAt(i);
 
     const isAlpha = asciiCode >= 0x61 && asciiCode <= 0x7a;
+    const isUpperAlpha = asciiCode >= 0x41 && asciiCode <= 0x5a;
     const isNumeric = asciiCode >= 0x30 && asciiCode <= 0x39;
     const isUnderscore = asciiCode === 0x5f;
     const isHyphen = asciiCode === 0x2d;
     const isFullStop = asciiCode === 0x2e;
 
-    if (!isAlpha && !isNumeric && !isUnderscore && !isHyphen && !isFullStop) {
+    if (
+      !isAlpha && !isUpperAlpha && !isNumeric && !isUnderscore && !isHyphen &&
+      !isFullStop
+    ) {
       return new ValidationError(
         `Found invalid character in path (${
           component.charAt(i)
