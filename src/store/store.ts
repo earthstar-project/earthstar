@@ -5,8 +5,6 @@ import {
   Willow,
 } from "../../deps.ts";
 import { AuthorisationToken, Capability } from "../auth/auth.ts";
-import { checkIdentityIsValid } from "../core_validators/addresses.ts";
-import { IdentityAddress, ShareAddress } from "../crypto/types.ts";
 import {
   authorisationScheme,
   fingerprintScheme,
@@ -14,7 +12,7 @@ import {
   pathScheme,
   payloadScheme,
   subspaceScheme,
-} from "../parameters/schemes.ts";
+} from "../schemes/schemes.ts";
 import { entryToDocument } from "../util/documents.ts";
 import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
 import { earthstarToWillowPath, willowToEarthstarPath } from "../util/path.ts";
@@ -22,6 +20,18 @@ import { relayWillowEvents } from "./events.ts";
 import { Document, Query, SetEvent, StoreDriverOpts } from "./types.ts";
 import { queryToWillowQueryParams } from "./util.ts";
 import { Path } from "./types.ts";
+import {
+  decodeIdentityPublicKeyDisplay,
+  encodeIdentityPublicKeyDisplay,
+  IdentityDisplayKey,
+  IdentityKeypair,
+  IdentityPublicKey,
+} from "../identifiers/identity.ts";
+import {
+  decodeSharePublicKeyDisplay,
+  ShareDisplayKey,
+  SharePublicKey,
+} from "../identifiers/share.ts";
 
 /** A store for reading, writing, and querying documents from a corresponding share.
  *
@@ -45,19 +55,20 @@ import { Path } from "./types.ts";
 export class Store extends EventTarget {
   /** The underlying Willow `Store`, made accessible for advanced usage and shenanigans. */
   willow: Willow.Store<
-    ShareAddress,
-    IdentityAddress,
-    ArrayBuffer,
+    SharePublicKey,
+    IdentityPublicKey,
+    Uint8Array,
     {
       cap: Capability;
-      receiverSecret: Uint8Array;
+      receiverKeypair: IdentityKeypair;
     },
     AuthorisationToken,
-    ArrayBuffer
+    Uint8Array,
+    Uint8Array
   >;
 
   constructor(
-    namespace: ShareAddress,
+    share: ShareDisplayKey,
     drivers?: StoreDriverOpts,
   ) {
     super();
@@ -65,8 +76,14 @@ export class Store extends EventTarget {
     // If drivers are specified, use those, otherwise always use in-memory drivers (the default in willow-js).
     const driversToUse = drivers && drivers !== "memory" ? drivers : {};
 
+    const sharePublicKey = decodeSharePublicKeyDisplay(share);
+
+    if (isErr(sharePublicKey)) {
+      throw sharePublicKey;
+    }
+
     this.willow = new Willow.Store({
-      namespace,
+      namespace: sharePublicKey,
       schemes: {
         namespace: namespaceScheme,
         subspace: subspaceScheme,
@@ -94,26 +111,15 @@ export class Store extends EventTarget {
   async set(
     input: {
       path: Path;
-      identity: IdentityAddress;
+      identity: IdentityDisplayKey;
       payload: Uint8Array | AsyncIterable<Uint8Array>;
       timestamp?: bigint;
     },
     // TODO: When we have the capability API, automatically find the right authorisation to use.
-    authorisation: { capability: Capability; secret: Uint8Array },
+    authorisation: { capability: Capability; keypair: IdentityKeypair },
     /** Whether to permit the deletion of documents via prefix pruning. Disabled by default. */
     permitPruning?: boolean,
   ): Promise<SetEvent> {
-    const isIdentityValid = checkIdentityIsValid(input.identity);
-
-    if (isErr(isIdentityValid)) {
-      return {
-        kind: "failure",
-        reason: "invalid_entry",
-        message: isIdentityValid.message,
-        err: isIdentityValid,
-      };
-    }
-
     const willowPath = earthstarToWillowPath(input.path);
 
     if (isErr(willowPath)) {
@@ -125,10 +131,21 @@ export class Store extends EventTarget {
       };
     }
 
+    const identityPublicKey = decodeIdentityPublicKeyDisplay(input.identity);
+
+    if (isErr(identityPublicKey)) {
+      return {
+        kind: "failure",
+        reason: "invalid_entry",
+        message: identityPublicKey.message,
+        err: identityPublicKey,
+      };
+    }
+
     if (!permitPruning) {
       const prunableEntries = await this.willow.prunableEntries({
         path: willowPath,
-        subspace: input.identity,
+        subspace: identityPublicKey,
         timestamp: input.timestamp || BigInt(Date.now() * 1000),
       });
 
@@ -157,12 +174,12 @@ export class Store extends EventTarget {
 
     const result = await this.willow.set({
       path: willowPath,
-      subspace: input.identity,
+      subspace: identityPublicKey,
       payload: input.payload,
       timestamp: input.timestamp,
     }, {
       cap: authorisation.capability,
-      receiverSecret: authorisation.secret,
+      receiverKeypair: authorisation.keypair,
     });
 
     if (result.kind !== "success") {
@@ -204,10 +221,10 @@ export class Store extends EventTarget {
    * ```
    */
   async clear(
-    identity: IdentityAddress,
+    identity: IdentityDisplayKey,
     path: Path,
     // TODO: When we have the capability API, automatically find the right authorisation to use.
-    authorisation: { capability: Capability; secret: Uint8Array },
+    authorisation: { capability: Capability; keypair: IdentityKeypair },
   ): Promise<Document | ValidationError> {
     const existing = await this.get(identity, path);
 
@@ -221,14 +238,20 @@ export class Store extends EventTarget {
       );
     }
 
+    const identityPublicKey = decodeIdentityPublicKeyDisplay(identity);
+
+    if (isErr(identityPublicKey)) {
+      throw identityPublicKey;
+    }
+
     const result = await this.willow.set({
       path: earthstarToWillowPath(path) as WillowPath, // Validated already by this.get.
-      subspace: identity,
+      subspace: identityPublicKey,
       payload: new Uint8Array(),
       timestamp: existing.timestamp + 1n,
     }, {
       cap: authorisation.capability,
-      receiverSecret: authorisation.secret,
+      receiverKeypair: authorisation.keypair,
     });
 
     if (result.kind === "failure") {
@@ -260,13 +283,13 @@ export class Store extends EventTarget {
    * ```
    */
   async get(
-    identity: IdentityAddress,
+    identity: IdentityDisplayKey,
     path: Path,
   ): Promise<Document | undefined | ValidationError> {
-    const isIdentityValid = checkIdentityIsValid(identity);
+    const identityPublicKey = decodeIdentityPublicKeyDisplay(identity);
 
-    if (isErr(isIdentityValid)) {
-      return isIdentityValid;
+    if (isErr(identityPublicKey)) {
+      return identityPublicKey;
     }
 
     const willowPath = earthstarToWillowPath(path);
@@ -282,8 +305,8 @@ export class Store extends EventTarget {
           end: successorPath(willowPath, pathScheme) || OPEN_END,
         },
         subspaceRange: {
-          start: identity,
-          end: subspaceScheme.successor(identity) || OPEN_END,
+          start: identityPublicKey,
+          end: subspaceScheme.successor(identityPublicKey) || OPEN_END,
         },
         timeRange: {
           start: 0n,
@@ -487,7 +510,7 @@ export class Store extends EventTarget {
    * }
    * ```
    */
-  async *queryIdentities(query: Query): AsyncIterable<IdentityAddress> {
+  async *queryIdentities(query: Query): AsyncIterable<IdentityDisplayKey> {
     const willowQueryParams = queryToWillowQueryParams(query);
 
     if (isErr(willowQueryParams)) {
@@ -503,12 +526,14 @@ export class Store extends EventTarget {
     const emittedSet = new Set<string>();
 
     for await (const [entry] of willowQuery) {
-      if (emittedSet.has(entry.subspaceId)) {
+      const displayKey = encodeIdentityPublicKeyDisplay(entry.subspaceId);
+
+      if (emittedSet.has(displayKey)) {
         continue;
       }
 
-      emittedSet.add(entry.subspaceId);
-      yield entry.subspaceId;
+      emittedSet.add(displayKey);
+      yield displayKey;
     }
   }
 }

@@ -1,6 +1,7 @@
 import { Willow } from "../../deps.ts";
 import { AuthorisationToken, Capability } from "../auth/auth.ts";
-import { IdentityAddress, ShareAddress } from "../crypto/types.ts";
+import { IdentityKeypair, IdentityPublicKey } from "../identifiers/identity.ts";
+import { SharePublicKey } from "../identifiers/share.ts";
 import { entryToDocument } from "../util/documents.ts";
 import { willowToEarthstarPath } from "../util/path.ts";
 import { Document, Path } from "./types.ts";
@@ -49,22 +50,23 @@ export class PayloadRemoveEvent extends CustomEvent<{ removedBy: Document }> {
 export function relayWillowEvents(
   dispatcher: EventTarget,
   willowStore: Willow.Store<
-    ShareAddress,
-    IdentityAddress,
-    ArrayBuffer,
+    SharePublicKey,
+    IdentityPublicKey,
+    Uint8Array,
     {
       cap: Capability;
-      receiverSecret: Uint8Array;
+      receiverKeypair: IdentityKeypair;
     },
     AuthorisationToken,
-    ArrayBuffer
+    Uint8Array,
+    Uint8Array
   >,
 ) {
   const onEntryPayloadSet = (event: Event) => {
     const evt = event as Willow.EntryPayloadSetEvent<
-      ShareAddress,
-      IdentityAddress,
-      ArrayBuffer,
+      SharePublicKey,
+      IdentityPublicKey,
+      Uint8Array,
       AuthorisationToken
     >;
 
@@ -81,9 +83,9 @@ export function relayWillowEvents(
 
   const onEntryIngest = (event: Event) => {
     const evt = event as Willow.EntryIngestEvent<
-      ShareAddress,
-      IdentityAddress,
-      ArrayBuffer,
+      SharePublicKey,
+      IdentityPublicKey,
+      Uint8Array,
       AuthorisationToken
     >;
 
@@ -103,9 +105,9 @@ export function relayWillowEvents(
 
   const onPayloadIngest = (event: Event) => {
     const evt = event as Willow.PayloadIngestEvent<
-      ShareAddress,
-      IdentityAddress,
-      ArrayBuffer,
+      SharePublicKey,
+      IdentityPublicKey,
+      Uint8Array,
       AuthorisationToken
     >;
 
@@ -125,9 +127,9 @@ export function relayWillowEvents(
 
   const onEntryRemove = (event: Event) => {
     const evt = event as Willow.EntryRemoveEvent<
-      ShareAddress,
-      IdentityAddress,
-      ArrayBuffer,
+      SharePublicKey,
+      IdentityPublicKey,
+      Uint8Array,
       AuthorisationToken
     >;
 
@@ -150,9 +152,9 @@ export function relayWillowEvents(
 
   const onPayloadRemove = (event: Event) => {
     const evt = event as Willow.PayloadRemoveEvent<
-      ShareAddress,
-      IdentityAddress,
-      ArrayBuffer,
+      SharePublicKey,
+      IdentityPublicKey,
+      Uint8Array,
       AuthorisationToken
     >;
 

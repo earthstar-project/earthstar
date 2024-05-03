@@ -1,5 +1,5 @@
 export * as Willow from "../willow-js/mod.universal.ts";
-//export * from "https://deno.land/x/willow_utils@0.4.0/mod.ts";
+// export * from "https://deno.land/x/willow_utils@0.7.0/mod.ts";
 export * from "../willow_utils/mod.ts";
 export * as Meadowcap from "../meadowcap/mod.ts";
 export {
@@ -12,6 +12,7 @@ export {
   decodeBase64Url,
   encodeBase64Url,
 } from "https://deno.land/std@0.203.0/encoding/base64url.ts";
+export { blake3 } from "npm:@noble/hashes/blake3";
 
 // Oldies.
 
