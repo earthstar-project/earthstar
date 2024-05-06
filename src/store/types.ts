@@ -1,11 +1,8 @@
 import { Willow } from "../../deps.ts";
 import { AuthorisationToken } from "../auth/auth.ts";
 import { Base32String } from "../encoding/types.ts";
-import {
-  IdentityDisplayKey,
-  IdentityPublicKey,
-} from "../identifiers/identity.ts";
-import { ShareDisplayKey, SharePublicKey } from "../identifiers/share.ts";
+import { IdentityPublicKey, IdentityTag } from "../identifiers/identity.ts";
+import { SharePublicKey, ShareTag } from "../identifiers/share.ts";
 
 export type Path = string[];
 
@@ -13,9 +10,9 @@ export type Payload = Willow.Payload;
 
 export type Document = {
   /** The share this document belongs to. */
-  share: ShareDisplayKey;
+  share: ShareTag;
   /** The identity associated with this document. */
-  identity: IdentityDisplayKey;
+  identity: IdentityTag;
   /** The path this document corresponds to. */
   path: Path;
   /** When the document was written. */
@@ -25,7 +22,7 @@ export type Document = {
   /** The BLAKE3 digest of the payload, encoded in base 32. */
   digest: Base32String;
   /** The identity used to authorise this document's creation. */
-  signedBy: IdentityDisplayKey;
+  signedBy: IdentityTag;
   /** The data associated with this document. */
   payload: Payload | undefined;
 };
@@ -44,7 +41,7 @@ export type Query = {
   /** A path all documents must be prefixed by. */
   pathPrefix?: Path;
   /** The identity which wrote the document. */
-  identity?: IdentityDisplayKey;
+  identity?: IdentityTag;
   /** The earliest point at which a document was written, in microseconds. */
   timestampGte?: bigint;
   /** The latest  point at which a document was written, in microseconds. */

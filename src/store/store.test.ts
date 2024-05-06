@@ -10,22 +10,22 @@ import { DocumentSetEvent } from "./events.ts";
 import { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";
 import {
-  encodeSharePublicKeyDisplay,
+  encodeShareTag,
   generateShareKeypair,
   ShareKeypair,
 } from "../identifiers/share.ts";
 import {
-  encodeIdentityPublicKeyDisplay,
+  encodeIdentityTag,
   generateIdentityKeypair,
   IdentityKeypair,
 } from "../identifiers/identity.ts";
 
 const share = await generateShareKeypair("gardening") as ShareKeypair;
-const shareDisplay = encodeSharePublicKeyDisplay(share.publicKey);
+const shareDisplay = encodeShareTag(share.publicKey);
 const identity = await generateIdentityKeypair(
   "suzy",
 ) as IdentityKeypair;
-const identityDisplay = encodeIdentityPublicKeyDisplay(identity.publicKey);
+const identityDisplay = encodeIdentityTag(identity.publicKey);
 
 const capability = meadowcap.createCapCommunal({
   accessMode: "write",
@@ -299,7 +299,7 @@ Deno.test("Store.documents respects ordering", async () => {
 const identity2 = await generateIdentityKeypair(
   "yarp",
 ) as IdentityKeypair;
-const identity2Display = encodeIdentityPublicKeyDisplay(identity2.publicKey);
+const identity2Display = encodeIdentityTag(identity2.publicKey);
 
 const capability2 = meadowcap.createCapCommunal({
   accessMode: "write",

@@ -1,6 +1,6 @@
 import { ANY_SUBSPACE, AreaOfInterest, OPEN_END } from "../../deps.ts";
 import {
-  decodeIdentityPublicKeyDisplay,
+  decodeIdentityTag,
   IdentityPublicKey,
 } from "../identifiers/identity.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
@@ -19,7 +19,7 @@ export function queryToWillowQueryParams(query: Query): {
   reverse: boolean;
 } | ValidationError {
   const identityPublicKey = query.identity
-    ? decodeIdentityPublicKeyDisplay(query.identity)
+    ? decodeIdentityTag(query.identity)
     : undefined;
 
   if (isErr(identityPublicKey)) {

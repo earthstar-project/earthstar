@@ -18,7 +18,7 @@ export const MAX_IDENTITY_SHORTNAME_LENGTH = 4;
 
 export type IdentityKeypair = Cinn25519Keypair;
 export type IdentityPublicKey = IdentityKeypair["publicKey"];
-export type IdentityDisplayKey = string;
+export type IdentityTag = string;
 
 export function generateIdentityKeypair(
   shortname: string,
@@ -67,17 +67,17 @@ export function decodeStreamIdentityPublicKey(
   return decodeStreamCinn25519PublickKey(bytes, MAX_IDENTITY_SHORTNAME_LENGTH);
 }
 
-export function encodeIdentityPublicKeyDisplay(
+export function encodeIdentityTag(
   publicKey: IdentityKeypair["publicKey"],
-): string {
+): IdentityTag {
   return encodeCinn25519PublicKeyDisplay(publicKey, "@");
 }
 
-export function decodeIdentityPublicKeyDisplay(
-  display: string,
+export function decodeIdentityTag(
+  tag: IdentityTag,
 ): IdentityKeypair["publicKey"] | ValidationError {
   return decodeCinn25519PublickKeyDisplay(
-    display,
+    tag,
     {
       sigil: "@",
       shortnameMinLength: MIN_IDENTITY_SHORTNAME_LENGTH,

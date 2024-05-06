@@ -3,12 +3,9 @@ import { encodeBase32 } from "../encoding/base32.ts";
 import { Document } from "../store/types.ts";
 import { willowToEarthstarPath } from "./path.ts";
 import { AuthorisationToken } from "../auth/auth.ts";
+import { encodeShareTag, SharePublicKey } from "../identifiers/share.ts";
 import {
-  encodeSharePublicKeyDisplay,
-  SharePublicKey,
-} from "../identifiers/share.ts";
-import {
-  encodeIdentityPublicKeyDisplay,
+  encodeIdentityTag,
   IdentityPublicKey,
 } from "../identifiers/identity.ts";
 import { Blake3Digest } from "../blake3/types.ts";
@@ -18,9 +15,9 @@ export function entryToDocument(
   payload: Willow.Payload | undefined,
   authToken: AuthorisationToken,
 ): Document {
-  const shareDisplay = encodeSharePublicKeyDisplay(entry.namespaceId);
-  const identityDisplay = encodeIdentityPublicKeyDisplay(entry.subspaceId);
-  const signedByDisplay = encodeIdentityPublicKeyDisplay(
+  const shareDisplay = encodeShareTag(entry.namespaceId);
+  const identityDisplay = encodeIdentityTag(entry.subspaceId);
+  const signedByDisplay = encodeIdentityTag(
     Meadowcap.getReceiver(authToken.capability),
   );
 

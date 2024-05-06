@@ -21,16 +21,16 @@ import { Document, Query, SetEvent, StoreDriverOpts } from "./types.ts";
 import { queryToWillowQueryParams } from "./util.ts";
 import { Path } from "./types.ts";
 import {
-  decodeIdentityPublicKeyDisplay,
-  encodeIdentityPublicKeyDisplay,
-  IdentityDisplayKey,
+  decodeIdentityTag,
+  encodeIdentityTag,
   IdentityKeypair,
   IdentityPublicKey,
+  IdentityTag,
 } from "../identifiers/identity.ts";
 import {
-  decodeSharePublicKeyDisplay,
-  ShareDisplayKey,
+  decodeShareTag,
   SharePublicKey,
+  ShareTag,
 } from "../identifiers/share.ts";
 
 /** A store for reading, writing, and querying documents from a corresponding share.
@@ -68,7 +68,7 @@ export class Store extends EventTarget {
   >;
 
   constructor(
-    share: ShareDisplayKey,
+    share: ShareTag,
     drivers?: StoreDriverOpts,
   ) {
     super();
@@ -76,7 +76,7 @@ export class Store extends EventTarget {
     // If drivers are specified, use those, otherwise always use in-memory drivers (the default in willow-js).
     const driversToUse = drivers && drivers !== "memory" ? drivers : {};
 
-    const sharePublicKey = decodeSharePublicKeyDisplay(share);
+    const sharePublicKey = decodeShareTag(share);
 
     if (isErr(sharePublicKey)) {
       throw sharePublicKey;
@@ -111,7 +111,7 @@ export class Store extends EventTarget {
   async set(
     input: {
       path: Path;
-      identity: IdentityDisplayKey;
+      identity: IdentityTag;
       payload: Uint8Array | AsyncIterable<Uint8Array>;
       timestamp?: bigint;
     },
@@ -131,7 +131,7 @@ export class Store extends EventTarget {
       };
     }
 
-    const identityPublicKey = decodeIdentityPublicKeyDisplay(input.identity);
+    const identityPublicKey = decodeIdentityTag(input.identity);
 
     if (isErr(identityPublicKey)) {
       return {
@@ -221,7 +221,7 @@ export class Store extends EventTarget {
    * ```
    */
   async clear(
-    identity: IdentityDisplayKey,
+    identity: IdentityTag,
     path: Path,
     // TODO: When we have the capability API, automatically find the right authorisation to use.
     authorisation: { capability: Capability; keypair: IdentityKeypair },
@@ -238,7 +238,7 @@ export class Store extends EventTarget {
       );
     }
 
-    const identityPublicKey = decodeIdentityPublicKeyDisplay(identity);
+    const identityPublicKey = decodeIdentityTag(identity);
 
     if (isErr(identityPublicKey)) {
       throw identityPublicKey;
@@ -283,10 +283,10 @@ export class Store extends EventTarget {
    * ```
    */
   async get(
-    identity: IdentityDisplayKey,
+    identity: IdentityTag,
     path: Path,
   ): Promise<Document | undefined | ValidationError> {
-    const identityPublicKey = decodeIdentityPublicKeyDisplay(identity);
+    const identityPublicKey = decodeIdentityTag(identity);
 
     if (isErr(identityPublicKey)) {
       return identityPublicKey;
@@ -510,7 +510,7 @@ export class Store extends EventTarget {
    * }
    * ```
    */
-  async *queryIdentities(query: Query): AsyncIterable<IdentityDisplayKey> {
+  async *queryIdentities(query: Query): AsyncIterable<IdentityTag> {
     const willowQueryParams = queryToWillowQueryParams(query);
 
     if (isErr(willowQueryParams)) {
@@ -526,7 +526,7 @@ export class Store extends EventTarget {
     const emittedSet = new Set<string>();
 
     for await (const [entry] of willowQuery) {
-      const displayKey = encodeIdentityPublicKeyDisplay(entry.subspaceId);
+      const displayKey = encodeIdentityTag(entry.subspaceId);
 
       if (emittedSet.has(displayKey)) {
         continue;

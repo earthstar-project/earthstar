@@ -18,7 +18,7 @@ export const MAX_SHARE_SHORTNAME_LENGTH = 15;
 
 export type ShareKeypair = Cinn25519Keypair;
 export type SharePublicKey = ShareKeypair["publicKey"];
-export type ShareDisplayKey = string;
+export type ShareTag = string;
 
 export async function generateShareKeypair(
   shortname: string,
@@ -97,22 +97,22 @@ export function decodeStreamSharePublicKey(
   return decodeStreamCinn25519PublickKey(bytes, MAX_SHARE_SHORTNAME_LENGTH);
 }
 
-export function encodeSharePublicKeyDisplay(
+export function encodeShareTag(
   publicKey: ShareKeypair["publicKey"],
-): string {
+): ShareTag {
   const isCommunal =
     (publicKey.underlying[publicKey.underlying.byteLength - 1] & 0x1) === 0x0;
 
   return encodeCinn25519PublicKeyDisplay(publicKey, isCommunal ? "+" : "-");
 }
 
-export function decodeSharePublicKeyDisplay(
-  display: string,
+export function decodeShareTag(
+  tag: ShareTag,
 ): ShareKeypair["publicKey"] | ValidationError {
-  const claimsToBeCommunal = display[0] === "+";
+  const claimsToBeCommunal = tag[0] === "+";
 
   const publicKey = decodeCinn25519PublickKeyDisplay(
-    display,
+    tag,
     {
       sigil: claimsToBeCommunal ? "+" : "-",
       shortnameMinLength: MIN_SHARE_SHORTNAME_LENGTH,
