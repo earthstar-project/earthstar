@@ -33,7 +33,10 @@ export async function generateShareKeypair(
     return keypair;
   }
 
-  while (!owned && !isCommunalShare(keypair.publicKey)) {
+  while (
+    owned === true && isCommunalShare(keypair.publicKey) ||
+    !owned && !isCommunalShare(keypair.publicKey)
+  ) {
     keypair = await generateCinn25519Keypair(shortname, {
       minLength: MIN_SHARE_SHORTNAME_LENGTH,
       maxLength: MAX_SHARE_SHORTNAME_LENGTH,

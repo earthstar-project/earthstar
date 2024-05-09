@@ -88,14 +88,17 @@ export function decodeCinn25519PublickKey(
     // Short name is max length.
     const encodedShortname = encoded.subarray(0, shortnameMaxLength);
     const shortname = new TextDecoder().decode(encodedShortname);
-    const publicKey = encoded.slice(shortnameMaxLength);
+    const publicKey = encoded.slice(
+      shortnameMaxLength,
+      shortnameMaxLength + 32,
+    );
 
     return { shortname, underlying: publicKey };
   }
 
   const encodedShortname = encoded.subarray(0, first0x0Index);
   const shortname = new TextDecoder().decode(encodedShortname);
-  const publicKey = encoded.slice(first0x0Index + 1);
+  const publicKey = encoded.slice(first0x0Index + 1, first0x0Index + 1 + 32);
 
   return { shortname, underlying: publicKey };
 }
