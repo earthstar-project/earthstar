@@ -10,6 +10,7 @@ import {
   isIncludedArea,
   Meadowcap,
   orderBytes,
+  Willow,
 } from "../../deps.ts";
 import { Blake3Digest } from "../blake3/types.ts";
 import {
@@ -33,10 +34,6 @@ import {
   namespaceScheme,
   subspaceScheme,
 } from "../schemes/schemes.ts";
-import {
-  decodeBase64,
-  encodeBase64,
-} from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { AuthorisationError, isErr, ValidationError } from "../util/errors.ts";
 import { blake3 } from "../blake3/blake3.ts";
 import { Path } from "../store/types.ts";
@@ -145,19 +142,19 @@ export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
 
 const PASSWORD_CHALLENGE = new Uint8Array([2, 3, 5, 8, 13]);
 
+export type AuthOpts = {
+  password: string;
+  kvDriver: Willow.KvDriver;
+};
+
 /** Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password. */
 export class Auth {
   private cryptoKey = deferred<CryptoKey>();
+  private kvDriver: Willow.KvDriver;
 
   /** Wipes all keypairs and capabilities from local storage. */
-  static reset() {
-    for (const key of Object.keys(localStorage)) {
-      if (!key.startsWith("earthstar_auth")) {
-        continue;
-      }
-
-      localStorage.removeItem(key);
-    }
+  static reset(kvDriver: Willow.KvDriver) {
+    kvDriver.clear();
   }
 
   /** Check if Auth has been successfully initialised with the given password. */
@@ -167,17 +164,21 @@ export class Auth {
     return true;
   }
 
-  constructor(password: string) {
+  constructor(opts: AuthOpts) {
+    this.kvDriver = opts.kvDriver;
+
     crypto.subtle.importKey(
       "raw",
-      new TextEncoder().encode(password),
+      new TextEncoder().encode(opts.password),
       "PBKDF2",
       false,
       ["deriveKey"],
     ).then(async (key) => {
-      const existingPassword = localStorage.getItem("earthstar_auth_pwd_test");
+      const encryptedChallenge = await opts.kvDriver.get<Uint8Array>([
+        "pwd_challenge",
+      ]);
 
-      if (!existingPassword) {
+      if (!encryptedChallenge) {
         const salt = crypto.getRandomValues(new Uint8Array(16));
         const iv = crypto.getRandomValues(new Uint8Array(12));
 
@@ -205,18 +206,16 @@ export class Auth {
 
         const encryptedTest = concat(salt, iv, new Uint8Array(encrypted));
 
-        const b64Encrypted = encodeBase64(encryptedTest);
-        localStorage.setItem("earthstar_auth_pwd_test", b64Encrypted);
+        this.kvDriver.set(["pwd_challenge"], encryptedTest);
+
         this.cryptoKey.resolve(key);
 
         return;
       }
 
-      const encryptedTest = decodeBase64(existingPassword);
-
-      const salt = encryptedTest.subarray(0, 16);
-      const iv = encryptedTest.subarray(16, 16 + 12);
-      const encryptedData = encryptedTest.subarray(16 + 12);
+      const salt = encryptedChallenge.subarray(0, 16);
+      const iv = encryptedChallenge.subarray(16, 16 + 12);
+      const encryptedData = encryptedChallenge.subarray(16 + 12);
 
       try {
         const decryptionKey = await crypto.subtle.deriveKey(
@@ -316,22 +315,15 @@ export class Auth {
     return new Uint8Array(decrypted);
   }
 
-  private async set(keyPrefix: string, bytes: Uint8Array): Promise<string> {
+  private async setDigest(
+    keyPrefix: Willow.KvKey,
+    bytes: Uint8Array,
+  ): Promise<Willow.KvKey> {
     const digest = await blake3(bytes);
-    const b64Digest = encodeBase64(digest);
-    const b64Bytes = encodeBase64(bytes);
 
-    const key = `earthstar_auth_${keyPrefix}_${b64Digest}`;
+    this.kvDriver.set([...keyPrefix, digest], bytes);
 
-    localStorage.setItem(key, b64Bytes);
-
-    return key;
-  }
-
-  private rehydrate(b64: string): Promise<Uint8Array> {
-    const bytes = decodeBase64(b64);
-
-    return this.decrypt(bytes);
+    return [...keyPrefix, digest];
   }
 
   /** Create a new identity keypair and safely store it. */
@@ -353,20 +345,42 @@ export class Auth {
   async addIdentityKeypair(keypair: IdentityKeypair): Promise<void> {
     const keypairEncoded = encodeIdentityKeypair(keypair);
     const keypairEncrypted = await this.encrypt(keypairEncoded);
+    const publicKeyEncoded = encodeIdentityPublicKey(keypair.publicKey);
+    const publicKeyEncrypted = await this.encrypt(publicKeyEncoded);
 
-    await this.set("identitykeypair", keypairEncrypted);
+    await this.kvDriver.set(
+      ["keypair", "identity", publicKeyEncrypted],
+      keypairEncrypted,
+    );
   }
 
   /** Iterate through all identity keypairs in encrypted storage. */
-  async *identityKeypairs() {
-    for (const [key, value] of Object.entries(localStorage)) {
-      if (!isEarthstarAuthPrefixed("identitykeypair", key)) {
-        continue;
+  async *identityKeypairs(): AsyncIterable<IdentityKeypair> {
+    for await (
+      const { value } of this.kvDriver.list<Uint8Array>({
+        prefix: ["keypair", "identity"],
+      })
+    ) {
+      const decrypted = await this.decrypt(value);
+      yield decodeIdentityKeypair(decrypted);
+    }
+  }
+
+  /** Retrieve the identity keypair for a given share public key. */
+  async identityKeypair(
+    identity: IdentityPublicKey,
+  ): Promise<IdentityKeypair | undefined> {
+    for await (
+      const { value } of this.kvDriver.list<Uint8Array>({
+        prefix: ["keypair", "identity"],
+      })
+    ) {
+      const decrypted = await this.decrypt(value);
+      const keypair = decodeIdentityKeypair(decrypted);
+
+      if (subspaceScheme.order(keypair.publicKey, identity) === 0) {
+        return keypair;
       }
-
-      const keypairBytes = await this.rehydrate(value);
-
-      yield decodeIdentityKeypair(keypairBytes);
     }
   }
 
@@ -390,34 +404,41 @@ export class Auth {
   async addShareKeypair(keypair: IdentityKeypair): Promise<void> {
     const keypairEncoded = encodeShareKeypair(keypair);
     const keypairEncrypted = await this.encrypt(keypairEncoded);
+    const publicKeyEncoded = encodeSharePublicKey(keypair.publicKey);
+    const publicKeyEncrypted = await this.encrypt(publicKeyEncoded);
 
-    await this.set("sharekeypair", keypairEncrypted);
+    await this.kvDriver.set(
+      ["keypair", "share", publicKeyEncrypted],
+      keypairEncrypted,
+    );
   }
 
   /** Iterate through all share keypairs in encrypted storage. */
-  async *shareKeypairs() {
-    for (const [key, value] of Object.entries(localStorage)) {
-      if (!isEarthstarAuthPrefixed("sharekeypair", key)) {
-        continue;
-      }
-
-      const keypairBytes = await this.rehydrate(value);
-
-      yield decodeShareKeypair(keypairBytes);
+  async *shareKeypairs(): AsyncIterable<ShareKeypair> {
+    for await (
+      const { value } of this.kvDriver.list<Uint8Array>({
+        prefix: ["keypair", "share"],
+      })
+    ) {
+      const decrypted = await this.decrypt(value);
+      yield decodeShareKeypair(decrypted);
     }
   }
 
   /** Retrieve the identity keypair for a given share public key. */
   async shareKeypair(share: SharePublicKey): Promise<ShareKeypair | undefined> {
-    for await (const keypair of this.shareKeypairs()) {
-      if (!namespaceScheme.isEqual(share, keypair.publicKey)) {
-        continue;
+    for await (
+      const { value } of this.kvDriver.list<Uint8Array>({
+        prefix: ["keypair", "share"],
+      })
+    ) {
+      const decrypted = await this.decrypt(value);
+      const keypair = decodeShareKeypair(decrypted);
+
+      if (namespaceScheme.isEqual(keypair.publicKey, share)) {
+        return keypair;
       }
-
-      return keypair;
     }
-
-    return undefined;
   }
 
   /** Produce a new cap pack granting full read / write access based on the semantics of the share (communal vs. share), and optionally store it in encrypted storage. */
@@ -459,7 +480,7 @@ export class Auth {
           ? encodeReadCapPack({ readCap: cap })
           : meadowcap.encodeCap(cap);
         const encrypted = await this.encrypt(encoded);
-        await this.set(accessMode, encrypted);
+        await this.setDigest(["cap", accessMode], encrypted);
       }
 
       return isCommunalReadCapability(cap)
@@ -489,7 +510,7 @@ export class Auth {
       if (store) {
         const encoded = encodeReadCapPack(capPack);
         const encrypted = await this.encrypt(encoded);
-        await this.set(accessMode, encrypted);
+        await this.setDigest(["cap", accessMode], encrypted);
       }
 
       return capPack;
@@ -498,7 +519,7 @@ export class Auth {
     if (store) {
       const encoded = meadowcap.encodeCap(cap);
       const encrypted = await this.encrypt(encoded);
-      await this.set(accessMode, encrypted);
+      await this.setDigest(["cap", accessMode], encrypted);
     }
 
     return { writeCap: cap };
@@ -693,7 +714,7 @@ export class Auth {
           : meadowcap.encodeCap(capPack.writeCap);
         const encrypted = await this.encrypt(encoded);
 
-        await this.set(cap.accessMode, encrypted);
+        await this.setDigest(["cap", cap.accessMode], encrypted);
 
         return true;
       }
@@ -711,15 +732,14 @@ export class Auth {
     /** Filter by cap packs which include this optional entry. */
     entry?: Entry<SharePublicKey, IdentityPublicKey, Blake3Digest>,
   ): AsyncIterable<ReadCapPack> {
-    // Find keypairs
-    for (const [key, value] of Object.entries(localStorage)) {
-      if (!isEarthstarAuthPrefixed("read", key)) {
-        continue;
-      }
+    for await (
+      const { value } of this.kvDriver.list<Uint8Array>({
+        prefix: ["cap", "read"],
+      })
+    ) {
+      const decrypted = await this.decrypt(value);
 
-      const capBytes = await this.rehydrate(value);
-
-      const capPack = decodeReadCapPack(capBytes);
+      const capPack = decodeReadCapPack(decrypted);
 
       if (!share) {
         yield capPack;
@@ -763,12 +783,12 @@ export class Auth {
     entry?: Entry<SharePublicKey, IdentityPublicKey, Blake3Digest>,
   ): AsyncIterable<WriteCapPack> {
     // Find keypairs
-    for (const [key, value] of Object.entries(localStorage)) {
-      if (!isEarthstarAuthPrefixed("write", key)) {
-        continue;
-      }
-
-      const capBytes = await this.rehydrate(value);
+    for await (
+      const { value } of this.kvDriver.list<Uint8Array>({
+        prefix: ["cap", "write"],
+      })
+    ) {
+      const capBytes = await this.decrypt(value);
 
       const cap = meadowcap.decodeCap(capBytes);
 
@@ -937,8 +957,4 @@ function decodeReadCapPack(encoded: Uint8Array): ReadCapPack {
     readCap: cap,
     subspaceCap: subspaceCap,
   } as ReadCapPack;
-}
-
-function isEarthstarAuthPrefixed(prefix: string, key: string) {
-  return key.startsWith(`earthstar_auth_${prefix}`);
 }

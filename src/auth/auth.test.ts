@@ -9,35 +9,39 @@ import { notErr } from "../util/errors.ts";
 import { earthstarToWillowPath } from "../util/path.ts";
 import { ANY_SUBSPACE } from "../../deps.ts";
 import { isCommunalShare } from "../identifiers/share.ts";
+import { KvDriverInMemory } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_in_memory.ts";
+import { KvDriverDeno } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_deno.ts";
 
 Deno.test("Auth passwords", async () => {
-  Auth.reset();
+  const denoKv = new KvDriverDeno(await Deno.openKv());
 
-  const auth = new Auth("password1234");
+  const auth = new Auth({ kvDriver: denoKv, password: "password1234" });
 
   await auth.ready();
 
-  const auth2 = new Auth("password1234");
+  const auth2 = new Auth({ kvDriver: denoKv, password: "password1234" });
 
   await auth2.ready();
 
   await assertRejects(
     async () => {
-      const auth3 = new Auth("Arggggggggg");
+      const auth3 = new Auth({ kvDriver: denoKv, password: "argggggggg" });
       await auth3.ready();
     },
   );
 
-  Auth.reset();
+  Auth.reset(denoKv);
 
-  const auth4 = new Auth("newPassword2345");
+  const auth4 = new Auth({ kvDriver: denoKv, password: "password1234" });
   await auth4.ready();
+
+  denoKv.close();
 });
 
-Deno.test("Auth identities", async () => {
-  Auth.reset();
+const memKv = () => new KvDriverInMemory();
 
-  const auth = new Auth("password1234");
+Deno.test("Auth identities", async () => {
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
   const newIdentity2 = await auth.createIdentityKeypair("buzy");
@@ -52,12 +56,15 @@ Deno.test("Auth identities", async () => {
   }
 
   assertArrayIncludes(identities, [newIdentity, newIdentity2]);
+
+  const suzyRetrieved = await auth.identityKeypair(newIdentity.publicKey);
+
+  assert(suzyRetrieved);
+  assertEquals(suzyRetrieved.publicKey, newIdentity.publicKey);
 });
 
 Deno.test("Auth Shares", async () => {
-  Auth.reset();
-
-  const auth = new Auth("password1234");
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newShare = await auth.createShareKeypair("gardening", true);
   const newShare2 = await auth.createShareKeypair("projects", false);
@@ -72,12 +79,15 @@ Deno.test("Auth Shares", async () => {
   }
 
   assertArrayIncludes(shares, [newShare, newShare2]);
+
+  const gardeningRetrieved = await auth.shareKeypair(newShare.publicKey);
+
+  assert(gardeningRetrieved);
+  assertEquals(gardeningRetrieved.publicKey, newShare.publicKey);
 });
 
 Deno.test("Auth Read cap packs", async () => {
-  Auth.reset();
-
-  const auth = new Auth("password1234");
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -148,9 +158,7 @@ Deno.test("Auth Read cap packs", async () => {
 });
 
 Deno.test("Auth Write cap packs", async () => {
-  Auth.reset();
-
-  const auth = new Auth("password1234");
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -222,9 +230,7 @@ Deno.test("Auth Write cap packs", async () => {
 });
 
 Deno.test("Delegate (communal, write)", async () => {
-  Auth.reset();
-
-  const auth = new Auth("password1234");
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -273,9 +279,7 @@ Deno.test("Delegate (communal, write)", async () => {
 });
 
 Deno.test("Delegate (communal, read)", async () => {
-  Auth.reset();
-
-  const auth = new Auth("password1234");
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -324,9 +328,7 @@ Deno.test("Delegate (communal, read)", async () => {
 });
 
 Deno.test("Delegate (owned, read)", async () => {
-  Auth.reset();
-
-  const auth = new Auth("password1234");
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -378,9 +380,7 @@ Deno.test("Delegate (owned, read)", async () => {
 });
 
 Deno.test("Delegate (owned, write)", async () => {
-  Auth.reset();
-
-  const auth = new Auth("password1234");
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
