@@ -4,13 +4,16 @@ import {
   assertEquals,
   assertRejects,
 } from "https://deno.land/std@0.203.0/assert/mod.ts";
-import { Auth, meadowcap } from "./auth.ts";
+import { Auth } from "./auth.ts";
 import { notErr } from "../util/errors.ts";
 import { earthstarToWillowPath } from "../util/path.ts";
-import { ANY_SUBSPACE } from "../../deps.ts";
+import { ANY_SUBSPACE, Meadowcap } from "../../deps.ts";
 import { isCommunalShare } from "../identifiers/share.ts";
 import { KvDriverInMemory } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_in_memory.ts";
 import { KvDriverDeno } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_deno.ts";
+import { meadowcapParams } from "../schemes/schemes.ts";
+
+const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
 Deno.test("Auth passwords", async () => {
   const denoKv = new KvDriverDeno(await Deno.openKv());
@@ -66,8 +69,8 @@ Deno.test("Auth identities", async () => {
 Deno.test("Auth Shares", async () => {
   const auth = new Auth({ password: "password1234", kvDriver: memKv() });
 
-  const newShare = await auth.createShareKeypair("gardening", true);
-  const newShare2 = await auth.createShareKeypair("projects", false);
+  const newShare = await auth.createShareKeypair("gardening", false);
+  const newShare2 = await auth.createShareKeypair("projects", true);
 
   assert(notErr(newShare));
   assert(notErr(newShare2));
@@ -263,7 +266,6 @@ Deno.test("Delegate (communal, write)", async () => {
       },
     },
     toUser: newIdentity2.publicKey,
-    userSecret: newIdentity.secretKey,
   });
 
   assert(notErr(delegated));
@@ -312,7 +314,6 @@ Deno.test("Delegate (communal, read)", async () => {
       },
     },
     toUser: newIdentity2.publicKey,
-    userSecret: newIdentity.secretKey,
   });
 
   assert(notErr(delegated));
@@ -363,7 +364,6 @@ Deno.test("Delegate (owned, read)", async () => {
       },
     },
     toUser: newIdentity2.publicKey,
-    userSecret: newIdentity.secretKey,
   });
 
   assert(notErr(delegated));
@@ -414,7 +414,6 @@ Deno.test("Delegate (owned, write)", async () => {
       },
     },
     toUser: newIdentity2.publicKey,
-    userSecret: newIdentity.secretKey,
   });
 
   assert(notErr(delegated));

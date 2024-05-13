@@ -1,24 +1,20 @@
 import { deferred } from "https://deno.land/std@0.202.0/async/deferred.ts";
 import {
   Area,
-  compactWidth,
+  areaIsIncluded,
   concat,
-  decodeCompactWidth,
-  encodeCompactWidth,
-  Entry,
-  entryPosition,
-  isIncludedArea,
   Meadowcap,
   orderBytes,
   Willow,
 } from "../../deps.ts";
-import { Blake3Digest } from "../blake3/types.ts";
 import {
   decodeIdentityPublicKey,
   encodeIdentityPublicKey,
   generateIdentityKeypair,
   IdentityKeypair,
   IdentityPublicKey,
+  identitySign,
+  identityVerify,
 } from "../identifiers/identity.ts";
 import {
   decodeSharePublicKey,
@@ -28,6 +24,8 @@ import {
   isCommunalShare,
   ShareKeypair,
   SharePublicKey,
+  shareSign,
+  shareVerify,
 } from "../identifiers/share.ts";
 import {
   meadowcapParams,
@@ -38,100 +36,16 @@ import { AuthorisationError, isErr, ValidationError } from "../util/errors.ts";
 import { blake3 } from "../blake3/blake3.ts";
 import { Path } from "../store/types.ts";
 import { earthstarToWillowPath } from "../util/path.ts";
+import { ReadCapPack, WriteCapPack } from "../caps/types.ts";
+import {
+  decodeCapPack,
+  encodeCapPack,
+  isCommunalReadCapability,
+  isOwnedReadCapability,
+  isReadCapPack,
+} from "../caps/util.ts";
 
-export const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
-
-/** An unforgeable token bestowing access to some resource. */
-export type Capability = Meadowcap.McCapability<
-  SharePublicKey,
-  IdentityPublicKey,
-  Uint8Array,
-  Uint8Array
->;
-
-function isCommunalReadCapability(
-  cap:
-    | Meadowcap.CommunalCapability<
-      SharePublicKey,
-      IdentityPublicKey,
-      Uint8Array
-    >
-      & { accessMode: "read" }
-    | Meadowcap.CommunalCapability<
-      SharePublicKey,
-      IdentityPublicKey,
-      Uint8Array
-    >
-      & { accessMode: "write" },
-): cap is Meadowcap.CommunalReadCapability<
-  SharePublicKey,
-  IdentityPublicKey,
-  Uint8Array
-> {
-  return cap.accessMode === "read";
-}
-
-function isOwnedReadCapability(
-  cap:
-    | Meadowcap.OwnedCapability<
-      SharePublicKey,
-      IdentityPublicKey,
-      Uint8Array,
-      Uint8Array
-    >
-      & { accessMode: "read" }
-    | Meadowcap.OwnedCapability<
-      SharePublicKey,
-      IdentityPublicKey,
-      Uint8Array,
-      Uint8Array
-    >
-      & { accessMode: "write" },
-): cap is Meadowcap.OwnedReadCapability<
-  SharePublicKey,
-  IdentityPublicKey,
-  Uint8Array,
-  Uint8Array
-> {
-  return cap.accessMode === "read";
-}
-
-/** An unforgeable token proving that the holder of an identity keypair is authorised to know about arbitrary identities in an owned share. */
-export type SubspaceCapability = Meadowcap.McSubspaceCapability<
-  SharePublicKey,
-  IdentityPublicKey,
-  Uint8Array,
-  Uint8Array
->;
-
-export type ReadCapPack = {
-  readCap: Meadowcap.ReadCapability<
-    SharePublicKey,
-    IdentityPublicKey,
-    Uint8Array,
-    Uint8Array
-  >;
-  subspaceCap?: Meadowcap.McSubspaceCapability<
-    SharePublicKey,
-    IdentityPublicKey,
-    Uint8Array,
-    Uint8Array
-  >;
-};
-export type WriteCapPack = {
-  writeCap: Meadowcap.WriteCapability<
-    SharePublicKey,
-    IdentityPublicKey,
-    Uint8Array,
-    Uint8Array
-  >;
-};
-
-function isReadCapPack(
-  capPack: ReadCapPack | WriteCapPack,
-): capPack is ReadCapPack {
-  return "readCap" in capPack;
-}
+const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
 export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
   SharePublicKey,
@@ -153,8 +67,8 @@ export class Auth {
   private kvDriver: Willow.KvDriver;
 
   /** Wipes all keypairs and capabilities from local storage. */
-  static reset(kvDriver: Willow.KvDriver) {
-    kvDriver.clear();
+  static reset(kvDriver: Willow.KvDriver): Promise<void> {
+    return kvDriver.clear();
   }
 
   /** Check if Auth has been successfully initialised with the given password. */
@@ -326,6 +240,34 @@ export class Auth {
     return [...keyPrefix, digest];
   }
 
+  private async checkIdentityKeypairIsValid(
+    keypair: IdentityKeypair,
+  ): Promise<true | ValidationError> {
+    const message = crypto.getRandomValues(new Uint8Array(16));
+    const sig = await identitySign(keypair, message);
+    const isValid = await identityVerify(keypair.publicKey, sig, message);
+
+    if (!isValid) {
+      return new ValidationError("Identity secret does not match public key");
+    }
+
+    return true;
+  }
+
+  private async checkShareKeypairIsValid(
+    keypair: ShareKeypair,
+  ): Promise<true | ValidationError> {
+    const message = crypto.getRandomValues(new Uint8Array(16));
+    const sig = await shareSign(keypair, message);
+    const isValid = await shareVerify(keypair.publicKey, sig, message);
+
+    if (!isValid) {
+      return new ValidationError("Identity secret does not match public key");
+    }
+
+    return true;
+  }
+
   /** Create a new identity keypair and safely store it. */
   async createIdentityKeypair(
     shortname: string,
@@ -342,7 +284,15 @@ export class Auth {
   }
 
   /** Safely store an existing identity keypair. */
-  async addIdentityKeypair(keypair: IdentityKeypair): Promise<void> {
+  async addIdentityKeypair(
+    keypair: IdentityKeypair,
+  ): Promise<true | ValidationError> {
+    const isValid = await this.checkIdentityKeypairIsValid(keypair);
+
+    if (isErr(isValid)) {
+      return isValid;
+    }
+
     const keypairEncoded = encodeIdentityKeypair(keypair);
     const keypairEncrypted = await this.encrypt(keypairEncoded);
     const publicKeyEncoded = encodeIdentityPublicKey(keypair.publicKey);
@@ -352,6 +302,8 @@ export class Auth {
       ["keypair", "identity", publicKeyEncrypted],
       keypairEncrypted,
     );
+
+    return true;
   }
 
   /** Iterate through all identity keypairs in encrypted storage. */
@@ -395,13 +347,30 @@ export class Auth {
       return keypair;
     }
 
-    await this.addShareKeypair(keypair);
+    const res = await this.addShareKeypair(keypair);
+
+    if (isErr(res)) {
+      throw res;
+    }
 
     return keypair;
   }
 
-  /** Safely store an existing identity keypair. */
-  async addShareKeypair(keypair: IdentityKeypair): Promise<void> {
+  /** Safely store an existing identity keypair.
+   *
+   * Keypairs for shares with communal public keys are not validated, as the secret is never used.
+   */
+  async addShareKeypair(
+    keypair: IdentityKeypair,
+  ): Promise<true | ValidationError> {
+    if (!isCommunalShare(keypair.publicKey)) {
+      const isValid = await this.checkShareKeypairIsValid(keypair);
+
+      if (isErr(isValid)) {
+        return isValid;
+      }
+    }
+
     const keypairEncoded = encodeShareKeypair(keypair);
     const keypairEncrypted = await this.encrypt(keypairEncoded);
     const publicKeyEncoded = encodeSharePublicKey(keypair.publicKey);
@@ -411,6 +380,8 @@ export class Auth {
       ["keypair", "share", publicKeyEncrypted],
       keypairEncrypted,
     );
+
+    return true;
   }
 
   /** Iterate through all share keypairs in encrypted storage. */
@@ -477,8 +448,8 @@ export class Auth {
 
       if (store) {
         const encoded = isCommunalReadCapability(cap)
-          ? encodeReadCapPack({ readCap: cap })
-          : meadowcap.encodeCap(cap);
+          ? encodeCapPack({ readCap: cap })
+          : encodeCapPack({ writeCap: cap });
         const encrypted = await this.encrypt(encoded);
         await this.setDigest(["cap", accessMode], encrypted);
       }
@@ -508,7 +479,7 @@ export class Auth {
       };
 
       if (store) {
-        const encoded = encodeReadCapPack(capPack);
+        const encoded = encodeCapPack(capPack);
         const encrypted = await this.encrypt(encoded);
         await this.setDigest(["cap", accessMode], encrypted);
       }
@@ -517,7 +488,7 @@ export class Auth {
     }
 
     if (store) {
-      const encoded = meadowcap.encodeCap(cap);
+      const encoded = encodeCapPack({ writeCap: cap });
       const encrypted = await this.encrypt(encoded);
       await this.setDigest(["cap", accessMode], encrypted);
     }
@@ -527,9 +498,8 @@ export class Auth {
 
   /** Delegate an existing cap pack to a new user. Does not add to storage by default. */
   async delegateCapPack(
-    { capPack, userSecret, toUser, restrictTo }: {
+    { capPack, toUser, restrictTo }: {
       capPack: ReadCapPack;
-      userSecret: Uint8Array;
       toUser: IdentityPublicKey;
       restrictTo: {
         identity?: IdentityPublicKey;
@@ -542,9 +512,8 @@ export class Auth {
     },
   ): Promise<ReadCapPack | ValidationError>;
   async delegateCapPack(
-    { capPack, userSecret, toUser, restrictTo }: {
+    { capPack, toUser, restrictTo }: {
       capPack: WriteCapPack;
-      userSecret: Uint8Array;
       toUser: IdentityPublicKey;
       restrictTo: {
         identity?: IdentityPublicKey;
@@ -557,11 +526,9 @@ export class Auth {
     },
   ): Promise<WriteCapPack | ValidationError>;
   async delegateCapPack(
-    { capPack, userSecret, toUser, restrictTo }: {
+    { capPack, toUser, restrictTo }: {
       /** The cap pack to delegate */
       capPack: ReadCapPack | WriteCapPack;
-      /** The secret of this cap pack's **receiver**. */
-      userSecret: Uint8Array;
       /** The public key of the user to delegate to. */
       toUser: IdentityPublicKey;
       /** Further restrictions to put on the newly delegated cap pack. */
@@ -589,6 +556,16 @@ export class Auth {
     if (
       !isReadCapPack(capPack)
     ) {
+      const receiverKeypair = await this.identityKeypair(
+        meadowcap.getCapReceiver(capPack.writeCap),
+      );
+
+      if (!receiverKeypair) {
+        return new ValidationError(
+          "Do not have the necessary credentials to delegate this capability.",
+        );
+      }
+
       const grantedArea = meadowcap.getCapGrantedArea(capPack.writeCap);
 
       const toArea: Area<IdentityPublicKey> = {
@@ -604,7 +581,7 @@ export class Auth {
           const cap = await meadowcap.delegateCapCommunal(
             {
               cap: capPack.writeCap,
-              secret: userSecret,
+              secret: receiverKeypair.secretKey,
               user: toUser,
               area: toArea,
             },
@@ -616,7 +593,7 @@ export class Auth {
         const cap = await meadowcap.delegateCapOwned(
           {
             cap: capPack.writeCap,
-            secret: userSecret,
+            secret: receiverKeypair.secretKey,
             user: toUser,
             area: toArea,
           },
@@ -626,6 +603,16 @@ export class Auth {
       } catch (err) {
         return new ValidationError(err);
       }
+    }
+
+    const receiverKeypair = await this.identityKeypair(
+      meadowcap.getCapReceiver(capPack.readCap),
+    );
+
+    if (!receiverKeypair) {
+      return new ValidationError(
+        "Do not have the necessary credentials to delegate this capability.",
+      );
     }
 
     const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
@@ -643,7 +630,7 @@ export class Auth {
         const delegated = await meadowcap.delegateCapCommunal(
           {
             cap: capPack.readCap,
-            secret: userSecret,
+            secret: receiverKeypair.secretKey,
             user: toUser,
             area: toArea,
           },
@@ -655,7 +642,7 @@ export class Auth {
       const delegated = await meadowcap.delegateCapOwned(
         {
           cap: capPack.readCap,
-          secret: userSecret,
+          secret: receiverKeypair.secretKey,
           user: toUser,
           area: toArea,
         },
@@ -679,7 +666,7 @@ export class Auth {
     const delegatedCap = await meadowcap.delegateCapOwned(
       {
         cap: capPack.readCap,
-        secret: userSecret,
+        secret: receiverKeypair.secretKey,
         user: toUser,
         area: toArea,
       },
@@ -688,7 +675,7 @@ export class Auth {
     const delegatedSubspaceCap = await meadowcap.delegateSubspaceCap(
       capPack.subspaceCap,
       toUser,
-      userSecret,
+      receiverKeypair.secretKey,
     );
 
     return {
@@ -709,9 +696,7 @@ export class Auth {
 
     for await (const keypair of this.identityKeypairs()) {
       if (subspaceScheme.order(keypair.publicKey, receiver) === 0) {
-        const encoded = "readCap" in capPack
-          ? encodeReadCapPack(capPack)
-          : meadowcap.encodeCap(capPack.writeCap);
+        const encoded = encodeCapPack(capPack);
         const encrypted = await this.encrypt(encoded);
 
         await this.setDigest(["cap", cap.accessMode], encrypted);
@@ -729,8 +714,8 @@ export class Auth {
   async *readCapPacks(
     /** An optional share public key to filter by. */
     share?: SharePublicKey,
-    /** Filter by cap packs which include this optional entry. */
-    entry?: Entry<SharePublicKey, IdentityPublicKey, Blake3Digest>,
+    /** Filter by cap packs which grant an an area included by this area. */
+    area?: Area<IdentityPublicKey>,
   ): AsyncIterable<ReadCapPack> {
     for await (
       const { value } of this.kvDriver.list<Uint8Array>({
@@ -739,7 +724,7 @@ export class Auth {
     ) {
       const decrypted = await this.decrypt(value);
 
-      const capPack = decodeReadCapPack(decrypted);
+      const capPack = decodeCapPack(decrypted) as ReadCapPack;
 
       if (!share) {
         yield capPack;
@@ -754,17 +739,17 @@ export class Auth {
         continue;
       }
 
-      if (!entry) {
+      if (!area) {
         yield capPack;
         continue;
       }
 
       const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
 
-      const isIncluded = isIncludedArea(
+      const isIncluded = areaIsIncluded(
         subspaceScheme.order,
         grantedArea,
-        entryPosition(entry),
+        area,
       );
 
       if (!isIncluded) {
@@ -779,8 +764,8 @@ export class Auth {
   async *writeCapPacks(
     /** An optional share public key to filter by. */
     share?: SharePublicKey,
-    /** Filter by cap packs which include this optional entry. */
-    entry?: Entry<SharePublicKey, IdentityPublicKey, Blake3Digest>,
+    /** Filter by cap packs which grant an an area included by this area. */
+    area?: Area<IdentityPublicKey>,
   ): AsyncIterable<WriteCapPack> {
     // Find keypairs
     for await (
@@ -790,37 +775,37 @@ export class Auth {
     ) {
       const capBytes = await this.decrypt(value);
 
-      const cap = meadowcap.decodeCap(capBytes);
+      const capPack = decodeCapPack(capBytes) as WriteCapPack;
 
       if (!share) {
-        yield { writeCap: cap } as WriteCapPack;
+        yield capPack;
         continue;
       }
 
-      const grantedNamespace = Meadowcap.getGrantedNamespace(cap);
+      const grantedNamespace = Meadowcap.getGrantedNamespace(capPack.writeCap);
 
       if (!namespaceScheme.isEqual(share, grantedNamespace)) {
         continue;
       }
 
-      if (!entry) {
-        yield { writeCap: cap } as WriteCapPack;
+      if (!area) {
+        yield capPack;
         continue;
       }
 
-      const grantedArea = meadowcap.getCapGrantedArea(cap);
+      const grantedArea = meadowcap.getCapGrantedArea(capPack.writeCap);
 
-      const isIncluded = isIncludedArea(
+      const isIncluded = areaIsIncluded(
         subspaceScheme.order,
         grantedArea,
-        entryPosition(entry),
+        area,
       );
 
       if (!isIncluded) {
         continue;
       }
 
-      yield { writeCap: cap } as WriteCapPack;
+      yield capPack;
     }
   }
 
@@ -910,51 +895,4 @@ function decodeShareKeypair(encoded: Uint8Array): IdentityKeypair {
     publicKey,
     secretKey: encoded.slice(len),
   };
-}
-
-function encodeReadCapPack(capPack: ReadCapPack): Uint8Array {
-  const encodedCap = meadowcap.encodeCap(capPack.readCap);
-
-  if (capPack.subspaceCap === undefined) {
-    return concat(new Uint8Array([0]), encodedCap);
-  }
-
-  const encodedSubspaceCap = meadowcap.encodeSubspaceCap(
-    capPack.subspaceCap,
-  );
-
-  const capCompactWidth = compactWidth(encodedCap.length);
-  const capLen = encodeCompactWidth(encodedCap.length);
-
-  return concat(
-    new Uint8Array([capCompactWidth]),
-    capLen,
-    encodedCap,
-    encodedSubspaceCap,
-  );
-}
-
-function decodeReadCapPack(encoded: Uint8Array): ReadCapPack {
-  const [lengthCompactWidth] = encoded;
-
-  if (lengthCompactWidth === 0) {
-    return {
-      readCap: meadowcap.decodeCap(encoded.subarray(1)),
-    } as ReadCapPack;
-  }
-
-  const length = Number(
-    decodeCompactWidth(encoded.subarray(1, 1 + lengthCompactWidth)),
-  );
-
-  const cap = meadowcap.decodeCap(encoded.subarray(1 + lengthCompactWidth));
-
-  const subspaceCap = meadowcap.decodeSubspaceCap(
-    encoded.subarray(1 + lengthCompactWidth + length),
-  );
-
-  return {
-    readCap: cap,
-    subspaceCap: subspaceCap,
-  } as ReadCapPack;
 }
