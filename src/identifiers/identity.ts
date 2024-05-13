@@ -16,13 +16,17 @@ import { ValidationError } from "../util/errors.ts";
 export const MIN_IDENTITY_SHORTNAME_LENGTH = 4;
 export const MAX_IDENTITY_SHORTNAME_LENGTH = 4;
 
-export type IdentityKeypair = Cinn25519Keypair;
-export type IdentityPublicKey = IdentityKeypair["publicKey"];
+export type IdentityKeypairRaw = Cinn25519Keypair;
+export type IdentityPublicKey = IdentityKeypairRaw["publicKey"];
 export type IdentityTag = string;
+export type IdentityKeypair = {
+  tag: IdentityTag;
+  secretKey: Uint8Array;
+};
 
 export function generateIdentityKeypair(
   shortname: string,
-): Promise<IdentityKeypair | ValidationError> {
+): Promise<IdentityKeypairRaw | ValidationError> {
   return generateCinn25519Keypair(shortname, {
     minLength: MIN_IDENTITY_SHORTNAME_LENGTH,
     maxLength: MAX_IDENTITY_SHORTNAME_LENGTH,
@@ -30,14 +34,14 @@ export function generateIdentityKeypair(
 }
 
 export function identitySign(
-  keypair: IdentityKeypair,
+  keypair: IdentityKeypairRaw,
   bytes: Uint8Array,
 ): Promise<Uint8Array> {
   return cinn25519Sign(keypair, bytes, MAX_IDENTITY_SHORTNAME_LENGTH);
 }
 
 export function identityVerify(
-  publicKey: IdentityKeypair["publicKey"],
+  publicKey: IdentityKeypairRaw["publicKey"],
   signature: Uint8Array,
   bytes: Uint8Array,
 ): Promise<boolean> {
@@ -50,32 +54,32 @@ export function identityVerify(
 }
 
 export function encodeIdentityPublicKey(
-  publicKey: IdentityKeypair["publicKey"],
+  publicKey: IdentityKeypairRaw["publicKey"],
 ): Uint8Array {
   return encodeCinn25519PublicKey(publicKey, MAX_IDENTITY_SHORTNAME_LENGTH);
 }
 
 export function decodeIdentityPublicKey(
   encoded: Uint8Array,
-): IdentityKeypair["publicKey"] {
+): IdentityKeypairRaw["publicKey"] {
   return decodeCinn25519PublickKey(encoded, MAX_IDENTITY_SHORTNAME_LENGTH);
 }
 
 export function decodeStreamIdentityPublicKey(
   bytes: GrowingBytes,
-): Promise<IdentityKeypair["publicKey"]> {
+): Promise<IdentityKeypairRaw["publicKey"]> {
   return decodeStreamCinn25519PublickKey(bytes, MAX_IDENTITY_SHORTNAME_LENGTH);
 }
 
 export function encodeIdentityTag(
-  publicKey: IdentityKeypair["publicKey"],
+  publicKey: IdentityKeypairRaw["publicKey"],
 ): IdentityTag {
   return encodeCinn25519PublicKeyDisplay(publicKey, "@");
 }
 
 export function decodeIdentityTag(
   tag: IdentityTag,
-): IdentityKeypair["publicKey"] | ValidationError {
+): IdentityKeypairRaw["publicKey"] | ValidationError {
   return decodeCinn25519PublickKeyDisplay(
     tag,
     {

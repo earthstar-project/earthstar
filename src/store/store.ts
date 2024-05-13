@@ -23,7 +23,7 @@ import { Path } from "./types.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
-  IdentityKeypair,
+  IdentityKeypairRaw,
   IdentityPublicKey,
   IdentityTag,
 } from "../identifiers/identity.ts";
@@ -61,7 +61,7 @@ export class Store extends EventTarget {
     Uint8Array,
     {
       cap: Capability;
-      receiverKeypair: IdentityKeypair;
+      receiverKeypair: IdentityKeypairRaw;
     },
     AuthorisationToken,
     Uint8Array,
@@ -117,7 +117,7 @@ export class Store extends EventTarget {
       timestamp?: bigint;
     },
     // TODO: When we have the capability API, automatically find the right authorisation to use.
-    authorisation: { capability: Capability; keypair: IdentityKeypair },
+    authorisation: { capability: Capability; keypair: IdentityKeypairRaw },
     /** Whether to permit the deletion of documents via prefix pruning. Disabled by default. */
     permitPruning?: boolean,
   ): Promise<SetEvent> {
@@ -225,7 +225,7 @@ export class Store extends EventTarget {
     identity: IdentityTag,
     path: Path,
     // TODO: When we have the capability API, automatically find the right authorisation to use.
-    authorisation: { capability: Capability; keypair: IdentityKeypair },
+    authorisation: { capability: Capability; keypair: IdentityKeypairRaw },
   ): Promise<Document | ValidationError> {
     const existing = await this.get(identity, path);
 

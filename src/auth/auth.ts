@@ -11,7 +11,7 @@ import {
   decodeIdentityPublicKey,
   encodeIdentityPublicKey,
   generateIdentityKeypair,
-  IdentityKeypair,
+  IdentityKeypairRaw,
   IdentityPublicKey,
   identitySign,
   identityVerify,
@@ -241,7 +241,7 @@ export class Auth {
   }
 
   private async checkIdentityKeypairIsValid(
-    keypair: IdentityKeypair,
+    keypair: IdentityKeypairRaw,
   ): Promise<true | ValidationError> {
     const message = crypto.getRandomValues(new Uint8Array(16));
     const sig = await identitySign(keypair, message);
@@ -271,7 +271,7 @@ export class Auth {
   /** Create a new identity keypair and safely store it. */
   async createIdentityKeypair(
     shortname: string,
-  ): Promise<IdentityKeypair | ValidationError> {
+  ): Promise<IdentityKeypairRaw | ValidationError> {
     const keypair = await generateIdentityKeypair(shortname);
 
     if (isErr(keypair)) {
@@ -285,7 +285,7 @@ export class Auth {
 
   /** Safely store an existing identity keypair. */
   async addIdentityKeypair(
-    keypair: IdentityKeypair,
+    keypair: IdentityKeypairRaw,
   ): Promise<true | ValidationError> {
     const isValid = await this.checkIdentityKeypairIsValid(keypair);
 
@@ -307,7 +307,7 @@ export class Auth {
   }
 
   /** Iterate through all identity keypairs in encrypted storage. */
-  async *identityKeypairs(): AsyncIterable<IdentityKeypair> {
+  async *identityKeypairs(): AsyncIterable<IdentityKeypairRaw> {
     for await (
       const { value } of this.kvDriver.list<Uint8Array>({
         prefix: ["keypair", "identity"],
@@ -321,7 +321,7 @@ export class Auth {
   /** Retrieve the identity keypair for a given share public key. */
   async identityKeypair(
     identity: IdentityPublicKey,
-  ): Promise<IdentityKeypair | undefined> {
+  ): Promise<IdentityKeypairRaw | undefined> {
     for await (
       const { value } of this.kvDriver.list<Uint8Array>({
         prefix: ["keypair", "identity"],
@@ -361,7 +361,7 @@ export class Auth {
    * Keypairs for shares with communal public keys are not validated, as the secret is never used.
    */
   async addShareKeypair(
-    keypair: IdentityKeypair,
+    keypair: IdentityKeypairRaw,
   ): Promise<true | ValidationError> {
     if (!isCommunalShare(keypair.publicKey)) {
       const isValid = await this.checkShareKeypairIsValid(keypair);
@@ -865,12 +865,12 @@ export class Auth {
   }
 }
 
-function encodeIdentityKeypair(keypair: IdentityKeypair): Uint8Array {
+function encodeIdentityKeypair(keypair: IdentityKeypairRaw): Uint8Array {
   const publicKeyEncoded = encodeIdentityPublicKey(keypair.publicKey);
   return concat(publicKeyEncoded, keypair.secretKey);
 }
 
-function decodeIdentityKeypair(encoded: Uint8Array): IdentityKeypair {
+function decodeIdentityKeypair(encoded: Uint8Array): IdentityKeypairRaw {
   const publicKeyEncoded = encoded.subarray(0, 36);
 
   const publicKey = decodeIdentityPublicKey(publicKeyEncoded);
@@ -887,7 +887,7 @@ function encodeShareKeypair(keypair: ShareKeypair): Uint8Array {
   return concat(publicKeyEncoded, keypair.secretKey);
 }
 
-function decodeShareKeypair(encoded: Uint8Array): IdentityKeypair {
+function decodeShareKeypair(encoded: Uint8Array): IdentityKeypairRaw {
   const publicKey = decodeSharePublicKey(encoded);
   const len = encodeSharePublicKey(publicKey).length;
 

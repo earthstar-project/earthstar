@@ -17,14 +17,14 @@ import {
 import {
   encodeIdentityTag,
   generateIdentityKeypair,
-  IdentityKeypair,
+  IdentityKeypairRaw,
 } from "../identifiers/identity.ts";
 
 const share = await generateShareKeypair("gardening") as ShareKeypair;
 const shareDisplay = encodeShareTag(share.publicKey);
 const identity = await generateIdentityKeypair(
   "suzy",
-) as IdentityKeypair;
+) as IdentityKeypairRaw;
 const identityDisplay = encodeIdentityTag(identity.publicKey);
 
 const capability = meadowcap.createCapCommunal({
@@ -298,7 +298,7 @@ Deno.test("Store.documents respects ordering", async () => {
 
 const identity2 = await generateIdentityKeypair(
   "yarp",
-) as IdentityKeypair;
+) as IdentityKeypairRaw;
 const identity2Display = encodeIdentityTag(identity2.publicKey);
 
 const capability2 = meadowcap.createCapCommunal({

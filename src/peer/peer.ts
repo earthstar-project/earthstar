@@ -1,9 +1,11 @@
+import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
 import { ANY_SUBSPACE, OPEN_END, Path, Willow } from "../../deps.ts";
 import { Auth } from "../auth/auth.ts";
 import { Cap } from "../caps/cap.ts";
 import { decodeCapPack } from "../caps/util.ts";
 import {
   decodeIdentityTag,
+  encodeIdentityTag,
   IdentityKeypair,
   IdentityTag,
 } from "../identifiers/identity.ts";
@@ -42,7 +44,7 @@ export type PeerDriver = {
 export type PeerOpts = {
   /** A plaintext password used to encrypt sensitive information stored within the peer, such as keypairs or capabilities. */
   password: string;
-  driver: PeerDriver;
+  driver?: PeerDriver;
 };
 
 /** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those. */
@@ -59,10 +61,11 @@ export class Peer {
   constructor(opts: PeerOpts) {
     this.auth = new Auth({
       password: opts.password,
-      kvDriver: opts.driver.authDriver,
+      kvDriver: opts.driver?.authDriver || new KvDriverInMemory(),
     });
 
-    this.createStoreFn = opts.driver.createStore;
+    this.createStoreFn = opts.driver?.createStore ||
+      ((share) => Promise.resolve(new Store(encodeShareTag(share))));
   }
 
   /** Create a new {@linkcode IdentityKeypair} and store it in the peer.
@@ -73,10 +76,19 @@ export class Peer {
    *
    * @param shortname A four character name to attach to the keypair for identification. Can only contain numbers and lowercase letters and must start with a letter.
    */
-  createNewIdentity(
+  async createIdentity(
     shortname: string,
   ): Promise<IdentityKeypair | ValidationError> {
-    return this.auth.createIdentityKeypair(shortname);
+    const result = await this.auth.createIdentityKeypair(shortname);
+
+    if (isErr(result)) {
+      return result;
+    }
+
+    return {
+      tag: encodeIdentityTag(result.publicKey),
+      secretKey: result.secretKey,
+    };
   }
 
   /** Store an existing {@linkcode IdentityKeypair} in the peer.
@@ -88,11 +100,20 @@ export class Peer {
   addExistingIdentity(
     keypair: IdentityKeypair,
   ): Promise<true | ValidationError> {
-    return this.auth.addIdentityKeypair(keypair);
+    const decodedTag = decodeIdentityTag(keypair.tag);
+
+    if (isErr(decodedTag)) {
+      return Promise.resolve(decodedTag);
+    }
+
+    return this.auth.addIdentityKeypair({
+      publicKey: decodedTag,
+      secretKey: keypair.secretKey,
+    });
   }
 
   /** Retrieve a stored {@linkcode IdentityKeypair} using its tag. */
-  getIdentityKeypair(
+  async getIdentityKeypair(
     tag: IdentityTag,
   ): Promise<IdentityKeypair | ValidationError | undefined> {
     const publicKey = decodeIdentityTag(tag);
@@ -101,7 +122,16 @@ export class Peer {
       return Promise.resolve(publicKey);
     }
 
-    return this.auth.identityKeypair(publicKey);
+    const keypair = await this.auth.identityKeypair(publicKey);
+
+    if (!keypair) {
+      return undefined;
+    }
+
+    return {
+      tag: encodeIdentityTag(keypair.publicKey),
+      secretKey: keypair.secretKey,
+    };
   }
 
   /** Create a new {@linkcode Share} and store any information in the peer.
@@ -115,15 +145,15 @@ export class Peer {
    *
    * @returns A tag if the new share is communal, a {@linkcode ShareKeypair} if it is owned, or {@linkcode ValidationError} if the given shortname is invalid.
    */
-  createNewShare(
+  createShare(
     shortname: string,
     communal: true,
   ): Promise<ShareTag | ValidationError>;
-  createNewShare(
+  createShare(
     shortname: string,
     communal: false,
   ): Promise<ShareKeypair | ValidationError>;
-  async createNewShare(
+  async createShare(
     shortname: string,
     communal: boolean,
   ): Promise<ShareKeypair | ShareTag | ValidationError> {
@@ -151,7 +181,7 @@ export class Peer {
    * @returns `true` if the operation was successful, or a {@linkcode ValidationError} if the keypair for an owned share was invalid.
    */
   async addExistingShare(
-    share: IdentityKeypair | IdentityTag,
+    share: ShareKeypair | ShareTag,
   ): Promise<true | ValidationError> {
     if (typeof share !== "string") {
       return await this.auth.addIdentityKeypair(share);
@@ -177,7 +207,7 @@ export class Peer {
    */
   getShareKeypair(
     tag: IdentityTag,
-  ): Promise<IdentityKeypair | ValidationError | undefined> {
+  ): Promise<ShareKeypair | ValidationError | undefined> {
     const publicKey = decodeIdentityTag(tag);
 
     if (isErr(publicKey)) {

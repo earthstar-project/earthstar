@@ -15,7 +15,7 @@ import {
   decodeIdentityPublicKey,
   decodeStreamIdentityPublicKey,
   encodeIdentityPublicKey,
-  IdentityKeypair,
+  IdentityKeypairRaw,
   IdentityPublicKey,
   identitySign,
   identityVerify,
@@ -216,7 +216,7 @@ export const authorisationScheme: Willow.AuthorisationScheme<
       Uint8Array,
       Uint8Array
     >;
-    receiverKeypair: IdentityKeypair;
+    receiverKeypair: IdentityKeypairRaw;
   },
   Meadowcap.MeadowcapAuthorisationToken<
     SharePublicKey,

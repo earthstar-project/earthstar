@@ -1,7 +1,10 @@
 import { Willow } from "../../deps.ts";
 import { AuthorisationToken } from "../auth/auth.ts";
 import { Capability } from "../caps/types.ts";
-import { IdentityKeypair, IdentityPublicKey } from "../identifiers/identity.ts";
+import {
+  IdentityKeypairRaw,
+  IdentityPublicKey,
+} from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
 import { entryToDocument } from "../util/documents.ts";
 import { willowToEarthstarPath } from "../util/path.ts";
@@ -56,7 +59,7 @@ export function relayWillowEvents(
     Uint8Array,
     {
       cap: Capability;
-      receiverKeypair: IdentityKeypair;
+      receiverKeypair: IdentityKeypairRaw;
     },
     AuthorisationToken,
     Uint8Array,
