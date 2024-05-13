@@ -22,7 +22,7 @@ import {
   encodeShareTag,
   generateShareKeypair,
   isCommunalShare,
-  ShareKeypair,
+  ShareKeypairRaw,
   SharePublicKey,
   shareSign,
   shareVerify,
@@ -255,7 +255,7 @@ export class Auth {
   }
 
   private async checkShareKeypairIsValid(
-    keypair: ShareKeypair,
+    keypair: ShareKeypairRaw,
   ): Promise<true | ValidationError> {
     const message = crypto.getRandomValues(new Uint8Array(16));
     const sig = await shareSign(keypair, message);
@@ -340,7 +340,7 @@ export class Auth {
   async createShareKeypair(
     name: string,
     owned: boolean,
-  ): Promise<ShareKeypair | ValidationError> {
+  ): Promise<ShareKeypairRaw | ValidationError> {
     const keypair = await generateShareKeypair(name, owned);
 
     if (isErr(keypair)) {
@@ -385,7 +385,7 @@ export class Auth {
   }
 
   /** Iterate through all share keypairs in encrypted storage. */
-  async *shareKeypairs(): AsyncIterable<ShareKeypair> {
+  async *shareKeypairs(): AsyncIterable<ShareKeypairRaw> {
     for await (
       const { value } of this.kvDriver.list<Uint8Array>({
         prefix: ["keypair", "share"],
@@ -397,7 +397,9 @@ export class Auth {
   }
 
   /** Retrieve the identity keypair for a given share public key. */
-  async shareKeypair(share: SharePublicKey): Promise<ShareKeypair | undefined> {
+  async shareKeypair(
+    share: SharePublicKey,
+  ): Promise<ShareKeypairRaw | undefined> {
     for await (
       const { value } of this.kvDriver.list<Uint8Array>({
         prefix: ["keypair", "share"],
@@ -881,7 +883,7 @@ function decodeIdentityKeypair(encoded: Uint8Array): IdentityKeypairRaw {
   };
 }
 
-function encodeShareKeypair(keypair: ShareKeypair): Uint8Array {
+function encodeShareKeypair(keypair: ShareKeypairRaw): Uint8Array {
   const publicKeyEncoded = encodeSharePublicKey(keypair.publicKey);
 
   return concat(publicKeyEncoded, keypair.secretKey);

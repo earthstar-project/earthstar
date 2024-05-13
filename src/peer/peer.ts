@@ -14,6 +14,7 @@ import {
   encodeShareTag,
   isCommunalShare,
   ShareKeypair,
+  ShareKeypairRaw,
   SharePublicKey,
   ShareTag,
 } from "../identifiers/share.ts";
@@ -143,7 +144,7 @@ export class Peer {
    * @param shortname A 1-15 character name for the share, containing only numbers and lowercase letters, and which must start with a letter.
    * @param communal Whether the share is [communal or owned](https://willowprotocol.org/specs/meadowcap/index.html#meadowcap_overview).
    *
-   * @returns A tag if the new share is communal, a {@linkcode ShareKeypair} if it is owned, or {@linkcode ValidationError} if the given shortname is invalid.
+   * @returns A tag if the new share is communal, a {@linkcode ShareKeypairRaw} if it is owned, or {@linkcode ValidationError} if the given shortname is invalid.
    */
   createShare(
     shortname: string,
@@ -167,7 +168,10 @@ export class Peer {
       return encodeShareTag(keypair.publicKey);
     }
 
-    return keypair;
+    return {
+      tag: encodeShareTag(keypair.publicKey),
+      secretKey: keypair.secretKey,
+    };
   }
 
   /** Store an existing {@linkcode IdentityKeypair} in the peer.
@@ -176,7 +180,7 @@ export class Peer {
    *
    * It's recommended to store keypairs in an additional secure storage, e.g. a password manager.
    *
-   * @param share The tag of a communal share or the {@linkcode ShareKeypair} of an owned share.
+   * @param share The tag of a communal share or the {@linkcode ShareKeypairRaw} of an owned share.
    *
    * @returns `true` if the operation was successful, or a {@linkcode ValidationError} if the keypair for an owned share was invalid.
    */
@@ -184,7 +188,16 @@ export class Peer {
     share: ShareKeypair | ShareTag,
   ): Promise<true | ValidationError> {
     if (typeof share !== "string") {
-      return await this.auth.addIdentityKeypair(share);
+      const publicKey = decodeShareTag(share.tag);
+
+      if (isErr(publicKey)) {
+        return publicKey;
+      }
+
+      return await this.auth.addIdentityKeypair({
+        publicKey,
+        secretKey: share.secretKey,
+      });
     }
 
     const publicKey = decodeShareTag(share);
@@ -207,7 +220,7 @@ export class Peer {
    */
   getShareKeypair(
     tag: IdentityTag,
-  ): Promise<ShareKeypair | ValidationError | undefined> {
+  ): Promise<ShareKeypairRaw | ValidationError | undefined> {
     const publicKey = decodeIdentityTag(tag);
 
     if (isErr(publicKey)) {
