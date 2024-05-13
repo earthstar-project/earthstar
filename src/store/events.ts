@@ -1,5 +1,6 @@
 import { Willow } from "../../deps.ts";
-import { AuthorisationToken, Capability } from "../auth/auth.ts";
+import { AuthorisationToken } from "../auth/auth.ts";
+import { Capability } from "../caps/types.ts";
 import { IdentityKeypair, IdentityPublicKey } from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
 import { entryToDocument } from "../util/documents.ts";

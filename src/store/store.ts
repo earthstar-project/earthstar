@@ -4,7 +4,7 @@ import {
   successorPath,
   Willow,
 } from "../../deps.ts";
-import { AuthorisationToken, Capability } from "../auth/auth.ts";
+import { AuthorisationToken } from "../auth/auth.ts";
 import {
   authorisationScheme,
   fingerprintScheme,
@@ -32,6 +32,7 @@ import {
   SharePublicKey,
   ShareTag,
 } from "../identifiers/share.ts";
+import { Capability } from "../caps/types.ts";
 
 /** A store for reading, writing, and querying documents from a corresponding share.
  *

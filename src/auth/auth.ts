@@ -834,7 +834,7 @@ export class Auth {
 
     await Promise.all(
       [
-        async () => {
+        (async () => {
           for await (const writeCapPack of this.writeCapPacks()) {
             const tag = encodeShareTag(writeCapPack.writeCap.namespaceKey);
 
@@ -845,8 +845,8 @@ export class Auth {
             foundShares.add(tag);
             sharePublicKeys.push(writeCapPack.writeCap.namespaceKey);
           }
-        },
-        async () => {
+        })(),
+        (async () => {
           for await (const readCapPacks of this.readCapPacks()) {
             const tag = encodeShareTag(readCapPacks.readCap.namespaceKey);
 
@@ -857,7 +857,7 @@ export class Auth {
             foundShares.add(tag);
             sharePublicKeys.push(readCapPacks.readCap.namespaceKey);
           }
-        },
+        })(),
       ],
     );
 
