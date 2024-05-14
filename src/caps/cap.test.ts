@@ -154,7 +154,7 @@ Deno.test("Cap delegation", async () => {
     tag2,
     {
       identity: tag2,
-      pathPrefix: ["ehhhh"],
+      pathPrefix: [new Uint8Array([7, 7, 7])],
       time: {
         start: 10n,
         end: 90n,
@@ -167,7 +167,9 @@ Deno.test("Cap delegation", async () => {
   assertEquals(delegatedRestricted.share, readCap.share);
   assertEquals(delegatedRestricted.accessMode, "read");
   assertEquals(delegatedRestricted.grantedIdentity, tag2);
-  assertEquals(delegatedRestricted.grantedPathPrefix, ["ehhhh"]);
+  assertEquals(delegatedRestricted.grantedPathPrefix, [
+    new Uint8Array([7, 7, 7]),
+  ]);
   assertEquals(delegatedRestricted.grantedTime, {
     start: 10n,
     end: 90n,
