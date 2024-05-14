@@ -259,7 +259,7 @@ Deno.test("Delegate (communal, write)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: ["hello"],
+      pathPrefix: [new Uint8Array([1])],
       time: {
         start: 2n,
         end: 10n,
@@ -272,7 +272,7 @@ Deno.test("Delegate (communal, write)", async () => {
   assert(auth.isValidCapPack(delegated));
   assertEquals(meadowcap.getCapGrantedArea(delegated.writeCap), {
     includedSubspaceId: newIdentity.publicKey,
-    pathPrefix: earthstarToWillowPath(["hello"]) as Uint8Array[],
+    pathPrefix: [new Uint8Array([1])],
     timeRange: {
       start: 2n,
       end: 10n,
@@ -307,7 +307,7 @@ Deno.test("Delegate (communal, read)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: ["hello"],
+      pathPrefix: [new Uint8Array([1])],
       time: {
         start: 2n,
         end: 10n,
@@ -320,7 +320,7 @@ Deno.test("Delegate (communal, read)", async () => {
   assert(auth.isValidCapPack(delegated));
   assertEquals(meadowcap.getCapGrantedArea(delegated.readCap), {
     includedSubspaceId: newIdentity.publicKey,
-    pathPrefix: earthstarToWillowPath(["hello"]) as Uint8Array[],
+    pathPrefix: [new Uint8Array([1])],
     timeRange: {
       start: 2n,
       end: 10n,
@@ -357,7 +357,7 @@ Deno.test("Delegate (owned, read)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: ["hello"],
+      pathPrefix: [new Uint8Array([1])],
       time: {
         start: 2n,
         end: 10n,
@@ -370,7 +370,7 @@ Deno.test("Delegate (owned, read)", async () => {
   assert(auth.isValidCapPack(delegated));
   assertEquals(meadowcap.getCapGrantedArea(delegated.readCap), {
     includedSubspaceId: ANY_SUBSPACE,
-    pathPrefix: earthstarToWillowPath(["hello"]) as Uint8Array[],
+    pathPrefix: [new Uint8Array([1])],
     timeRange: {
       start: 2n,
       end: 10n,
@@ -407,7 +407,7 @@ Deno.test("Delegate (owned, write)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: ["hello"],
+      pathPrefix: [new Uint8Array([1])],
       time: {
         start: 2n,
         end: 10n,
@@ -420,10 +420,115 @@ Deno.test("Delegate (owned, write)", async () => {
   assert(auth.isValidCapPack(delegated));
   assertEquals(meadowcap.getCapGrantedArea(delegated.writeCap), {
     includedSubspaceId: ANY_SUBSPACE,
-    pathPrefix: earthstarToWillowPath(["hello"]) as Uint8Array[],
+    pathPrefix: [new Uint8Array([1])],
     timeRange: {
       start: 2n,
       end: 10n,
     },
+  });
+});
+
+Deno.test("Auth.getWriteAuthorisation", async () => {
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+
+  // Communal by default, owned is a second param.
+  const gardeningShare = await auth.createShareKeypair("gardening", true);
+
+  assert(notErr(gardeningShare));
+  assert(!isCommunalShare(gardeningShare.publicKey));
+
+  const newIdentity = await auth.createIdentityKeypair("suzy");
+
+  assert(notErr(newIdentity));
+
+  const res1 = await auth.getWriteAuthorisation(
+    gardeningShare.publicKey,
+    newIdentity.publicKey,
+    [],
+    0n,
+  );
+
+  assertEquals(res1, undefined);
+
+  const capPack = await auth.createFullCapPack(
+    gardeningShare.publicKey,
+    newIdentity.publicKey,
+    "write",
+  );
+  assert(notErr(capPack));
+
+  const res2 = await auth.getWriteAuthorisation(
+    gardeningShare.publicKey,
+    newIdentity.publicKey,
+    [],
+    0n,
+  );
+
+  assertEquals(res2, {
+    cap: capPack.writeCap,
+    receiverKeypair: newIdentity,
+  });
+
+  const delegated = await auth.delegateCapPack({
+    capPack,
+    toUser: newIdentity.publicKey,
+    restrictTo: {
+      pathPrefix: [new Uint8Array([8])],
+      identity: newIdentity.publicKey,
+      time: {
+        start: 10n,
+        end: 20n,
+      },
+    },
+  });
+  assert(notErr(delegated));
+  assert(notErr(await auth.addCapPack(delegated)));
+
+  const res3 = await auth.getWriteAuthorisation(
+    gardeningShare.publicKey,
+    newIdentity.publicKey,
+    [new Uint8Array([8]), new Uint8Array([8])],
+    15n,
+  );
+  assert(notErr(res3));
+
+  assertEquals(res3, {
+    cap: capPack.writeCap,
+    receiverKeypair: newIdentity,
+  });
+
+  // Let's double check using another auth.
+
+  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+
+  assert(notErr(await auth2.addIdentityKeypair(newIdentity)));
+  assert(notErr(await auth2.addCapPack(delegated)));
+
+  const res4 = await auth2.getWriteAuthorisation(
+    gardeningShare.publicKey,
+    newIdentity.publicKey,
+    [new Uint8Array([8]), new Uint8Array([8])],
+    15n,
+  );
+  assert(notErr(res4));
+
+  assertEquals(res4, {
+    cap: delegated.writeCap,
+    receiverKeypair: newIdentity,
+  });
+
+  assert(notErr(await auth2.addCapPack(capPack)));
+
+  const res5 = await auth2.getWriteAuthorisation(
+    gardeningShare.publicKey,
+    newIdentity.publicKey,
+    [new Uint8Array([8]), new Uint8Array([8])],
+    15n,
+  );
+  assert(notErr(res5));
+
+  assertEquals(res5, {
+    cap: capPack.writeCap,
+    receiverKeypair: newIdentity,
   });
 });

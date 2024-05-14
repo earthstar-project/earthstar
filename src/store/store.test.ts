@@ -1,5 +1,5 @@
 import { Store } from "./store.ts";
-import { meadowcap } from "../auth/auth.ts";
+import { Auth } from "../auth/auth.ts";
 
 import {
   assert,
@@ -9,37 +9,32 @@ import {
 import { DocumentSetEvent } from "./events.ts";
 import { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";
-import {
-  encodeShareTag,
-  generateShareKeypair,
-  ShareKeypair,
-} from "../identifiers/share.ts";
+import { encodeShareTag, ShareKeypairRaw } from "../identifiers/share.ts";
 import {
   encodeIdentityTag,
-  generateIdentityKeypair,
   IdentityKeypairRaw,
 } from "../identifiers/identity.ts";
+import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
 
-const share = await generateShareKeypair("gardening") as ShareKeypair;
+const auth = new Auth({
+  password: "password1234",
+  kvDriver: new KvDriverInMemory(),
+});
+
+const share = await auth.createShareKeypair(
+  "gardening",
+  false,
+) as ShareKeypairRaw;
 const shareDisplay = encodeShareTag(share.publicKey);
-const identity = await generateIdentityKeypair(
+const identity = await auth.createIdentityKeypair(
   "suzy",
 ) as IdentityKeypairRaw;
 const identityDisplay = encodeIdentityTag(identity.publicKey);
 
-const capability = meadowcap.createCapCommunal({
-  accessMode: "write",
-  namespace: share.publicKey,
-  user: identity.publicKey,
-});
-
-const auth = {
-  capability,
-  keypair: identity,
-};
+await auth.createFullCapPack(share.publicKey, identity.publicKey, "write");
 
 function newStore() {
-  return new Store(shareDisplay);
+  return new Store(shareDisplay, auth);
 }
 
 Deno.test("Store.set", async () => {
@@ -49,7 +44,7 @@ Deno.test("Store.set", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(result.kind === "success");
   assertEquals(result.document.identity, identityDisplay);
@@ -64,7 +59,7 @@ Deno.test("Store.set uses manual timestamp", async () => {
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   assert(result.kind === "success");
   assertEquals(result.document.timestamp, 1000n);
@@ -77,7 +72,7 @@ Deno.test("Store.set rejects invalid identity", async () => {
     identity: "james",
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(result.kind === "failure");
 });
@@ -89,7 +84,7 @@ Deno.test("Store.set rejects invalid path ", async () => {
     identity: identityDisplay,
     path: ["bad/test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(result.kind === "failure");
 });
@@ -101,13 +96,13 @@ Deno.test("Store.set permitPruning option", async () => {
     identity: identityDisplay,
     path: ["root", "nested"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   const result = await store.set({
     identity: identityDisplay,
     path: ["root"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assertEquals(result.kind, "pruning_prevented");
 
@@ -117,7 +112,6 @@ Deno.test("Store.set permitPruning option", async () => {
       path: ["root"],
       payload: new TextEncoder().encode("Hello world"),
     },
-    auth,
     true,
   );
 
@@ -139,7 +133,7 @@ Deno.test("Store.set emits event", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(gotEventDoc);
   assertEquals((gotEventDoc as Document).identity, identityDisplay);
@@ -155,9 +149,9 @@ Deno.test("Store.clear", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
-  const result = await store.clear(identityDisplay, ["test"], auth);
+  const result = await store.clear(identityDisplay, ["test"]);
 
   assert(notErr(result));
 
@@ -171,7 +165,7 @@ Deno.test("Store.clear", async () => {
 Deno.test("Store.clear can't clear non-existent docs", async () => {
   const store = newStore();
 
-  const result = await store.clear(identityDisplay, ["test"], auth);
+  const result = await store.clear(identityDisplay, ["test"]);
 
   assert(isErr(result));
 });
@@ -185,7 +179,7 @@ Deno.test("Store.get", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   const doc = await store.get(identityDisplay, ["test"]);
 
@@ -220,19 +214,19 @@ Deno.test("Store.documents", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
     identity: identityDisplay,
     path: ["test", "2"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
     identity: identityDisplay,
     path: ["also", "test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   const docs = [];
 
@@ -258,19 +252,19 @@ Deno.test("Store.documents respects ordering", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
     identity: identityDisplay,
     path: ["test", "2"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
     identity: identityDisplay,
     path: ["also", "test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   const docs = [];
 
@@ -296,21 +290,12 @@ Deno.test("Store.documents respects ordering", async () => {
 
 ///
 
-const identity2 = await generateIdentityKeypair(
+const identity2 = await auth.createIdentityKeypair(
   "yarp",
 ) as IdentityKeypairRaw;
 const identity2Display = encodeIdentityTag(identity2.publicKey);
 
-const capability2 = meadowcap.createCapCommunal({
-  accessMode: "write",
-  namespace: share.publicKey,
-  user: identity2.publicKey,
-});
-
-const auth2 = {
-  capability: capability2,
-  keypair: identity2,
-};
+await auth.createFullCapPack(share.publicKey, identity2.publicKey, "write");
 
 Deno.test("Store.latestDocAtPath", async () => {
   const store = newStore();
@@ -319,13 +304,13 @@ Deno.test("Store.latestDocAtPath", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
     identity: identity2Display,
     path: ["test"],
     payload: new TextEncoder().encode("Yo!!!"),
-  }, auth2);
+  });
 
   const latest = await store.latestDocAtPath(["test"]);
 
@@ -351,13 +336,13 @@ Deno.test("Store.documentsAtPath", async () => {
     identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
     identity: identity2Display,
     path: ["test"],
     payload: new TextEncoder().encode("Yo!!!"),
-  }, auth2);
+  });
 
   const docs = [];
 
@@ -400,14 +385,14 @@ Deno.test("Store.queryDocs", async () => {
     path: ["test1"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   await store.set({
     identity: identity2Display,
     path: ["test2"],
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
-  }, auth2);
+  });
 
   const docsAll = await collect(store.queryDocs({}));
   assertEquals(docsAll.length, 2);
@@ -478,14 +463,14 @@ Deno.test("Store.queryPaths", async () => {
     path: ["test1"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   await store.set({
     identity: identity2Display,
     path: ["test2"],
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
-  }, auth2);
+  });
 
   const paths = await collect(store.queryPaths({
     identity: identity2Display,
@@ -501,14 +486,14 @@ Deno.test("Store.queryIdentities", async () => {
     path: ["test1"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   await store.set({
     identity: identity2Display,
     path: ["test2"],
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
-  }, auth2);
+  });
 
   const identities = await collect(store.queryIdentities({
     pathPrefix: ["test1"],

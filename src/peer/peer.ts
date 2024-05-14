@@ -51,7 +51,7 @@ export type PeerOpts = {
 /** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those. */
 export class Peer {
   private auth: Auth;
-  private createStoreFn: (share: SharePublicKey) => Promise<Store>;
+  private createStoreFn: (share: SharePublicKey, auth: Auth) => Promise<Store>;
   private storeMap = new Map<string, Store>();
 
   /** Resets the password and irrevocably deletes all previously stored identity keypairs, share keypairs, and capabalities. */
@@ -66,7 +66,8 @@ export class Peer {
     });
 
     this.createStoreFn = opts.driver?.createStore ||
-      ((share) => Promise.resolve(new Store(encodeShareTag(share))));
+      ((share, auth) =>
+        Promise.resolve(new Store(encodeShareTag(share), auth)));
   }
 
   /** Create a new {@linkcode IdentityKeypair} and store it in the peer.
@@ -336,7 +337,7 @@ export class Peer {
    */
   async getStore(
     share: ShareTag,
-  ): Promise<Store | ValidationError | undefined> {
+  ): Promise<Store | ValidationError> {
     const decodedShare = decodeShareTag(share);
 
     if (isErr(decodedShare)) {
@@ -355,9 +356,11 @@ export class Peer {
       return existing;
     }
 
-    const newStore = await this.createStoreFn(decodedShare);
+    const newStore = await this.createStoreFn(decodedShare, this.auth);
 
     this.storeMap.set(share, newStore);
+
+    return newStore;
   }
 
   /** All shares for which the peer has read or write access to.

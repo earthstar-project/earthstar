@@ -4,7 +4,7 @@ import {
   successorPath,
   Willow,
 } from "../../deps.ts";
-import { AuthorisationToken } from "../auth/auth.ts";
+import { Auth, AuthorisationToken } from "../auth/auth.ts";
 import {
   authorisationScheme,
   fingerprintScheme,
@@ -14,7 +14,12 @@ import {
   subspaceScheme,
 } from "../schemes/schemes.ts";
 import { entryToDocument } from "../util/documents.ts";
-import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
+import {
+  AuthorisationError,
+  EarthstarError,
+  isErr,
+  ValidationError,
+} from "../util/errors.ts";
 import { earthstarToWillowPath, willowToEarthstarPath } from "../util/path.ts";
 import { relayWillowEvents } from "./events.ts";
 import { Document, Query, SetEvent, StoreDriverOpts } from "./types.ts";
@@ -29,6 +34,7 @@ import {
 } from "../identifiers/identity.ts";
 import {
   decodeShareTag,
+  encodeShareTag,
   SharePublicKey,
   ShareTag,
 } from "../identifiers/share.ts";
@@ -54,6 +60,8 @@ import { Capability } from "../caps/types.ts";
  * ```
  */
 export class Store extends EventTarget {
+  private auth: Auth;
+
   /** The underlying Willow `Store`, made accessible for advanced usage and shenanigans. */
   willow: Willow.Store<
     SharePublicKey,
@@ -68,11 +76,18 @@ export class Store extends EventTarget {
     Uint8Array
   >;
 
+  get share(): ShareTag {
+    return encodeShareTag(this.willow.namespace);
+  }
+
   constructor(
     share: ShareTag,
+    auth: Auth,
     drivers?: StoreDriverOpts,
   ) {
     super();
+
+    this.auth = auth;
 
     // If drivers are specified, use those, otherwise always use in-memory drivers (the default in willow-js).
     const driversToUse = drivers && drivers !== "memory" ? drivers : {};
@@ -116,8 +131,6 @@ export class Store extends EventTarget {
       payload: Uint8Array | AsyncIterable<Uint8Array>;
       timestamp?: bigint;
     },
-    // TODO: When we have the capability API, automatically find the right authorisation to use.
-    authorisation: { capability: Capability; keypair: IdentityKeypairRaw },
     /** Whether to permit the deletion of documents via prefix pruning. Disabled by default. */
     permitPruning?: boolean,
   ): Promise<SetEvent> {
@@ -173,15 +186,28 @@ export class Store extends EventTarget {
       }
     }
 
+    const authorisation = await this.auth.getWriteAuthorisation(
+      this.willow.namespace,
+      identityPublicKey,
+      willowPath,
+      input.timestamp || BigInt(Date.now() * 1000),
+    );
+
+    if (!authorisation) {
+      return {
+        kind: "failure",
+        reason: "invalid_entry",
+        err: new AuthorisationError("Not authorised to write this document."),
+        message: "Not authorised to write this document.",
+      };
+    }
+
     const result = await this.willow.set({
       path: willowPath,
       subspace: identityPublicKey,
       payload: input.payload,
       timestamp: input.timestamp,
-    }, {
-      cap: authorisation.capability,
-      receiverKeypair: authorisation.keypair,
-    });
+    }, authorisation);
 
     if (result.kind !== "success") {
       return result;
@@ -224,9 +250,7 @@ export class Store extends EventTarget {
   async clear(
     identity: IdentityTag,
     path: Path,
-    // TODO: When we have the capability API, automatically find the right authorisation to use.
-    authorisation: { capability: Capability; keypair: IdentityKeypairRaw },
-  ): Promise<Document | ValidationError> {
+  ): Promise<Document | ValidationError | AuthorisationError> {
     const existing = await this.get(identity, path);
 
     if (isErr(existing)) {
@@ -245,15 +269,23 @@ export class Store extends EventTarget {
       throw identityPublicKey;
     }
 
+    const authorisation = await this.auth.getWriteAuthorisation(
+      this.willow.namespace,
+      identityPublicKey,
+      earthstarToWillowPath(path) as WillowPath,
+      existing.timestamp + 1n,
+    );
+
+    if (!authorisation) {
+      return new AuthorisationError("Not authorised to clear this ");
+    }
+
     const result = await this.willow.set({
       path: earthstarToWillowPath(path) as WillowPath, // Validated already by this.get.
       subspace: identityPublicKey,
       payload: new Uint8Array(),
       timestamp: existing.timestamp + 1n,
-    }, {
-      cap: authorisation.capability,
-      receiverKeypair: authorisation.keypair,
-    });
+    }, authorisation);
 
     if (result.kind === "failure") {
       return new ValidationError(`Could not clear document: ${result.message}`);

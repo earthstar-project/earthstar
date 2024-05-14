@@ -6,6 +6,7 @@ import {
 import { notErr } from "../util/errors.ts";
 
 Deno.test("Peer", async () => {
+  // A Peer which can securely store capabilities and keypairs.
   const peer = new Peer({ password: "password1234" });
 
   // At this point the peer has no capabilities, so no shares.
@@ -24,13 +25,21 @@ Deno.test("Peer", async () => {
   const gardeningRootCap = await peer.mintCap(
     gardeningTag,
     suzyKeypair.tag,
-    "read",
+    "write",
   );
   assert(notErr(gardeningRootCap));
 
   // Now our Peer can produce stores to access +gardening
   assertEquals(await peer.shares(), [gardeningTag]);
-
   const gardeningStore = await peer.getStore(gardeningTag);
   assert(notErr(gardeningStore));
+
+  // And even better, our Store knows about our capabilities,
+  // And selects them automatically when creating new documents.
+  const result = await gardeningStore.set({
+    path: ["hello"],
+    identity: suzyKeypair.tag,
+    payload: new TextEncoder().encode("yo!"),
+  });
+  assertEquals(result.kind, "success");
 });

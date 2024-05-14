@@ -1,4 +1,4 @@
-import { ANY_SUBSPACE, Meadowcap, OPEN_END } from "../../deps.ts";
+import { ANY_SUBSPACE, Meadowcap, OPEN_END, Path } from "../../deps.ts";
 import { Auth } from "../auth/auth.ts";
 import {
   decodeIdentityTag,
@@ -7,9 +7,7 @@ import {
 } from "../identifiers/identity.ts";
 import { encodeShareTag, ShareTag } from "../identifiers/share.ts";
 import { meadowcapParams } from "../schemes/schemes.ts";
-import { Path } from "../store/types.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { willowToEarthstarPath } from "../util/path.ts";
 import { ReadCapPack, WriteCapPack } from "./types.ts";
 import { encodeCapPack, isReadCapPack } from "./util.ts";
 
@@ -58,7 +56,7 @@ export class Cap {
     this.grantedIdentity = grantedArea.includedSubspaceId === ANY_SUBSPACE
       ? undefined
       : encodeIdentityTag(grantedArea.includedSubspaceId);
-    this.grantedPathPrefix = willowToEarthstarPath(grantedArea.pathPrefix);
+    this.grantedPathPrefix = grantedArea.pathPrefix;
     this.grantedTime = {
       start: grantedArea.timeRange.start,
       end: grantedArea.timeRange.end === OPEN_END

@@ -5,6 +5,7 @@ import {
   concat,
   Meadowcap,
   orderBytes,
+  Path,
   Willow,
 } from "../../deps.ts";
 import {
@@ -32,11 +33,14 @@ import {
   namespaceScheme,
   subspaceScheme,
 } from "../schemes/schemes.ts";
-import { AuthorisationError, isErr, ValidationError } from "../util/errors.ts";
+import {
+  AuthorisationError,
+  EarthstarError,
+  isErr,
+  ValidationError,
+} from "../util/errors.ts";
 import { blake3 } from "../blake3/blake3.ts";
-import { Path } from "../store/types.ts";
-import { earthstarToWillowPath } from "../util/path.ts";
-import { ReadCapPack, WriteCapPack } from "../caps/types.ts";
+import { Capability, ReadCapPack, WriteCapPack } from "../caps/types.ts";
 import {
   decodeCapPack,
   encodeCapPack,
@@ -63,7 +67,7 @@ export type AuthOpts = {
 
 /** Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password. */
 export class Auth {
-  private cryptoKey = deferred<CryptoKey>();
+  private encryptionKey = deferred<CryptoKey>();
   private kvDriver: Willow.KvDriver;
 
   /** Wipes all keypairs and capabilities from local storage. */
@@ -73,7 +77,7 @@ export class Auth {
 
   /** Check if Auth has been successfully initialised with the given password. */
   async ready(): Promise<boolean> {
-    await this.cryptoKey;
+    await this.encryptionKey;
 
     return true;
   }
@@ -106,7 +110,7 @@ export class Auth {
           key,
           { name: "AES-GCM", length: 256 },
           false,
-          ["encrypt"],
+          ["encrypt", "decrypt"],
         );
 
         const encrypted = await crypto.subtle.encrypt(
@@ -122,7 +126,7 @@ export class Auth {
 
         this.kvDriver.set(["pwd_challenge"], encryptedTest);
 
-        this.cryptoKey.resolve(key);
+        this.encryptionKey.resolve(encryptionKey);
 
         return;
       }
@@ -132,7 +136,7 @@ export class Auth {
       const encryptedData = encryptedChallenge.subarray(16 + 12);
 
       try {
-        const decryptionKey = await crypto.subtle.deriveKey(
+        const encryptionKey = await crypto.subtle.deriveKey(
           {
             name: "PBKDF2",
             salt,
@@ -142,7 +146,7 @@ export class Auth {
           key,
           { name: "AES-GCM", length: 256 },
           false,
-          ["decrypt"],
+          ["encrypt", "decrypt"],
         );
 
         const decrypted = await crypto.subtle.decrypt(
@@ -150,7 +154,7 @@ export class Auth {
             name: "AES-GCM",
             iv,
           },
-          decryptionKey,
+          encryptionKey,
           encryptedData,
         );
 
@@ -159,70 +163,42 @@ export class Auth {
         }
 
         // It's the right password, yay.
-        this.cryptoKey.resolve(key);
+        this.encryptionKey.resolve(encryptionKey);
       } catch {
-        this.cryptoKey.reject("Wrong password entered for Auth");
+        this.encryptionKey.reject("Wrong password entered for Auth");
       }
     });
   }
 
   private async encrypt(bytes: Uint8Array) {
-    const key = await this.cryptoKey;
+    const key = await this.encryptionKey;
 
-    const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
-
-    const encryptionKey = await crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt,
-        iterations: 250000,
-        hash: "SHA-256",
-      },
-      key,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["encrypt"],
-    );
 
     const encrypted = await crypto.subtle.encrypt(
       {
         name: "AES-GCM",
         iv,
       },
-      encryptionKey,
+      key,
       bytes,
     );
 
-    return concat(salt, iv, new Uint8Array(encrypted));
+    return concat(iv, new Uint8Array(encrypted));
   }
 
   private async decrypt(encrypted: Uint8Array): Promise<Uint8Array> {
-    const salt = encrypted.subarray(0, 16);
-    const iv = encrypted.subarray(16, 16 + 12);
-    const encryptedData = encrypted.subarray(16 + 12);
+    const iv = encrypted.subarray(0, 12);
+    const encryptedData = encrypted.subarray(12);
 
-    const key = await this.cryptoKey;
-
-    const decryptionKey = await crypto.subtle.deriveKey(
-      {
-        name: "PBKDF2",
-        salt,
-        iterations: 250000,
-        hash: "SHA-256",
-      },
-      key,
-      { name: "AES-GCM", length: 256 },
-      false,
-      ["decrypt"],
-    );
+    const key = await this.encryptionKey;
 
     const decrypted = await crypto.subtle.decrypt(
       {
         name: "AES-GCM",
         iv,
       },
-      decryptionKey,
+      key,
       encryptedData,
     );
 
@@ -548,7 +524,7 @@ export class Auth {
     },
   ): Promise<ReadCapPack | WriteCapPack | ValidationError> {
     const restrictToPath = restrictTo.pathPrefix
-      ? earthstarToWillowPath(restrictTo.pathPrefix)
+      ? restrictTo.pathPrefix
       : undefined;
 
     if (isErr(restrictToPath)) {
@@ -716,7 +692,7 @@ export class Auth {
   async *readCapPacks(
     /** An optional share public key to filter by. */
     share?: SharePublicKey,
-    /** Filter by cap packs which grant an an area included by this area. */
+    /** Filter by cap packs which are included by this area. */
     area?: Area<IdentityPublicKey>,
   ): AsyncIterable<ReadCapPack> {
     for await (
@@ -750,8 +726,8 @@ export class Auth {
 
       const isIncluded = areaIsIncluded(
         subspaceScheme.order,
-        grantedArea,
         area,
+        grantedArea,
       );
 
       if (!isIncluded) {
@@ -766,7 +742,7 @@ export class Auth {
   async *writeCapPacks(
     /** An optional share public key to filter by. */
     share?: SharePublicKey,
-    /** Filter by cap packs which grant an an area included by this area. */
+    /** Filter by cap packs which are included by this area. */
     area?: Area<IdentityPublicKey>,
   ): AsyncIterable<WriteCapPack> {
     // Find keypairs
@@ -799,8 +775,8 @@ export class Auth {
 
       const isIncluded = areaIsIncluded(
         subspaceScheme.order,
-        grantedArea,
         area,
+        grantedArea,
       );
 
       if (!isIncluded) {
@@ -864,6 +840,84 @@ export class Auth {
     );
 
     return sharePublicKeys;
+  }
+
+  async getWriteAuthorisation(
+    share: SharePublicKey,
+    subspace: IdentityPublicKey,
+    path: Path,
+    timestamp: bigint,
+  ): Promise<
+    {
+      cap: Capability;
+      receiverKeypair: IdentityKeypairRaw;
+    } | undefined
+  > {
+    const foundAuthorisations = [];
+
+    for await (
+      const capPack of this.writeCapPacks(share, {
+        includedSubspaceId: subspace,
+        pathPrefix: path,
+        timeRange: {
+          start: timestamp,
+          end: timestamp + 1n,
+        },
+      })
+    ) {
+      const receiver = meadowcap.getCapReceiver(capPack.writeCap);
+
+      const keypair = await this.identityKeypair(receiver);
+
+      if (!keypair) {
+        throw new EarthstarError(
+          "Malformed auth data: no corresponding keypair for held capability",
+        );
+      }
+
+      foundAuthorisations.push({
+        cap: capPack.writeCap,
+        receiverKeypair: keypair,
+      });
+    }
+
+    if (foundAuthorisations.length === 0) {
+      return undefined;
+    } else if (foundAuthorisations.length === 1) {
+      return foundAuthorisations[0];
+    }
+
+    // Find the most powerful capability
+    // and then the one with the least delegations
+    // or the other way around?
+
+    let candidateAuth = foundAuthorisations[0];
+
+    for (let i = 1; i < foundAuthorisations.length; i++) {
+      const contenderAuth = foundAuthorisations[i];
+
+      if (
+        candidateAuth.cap.delegations.length <
+          contenderAuth.cap.delegations.length
+      ) {
+        continue;
+      } else if (
+        contenderAuth.cap.delegations.length <
+          candidateAuth.cap.delegations.length
+      ) {
+        candidateAuth = contenderAuth;
+        continue;
+      }
+
+      const candidateArea = meadowcap.getCapGrantedArea(candidateAuth.cap);
+      const contenderArea = meadowcap.getCapGrantedArea(contenderAuth.cap);
+
+      if (areaIsIncluded(subspaceScheme.order, candidateArea, contenderArea)) {
+        candidateAuth = contenderAuth;
+      }
+    }
+
+    return candidateAuth;
   }
 }
 
