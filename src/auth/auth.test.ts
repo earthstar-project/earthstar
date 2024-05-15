@@ -532,3 +532,79 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
     receiverKeypair: newIdentity,
   });
 });
+
+Deno.test("Auth.interestsFromCaps", async () => {
+  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+
+  const gardeningShare = await auth.createShareKeypair("gardening", true);
+
+  assert(notErr(gardeningShare));
+  assert(!isCommunalShare(gardeningShare.publicKey));
+
+  const newIdentity = await auth.createIdentityKeypair("suzy");
+  assert(notErr(newIdentity));
+
+  // Setup.
+  const fullCap = await auth.createFullCapPack(
+    gardeningShare.publicKey,
+    newIdentity.publicKey,
+    "read",
+  );
+  assert(notErr(fullCap));
+
+  const capA = await auth.delegateCapPack({
+    capPack: fullCap,
+    toUser: newIdentity.publicKey,
+    restrictTo: {
+      time: {
+        start: 0n,
+        end: 1000n,
+      },
+    },
+  });
+  assert(notErr(capA));
+
+  const capAa = await auth.delegateCapPack({
+    capPack: fullCap,
+    toUser: newIdentity.publicKey,
+    restrictTo: {
+      time: {
+        start: 250n,
+        end: 750n,
+      },
+    },
+  });
+  assert(notErr(capAa));
+
+  const capB = await auth.delegateCapPack({
+    capPack: fullCap,
+    toUser: newIdentity.publicKey,
+    restrictTo: {
+      time: {
+        start: 750n,
+        end: 1500n,
+      },
+    },
+  });
+  assert(notErr(capB));
+
+  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+
+  await auth2.addIdentityKeypair(newIdentity);
+  await auth2.addCapPack(capA);
+  await auth2.addCapPack(capAa);
+  await auth2.addCapPack(capB);
+
+  const interests = await auth2.interestsFromCaps();
+
+  assertEquals(interests.size, 2);
+  assertArrayIncludes(
+    Array.from(interests.keys()),
+    [capA, capB].map((pack) => {
+      return {
+        capability: pack.readCap,
+        subspaceCapability: pack.subspaceCap,
+      };
+    }),
+  );
+});

@@ -1,16 +1,24 @@
+import { isFragmentTriple } from "https://deno.land/x/willow@0.3.0/src/wgps/pai/pai_finder.ts";
 import { equalsBytes } from "../../../willow_utils/deps.ts";
 import {
-  bigintToBytes,
+  ANY_SUBSPACE,
   concat,
+  ed25519,
+  encodeCompactWidth,
   encodeEntry,
+  encodePath,
   EncodingScheme,
+  hashToCurve,
   Meadowcap,
   orderBytes,
   PathScheme,
   successorBytesFixedWidth,
   Willow,
+  x25519,
 } from "../../deps.ts";
+import { Auth, AuthorisationToken } from "../auth/auth.ts";
 import { blake3 } from "../blake3/blake3.ts";
+import { SubspaceCapability } from "../caps/types.ts";
 import {
   decodeIdentityPublicKey,
   decodeStreamIdentityPublicKey,
@@ -29,7 +37,8 @@ import {
   shareSign,
   shareVerify,
 } from "../identifiers/share.ts";
-import { addBytes } from "../util/misc.ts";
+import { EarthstarError } from "../util/errors.ts";
+import { PreFingerprint } from "../store/types.ts";
 
 export const namespaceScheme: Willow.NamespaceScheme<SharePublicKey> = {
   encode: (key) => encodeSharePublicKey(key),
@@ -278,7 +287,7 @@ export const authorisationScheme: Willow.AuthorisationScheme<
     },
     encodedLength: (token) => {
       // TODO Implement a real encodeMcCapabilityLength
-      return 32 + Meadowcap.encodeMcCapability({
+      return 64 + Meadowcap.encodeMcCapability({
         encodingNamespace: namespaceScheme,
         encodingNamespaceSig: signatureEncodingScheme,
         encodingUser: subspaceScheme,
@@ -288,11 +297,11 @@ export const authorisationScheme: Willow.AuthorisationScheme<
       }, token.capability).byteLength;
     },
     decodeStream: async (bytes) => {
-      await bytes.nextAbsolute(32);
+      await bytes.nextAbsolute(64);
 
-      const signature = bytes.array.slice(0, 32);
+      const signature = bytes.array.slice(0, 64);
 
-      bytes.prune(32);
+      bytes.prune(64);
 
       const capability = await Meadowcap.decodeStreamMcCapability({
         encodingNamespace: namespaceScheme,
@@ -316,10 +325,10 @@ export const fingerprintScheme: Willow.FingerprintScheme<
   SharePublicKey,
   IdentityPublicKey,
   Uint8Array,
-  Uint8Array,
+  PreFingerprint,
   Uint8Array
 > = {
-  neutral: new Uint8Array(32),
+  neutral: ed25519.ExtendedPoint.ZERO,
   fingerprintSingleton: ({ entry, available }) => {
     const entryEnc = encodeEntry({
       namespaceScheme,
@@ -328,15 +337,18 @@ export const fingerprintScheme: Willow.FingerprintScheme<
       subspaceScheme,
     }, entry);
 
-    const toHash = concat(entryEnc, bigintToBytes(available));
+    const encoded = concat(encodeCompactWidth(available), entryEnc);
 
-    return blake3(toHash);
+    return Promise.resolve(hashToCurve(encoded, {
+      DST: "earthstar6i",
+    }));
   },
   fingerprintCombine: (a, b) => {
-    return addBytes(new Uint8Array(a), new Uint8Array(b), 32);
+    return a.add(b);
   },
   fingerprintFinalise: (pre) => {
-    return blake3(pre);
+    // @ts-ignore https://github.com/paulmillr/noble-curves/issues/137
+    return pre.toRawBytes();
   },
   neutralFinalised: new Uint8Array(32),
   isEqual: (a, b) => {
@@ -359,5 +371,302 @@ export const fingerprintScheme: Willow.FingerprintScheme<
       return fingerprint;
     },
     encodedLength: () => 32,
+  },
+};
+
+export function makeAccessControlScheme(auth: Auth): Willow.AccessControlScheme<
+  Meadowcap.ReadCapability<
+    SharePublicKey,
+    IdentityPublicKey,
+    Uint8Array,
+    Uint8Array
+  >,
+  IdentityPublicKey,
+  Uint8Array,
+  Uint8Array,
+  SharePublicKey,
+  IdentityPublicKey
+> {
+  return {
+    getGrantedArea: (cap) => meadowcap.getCapGrantedArea(cap),
+    getGrantedNamespace: (cap) => cap.namespaceKey,
+    getReceiver: (cap) => meadowcap.getCapReceiver(cap),
+    getSecretKey: async (receiver) => {
+      const keypair = await auth.identityKeypair(receiver);
+
+      if (!keypair) {
+        throw new EarthstarError(
+          "Failed to retrieve a secret for a capability's receiver.",
+        );
+      }
+
+      return keypair.secretKey;
+    },
+    isValidCap: (cap) => meadowcap.isValidCap(cap),
+    signatures: {
+      sign: (publicKey, secretKey, msg) => {
+        return identitySign({
+          publicKey,
+          secretKey,
+        }, msg);
+      },
+      verify: identityVerify,
+    },
+    encodings: {
+      readCapability: {
+        encode: (cap) => {
+          return meadowcap.encodeCap(cap);
+        },
+        decode: (cap) => {
+          return meadowcap.decodeCap(cap) as Meadowcap.ReadCapability<
+            SharePublicKey,
+            IdentityPublicKey,
+            Uint8Array,
+            Uint8Array
+          >;
+        },
+        decodeStream: (cap) => {
+          return meadowcap.decodeStreamingCap(cap) as Promise<
+            Meadowcap.ReadCapability<
+              SharePublicKey,
+              IdentityPublicKey,
+              Uint8Array,
+              Uint8Array
+            >
+          >;
+        },
+        encodedLength: (cap) => {
+          return meadowcap.encodeCap(cap).byteLength;
+        },
+      },
+      syncSignature: {
+        encode: (sig) => sig,
+        decode: (sig) => sig.subarray(0, 64),
+        encodedLength: () => 64,
+        decodeStream: async (bytes) => {
+          await bytes.nextAbsolute(64);
+
+          const sig = bytes.array.slice(0, 64);
+
+          bytes.prune(64);
+
+          return sig;
+        },
+      },
+    },
+  };
+}
+
+export function makeSubspaceCapScheme(
+  auth: Auth,
+): Willow.SubspaceCapScheme<
+  SubspaceCapability,
+  IdentityPublicKey,
+  Uint8Array,
+  Uint8Array,
+  SharePublicKey
+> {
+  return {
+    getNamespace: (cap) => cap.namespaceKey,
+    getReceiver: (cap) => Meadowcap.getReceiverSubspaceCap(cap),
+    isValidCap: (cap) => meadowcap.isValidSubspaceCap(cap),
+    getSecretKey: async (receiver) => {
+      const keypair = await auth.identityKeypair(receiver);
+
+      if (!keypair) {
+        throw new EarthstarError(
+          "Failed to retrieve a secret for a capability's receiver.",
+        );
+      }
+
+      return keypair.secretKey;
+    },
+    signatures: {
+      sign: (publicKey, secretKey, msg) => {
+        return identitySign({
+          publicKey,
+          secretKey,
+        }, msg);
+      },
+      verify: identityVerify,
+    },
+    encodings: {
+      subspaceCapability: {
+        encode: (cap) => meadowcap.encodeSubspaceCap(cap),
+        decode: (cap) => meadowcap.decodeSubspaceCap(cap),
+        encodedLength: (cap) => meadowcap.encodeSubspaceCap(cap).byteLength,
+        decodeStream: (cap) => meadowcap.decodeStreamingSubspaceCap(cap),
+      },
+      syncSubspaceSignature: {
+        encode: (sig) => sig,
+        decode: (sig) => sig.subarray(0, 64),
+        encodedLength: () => 64,
+        decodeStream: async (bytes) => {
+          await bytes.nextAbsolute(64);
+
+          const sig = bytes.array.slice(0, 64);
+
+          bytes.prune(64);
+
+          return sig;
+        },
+      },
+    },
+  };
+}
+
+export const authorisationTokenScheme: Willow.AuthorisationTokenScheme<
+  AuthorisationToken,
+  Meadowcap.WriteCapability<
+    SharePublicKey,
+    IdentityPublicKey,
+    Uint8Array,
+    Uint8Array
+  >,
+  Uint8Array
+> = {
+  decomposeAuthToken: (authToken) => {
+    return [
+      authToken.capability as Meadowcap.WriteCapability<
+        SharePublicKey,
+        IdentityPublicKey,
+        Uint8Array,
+        Uint8Array
+      >,
+      authToken.signature,
+    ];
+  },
+  recomposeAuthToken: (staticToken, dynamicToken) => {
+    return {
+      capability: staticToken,
+      signature: dynamicToken,
+    };
+  },
+  encodings: {
+    staticToken: {
+      encode: (cap) => {
+        return meadowcap.encodeCap(cap);
+      },
+      decode: (cap) => {
+        return meadowcap.decodeCap(cap) as Meadowcap.WriteCapability<
+          SharePublicKey,
+          IdentityPublicKey,
+          Uint8Array,
+          Uint8Array
+        >;
+      },
+      decodeStream: (cap) => {
+        return meadowcap.decodeStreamingCap(cap) as Promise<
+          Meadowcap.WriteCapability<
+            SharePublicKey,
+            IdentityPublicKey,
+            Uint8Array,
+            Uint8Array
+          >
+        >;
+      },
+      encodedLength: (cap) => {
+        return meadowcap.encodeCap(cap).byteLength;
+      },
+    },
+    dynamicToken: {
+      encode: (sig) => sig,
+      decode: (sig) => sig.subarray(0, 64),
+      encodedLength: () => 64,
+      decodeStream: async (bytes) => {
+        await bytes.nextAbsolute(64);
+
+        const sig = bytes.array.slice(0, 64);
+
+        bytes.prune(64);
+
+        return sig;
+      },
+    },
+  },
+};
+
+export const paiScheme: Willow.PaiScheme<
+  Meadowcap.ReadCapability<
+    SharePublicKey,
+    IdentityPublicKey,
+    Uint8Array,
+    Uint8Array
+  >,
+  Uint8Array,
+  Uint8Array,
+  SharePublicKey,
+  IdentityPublicKey
+> = {
+  isGroupEqual: (a, b) => {
+    return equalsBytes(a, b);
+  },
+  getScalar: () => {
+    return crypto.getRandomValues(new Uint8Array(32));
+  },
+  scalarMult(group, scalar) {
+    return x25519.scalarMult(scalar, group);
+  },
+  getFragmentKit: (cap) => {
+    const grantedArea = meadowcap.getCapGrantedArea(cap);
+
+    if (grantedArea.includedSubspaceId === ANY_SUBSPACE) {
+      return {
+        grantedNamespace: cap.namespaceKey,
+        grantedPath: grantedArea.pathPrefix,
+      };
+    }
+
+    return {
+      grantedNamespace: cap.namespaceKey,
+      grantedSubspace: grantedArea.includedSubspaceId,
+      grantedPath: grantedArea.pathPrefix,
+    };
+  },
+  fragmentToGroup: (fragment) => {
+    if (isFragmentTriple(fragment)) {
+      const [namespace, subspace, path] = fragment;
+
+      const encoded = concat(
+        namespaceScheme.encode(namespace),
+        subspaceScheme.encode(subspace),
+        encodePath(pathScheme, path),
+      );
+
+      const curve = hashToCurve(encoded, {
+        DST: "earthstar6i",
+      });
+
+      // @ts-ignore toRawBytes really _does_ exist. https://github.com/paulmillr/noble-curves/issues/137
+      return curve.toRawBytes();
+    }
+
+    const [namespace, path] = fragment;
+
+    const encoded = concat(
+      namespaceScheme.encode(namespace),
+      encodePath(pathScheme, path),
+    );
+
+    const curve = hashToCurve(encoded, {
+      DST: "earthstar6i",
+    });
+
+    // @ts-ignore toRawBytes really _does_ exist. https://github.com/paulmillr/noble-curves/issues/137
+    return curve.toRawBytes();
+  },
+  groupMemberEncoding: {
+    encode: (group) => group,
+    decode: (group) => group.subarray(0, 32),
+    encodedLength: () => 32,
+    decodeStream: async (bytes) => {
+      await bytes.nextAbsolute(32);
+
+      const group = bytes.array.slice(0, 32);
+
+      bytes.prune(32);
+
+      return group;
+    },
   },
 };

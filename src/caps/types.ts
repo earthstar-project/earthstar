@@ -10,6 +10,20 @@ export type Capability = Meadowcap.McCapability<
   Uint8Array
 >;
 
+export type ReadCapability = Meadowcap.ReadCapability<
+  SharePublicKey,
+  IdentityPublicKey,
+  Uint8Array,
+  Uint8Array
+>;
+
+export type WriteCapability = Meadowcap.WriteCapability<
+  SharePublicKey,
+  IdentityPublicKey,
+  Uint8Array,
+  Uint8Array
+>;
+
 /** An unforgeable token proving that the holder of an identity keypair is authorised to know about arbitrary identities in an owned share. */
 export type SubspaceCapability = Meadowcap.McSubspaceCapability<
   SharePublicKey,
@@ -19,24 +33,10 @@ export type SubspaceCapability = Meadowcap.McSubspaceCapability<
 >;
 
 export type ReadCapPack = {
-  readCap: Meadowcap.ReadCapability<
-    SharePublicKey,
-    IdentityPublicKey,
-    Uint8Array,
-    Uint8Array
-  >;
-  subspaceCap?: Meadowcap.McSubspaceCapability<
-    SharePublicKey,
-    IdentityPublicKey,
-    Uint8Array,
-    Uint8Array
-  >;
+  readCap: ReadCapability;
+  subspaceCap?: SubspaceCapability;
 };
+
 export type WriteCapPack = {
-  writeCap: Meadowcap.WriteCapability<
-    SharePublicKey,
-    IdentityPublicKey,
-    Uint8Array,
-    Uint8Array
-  >;
+  writeCap: WriteCapability;
 };

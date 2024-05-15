@@ -19,8 +19,9 @@ import {
   ShareTag,
 } from "../identifiers/share.ts";
 import { Store } from "../store/store.ts";
+import { Syncer, SyncInterests } from "../syncer/syncer.ts";
 
-import { isErr, ValidationError } from "../util/errors.ts";
+import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
 
 /** A query which selects all capabilities which include the given parameters. */
 export type CapQuery = {
@@ -50,14 +51,14 @@ export type PeerOpts = {
 
 /** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those. */
 export class Peer {
-  private auth: Auth;
-  private createStoreFn: (share: SharePublicKey, auth: Auth) => Promise<Store>;
-  private storeMap = new Map<string, Store>();
-
   /** Resets the password and irrevocably deletes all previously stored identity keypairs, share keypairs, and capabalities. */
   static reset(driver: PeerDriver): Promise<void> {
     return Auth.reset(driver.authDriver);
   }
+
+  private auth: Auth;
+  private createStoreFn: (share: SharePublicKey, auth: Auth) => Promise<Store>;
+  private storeMap = new Map<string, Store>();
 
   constructor(opts: PeerOpts) {
     this.auth = new Auth({

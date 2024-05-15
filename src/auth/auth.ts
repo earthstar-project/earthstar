@@ -2,6 +2,7 @@ import { deferred } from "https://deno.land/std@0.202.0/async/deferred.ts";
 import {
   Area,
   areaIsIncluded,
+  AreaOfInterest,
   concat,
   Meadowcap,
   orderBytes,
@@ -26,6 +27,7 @@ import {
   ShareKeypairRaw,
   SharePublicKey,
   shareSign,
+  ShareTag,
   shareVerify,
 } from "../identifiers/share.ts";
 import {
@@ -48,6 +50,7 @@ import {
   isOwnedReadCapability,
   isReadCapPack,
 } from "../caps/util.ts";
+import { SyncInterests } from "../syncer/syncer.ts";
 
 const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
@@ -692,7 +695,7 @@ export class Auth {
   async *readCapPacks(
     /** An optional share public key to filter by. */
     share?: SharePublicKey,
-    /** Filter by cap packs which are included by this area. */
+    /** Filter by cap packs which grant access to this area. */
     area?: Area<IdentityPublicKey>,
   ): AsyncIterable<ReadCapPack> {
     for await (
@@ -742,7 +745,7 @@ export class Auth {
   async *writeCapPacks(
     /** An optional share public key to filter by. */
     share?: SharePublicKey,
-    /** Filter by cap packs which are included by this area. */
+    /** Filter by cap packs which grant access to this area. */
     area?: Area<IdentityPublicKey>,
   ): AsyncIterable<WriteCapPack> {
     // Find keypairs
@@ -918,6 +921,80 @@ export class Auth {
     }
 
     return candidateAuth;
+  }
+
+  /** Generate a map of {@linkcode SyncInterests} based on the read capabilities in secure storage.
+   *
+   * If two capabilities from the same share are such that one completely includes the other, only the larger capability will be chosen.
+   */
+  async interestsFromCaps(
+    share?: SharePublicKey,
+    area?: Area<IdentityPublicKey>,
+  ): Promise<SyncInterests> {
+    const interests: SyncInterests = new Map();
+
+    const mostPowerfulCaps = new Map<ShareTag, Set<ReadCapPack>>();
+
+    for await (const capPack of this.readCapPacks(share, area)) {
+      const shareTag = encodeShareTag(capPack.readCap.namespaceKey);
+      const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
+
+      const otherAreas = mostPowerfulCaps.get(shareTag);
+
+      let isRedundant = false;
+
+      if (!otherAreas) {
+        mostPowerfulCaps.set(shareTag, new Set([capPack]));
+        continue;
+      }
+
+      for (const otherCapPack of otherAreas.values()) {
+        const otherGrantedArea = meadowcap.getCapGrantedArea(
+          otherCapPack.readCap,
+        );
+
+        if (
+          areaIsIncluded(subspaceScheme.order, grantedArea, otherGrantedArea)
+        ) {
+          isRedundant = true;
+        } else if (
+          areaIsIncluded(subspaceScheme.order, otherGrantedArea, grantedArea)
+        ) {
+          otherAreas.delete(otherCapPack);
+        }
+      }
+
+      if (!isRedundant) {
+        otherAreas.add(capPack);
+      }
+    }
+
+    for (const capPacks of mostPowerfulCaps.values()) {
+      for (const capPack of capPacks.values()) {
+        const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
+
+        if (capPack.subspaceCap) {
+          interests.set({
+            capability: capPack.readCap,
+            subspaceCapability: capPack.subspaceCap,
+          }, [{
+            area: grantedArea,
+            maxCount: 0,
+            maxSize: 0n,
+          }]);
+        } else {
+          interests.set({
+            capability: capPack.readCap,
+          }, [{
+            area: grantedArea,
+            maxCount: 0,
+            maxSize: 0n,
+          }]);
+        }
+      }
+    }
+
+    return interests;
   }
 }
 

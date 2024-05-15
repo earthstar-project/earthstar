@@ -114,16 +114,19 @@ export async function decodeStreamCinn25519PublickKey(
   if (terminatorIndex >= shortnameMaxLength || terminatorIndex === -1) {
     await bytes.nextAbsolute(32);
 
+    const shortname = new TextDecoder().decode(
+      bytes.array.slice(0, shortnameMaxLength),
+    );
+    const underlying = bytes.array.slice(
+      shortnameMaxLength,
+      shortnameMaxLength + 32,
+    );
+
     bytes.prune(shortnameMaxLength + 32);
 
     return {
-      shortname: new TextDecoder().decode(
-        bytes.array.slice(0, shortnameMaxLength),
-      ),
-      underlying: bytes.array.slice(
-        shortnameMaxLength,
-        shortnameMaxLength + 32,
-      ),
+      shortname,
+      underlying,
     };
   }
 
@@ -131,14 +134,20 @@ export async function decodeStreamCinn25519PublickKey(
     bytes.array.subarray(terminatorIndex).byteLength - 1;
   await bytes.nextAbsolute(32 - alreadyHavePubkeyBytes);
 
+  const shortname = new TextDecoder().decode(
+    bytes.array.slice(0, terminatorIndex),
+  );
+
+  const underlying = bytes.array.slice(
+    terminatorIndex + 1,
+    terminatorIndex + 1 + 32,
+  );
+
+  bytes.prune(terminatorIndex + 1 + 32);
+
   return {
-    shortname: new TextDecoder().decode(
-      bytes.array.slice(0, terminatorIndex),
-    ),
-    underlying: bytes.array.slice(
-      terminatorIndex + 1,
-      terminatorIndex + 1 + 32,
-    ),
+    shortname,
+    underlying,
   };
 }
 

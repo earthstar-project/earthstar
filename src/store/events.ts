@@ -8,7 +8,7 @@ import {
 import { SharePublicKey } from "../identifiers/share.ts";
 import { entryToDocument } from "../util/documents.ts";
 import { willowToEarthstarPath } from "../util/path.ts";
-import { Document, Path } from "./types.ts";
+import { Document, Path, PreFingerprint } from "./types.ts";
 
 export class DocumentSetEvent extends CustomEvent<{ document: Document }> {
   constructor(document: Document) {
@@ -62,7 +62,7 @@ export function relayWillowEvents(
       receiverKeypair: IdentityKeypairRaw;
     },
     AuthorisationToken,
-    Uint8Array,
+    PreFingerprint,
     Uint8Array
   >,
 ) {

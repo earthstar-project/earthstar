@@ -22,13 +22,19 @@ import {
 } from "../util/errors.ts";
 import { earthstarToWillowPath, willowToEarthstarPath } from "../util/path.ts";
 import { relayWillowEvents } from "./events.ts";
-import { Document, Query, SetEvent, StoreDriverOpts } from "./types.ts";
+import {
+  AuthorisationOpts,
+  Document,
+  PreFingerprint,
+  Query,
+  SetEvent,
+  StoreDriverOpts,
+} from "./types.ts";
 import { queryToWillowQueryParams } from "./util.ts";
 import { Path } from "./types.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
-  IdentityKeypairRaw,
   IdentityPublicKey,
   IdentityTag,
 } from "../identifiers/identity.ts";
@@ -38,7 +44,6 @@ import {
   SharePublicKey,
   ShareTag,
 } from "../identifiers/share.ts";
-import { Capability } from "../caps/types.ts";
 
 /** A store for reading, writing, and querying documents from a corresponding share.
  *
@@ -67,12 +72,9 @@ export class Store extends EventTarget {
     SharePublicKey,
     IdentityPublicKey,
     Uint8Array,
-    {
-      cap: Capability;
-      receiverKeypair: IdentityKeypairRaw;
-    },
+    AuthorisationOpts,
     AuthorisationToken,
-    Uint8Array,
+    PreFingerprint,
     Uint8Array
   >;
 

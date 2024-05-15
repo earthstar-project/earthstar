@@ -1,12 +1,24 @@
-import { Willow } from "../../deps.ts";
+import { H2CPoint, Willow } from "../../deps.ts";
 import { AuthorisationToken } from "../auth/auth.ts";
+import { Capability } from "../caps/types.ts";
 import { Base32String } from "../encoding/types.ts";
-import { IdentityPublicKey, IdentityTag } from "../identifiers/identity.ts";
+import {
+  IdentityKeypairRaw,
+  IdentityPublicKey,
+  IdentityTag,
+} from "../identifiers/identity.ts";
 import { SharePublicKey, ShareTag } from "../identifiers/share.ts";
+
+export type PreFingerprint = H2CPoint<bigint>;
 
 export type Path = string[];
 
 export type Payload = Willow.Payload;
+
+export type AuthorisationOpts = {
+  cap: Capability;
+  receiverKeypair: IdentityKeypairRaw;
+};
 
 export type Document = {
   /** The share this document belongs to. */
