@@ -208,17 +208,6 @@ export class Auth {
     return new Uint8Array(decrypted);
   }
 
-  private async setDigest(
-    keyPrefix: Willow.KvKey,
-    bytes: Uint8Array,
-  ): Promise<Willow.KvKey> {
-    const digest = await blake3(bytes);
-
-    this.kvDriver.set([...keyPrefix, digest], bytes);
-
-    return [...keyPrefix, digest];
-  }
-
   private async checkIdentityKeypairIsValid(
     keypair: IdentityKeypairRaw,
   ): Promise<true | ValidationError> {
@@ -274,11 +263,9 @@ export class Auth {
 
     const keypairEncoded = encodeIdentityKeypair(keypair);
     const keypairEncrypted = await this.encrypt(keypairEncoded);
-    const publicKeyEncoded = encodeIdentityPublicKey(keypair.publicKey);
-    const publicKeyEncrypted = await this.encrypt(publicKeyEncoded);
 
     await this.kvDriver.set(
-      ["keypair", "identity", publicKeyEncrypted],
+      ["keypair", "identity", crypto.getRandomValues(new Uint8Array(32))],
       keypairEncrypted,
     );
 
@@ -352,11 +339,9 @@ export class Auth {
 
     const keypairEncoded = encodeShareKeypair(keypair);
     const keypairEncrypted = await this.encrypt(keypairEncoded);
-    const publicKeyEncoded = encodeSharePublicKey(keypair.publicKey);
-    const publicKeyEncrypted = await this.encrypt(publicKeyEncoded);
 
     await this.kvDriver.set(
-      ["keypair", "share", publicKeyEncrypted],
+      ["keypair", "share", crypto.getRandomValues(new Uint8Array(32))],
       keypairEncrypted,
     );
 
@@ -428,11 +413,9 @@ export class Auth {
       });
 
       if (store) {
-        const encoded = isCommunalReadCapability(cap)
-          ? encodeCapPack({ readCap: cap })
-          : encodeCapPack({ writeCap: cap });
-        const encrypted = await this.encrypt(encoded);
-        await this.setDigest(["cap", accessMode], encrypted);
+        await this.addCapPack(
+          isCommunalReadCapability(cap) ? { readCap: cap } : { writeCap: cap },
+        );
       }
 
       return isCommunalReadCapability(cap)
@@ -460,18 +443,14 @@ export class Auth {
       };
 
       if (store) {
-        const encoded = encodeCapPack(capPack);
-        const encrypted = await this.encrypt(encoded);
-        await this.setDigest(["cap", accessMode], encrypted);
+        await this.addCapPack(capPack);
       }
 
       return capPack;
     }
 
     if (store) {
-      const encoded = encodeCapPack({ writeCap: cap });
-      const encrypted = await this.encrypt(encoded);
-      await this.setDigest(["cap", accessMode], encrypted);
+      await this.addCapPack({ writeCap: cap });
     }
 
     return { writeCap: cap };
@@ -680,7 +659,11 @@ export class Auth {
         const encoded = encodeCapPack(capPack);
         const encrypted = await this.encrypt(encoded);
 
-        await this.setDigest(["cap", cap.accessMode], encrypted);
+        await this.kvDriver.set([
+          "cap",
+          cap.accessMode,
+          crypto.getRandomValues(new Uint8Array(32)),
+        ], encrypted);
 
         return true;
       }
