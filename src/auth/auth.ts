@@ -1,9 +1,8 @@
-import { deferred } from "https://deno.land/std@0.202.0/async/deferred.ts";
 import {
   Area,
   areaIsIncluded,
-  AreaOfInterest,
   concat,
+  deferred,
   Meadowcap,
   orderBytes,
   Path,
@@ -51,6 +50,7 @@ import {
   isReadCapPack,
 } from "../caps/util.ts";
 import { SyncInterests } from "../syncer/syncer.ts";
+import { CapPackSelector } from "./types.ts";
 
 const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
@@ -693,10 +693,7 @@ export class Auth {
 
   /** Iterate through read access cap packs in safe storage. */
   async *readCapPacks(
-    /** An optional share public key to filter by. */
-    share?: SharePublicKey,
-    /** Filter by cap packs which grant access to this area. */
-    area?: Area<IdentityPublicKey>,
+    selectors?: CapPackSelector[],
   ): AsyncIterable<ReadCapPack> {
     for await (
       const { value } of this.kvDriver.list<Uint8Array>({
@@ -707,7 +704,7 @@ export class Auth {
 
       const capPack = decodeCapPack(decrypted) as ReadCapPack;
 
-      if (!share) {
+      if (!selectors) {
         yield capPack;
         continue;
       }
@@ -715,38 +712,44 @@ export class Auth {
       const grantedNamespace = Meadowcap.getGrantedNamespace(
         capPack.readCap,
       );
-
-      if (!namespaceScheme.isEqual(share, grantedNamespace)) {
-        continue;
-      }
-
-      if (!area) {
-        yield capPack;
-        continue;
-      }
-
       const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
 
-      const isIncluded = areaIsIncluded(
-        subspaceScheme.order,
-        area,
-        grantedArea,
-      );
+      for (const selector of selectors) {
+        const hasSameNamespace = namespaceScheme.isEqual(
+          selector.share,
+          grantedNamespace,
+        );
 
-      if (!isIncluded) {
-        continue;
+        if (!hasSameNamespace) {
+          continue;
+        }
+
+        if (!selector.areas) {
+          yield capPack;
+          break;
+        }
+
+        for (const area of selector.areas) {
+          const isIncluded = areaIsIncluded(
+            subspaceScheme.order,
+            area,
+            grantedArea,
+          );
+
+          if (!isIncluded) {
+            continue;
+          }
+
+          yield capPack;
+          break;
+        }
       }
-
-      yield capPack;
     }
   }
 
   /** Iterate through write access cap packs in safe storage. */
   async *writeCapPacks(
-    /** An optional share public key to filter by. */
-    share?: SharePublicKey,
-    /** Filter by cap packs which grant access to this area. */
-    area?: Area<IdentityPublicKey>,
+    selectors?: CapPackSelector[],
   ): AsyncIterable<WriteCapPack> {
     // Find keypairs
     for await (
@@ -758,35 +761,46 @@ export class Auth {
 
       const capPack = decodeCapPack(capBytes) as WriteCapPack;
 
-      if (!share) {
+      if (!selectors) {
         yield capPack;
         continue;
       }
 
-      const grantedNamespace = Meadowcap.getGrantedNamespace(capPack.writeCap);
-
-      if (!namespaceScheme.isEqual(share, grantedNamespace)) {
-        continue;
-      }
-
-      if (!area) {
-        yield capPack;
-        continue;
-      }
-
+      const grantedNamespace = Meadowcap.getGrantedNamespace(
+        capPack.writeCap,
+      );
       const grantedArea = meadowcap.getCapGrantedArea(capPack.writeCap);
 
-      const isIncluded = areaIsIncluded(
-        subspaceScheme.order,
-        area,
-        grantedArea,
-      );
+      for (const selector of selectors) {
+        const hasSameNamespace = namespaceScheme.isEqual(
+          selector.share,
+          grantedNamespace,
+        );
 
-      if (!isIncluded) {
-        continue;
+        if (!hasSameNamespace) {
+          continue;
+        }
+
+        if (!selector.areas) {
+          yield capPack;
+          break;
+        }
+
+        for (const area of selector.areas) {
+          const isIncluded = areaIsIncluded(
+            subspaceScheme.order,
+            area,
+            grantedArea,
+          );
+
+          if (!isIncluded) {
+            continue;
+          }
+
+          yield capPack;
+          break;
+        }
       }
-
-      yield capPack;
     }
   }
 
@@ -859,14 +873,17 @@ export class Auth {
     const foundAuthorisations = [];
 
     for await (
-      const capPack of this.writeCapPacks(share, {
-        includedSubspaceId: subspace,
-        pathPrefix: path,
-        timeRange: {
-          start: timestamp,
-          end: timestamp + 1n,
-        },
-      })
+      const capPack of this.writeCapPacks([{
+        share,
+        areas: [{
+          includedSubspaceId: subspace,
+          pathPrefix: path,
+          timeRange: {
+            start: timestamp,
+            end: timestamp + 1n,
+          },
+        }],
+      }])
     ) {
       const receiver = meadowcap.getCapReceiver(capPack.writeCap);
 
@@ -928,14 +945,13 @@ export class Auth {
    * If two capabilities from the same share are such that one completely includes the other, only the larger capability will be chosen.
    */
   async interestsFromCaps(
-    share?: SharePublicKey,
-    area?: Area<IdentityPublicKey>,
+    selectors?: CapPackSelector[],
   ): Promise<SyncInterests> {
     const interests: SyncInterests = new Map();
 
     const mostPowerfulCaps = new Map<ShareTag, Set<ReadCapPack>>();
 
-    for await (const capPack of this.readCapPacks(share, area)) {
+    for await (const capPack of this.readCapPacks(selectors)) {
       const shareTag = encodeShareTag(capPack.readCap.namespaceKey);
       const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
 

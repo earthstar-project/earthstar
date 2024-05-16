@@ -7,9 +7,10 @@
 
   ],
   "deno.enablePaths" : [
-    "debug",
+    "deno.json",
     "deps.ts",
-    "src"
+    "src",
+    "debug"
   ],
   "eablokker.tabsSidebar.config.customKindGroupsOrder" : [
     "typescript"

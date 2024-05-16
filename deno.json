@@ -1,7 +1,4 @@
 {
-  "imports": {
-    "$std/": "https://deno.land/std@0.203.0/"
-  },
   "tasks": {
     "test": "deno test --allow-all --unstable-kv src",
     "test-watch": "deno test --watch --allow-all --no-check --unstable-kv src",
@@ -17,9 +14,7 @@
     "release-beta": "deno run --allow-all scripts/release_beta.ts"
   },
   "fmt": {
-    "files": {
-      "exclude": ["npm", ".git", "earthstar.bundle.js", ".nova"]
-    }
+    "exclude": ["npm", ".git", "earthstar.bundle.js", ".nova"]
   },
   "lock": false
 }

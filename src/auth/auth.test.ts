@@ -6,7 +6,6 @@ import {
 } from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { Auth } from "./auth.ts";
 import { notErr } from "../util/errors.ts";
-import { earthstarToWillowPath } from "../util/path.ts";
 import { ANY_SUBSPACE, Meadowcap } from "../../deps.ts";
 import { isCommunalShare } from "../identifiers/share.ts";
 import { KvDriverInMemory } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_in_memory.ts";
@@ -142,7 +141,7 @@ Deno.test("Auth Read cap packs", async () => {
 
   // Fetch that one gardening cap pack out of storage.
   for await (
-    const capPack of auth.readCapPacks(gardeningShare.publicKey)
+    const capPack of auth.readCapPacks([{ share: gardeningShare.publicKey }])
   ) {
     gardeningCapPacks.push(capPack);
   }
@@ -158,6 +157,46 @@ Deno.test("Auth Read cap packs", async () => {
   }
 
   assertArrayIncludes(allCapPacksAgain, [capPack, mountainCapPack]);
+
+  // Do area selectors work?
+
+  const delegated = await auth.delegateCapPack({
+    capPack: mountainCapPack,
+    toUser: newIdentity.publicKey,
+    restrictTo: {
+      pathPrefix: [new Uint8Array([1])],
+      time: {
+        start: 100n,
+        end: 900n,
+      },
+    },
+  });
+  assert(notErr(delegated));
+
+  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+  assert(notErr(await auth2.addIdentityKeypair(newIdentity)));
+  assert(notErr(await auth2.addCapPack(delegated)));
+
+  const restrictedCapPacks = [];
+
+  for await (
+    const capPack of auth2.readCapPacks([{
+      share: mountainShare.publicKey,
+      areas: [{
+        includedSubspaceId: newIdentity.publicKey,
+        pathPrefix: [new Uint8Array([1]), new Uint8Array([2])],
+        timeRange: {
+          start: 500n,
+          end: 900n,
+        },
+      }],
+    }])
+  ) {
+    restrictedCapPacks.push(capPack);
+  }
+
+  assertEquals(restrictedCapPacks.length, 1);
+  assertArrayIncludes(restrictedCapPacks, [delegated]);
 });
 
 Deno.test("Auth Write cap packs", async () => {
@@ -214,7 +253,7 @@ Deno.test("Auth Write cap packs", async () => {
 
   // Fetch that one gardening cap pack out of storage.
   for await (
-    const capPack of auth.writeCapPacks(gardeningShare.publicKey)
+    const capPack of auth.writeCapPacks([{ share: gardeningShare.publicKey }])
   ) {
     gardeningCapPacks.push(capPack);
   }
@@ -230,6 +269,46 @@ Deno.test("Auth Write cap packs", async () => {
   }
 
   assertArrayIncludes(allCapPacksAgain, [capPack, mountainCapPack]);
+
+  // Do area selectors work?
+
+  const delegated = await auth.delegateCapPack({
+    capPack: mountainCapPack,
+    toUser: newIdentity.publicKey,
+    restrictTo: {
+      pathPrefix: [new Uint8Array([1])],
+      time: {
+        start: 100n,
+        end: 900n,
+      },
+    },
+  });
+  assert(notErr(delegated));
+
+  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+  assert(notErr(await auth2.addIdentityKeypair(newIdentity)));
+  assert(notErr(await auth2.addCapPack(delegated)));
+
+  const restrictedCapPacks = [];
+
+  for await (
+    const capPack of auth2.writeCapPacks([{
+      share: mountainShare.publicKey,
+      areas: [{
+        includedSubspaceId: newIdentity.publicKey,
+        pathPrefix: [new Uint8Array([1]), new Uint8Array([2])],
+        timeRange: {
+          start: 500n,
+          end: 900n,
+        },
+      }],
+    }])
+  ) {
+    restrictedCapPacks.push(capPack);
+  }
+
+  assertEquals(restrictedCapPacks.length, 1);
+  assertArrayIncludes(restrictedCapPacks, [delegated]);
 });
 
 Deno.test("Delegate (communal, write)", async () => {

@@ -1,5 +1,4 @@
 import { isFragmentTriple } from "https://deno.land/x/willow@0.3.0/src/wgps/pai/pai_finder.ts";
-import { equalsBytes } from "../../../willow_utils/deps.ts";
 import {
   ANY_SUBSPACE,
   concat,
@@ -8,6 +7,7 @@ import {
   encodeEntry,
   encodePath,
   EncodingScheme,
+  equalsBytes,
   hashToCurve,
   Meadowcap,
   orderBytes,

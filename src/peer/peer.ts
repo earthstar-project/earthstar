@@ -1,12 +1,14 @@
 import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
-import { ANY_SUBSPACE, OPEN_END, Path, Willow } from "../../deps.ts";
+import { ANY_SUBSPACE, Area, OPEN_END, Path, Willow } from "../../deps.ts";
 import { Auth } from "../auth/auth.ts";
+import { CapPackSelector } from "../auth/types.ts";
 import { Cap } from "../caps/cap.ts";
 import { decodeCapPack } from "../caps/util.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
   IdentityKeypair,
+  IdentityPublicKey,
   IdentityTag,
 } from "../identifiers/identity.ts";
 import {
@@ -19,23 +21,26 @@ import {
   ShareTag,
 } from "../identifiers/share.ts";
 import { Store } from "../store/store.ts";
-import { Syncer, SyncInterests } from "../syncer/syncer.ts";
+import { Syncer } from "../syncer/syncer.ts";
 
 import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
+import { capSelectorsToCapPackSelectors } from "./util.ts";
 
 /** A query which selects all capabilities which include the given parameters. */
-export type CapQuery = {
+export type CapSelector = {
   /** The share the capability grants access to. */
   share: ShareTag;
-  /** An optional identity the cap must be able to permit access to. */
-  identity?: IdentityTag;
-  /** An optional path prefix the cap must be able to permit access to. */
-  pathPrefix?: Path;
-  /** An optional time range the cap must be able to permit access to..  */
-  time?: {
-    start: number;
-    end?: number;
-  };
+  capableOf?: {
+    /** An optional identity the cap must be able to permit access to. */
+    identity?: IdentityTag;
+    /** An optional path prefix the cap must be able to permit access to. */
+    pathPrefix?: Path;
+    /** An optional time range the cap must be able to permit access to..  */
+    time?: {
+      start: number;
+      end?: number;
+    };
+  }[];
 };
 
 export type PeerDriver = {
@@ -239,8 +244,8 @@ export class Peer {
   }
 
   /** Iterate through all read capabilities satisfying an (optional) {@linkcode CapQuery} */
-  async *getReadCapabilities(query?: CapQuery) {
-    if (!query) {
+  async *getReadCapabilities(selectors?: CapSelector[]) {
+    if (!selectors) {
       for await (const cap of this.auth.readCapPacks()) {
         yield cap;
       }
@@ -248,20 +253,20 @@ export class Peer {
       return;
     }
 
-    const params = capQueryToCapParams(query);
+    const capPackSelectors = capSelectorsToCapPackSelectors(selectors);
 
-    if (isErr(params)) {
-      return params;
+    if (isErr(capPackSelectors)) {
+      return capPackSelectors;
     }
 
-    for await (const cap of this.auth.readCapPacks(...params)) {
+    for await (const cap of this.auth.readCapPacks(capPackSelectors)) {
       yield cap;
     }
   }
 
   /** Iterate through all write capabilities satisfying an (optional) {@linkcode CapQuery} */
-  async *getWriteCapabilities(query?: CapQuery) {
-    if (!query) {
+  async *getWriteCapabilities(selectors?: CapSelector[]) {
+    if (!selectors) {
       for await (const cap of this.auth.writeCapPacks()) {
         yield cap;
       }
@@ -269,13 +274,13 @@ export class Peer {
       return;
     }
 
-    const params = capQueryToCapParams(query);
+    const capPackSelectors = capSelectorsToCapPackSelectors(selectors);
 
-    if (isErr(params)) {
-      return params;
+    if (isErr(capPackSelectors)) {
+      return capPackSelectors;
     }
 
-    for await (const cap of this.auth.writeCapPacks(...params)) {
+    for await (const cap of this.auth.writeCapPacks(capPackSelectors)) {
       yield cap;
     }
   }
@@ -379,47 +384,45 @@ export class Peer {
 
     return tags;
   }
-}
 
-function capQueryToCapParams(
-  query: CapQuery,
-): Parameters<Auth["readCapPacks"]> | ValidationError {
-  if (!query.share) {
-    return [undefined, undefined];
-  }
+  async syncHttp(url: string, interests?: CapSelector[]) {
+    try {
+      new URL("url");
+    } catch {
+      return new ValidationError("Invalid URL provided");
+    }
 
-  const sharePublicKey = decodeShareTag(query.share);
+    const socket = new WebSocket(url);
+    const transport = new Willow.TransportWebsocket(Willow.IS_ALFIE, socket);
 
-  if (isErr(sharePublicKey)) {
-    return sharePublicKey;
-  }
+    const selectors = interests
+      ? capSelectorsToCapPackSelectors(interests)
+      : undefined;
 
-  if (
-    query.identity === undefined && query.pathPrefix === undefined &&
-    query.time === undefined
-  ) {
-    return [sharePublicKey, undefined];
-  }
+    if (isErr(selectors)) {
+      return selectors;
+    }
 
-  const subspace = query.identity
-    ? decodeIdentityTag(query.identity)
-    : undefined;
+    const syncer = new Syncer({
+      auth: this.auth,
+      getStore: async (share) => {
+        const tag = encodeShareTag(share);
 
-  if (isErr(subspace)) {
-    return subspace;
-  }
+        const result = await this.getStore(tag);
 
-  return [sharePublicKey, {
-    includedSubspaceId: subspace || ANY_SUBSPACE,
-    pathPrefix: query.pathPrefix || [],
-    timeRange: query.time
-      ? {
-        start: BigInt(query.time.start),
-        end: query.time.end ? BigInt(query.time.end) : OPEN_END,
-      }
-      : {
-        start: 0n,
-        end: OPEN_END,
+        if (isErr(result)) {
+          throw new EarthstarError(
+            "Could not get Store requested by Syncer.",
+          );
+        }
+
+        return result;
       },
-  }];
+      maxPayloadSizePower: 8,
+      transport: transport,
+      interests: await this.auth.interestsFromCaps(selectors),
+    });
+
+    return syncer;
+  }
 }
