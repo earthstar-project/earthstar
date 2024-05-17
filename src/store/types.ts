@@ -1,35 +1,48 @@
-import { Willow } from "../../deps.ts";
+import { H2CPoint, Willow } from "../../deps.ts";
 import { AuthorisationToken } from "../auth/auth.ts";
-import { IdentityAddress, ShareAddress } from "../crypto/types.ts";
+import { Capability } from "../caps/types.ts";
 import { Base32String } from "../encoding/types.ts";
+import {
+  IdentityKeypairRaw,
+  IdentityPublicKey,
+  IdentityTag,
+} from "../identifiers/identity.ts";
+import { SharePublicKey, ShareTag } from "../identifiers/share.ts";
+
+export type PreFingerprint = H2CPoint<bigint>;
 
 export type Path = string[];
 
 export type Payload = Willow.Payload;
 
+export type AuthorisationOpts = {
+  cap: Capability;
+  receiverKeypair: IdentityKeypairRaw;
+};
+
 export type Document = {
   /** The share this document belongs to. */
-  share: ShareAddress;
+  share: ShareTag;
   /** The identity associated with this document. */
-  identity: IdentityAddress;
+  identity: IdentityTag;
   /** The path this document corresponds to. */
   path: Path;
   /** When the document was written. */
   timestamp: bigint;
   /** The size of the document's payload in bytes. */
   size: bigint;
-  /** The SHA-256 digest of the payload, encoded in base 32. */
+  /** The BLAKE3 digest of the payload, encoded in base 32. */
   digest: Base32String;
   /** The identity used to authorise this document's creation. */
-  signedBy: IdentityAddress;
+  signedBy: IdentityTag;
   /** The data associated with this document. */
   payload: Payload | undefined;
 };
 
 export type StoreDriverOpts = "memory" | {
   entryDriver: Willow.EntryDriver<
-    ShareAddress,
-    IdentityAddress,
+    SharePublicKey,
+    IdentityPublicKey,
     ArrayBuffer,
     ArrayBuffer
   >;
@@ -40,7 +53,7 @@ export type Query = {
   /** A path all documents must be prefixed by. */
   pathPrefix?: Path;
   /** The identity which wrote the document. */
-  identity?: IdentityAddress;
+  identity?: IdentityTag;
   /** The earliest point at which a document was written, in microseconds. */
   timestampGte?: bigint;
   /** The latest  point at which a document was written, in microseconds. */
@@ -92,8 +105,8 @@ export type SetEvent =
   | SetEventSuccess;
 
 export type IngestEvent = Willow.IngestEvent<
-  ShareAddress,
-  IdentityAddress,
+  SharePublicKey,
+  IdentityPublicKey,
   ArrayBuffer,
   AuthorisationToken
 >;

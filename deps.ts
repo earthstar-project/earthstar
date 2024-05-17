@@ -1,7 +1,6 @@
-export * as Willow from "../willow-js/mod.universal.ts";
-//export * from "https://deno.land/x/willow_utils@0.4.0/mod.ts";
-export * from "../willow_utils/mod.ts";
-export * as Meadowcap from "../meadowcap/mod.ts";
+export * as Willow from "https://deno.land/x/willow@0.3.1/mod.universal.ts";
+export * from "https://deno.land/x/willow_utils@0.8.0/mod.ts";
+export * as Meadowcap from "https://deno.land/x/meadowcap@0.6.1/mod.ts";
 export {
   decodeBase32 as stdDecodeBase32,
   encodeBase32 as stdEncodeBase32,
@@ -12,6 +11,10 @@ export {
   decodeBase64Url,
   encodeBase64Url,
 } from "https://deno.land/std@0.203.0/encoding/base64url.ts";
+export { deferred } from "https://deno.land/std@0.202.0/async/deferred.ts";
+export { ed25519, hashToCurve, x25519 } from "npm:@noble/curves/ed25519";
+export { type H2CPoint } from "npm:@noble/curves/abstract/hash-to-curve";
+export { equals as equalsBytes } from "https://deno.land/std@0.203.0/bytes/equals.ts";
 
 // Oldies.
 

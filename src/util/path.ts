@@ -1,5 +1,5 @@
 import { Path as WillowPath } from "../../deps.ts";
-import { isValidPath } from "../core_validators/paths.ts";
+import { isValidPath } from "../paths/paths.ts";
 import { Path } from "../store/types.ts";
 import { isErr, ValidationError } from "./errors.ts";
 

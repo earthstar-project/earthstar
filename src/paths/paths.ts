@@ -1,13 +1,28 @@
-import { checkString } from "./checkers.ts";
-import { pathChars } from "./characters.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { pathScheme } from "../parameters/schemes.ts";
+import { pathScheme } from "../schemes/schemes.ts";
 
 function isValidPathComponent(component: string): true | ValidationError {
-  const errorMessage = checkString({ allowedChars: pathChars })(component);
+  // is alphanumeric, _ - or .
+  for (let i = 0; i < component.length; i++) {
+    const asciiCode = component.charCodeAt(i);
 
-  if (errorMessage) {
-    return new ValidationError(errorMessage);
+    const isAlpha = asciiCode >= 0x61 && asciiCode <= 0x7a;
+    const isUpperAlpha = asciiCode >= 0x41 && asciiCode <= 0x5a;
+    const isNumeric = asciiCode >= 0x30 && asciiCode <= 0x39;
+    const isUnderscore = asciiCode === 0x5f;
+    const isHyphen = asciiCode === 0x2d;
+    const isFullStop = asciiCode === 0x2e;
+
+    if (
+      !isAlpha && !isUpperAlpha && !isNumeric && !isUnderscore && !isHyphen &&
+      !isFullStop
+    ) {
+      return new ValidationError(
+        `Found invalid character in path (${
+          component.charAt(i)
+        }). Only lowercase alphanumeric characters, _, -, and . allowed.`,
+      );
+    }
   }
 
   return true;

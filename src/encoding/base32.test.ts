@@ -1,4 +1,4 @@
-import { assertEquals } from "$std/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { decodeBase32, encodeBase32 } from "./base32.ts";
 
 Deno.test("Base32 encoding and decoding", () => {

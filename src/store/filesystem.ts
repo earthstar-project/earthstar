@@ -1,25 +1,28 @@
 import { ensureDir } from "https://deno.land/std@0.188.0/fs/ensure_dir.ts";
 import { join } from "https://deno.land/std@0.188.0/path/win32.ts";
 import { Willow } from "../../deps.ts";
-import { IdentityAddress, ShareAddress } from "../crypto/types.ts";
+
 import {
   fingerprintScheme,
   namespaceScheme,
   pathScheme,
   payloadScheme,
   subspaceScheme,
-} from "../parameters/schemes.ts";
+} from "../schemes/schemes.ts";
 import {
   KvDriverDeno,
   PayloadDriverFilesystem,
 } from "../../../willow-js/mod.deno.ts";
+import { Blake3Digest } from "../blake3/types.ts";
+import { IdentityPublicKey } from "../identifiers/identity.ts";
+import { SharePublicKey } from "../identifiers/share.ts";
 
 export async function filesystemDrivers(path: string): Promise<{
   entryDriver: Willow.EntryDriver<
-    ShareAddress,
-    IdentityAddress,
-    ArrayBuffer,
-    ArrayBuffer
+    SharePublicKey,
+    IdentityPublicKey,
+    Blake3Digest,
+    Uint8Array
   >;
   payloadDriver: Willow.PayloadDriver<ArrayBuffer>;
 }> {

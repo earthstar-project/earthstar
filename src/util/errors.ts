@@ -14,23 +14,10 @@ export class ValidationError extends EarthstarError {
   }
 }
 
-/** An IReplica or IReplicaDriver was used after close() was called on it. */
-export class ReplicaIsClosedError extends EarthstarError {
+export class AuthorisationError extends EarthstarError {
   constructor(message?: string) {
-    super(
-      message || "a Replica or ReplicaDriver was used after being closed",
-    );
-    this.name = "ReplicaIsClosedError";
-  }
-}
-
-/** An IReplica or IReplicaDriver was used after close() was called on it. */
-export class ReplicaCacheIsClosedError extends EarthstarError {
-  constructor(message?: string) {
-    super(
-      message || "a ReplicaCache was used after being closed",
-    );
-    this.name = "ReplicaCacheIsClosedError";
+    super(message || "Authorisation error");
+    this.name = "AuthorisationError";
   }
 }
 

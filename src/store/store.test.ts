@@ -1,8 +1,6 @@
-import { CryptoES } from "../crypto/crypto_es.ts";
-import { CryptoDriverWebExtractable } from "../crypto/drivers/webcrypto.ts";
 import { Store } from "./store.ts";
-import { meadowcap } from "../auth/auth.ts";
-import { IdentityKeypair } from "../crypto/types.ts";
+import { Auth } from "../auth/auth.ts";
+
 import {
   assert,
   assertEquals,
@@ -11,39 +9,45 @@ import {
 import { DocumentSetEvent } from "./events.ts";
 import { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";
+import { encodeShareTag, ShareKeypairRaw } from "../identifiers/share.ts";
+import {
+  encodeIdentityTag,
+  IdentityKeypairRaw,
+} from "../identifiers/identity.ts";
+import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
 
-const cryptoEs = new CryptoES(new CryptoDriverWebExtractable());
-const addr = cryptoEs.generateCommunalNamespaceAddress("gardening");
-const identity = await cryptoEs.generateIdentityKeypair(
-  "suzy",
-) as IdentityKeypair<Uint8Array>;
-
-const capability = meadowcap.createCapCommunal({
-  accessMode: "write",
-  namespace: addr,
-  user: identity.identityAddress,
+const auth = new Auth({
+  password: "password1234",
+  kvDriver: new KvDriverInMemory(),
 });
 
-const auth = {
-  capability,
-  secret: identity.privateKey,
-};
+const share = await auth.createShareKeypair(
+  "gardening",
+  false,
+) as ShareKeypairRaw;
+const shareDisplay = encodeShareTag(share.publicKey);
+const identity = await auth.createIdentityKeypair(
+  "suzy",
+) as IdentityKeypairRaw;
+const identityDisplay = encodeIdentityTag(identity.publicKey);
+
+await auth.createFullCapPack(share.publicKey, identity.publicKey, "write");
 
 function newStore() {
-  return new Store(addr);
+  return new Store(shareDisplay, auth);
 }
 
 Deno.test("Store.set", async () => {
   const store = newStore();
 
   const result = await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(result.kind === "success");
-  assertEquals(result.document.identity, identity.identityAddress);
+  assertEquals(result.document.identity, identityDisplay);
   assertEquals(result.document.path, ["test"]);
 });
 
@@ -51,11 +55,11 @@ Deno.test("Store.set uses manual timestamp", async () => {
   const store = newStore();
 
   const result = await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   assert(result.kind === "success");
   assertEquals(result.document.timestamp, 1000n);
@@ -68,7 +72,7 @@ Deno.test("Store.set rejects invalid identity", async () => {
     identity: "james",
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(result.kind === "failure");
 });
@@ -77,10 +81,10 @@ Deno.test("Store.set rejects invalid path ", async () => {
   const store = newStore();
 
   const result = await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["bad/test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(result.kind === "failure");
 });
@@ -89,26 +93,25 @@ Deno.test("Store.set permitPruning option", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["root", "nested"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   const result = await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["root"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assertEquals(result.kind, "pruning_prevented");
 
   const result2 = await store.set(
     {
-      identity: identity.identityAddress,
+      identity: identityDisplay,
       path: ["root"],
       payload: new TextEncoder().encode("Hello world"),
     },
-    auth,
     true,
   );
 
@@ -127,13 +130,13 @@ Deno.test("Store.set emits event", async () => {
   });
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   assert(gotEventDoc);
-  assertEquals((gotEventDoc as Document).identity, identity.identityAddress);
+  assertEquals((gotEventDoc as Document).identity, identityDisplay);
   assertEquals((gotEventDoc as Document).path, ["test"]);
 });
 
@@ -143,16 +146,16 @@ Deno.test("Store.clear", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
-  const result = await store.clear(identity.identityAddress, ["test"], auth);
+  const result = await store.clear(identityDisplay, ["test"]);
 
   assert(notErr(result));
 
-  const clearedDoc = await store.get(identity.identityAddress, ["test"]);
+  const clearedDoc = await store.get(identityDisplay, ["test"]);
 
   assert(clearedDoc);
   assert(notErr(clearedDoc));
@@ -162,7 +165,7 @@ Deno.test("Store.clear", async () => {
 Deno.test("Store.clear can't clear non-existent docs", async () => {
   const store = newStore();
 
-  const result = await store.clear(identity.identityAddress, ["test"], auth);
+  const result = await store.clear(identityDisplay, ["test"]);
 
   assert(isErr(result));
 });
@@ -173,16 +176,16 @@ Deno.test("Store.get", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
-  const doc = await store.get(identity.identityAddress, ["test"]);
+  const doc = await store.get(identityDisplay, ["test"]);
 
   assert(doc);
   assert(notErr(doc));
-  assertEquals(doc.identity, identity.identityAddress);
+  assertEquals(doc.identity, identityDisplay);
   assertEquals(doc.path, ["test"]);
 });
 
@@ -197,7 +200,7 @@ Deno.test("Store.get rejects invalid identity", async () => {
 Deno.test("Store.get rejects invalid path", async () => {
   const store = newStore();
 
-  const result = await store.get(identity.identityAddress, ["👹"]);
+  const result = await store.get(identityDisplay, ["👹"]);
 
   assert(isErr(result));
 });
@@ -208,22 +211,22 @@ Deno.test("Store.documents", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test", "2"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["also", "test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   const docs = [];
 
@@ -246,22 +249,22 @@ Deno.test("Store.documents respects ordering", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test", "2"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["also", "test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   const docs = [];
 
@@ -287,41 +290,33 @@ Deno.test("Store.documents respects ordering", async () => {
 
 ///
 
-const identity2 = await cryptoEs.generateIdentityKeypair(
-  "jose",
-) as IdentityKeypair<Uint8Array>;
+const identity2 = await auth.createIdentityKeypair(
+  "yarp",
+) as IdentityKeypairRaw;
+const identity2Display = encodeIdentityTag(identity2.publicKey);
 
-const capability2 = meadowcap.createCapCommunal({
-  accessMode: "write",
-  namespace: addr,
-  user: identity2.identityAddress,
-});
-
-const auth2 = {
-  capability: capability2,
-  secret: identity2.privateKey,
-};
+await auth.createFullCapPack(share.publicKey, identity2.publicKey, "write");
 
 Deno.test("Store.latestDocAtPath", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
-    identity: identity2.identityAddress,
+    identity: identity2Display,
     path: ["test"],
     payload: new TextEncoder().encode("Yo!!!"),
-  }, auth2);
+  });
 
   const latest = await store.latestDocAtPath(["test"]);
 
   assert(latest);
   assert(notErr(latest));
-  assertEquals(latest.identity, identity2.identityAddress);
+  assertEquals(latest.identity, identity2Display);
 });
 
 Deno.test("Store.latestDocAtPath rejects invalid path", async () => {
@@ -338,16 +333,16 @@ Deno.test("Store.documentsAtPath", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test"],
     payload: new TextEncoder().encode("Hello world"),
-  }, auth);
+  });
 
   await store.set({
-    identity: identity2.identityAddress,
+    identity: identity2Display,
     path: ["test"],
     payload: new TextEncoder().encode("Yo!!!"),
-  }, auth2);
+  });
 
   const docs = [];
 
@@ -357,8 +352,8 @@ Deno.test("Store.documentsAtPath", async () => {
 
   assertEquals(docs.length, 2);
   assertEquals(docs.map((doc) => doc.identity), [
-    identity2.identityAddress,
-    identity.identityAddress,
+    identity2Display,
+    identityDisplay,
   ]);
 });
 
@@ -386,28 +381,28 @@ Deno.test("Store.queryDocs", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test1"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   await store.set({
-    identity: identity2.identityAddress,
+    identity: identity2Display,
     path: ["test2"],
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
-  }, auth2);
+  });
 
   const docsAll = await collect(store.queryDocs({}));
   assertEquals(docsAll.length, 2);
 
   const docsIdentity2 = await collect(store.queryDocs({
-    identity: identity2.identityAddress,
+    identity: identity2Display,
   }));
   assertEquals(docsIdentity2.length, 1);
   assert(
-    docsIdentity2.every((doc) => doc.identity === identity2.identityAddress),
+    docsIdentity2.every((doc) => doc.identity === identity2Display),
   );
 
   const docsTest1 = await collect(store.queryDocs({
@@ -464,21 +459,21 @@ Deno.test("Store.queryPaths", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test1"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   await store.set({
-    identity: identity2.identityAddress,
+    identity: identity2Display,
     path: ["test2"],
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
-  }, auth2);
+  });
 
   const paths = await collect(store.queryPaths({
-    identity: identity2.identityAddress,
+    identity: identity2Display,
   }));
   assertEquals(paths, [["test2"]]);
 });
@@ -487,21 +482,21 @@ Deno.test("Store.queryIdentities", async () => {
   const store = newStore();
 
   await store.set({
-    identity: identity.identityAddress,
+    identity: identityDisplay,
     path: ["test1"],
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
-  }, auth);
+  });
 
   await store.set({
-    identity: identity2.identityAddress,
+    identity: identity2Display,
     path: ["test2"],
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
-  }, auth2);
+  });
 
   const identities = await collect(store.queryIdentities({
     pathPrefix: ["test1"],
   }));
-  assertEquals(identities, [identity.identityAddress]);
+  assertEquals(identities, [identityDisplay]);
 });
