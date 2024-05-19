@@ -5,7 +5,6 @@ import {
   deferred,
   Meadowcap,
   orderBytes,
-  Path,
   Willow,
 } from "../../deps.ts";
 import {
@@ -51,6 +50,7 @@ import {
 } from "../caps/util.ts";
 import { SyncInterests } from "../syncer/syncer.ts";
 import { CapPackSelector } from "./types.ts";
+import { Path } from "../path/path.ts";
 
 const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
@@ -531,7 +531,7 @@ export class Auth {
       const toArea: Area<IdentityPublicKey> = {
         includedSubspaceId: restrictTo.identity ||
           grantedArea.includedSubspaceId,
-        pathPrefix: restrictToPath ||
+        pathPrefix: restrictToPath?.underlying ||
           grantedArea.pathPrefix,
         timeRange: restrictTo.time || grantedArea.timeRange,
       };
@@ -580,7 +580,7 @@ export class Auth {
     const toArea: Area<IdentityPublicKey> = {
       includedSubspaceId: restrictTo.identity ||
         grantedArea.includedSubspaceId,
-      pathPrefix: restrictToPath ||
+      pathPrefix: restrictToPath?.underlying ||
         grantedArea.pathPrefix,
       timeRange: restrictTo.time || grantedArea.timeRange,
     };
@@ -860,7 +860,7 @@ export class Auth {
         share,
         areas: [{
           includedSubspaceId: subspace,
-          pathPrefix: path,
+          pathPrefix: path.underlying,
           timeRange: {
             start: timestamp,
             end: timestamp + 1n,

@@ -1,4 +1,4 @@
-import { ANY_SUBSPACE, Meadowcap, OPEN_END, Path } from "../../deps.ts";
+import { ANY_SUBSPACE, Meadowcap, OPEN_END } from "../../deps.ts";
 import { Auth } from "../auth/auth.ts";
 import {
   decodeIdentityTag,
@@ -6,6 +6,7 @@ import {
   IdentityTag,
 } from "../identifiers/identity.ts";
 import { encodeShareTag, ShareTag } from "../identifiers/share.ts";
+import { Path } from "../path/path.ts";
 import { meadowcapParams } from "../schemes/schemes.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 import { ReadCapPack, WriteCapPack } from "./types.ts";
@@ -56,7 +57,7 @@ export class Cap {
     this.grantedIdentity = grantedArea.includedSubspaceId === ANY_SUBSPACE
       ? undefined
       : encodeIdentityTag(grantedArea.includedSubspaceId);
-    this.grantedPathPrefix = grantedArea.pathPrefix;
+    this.grantedPathPrefix = new Path(grantedArea.pathPrefix);
     this.grantedTime = {
       start: grantedArea.timeRange.start,
       end: grantedArea.timeRange.end === OPEN_END

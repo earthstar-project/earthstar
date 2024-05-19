@@ -6,6 +6,7 @@ import { Cap } from "./cap.ts";
 import { assertEquals } from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { encodeIdentityTag } from "../identifiers/identity.ts";
 import { encodeShareTag } from "../identifiers/share.ts";
+import { Path } from "../path/path.ts";
 
 Deno.test("Cap semantics (communal)", async () => {
   const auth = new Auth({
@@ -31,7 +32,7 @@ Deno.test("Cap semantics (communal)", async () => {
   assertEquals(readCap.receiver, encodeIdentityTag(id.publicKey));
   assertEquals(readCap.accessMode, "read");
   assertEquals(readCap.grantedIdentity, encodeIdentityTag(id.publicKey));
-  assertEquals(readCap.grantedPathPrefix, []);
+  assertEquals(readCap.grantedPathPrefix.underlying, Path.empty.underlying);
   assertEquals(readCap.grantedTime, {
     start: 0n,
     end: undefined,
@@ -51,7 +52,7 @@ Deno.test("Cap semantics (communal)", async () => {
   assertEquals(writeCap.receiver, encodeIdentityTag(id.publicKey));
   assertEquals(writeCap.accessMode, "write");
   assertEquals(writeCap.grantedIdentity, encodeIdentityTag(id.publicKey));
-  assertEquals(writeCap.grantedPathPrefix, []);
+  assertEquals(writeCap.grantedPathPrefix.underlying, Path.empty.underlying);
   assertEquals(writeCap.grantedTime, {
     start: 0n,
     end: undefined,
@@ -83,7 +84,7 @@ Deno.test("Cap semantics (owned)", async () => {
   assertEquals(readCap.receiver, encodeIdentityTag(id.publicKey));
   assertEquals(readCap.accessMode, "read");
   assertEquals(readCap.grantedIdentity, undefined);
-  assertEquals(readCap.grantedPathPrefix, []);
+  assertEquals(readCap.grantedPathPrefix.underlying, Path.empty.underlying);
   assertEquals(readCap.grantedTime, {
     start: 0n,
     end: undefined,
@@ -103,7 +104,7 @@ Deno.test("Cap semantics (owned)", async () => {
   assertEquals(writeCap.receiver, encodeIdentityTag(id.publicKey));
   assertEquals(writeCap.accessMode, "write");
   assertEquals(writeCap.grantedIdentity, undefined);
-  assertEquals(writeCap.grantedPathPrefix, []);
+  assertEquals(writeCap.grantedPathPrefix.underlying, Path.empty.underlying);
   assertEquals(writeCap.grantedTime, {
     start: 0n,
     end: undefined,
@@ -154,7 +155,7 @@ Deno.test("Cap delegation", async () => {
     tag2,
     {
       identity: tag2,
-      pathPrefix: [new Uint8Array([7, 7, 7])],
+      pathPrefix: new Path([new Uint8Array([7, 7, 7])]),
       time: {
         start: 10n,
         end: 90n,
@@ -167,7 +168,7 @@ Deno.test("Cap delegation", async () => {
   assertEquals(delegatedRestricted.share, readCap.share);
   assertEquals(delegatedRestricted.accessMode, "read");
   assertEquals(delegatedRestricted.grantedIdentity, tag2);
-  assertEquals(delegatedRestricted.grantedPathPrefix, [
+  assertEquals(delegatedRestricted.grantedPathPrefix.underlying, [
     new Uint8Array([7, 7, 7]),
   ]);
   assertEquals(delegatedRestricted.grantedTime, {

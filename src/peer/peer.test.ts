@@ -4,6 +4,7 @@ import {
   assertEquals,
 } from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { notErr } from "../util/errors.ts";
+import { Path } from "../path/path.ts";
 
 Deno.test("Peer", async () => {
   // A Peer which can securely store capabilities and keypairs.
@@ -37,7 +38,7 @@ Deno.test("Peer", async () => {
   // And even better, our Store knows about our capabilities,
   // And selects them automatically when creating new documents.
   const result = await gardeningStore.set({
-    path: ["hello"],
+    path: Path.fromStrings("hello"),
     identity: suzyKeypair.tag,
     payload: new TextEncoder().encode("yo!"),
   });

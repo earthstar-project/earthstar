@@ -8,10 +8,9 @@ import {
   IdentityTag,
 } from "../identifiers/identity.ts";
 import { SharePublicKey, ShareTag } from "../identifiers/share.ts";
+import { Path } from "../path/path.ts";
 
 export type PreFingerprint = H2CPoint<bigint>;
-
-export type Path = string[];
 
 export type Payload = Willow.Payload;
 
@@ -95,7 +94,7 @@ export type SetEventSuccess = {
   /** The successfully created document. */
   document: Document;
   /** The paths of documents deleted by the new document via prefix pruning. */
-  pruned: string[][];
+  pruned: Path[];
 };
 
 export type SetEvent =

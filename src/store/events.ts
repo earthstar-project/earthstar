@@ -6,9 +6,10 @@ import {
   IdentityPublicKey,
 } from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
+import { Path } from "../path/path.ts";
 import { entryToDocument } from "../util/documents.ts";
-import { willowToEarthstarPath } from "../util/path.ts";
-import { Document, Path, PreFingerprint } from "./types.ts";
+
+import { Document, PreFingerprint } from "./types.ts";
 
 export class DocumentSetEvent extends CustomEvent<{ document: Document }> {
   constructor(document: Document) {
@@ -139,7 +140,7 @@ export function relayWillowEvents(
 
     dispatcher.dispatchEvent(
       new DocumentRemoveEvent(
-        willowToEarthstarPath(evt.detail.removed.path),
+        new Path(evt.detail.removed.path),
         entryToDocument(
           evt.detail.removedBy.entry,
           undefined,

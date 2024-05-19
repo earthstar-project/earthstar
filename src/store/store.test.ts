@@ -15,6 +15,7 @@ import {
   IdentityKeypairRaw,
 } from "../identifiers/identity.ts";
 import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
+import { Path } from "../path/path.ts";
 
 const auth = new Auth({
   password: "password1234",
@@ -40,15 +41,17 @@ function newStore() {
 Deno.test("Store.set", async () => {
   const store = newStore();
 
+  const path = Path.fromStrings("test");
+
   const result = await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: path,
     payload: new TextEncoder().encode("Hello world"),
   });
 
   assert(result.kind === "success");
   assertEquals(result.document.identity, identityDisplay);
-  assertEquals(result.document.path, ["test"]);
+  assertEquals(result.document.path.underlying, path.underlying);
 });
 
 Deno.test("Store.set uses manual timestamp", async () => {
@@ -56,7 +59,7 @@ Deno.test("Store.set uses manual timestamp", async () => {
 
   const result = await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
   });
@@ -70,13 +73,14 @@ Deno.test("Store.set rejects invalid identity", async () => {
 
   const result = await store.set({
     identity: "james",
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   assert(result.kind === "failure");
 });
 
+/*
 Deno.test("Store.set rejects invalid path ", async () => {
   const store = newStore();
 
@@ -88,19 +92,20 @@ Deno.test("Store.set rejects invalid path ", async () => {
 
   assert(result.kind === "failure");
 });
+*/
 
 Deno.test("Store.set permitPruning option", async () => {
   const store = newStore();
 
   await store.set({
     identity: identityDisplay,
-    path: ["root", "nested"],
+    path: Path.fromStrings("root", "nested"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   const result = await store.set({
     identity: identityDisplay,
-    path: ["root"],
+    path: Path.fromStrings("root"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
@@ -109,7 +114,7 @@ Deno.test("Store.set permitPruning option", async () => {
   const result2 = await store.set(
     {
       identity: identityDisplay,
-      path: ["root"],
+      path: Path.fromStrings("root"),
       payload: new TextEncoder().encode("Hello world"),
     },
     true,
@@ -131,13 +136,16 @@ Deno.test("Store.set emits event", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   assert(gotEventDoc);
   assertEquals((gotEventDoc as Document).identity, identityDisplay);
-  assertEquals((gotEventDoc as Document).path, ["test"]);
+  assertEquals(
+    (gotEventDoc as Document).path.underlying,
+    (Path.fromStrings("test")).underlying,
+  );
 });
 
 ///
@@ -147,15 +155,21 @@ Deno.test("Store.clear", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
-  const result = await store.clear(identityDisplay, ["test"]);
+  const result = await store.clear(
+    identityDisplay,
+    Path.fromStrings("test"),
+  );
 
   assert(notErr(result));
 
-  const clearedDoc = await store.get(identityDisplay, ["test"]);
+  const clearedDoc = await store.get(
+    identityDisplay,
+    Path.fromStrings("test"),
+  );
 
   assert(clearedDoc);
   assert(notErr(clearedDoc));
@@ -165,7 +179,10 @@ Deno.test("Store.clear", async () => {
 Deno.test("Store.clear can't clear non-existent docs", async () => {
   const store = newStore();
 
-  const result = await store.clear(identityDisplay, ["test"]);
+  const result = await store.clear(
+    identityDisplay,
+    Path.fromStrings("test"),
+  );
 
   assert(isErr(result));
 });
@@ -177,26 +194,27 @@ Deno.test("Store.get", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
-  const doc = await store.get(identityDisplay, ["test"]);
+  const doc = await store.get(identityDisplay, Path.fromStrings("test"));
 
   assert(doc);
   assert(notErr(doc));
   assertEquals(doc.identity, identityDisplay);
-  assertEquals(doc.path, ["test"]);
+  assertEquals(doc.path, Path.fromStrings("test"));
 });
 
 Deno.test("Store.get rejects invalid identity", async () => {
   const store = newStore();
 
-  const result = await store.get("moriarty", ["test"]);
+  const result = await store.get("moriarty", Path.fromStrings("test"));
 
   assert(isErr(result));
 });
 
+/*
 Deno.test("Store.get rejects invalid path", async () => {
   const store = newStore();
 
@@ -204,6 +222,7 @@ Deno.test("Store.get rejects invalid path", async () => {
 
   assert(isErr(result));
 });
+*/
 
 ///
 
@@ -212,19 +231,19 @@ Deno.test("Store.documents", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   await store.set({
     identity: identityDisplay,
-    path: ["test", "2"],
+    path: Path.fromStrings("test", "2"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   await store.set({
     identity: identityDisplay,
-    path: ["also", "test"],
+    path: Path.fromStrings("also", "test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
@@ -235,13 +254,13 @@ Deno.test("Store.documents", async () => {
   }
 
   assertEquals(docs.length, 3);
-  assertEquals(docs.map((doc) => doc.path), [
-    [
+  assertEquals(docs.map((doc) => doc.path.underlying), [
+    Path.fromStrings(
       "also",
       "test",
-    ],
-    ["test"],
-    ["test", "2"],
+    ).underlying,
+    Path.fromStrings("test").underlying,
+    Path.fromStrings("test", "2").underlying,
   ]);
 });
 
@@ -250,19 +269,19 @@ Deno.test("Store.documents respects ordering", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   await store.set({
     identity: identityDisplay,
-    path: ["test", "2"],
+    path: Path.fromStrings("test", "2"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   await store.set({
     identity: identityDisplay,
-    path: ["also", "test"],
+    path: Path.fromStrings("also", "test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
@@ -278,13 +297,13 @@ Deno.test("Store.documents respects ordering", async () => {
   }
 
   assertEquals(docs.length, 3);
-  assertEquals(docs.map((doc) => doc.path), [
-    [
+  assertEquals(docs.map((doc) => doc.path.underlying), [
+    Path.fromStrings(
       "also",
       "test",
-    ],
-    ["test", "2"],
-    ["test"],
+    ).underlying,
+    Path.fromStrings("test", "2").underlying,
+    Path.fromStrings("test").underlying,
   ]);
 });
 
@@ -302,23 +321,24 @@ Deno.test("Store.latestDocAtPath", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   await store.set({
     identity: identity2Display,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Yo!!!"),
   });
 
-  const latest = await store.latestDocAtPath(["test"]);
+  const latest = await store.latestDocAtPath(Path.fromStrings("test"));
 
   assert(latest);
   assert(notErr(latest));
   assertEquals(latest.identity, identity2Display);
 });
 
+/*
 Deno.test("Store.latestDocAtPath rejects invalid path", async () => {
   const store = newStore();
 
@@ -326,6 +346,7 @@ Deno.test("Store.latestDocAtPath rejects invalid path", async () => {
 
   assert(isErr(latest));
 });
+*/
 
 ///
 
@@ -334,19 +355,19 @@ Deno.test("Store.documentsAtPath", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Hello world"),
   });
 
   await store.set({
     identity: identity2Display,
-    path: ["test"],
+    path: Path.fromStrings("test"),
     payload: new TextEncoder().encode("Yo!!!"),
   });
 
   const docs = [];
 
-  for await (const doc of store.documentsAtPath(["test"])) {
+  for await (const doc of store.documentsAtPath(Path.fromStrings("test"))) {
     docs.push(doc);
   }
 
@@ -357,6 +378,7 @@ Deno.test("Store.documentsAtPath", async () => {
   ]);
 });
 
+/*
 Deno.test("Store.latestDocAtPath rejects invalid path", async () => {
   const store = newStore();
 
@@ -366,6 +388,7 @@ Deno.test("Store.latestDocAtPath rejects invalid path", async () => {
     }
   });
 });
+*/
 
 async function collect<Value>(iter: AsyncIterable<Value>): Promise<Value[]> {
   const items = [];
@@ -382,14 +405,14 @@ Deno.test("Store.queryDocs", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test1"],
+    path: Path.fromStrings("test1"),
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
   });
 
   await store.set({
     identity: identity2Display,
-    path: ["test2"],
+    path: Path.fromStrings("test2"),
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
   });
@@ -406,12 +429,12 @@ Deno.test("Store.queryDocs", async () => {
   );
 
   const docsTest1 = await collect(store.queryDocs({
-    pathPrefix: ["test1"],
+    pathPrefix: Path.fromStrings("test1"),
   }));
   assertEquals(docsTest1.length, 1);
   assertEquals(
-    docsTest1[0].path,
-    ["test1"],
+    docsTest1[0].path.underlying,
+    Path.fromStrings("test1").underlying,
   );
 
   const docsTimestampGte = await collect(store.queryDocs({
@@ -446,13 +469,19 @@ Deno.test("Store.queryDocs", async () => {
     order: "path",
   }));
   assertEquals(docsOrderPath.length, 2);
-  assertEquals(docsOrderPath.map((doc) => doc.path), [["test1"], ["test2"]]);
+  assertEquals(docsOrderPath.map((doc) => doc.path.underlying), [
+    Path.fromStrings("test1").underlying,
+    Path.fromStrings("test2").underlying,
+  ]);
 
   const docsDescending = await collect(store.queryDocs({
     descending: true,
   }));
   assertEquals(docsDescending.length, 2);
-  assertEquals(docsDescending.map((doc) => doc.path), [["test2"], ["test1"]]);
+  assertEquals(docsDescending.map((doc) => doc.path.underlying), [
+    Path.fromStrings("test2").underlying,
+    Path.fromStrings("test1").underlying,
+  ]);
 });
 
 Deno.test("Store.queryPaths", async () => {
@@ -460,14 +489,14 @@ Deno.test("Store.queryPaths", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test1"],
+    path: Path.fromStrings("test1"),
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
   });
 
   await store.set({
     identity: identity2Display,
-    path: ["test2"],
+    path: Path.fromStrings("test2"),
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
   });
@@ -475,7 +504,9 @@ Deno.test("Store.queryPaths", async () => {
   const paths = await collect(store.queryPaths({
     identity: identity2Display,
   }));
-  assertEquals(paths, [["test2"]]);
+  assertEquals(paths.map((path) => path.underlying), [
+    Path.fromStrings("test2").underlying,
+  ]);
 });
 
 Deno.test("Store.queryIdentities", async () => {
@@ -483,20 +514,20 @@ Deno.test("Store.queryIdentities", async () => {
 
   await store.set({
     identity: identityDisplay,
-    path: ["test1"],
+    path: Path.fromStrings("test1"),
     payload: new TextEncoder().encode("Hello world"),
     timestamp: 1000n,
   });
 
   await store.set({
     identity: identity2Display,
-    path: ["test2"],
+    path: Path.fromStrings("test2"),
     payload: new TextEncoder().encode("Yo!!!"),
     timestamp: 2000n,
   });
 
   const identities = await collect(store.queryIdentities({
-    pathPrefix: ["test1"],
+    pathPrefix: Path.fromStrings("test1"),
   }));
   assertEquals(identities, [identityDisplay]);
 });

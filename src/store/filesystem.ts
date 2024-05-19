@@ -16,13 +16,14 @@ import {
 import { Blake3Digest } from "../blake3/types.ts";
 import { IdentityPublicKey } from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
+import { PreFingerprint } from "./types.ts";
 
 export async function filesystemDrivers(path: string): Promise<{
   entryDriver: Willow.EntryDriver<
     SharePublicKey,
     IdentityPublicKey,
     Blake3Digest,
-    Uint8Array
+    PreFingerprint
   >;
   payloadDriver: Willow.PayloadDriver<ArrayBuffer>;
 }> {

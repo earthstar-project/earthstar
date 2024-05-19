@@ -1,9 +1,4 @@
-import {
-  OPEN_END,
-  Path as WillowPath,
-  successorPath,
-  Willow,
-} from "../../deps.ts";
+import { OPEN_END, successorPath, Willow } from "../../deps.ts";
 import { Auth, AuthorisationToken } from "../auth/auth.ts";
 import {
   authorisationScheme,
@@ -20,7 +15,6 @@ import {
   isErr,
   ValidationError,
 } from "../util/errors.ts";
-import { earthstarToWillowPath, willowToEarthstarPath } from "../util/path.ts";
 import { relayWillowEvents } from "./events.ts";
 import {
   AuthorisationOpts,
@@ -31,7 +25,6 @@ import {
   StoreDriverOpts,
 } from "./types.ts";
 import { queryToWillowQueryParams } from "./util.ts";
-import { Path } from "./types.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
@@ -44,6 +37,7 @@ import {
   SharePublicKey,
   ShareTag,
 } from "../identifiers/share.ts";
+import { Path } from "../path/path.ts";
 
 /** A store for reading, writing, and querying documents from a corresponding share.
  *
@@ -136,17 +130,6 @@ export class Store extends EventTarget {
     /** Whether to permit the deletion of documents via prefix pruning. Disabled by default. */
     permitPruning?: boolean,
   ): Promise<SetEvent> {
-    const willowPath = earthstarToWillowPath(input.path);
-
-    if (isErr(willowPath)) {
-      return {
-        kind: "failure",
-        reason: "invalid_entry",
-        message: willowPath.message,
-        err: willowPath,
-      };
-    }
-
     const identityPublicKey = decodeIdentityTag(input.identity);
 
     if (isErr(identityPublicKey)) {
@@ -160,7 +143,7 @@ export class Store extends EventTarget {
 
     if (!permitPruning) {
       const prunableEntries = await this.willow.prunableEntries({
-        path: willowPath,
+        path: input.path.underlying,
         subspace: identityPublicKey,
         timestamp: input.timestamp || BigInt(Date.now() * 1000),
       });
@@ -191,7 +174,7 @@ export class Store extends EventTarget {
     const authorisation = await this.auth.getWriteAuthorisation(
       this.willow.namespace,
       identityPublicKey,
-      willowPath,
+      input.path,
       input.timestamp || BigInt(Date.now() * 1000),
     );
 
@@ -205,7 +188,7 @@ export class Store extends EventTarget {
     }
 
     const result = await this.willow.set({
-      path: willowPath,
+      path: input.path.underlying,
       subspace: identityPublicKey,
       payload: input.payload,
       timestamp: input.timestamp,
@@ -226,9 +209,7 @@ export class Store extends EventTarget {
     const prunedPaths: Path[] = [];
 
     for (const entry of result.pruned) {
-      const path = willowToEarthstarPath(entry.path);
-
-      prunedPaths.push(path);
+      prunedPaths.push(new Path(entry.path));
     }
 
     return {
@@ -274,7 +255,7 @@ export class Store extends EventTarget {
     const authorisation = await this.auth.getWriteAuthorisation(
       this.willow.namespace,
       identityPublicKey,
-      earthstarToWillowPath(path) as WillowPath,
+      path,
       existing.timestamp + 1n,
     );
 
@@ -283,7 +264,7 @@ export class Store extends EventTarget {
     }
 
     const result = await this.willow.set({
-      path: earthstarToWillowPath(path) as WillowPath, // Validated already by this.get.
+      path: path.underlying,
       subspace: identityPublicKey,
       payload: new Uint8Array(),
       timestamp: existing.timestamp + 1n,
@@ -327,17 +308,11 @@ export class Store extends EventTarget {
       return identityPublicKey;
     }
 
-    const willowPath = earthstarToWillowPath(path);
-
-    if (isErr(willowPath)) {
-      return willowPath;
-    }
-
     const query = this.willow.queryRange(
       {
         pathRange: {
-          start: willowPath,
-          end: successorPath(willowPath, pathScheme) || OPEN_END,
+          start: path.underlying,
+          end: successorPath(path.underlying, pathScheme) || OPEN_END,
         },
         subspaceRange: {
           start: identityPublicKey,
@@ -396,17 +371,11 @@ export class Store extends EventTarget {
   async latestDocAtPath(
     path: Path,
   ): Promise<Document | undefined | ValidationError> {
-    const willowPath = earthstarToWillowPath(path);
-
-    if (isErr(willowPath)) {
-      return willowPath;
-    }
-
     const query = this.willow.queryRange(
       {
         pathRange: {
-          start: willowPath,
-          end: successorPath(willowPath, pathScheme) || OPEN_END,
+          start: path.underlying,
+          end: successorPath(path.underlying, pathScheme) || OPEN_END,
         },
         subspaceRange: {
           start: subspaceScheme.minimalSubspaceId,
@@ -438,17 +407,11 @@ export class Store extends EventTarget {
   async *documentsAtPath(
     path: Path,
   ): AsyncIterable<Document> {
-    const willowPath = earthstarToWillowPath(path);
-
-    if (isErr(willowPath)) {
-      throw willowPath;
-    }
-
     const query = this.willow.queryRange(
       {
         pathRange: {
-          start: willowPath,
-          end: successorPath(willowPath, pathScheme) || OPEN_END,
+          start: path.underlying,
+          end: successorPath(path.underlying, pathScheme) || OPEN_END,
         },
         subspaceRange: {
           start: subspaceScheme.minimalSubspaceId,
@@ -523,15 +486,13 @@ export class Store extends EventTarget {
     const emittedSet = new Set<string>();
 
     for await (const [entry] of willowQuery) {
-      const path = willowToEarthstarPath(entry.path);
-      const joined = path.join("/");
+      const path = new Path(entry.path);
+      const formatted = path.format("ascii");
 
-      if (emittedSet.has(joined)) {
-        continue;
+      if (!emittedSet.has(formatted)) {
+        emittedSet.add(formatted);
+        yield path;
       }
-
-      emittedSet.add(joined);
-      yield path;
     }
   }
 

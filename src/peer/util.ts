@@ -29,9 +29,9 @@ export function capSelectorsToCapPackSelectors(
       continue;
     }
 
-    for (const hmmm of selector.capableOf) {
-      const subspace = hmmm.identity
-        ? decodeIdentityTag(hmmm.identity)
+    for (const area of selector.capableOf) {
+      const subspace = area.identity
+        ? decodeIdentityTag(area.identity)
         : undefined;
 
       if (isErr(subspace)) {
@@ -40,11 +40,11 @@ export function capSelectorsToCapPackSelectors(
 
       areas.push({
         includedSubspaceId: subspace || ANY_SUBSPACE,
-        pathPrefix: hmmm.pathPrefix || [],
-        timeRange: hmmm.time
+        pathPrefix: area.pathPrefix?.underlying || [],
+        timeRange: area.time
           ? {
-            start: BigInt(hmmm.time.start),
-            end: hmmm.time.end ? BigInt(hmmm.time.end) : OPEN_END,
+            start: BigInt(area.time.start),
+            end: area.time.end ? BigInt(area.time.end) : OPEN_END,
           }
           : {
             start: 0n,
