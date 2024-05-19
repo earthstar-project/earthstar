@@ -1,6 +1,6 @@
 import { assert } from "https://deno.land/std@0.203.0/assert/assert.ts";
 import { Auth } from "../auth/auth.ts";
-import { KvDriverInMemory } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_in_memory.ts";
+import { KvDriverInMemory } from "jsr:@earthstar/willow";
 import { notErr } from "../util/errors.ts";
 import { Cap } from "./cap.ts";
 import { assertEquals } from "https://deno.land/std@0.203.0/assert/mod.ts";

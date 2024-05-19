@@ -4,7 +4,6 @@ import { Auth } from "../auth/auth.ts";
 import {
   assert,
   assertEquals,
-  assertRejects,
 } from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { DocumentSetEvent } from "./events.ts";
 import { Document } from "./types.ts";
@@ -14,7 +13,7 @@ import {
   encodeIdentityTag,
   IdentityKeypairRaw,
 } from "../identifiers/identity.ts";
-import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
+import { KvDriverInMemory } from "jsr:@earthstar/willow";
 import { Path } from "../path/path.ts";
 
 const auth = new Auth({

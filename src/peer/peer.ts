@@ -1,4 +1,4 @@
-import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
+import { KvDriverInMemory } from "jsr:@earthstar/willow";
 import { Willow } from "../../deps.ts";
 import { Auth } from "../auth/auth.ts";
 import { Cap } from "../caps/cap.ts";

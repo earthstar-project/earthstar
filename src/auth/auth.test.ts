@@ -8,8 +8,8 @@ import { Auth } from "./auth.ts";
 import { notErr } from "../util/errors.ts";
 import { ANY_SUBSPACE, Meadowcap } from "../../deps.ts";
 import { isCommunalShare } from "../identifiers/share.ts";
-import { KvDriverInMemory } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_in_memory.ts";
-import { KvDriverDeno } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_deno.ts";
+import { KvDriverInMemory } from "jsr:@earthstar/willow";
+import { KvDriverDeno } from "jsr:@earthstar/willow/deno";
 import { meadowcapParams } from "../schemes/schemes.ts";
 import { Path } from "../path/path.ts";
 

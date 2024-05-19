@@ -487,7 +487,7 @@ export class Store extends EventTarget {
 
     for await (const [entry] of willowQuery) {
       const path = new Path(entry.path);
-      const formatted = path.format("ascii");
+      const formatted = path.format("base32");
 
       if (!emittedSet.has(formatted)) {
         emittedSet.add(formatted);
