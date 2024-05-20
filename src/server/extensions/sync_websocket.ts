@@ -4,6 +4,7 @@ import { Peer } from "../../peer/peer.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { EarthstarError, isErr } from "../../util/errors.ts";
 import { ServerExtension } from "./extension.ts";
+import { RuntimeDriverDeno } from "../../runtime/driver_deno.ts";
 
 export class ExtensionSyncWebsocket implements ServerExtension {
   private path = "";
@@ -53,6 +54,7 @@ export class ExtensionSyncWebsocket implements ServerExtension {
 
         return result;
       },
+      runtime: new RuntimeDriverDeno(),
     });
 
     return response;

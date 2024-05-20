@@ -1,6 +1,7 @@
 import { Ed25519Driver } from "../types.ts";
 
-export class Ed25519 implements Ed25519Driver<CryptoKey> {
+export class Ed25519webcryptoNonExtractable
+  implements Ed25519Driver<CryptoKey> {
   async generateKeypair(): Promise<
     { publicKey: Uint8Array; secretKey: CryptoKey }
   > {
@@ -37,7 +38,7 @@ export class Ed25519 implements Ed25519Driver<CryptoKey> {
       "raw",
       publicKey,
       { name: "Ed25519" },
-      true, /* extractable */
+      false, /* non-extractable */
       ["deriveKey", "deriveBits"],
     );
 

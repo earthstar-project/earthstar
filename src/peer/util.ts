@@ -6,7 +6,7 @@ import {
 } from "../identifiers/identity.ts";
 import { decodeShareTag } from "../identifiers/share.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { CapSelector } from "./peer.ts";
+import { CapSelector } from "./types.ts";
 
 export function capSelectorsToCapPackSelectors(
   selectors: CapSelector[],

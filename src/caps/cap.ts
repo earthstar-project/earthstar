@@ -7,13 +7,14 @@ import {
 } from "../identifiers/identity.ts";
 import { encodeShareTag, ShareTag } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
-import { meadowcapParams } from "../schemes/schemes.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 import { ReadCapPack, WriteCapPack } from "./types.ts";
 import { encodeCapPack, isReadCapPack } from "./util.ts";
-import { Meadowcap } from "@earthstar/meadowcap";
-
-const meadowcap = new Meadowcap(meadowcapParams);
+import {
+  getGrantedAreaCommunal,
+  getGrantedAreaOwned,
+  getReceiver,
+} from "@earthstar/meadowcap";
 
 /** An unforgeable token bestowing read or write access to a share.
  */
@@ -49,11 +50,13 @@ export class Cap {
 
     this.share = encodeShareTag(cap.namespaceKey);
     this.receiver = encodeIdentityTag(
-      meadowcap.getCapReceiver(cap),
+      getReceiver(cap),
     );
     this.accessMode = cap.accessMode;
 
-    const grantedArea = meadowcap.getCapGrantedArea(cap);
+    const grantedArea = "initialAuthorisation" in cap
+      ? getGrantedAreaOwned(cap)
+      : getGrantedAreaCommunal(cap);
 
     this.grantedIdentity = grantedArea.includedSubspaceId === ANY_SUBSPACE
       ? undefined
@@ -125,6 +128,6 @@ export class Cap {
 
   /** Export the capability to an encoded format for transmission. */
   export(): Uint8Array {
-    return encodeCapPack(this.capPack);
+    return encodeCapPack(this.capPack, this.auth.runtimeDriver);
   }
 }

@@ -1,9 +1,4 @@
-import {
-  IS_ALFIE,
-  KvDriver,
-  KvDriverInMemory,
-  TransportWebsocket,
-} from "jsr:@earthstar/willow";
+import { IS_ALFIE, KvDriver, TransportWebsocket } from "@earthstar/willow";
 import { Auth } from "../auth/auth.ts";
 import { Cap } from "../caps/cap.ts";
 import { decodeCapPack } from "../caps/util.ts";
@@ -19,43 +14,18 @@ import {
   isCommunalShare,
   ShareKeypair,
   ShareKeypairRaw,
-  SharePublicKey,
   ShareTag,
 } from "../identifiers/share.ts";
-import { Path } from "../path/path.ts";
 import { Store } from "../store/store.ts";
 import { Syncer } from "../syncer/syncer.ts";
-
 import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
 import { capSelectorsToCapPackSelectors } from "./util.ts";
-
-/** A query which selects all capabilities which include the given parameters. */
-export type CapSelector = {
-  /** The share the capability grants access to. */
-  share: ShareTag;
-  capableOf?: {
-    /** An optional identity the cap must be able to permit access to. */
-    identity?: IdentityTag;
-    /** An optional path prefix the cap must be able to permit access to. */
-    pathPrefix?: Path;
-    /** An optional time range the cap must be able to permit access to..  */
-    time?: {
-      start: number;
-      end?: number;
-    };
-  }[];
-};
-
-export type PeerDriver = {
-  authDriver: KvDriver;
-  createStore: (share: SharePublicKey) => Promise<Store>;
-};
-
-export type PeerOpts = {
-  /** A plaintext password used to encrypt sensitive information stored within the peer, such as keypairs or capabilities. */
-  password: string;
-  driver?: PeerDriver;
-};
+import {
+  CapSelector,
+  PeerOpts,
+  RuntimeDriver,
+  StorageDriver,
+} from "./types.ts";
 
 /** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those. */
 export class Peer {
@@ -63,22 +33,26 @@ export class Peer {
   readonly auth: Auth;
 
   /** Resets the password and irrevocably deletes all previously stored identity keypairs, share keypairs, and capabalities. */
-  static reset(driver: PeerDriver): Promise<void> {
-    return Auth.reset(driver.authDriver);
+  static reset(driver: KvDriver): Promise<void> {
+    return Auth.reset(driver);
   }
 
-  private createStoreFn: (share: SharePublicKey, auth: Auth) => Promise<Store>;
   private storeMap = new Map<string, Store>();
+
+  private runtime: RuntimeDriver;
+
+  private storageDriver: StorageDriver;
 
   constructor(opts: PeerOpts) {
     this.auth = new Auth({
       password: opts.password,
-      kvDriver: opts.driver?.authDriver || new KvDriverInMemory(),
+      kvDriver: opts.storage.auth,
+      runtimeDriver: opts.runtime,
     });
 
-    this.createStoreFn = opts.driver?.createStore ||
-      ((share, auth) =>
-        Promise.resolve(new Store(encodeShareTag(share), auth)));
+    this.storageDriver = opts.storage;
+
+    this.runtime = opts.runtime;
   }
 
   /** Create a new {@linkcode IdentityKeypair} and store it in the peer.
@@ -249,10 +223,10 @@ export class Peer {
   }
 
   /** Iterate through all read capabilities satisfying an (optional) {@linkcode CapQuery} */
-  async *getReadCapabilities(selectors?: CapSelector[]) {
+  async *getReadCapabilities(selectors?: CapSelector[]): AsyncGenerator<Cap> {
     if (!selectors) {
       for await (const cap of this.auth.readCapPacks()) {
-        yield cap;
+        yield new Cap(cap, this.auth);
       }
 
       return;
@@ -265,15 +239,15 @@ export class Peer {
     }
 
     for await (const cap of this.auth.readCapPacks(capPackSelectors)) {
-      yield cap;
+      yield new Cap(cap, this.auth);
     }
   }
 
   /** Iterate through all write capabilities satisfying an (optional) {@linkcode CapQuery} */
-  async *getWriteCapabilities(selectors?: CapSelector[]) {
+  async *getWriteCapabilities(selectors?: CapSelector[]): AsyncGenerator<Cap> {
     if (!selectors) {
       for await (const cap of this.auth.writeCapPacks()) {
-        yield cap;
+        yield new Cap(cap, this.auth);
       }
 
       return;
@@ -286,7 +260,7 @@ export class Peer {
     }
 
     for await (const cap of this.auth.writeCapPacks(capPackSelectors)) {
-      yield cap;
+      yield new Cap(cap, this.auth);
     }
   }
 
@@ -295,7 +269,7 @@ export class Peer {
    * @returns If the {@linkcode IdentityKeypair} for the given capability's receiver is known, a {@linkcode Cap}. Otherwise, a {@linkcode ValidationError}.
    */
   async importCap(cap: Uint8Array): Promise<Cap | ValidationError> {
-    const decoded = decodeCapPack(cap);
+    const decoded = decodeCapPack(cap, this.runtime);
 
     const result = await this.auth.addCapPack(decoded);
 
@@ -367,7 +341,16 @@ export class Peer {
       return existing;
     }
 
-    const newStore = await this.createStoreFn(decodedShare, this.auth);
+    const drivers = await this.storageDriver.getStoreDrivers(
+      decodedShare,
+      this.runtime,
+    );
+
+    const newStore = new Store(share, this.auth, {
+      entryDriver: drivers.entry,
+      payloadDriver: drivers.payload,
+      runtimeDriver: this.runtime,
+    });
 
     this.storeMap.set(share, newStore);
 
@@ -390,7 +373,10 @@ export class Peer {
     return tags;
   }
 
-  async syncHttp(url: string, interests?: CapSelector[]) {
+  async syncHttp(
+    url: string,
+    interests?: CapSelector[],
+  ): Promise<Syncer | ValidationError> {
     try {
       new URL(url);
     } catch {
@@ -426,6 +412,7 @@ export class Peer {
       maxPayloadSizePower: 8,
       transport: transport,
       interests: await this.auth.interestsFromCaps(selectors),
+      runtime: this.runtime,
     });
 
     return syncer;

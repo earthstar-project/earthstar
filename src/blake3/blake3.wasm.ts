@@ -2,7 +2,7 @@ import { createBLAKE3 } from "hash-wasm";
 
 const reusableBlake3 = createBLAKE3();
 
-export async function blake3(
+export async function blake3wasm(
   source: Uint8Array | AsyncIterable<Uint8Array>,
 ): Promise<Uint8Array> {
   if (source instanceof Uint8Array) {

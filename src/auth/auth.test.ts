@@ -13,32 +13,55 @@ import { notErr } from "../util/errors.ts";
 
 import { isCommunalShare } from "../identifiers/share.ts";
 
-import { meadowcapParams } from "../schemes/schemes.ts";
 import { Path } from "../path/path.ts";
+import { blake3std } from "../blake3/blake3.std.ts";
+import { Ed25519webcrypto } from "../cinn25519/ed25519/ed25519.webcrypto.ts";
+import { makeMeadowcapParams } from "../schemes/schemes.ts";
+import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
 
-const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
+const meadowcap = new Meadowcap.Meadowcap(
+  makeMeadowcapParams(new Ed25519webcrypto(), blake3std),
+);
+
+const runtimeDriver = new RuntimeDriverDeno();
 
 Deno.test("Auth passwords", async () => {
   const denoKv = new KvDriverDeno(await Deno.openKv());
 
-  const auth = new Auth({ kvDriver: denoKv, password: "password1234" });
+  const auth = new Auth({
+    kvDriver: denoKv,
+    password: "password1234",
+    runtimeDriver,
+  });
 
   await auth.ready();
 
-  const auth2 = new Auth({ kvDriver: denoKv, password: "password1234" });
+  const auth2 = new Auth({
+    kvDriver: denoKv,
+    password: "password1234",
+    runtimeDriver,
+  });
 
   await auth2.ready();
 
   await assertRejects(
     async () => {
-      const auth3 = new Auth({ kvDriver: denoKv, password: "argggggggg" });
+      const auth3 = new Auth({
+        kvDriver: denoKv,
+        password: "argggggggg",
+        runtimeDriver,
+      });
       await auth3.ready();
     },
   );
 
   Auth.reset(denoKv);
 
-  const auth4 = new Auth({ kvDriver: denoKv, password: "password1234" });
+  const auth4 = new Auth({
+    kvDriver: denoKv,
+    password: "password1234",
+    runtimeDriver,
+  });
   await auth4.ready();
 
   denoKv.close();
@@ -47,7 +70,11 @@ Deno.test("Auth passwords", async () => {
 const memKv = () => new KvDriverInMemory();
 
 Deno.test("Auth identities", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
   const newIdentity2 = await auth.createIdentityKeypair("buzy");
@@ -70,7 +97,11 @@ Deno.test("Auth identities", async () => {
 });
 
 Deno.test("Auth Shares", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newShare = await auth.createShareKeypair("gardening", false);
   const newShare2 = await auth.createShareKeypair("projects", true);
@@ -93,7 +124,11 @@ Deno.test("Auth Shares", async () => {
 });
 
 Deno.test("Auth Read cap packs", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -177,7 +212,11 @@ Deno.test("Auth Read cap packs", async () => {
   });
   assert(notErr(delegated));
 
-  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth2 = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
   assert(notErr(await auth2.addIdentityKeypair(newIdentity)));
   assert(notErr(await auth2.addCapPack(delegated)));
 
@@ -204,7 +243,11 @@ Deno.test("Auth Read cap packs", async () => {
 });
 
 Deno.test("Auth Write cap packs", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -289,7 +332,11 @@ Deno.test("Auth Write cap packs", async () => {
   });
   assert(notErr(delegated));
 
-  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth2 = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
   assert(notErr(await auth2.addIdentityKeypair(newIdentity)));
   assert(notErr(await auth2.addCapPack(delegated)));
 
@@ -316,7 +363,11 @@ Deno.test("Auth Write cap packs", async () => {
 });
 
 Deno.test("Delegate (communal, write)", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -364,7 +415,11 @@ Deno.test("Delegate (communal, write)", async () => {
 });
 
 Deno.test("Delegate (communal, read)", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -412,7 +467,11 @@ Deno.test("Delegate (communal, read)", async () => {
 });
 
 Deno.test("Delegate (owned, read)", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -463,7 +522,11 @@ Deno.test("Delegate (owned, read)", async () => {
 });
 
 Deno.test("Delegate (owned, write)", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const newIdentity = await auth.createIdentityKeypair("suzy");
 
@@ -512,7 +575,11 @@ Deno.test("Delegate (owned, write)", async () => {
 });
 
 Deno.test("Auth.getWriteAuthorisation", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   // Communal by default, owned is a second param.
   const gardeningShare = await auth.createShareKeypair("gardening", true);
@@ -582,7 +649,11 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
 
   // Let's double check using another auth.
 
-  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth2 = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   assert(notErr(await auth2.addIdentityKeypair(newIdentity)));
   assert(notErr(await auth2.addCapPack(delegated)));
@@ -617,7 +688,11 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
 });
 
 Deno.test("Auth.interestsFromCaps", async () => {
-  const auth = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   const gardeningShare = await auth.createShareKeypair("gardening", true);
 
@@ -671,7 +746,11 @@ Deno.test("Auth.interestsFromCaps", async () => {
   });
   assert(notErr(capB));
 
-  const auth2 = new Auth({ password: "password1234", kvDriver: memKv() });
+  const auth2 = new Auth({
+    password: "password1234",
+    kvDriver: memKv(),
+    runtimeDriver,
+  });
 
   await auth2.addIdentityKeypair(newIdentity);
   await auth2.addCapPack(capA);

@@ -11,7 +11,7 @@ import { ValidationError } from "../util/errors.ts";
  */
 export class Path {
   /** The empty path, which prefixes all other paths. */
-  static empty = new Path([]);
+  static empty: Path = new Path([]);
 
   /** Determine whether a new {@linkcode Path} made of bytestrings would be a valid Earthstar path. */
   static isValidBytePath(...bytePath: Uint8Array[]): boolean {

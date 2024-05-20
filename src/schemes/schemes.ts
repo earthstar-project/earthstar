@@ -1,4 +1,5 @@
 import * as Willow from "@earthstar/willow";
+
 import { concat, equals as equalsBytes } from "@std/bytes";
 import {
   ANY_SUBSPACE,
@@ -13,7 +14,6 @@ import {
 import * as Meadowcap from "@earthstar/meadowcap";
 import { ed25519, hashToCurve, x25519 } from "@noble/curves/ed25519";
 import { Auth, AuthorisationToken } from "../auth/auth.ts";
-import { blake3 } from "../blake3/blake3.ts";
 import { SubspaceCapability } from "../caps/types.ts";
 import {
   decodeIdentityPublicKey,
@@ -35,6 +35,8 @@ import {
 } from "../identifiers/share.ts";
 import { EarthstarError } from "../util/errors.ts";
 import { PreFingerprint } from "../store/types.ts";
+import { Blake3Driver } from "../blake3/types.ts";
+import { Ed25519Driver } from "../cinn25519/types.ts";
 
 export const namespaceScheme: Willow.NamespaceScheme<SharePublicKey> = {
   encode: (key) => encodeSharePublicKey(key),
@@ -121,32 +123,36 @@ export const pathScheme: PathScheme = {
   maxComponentLength: 64,
 };
 
-export const payloadScheme: Willow.PayloadScheme<Uint8Array> = {
-  encode: (digest) => digest,
-  encodedLength: () => 32,
-  decode: (encoded) => {
-    return encoded.slice(0, 32);
-  },
-  decodeStream: async (bytes) => {
-    await bytes.nextAbsolute(32);
+export function makePayloadScheme(
+  blake3: Blake3Driver,
+): Willow.PayloadScheme<Uint8Array> {
+  return {
+    encode: (digest) => digest,
+    encodedLength: () => 32,
+    decode: (encoded) => {
+      return encoded.slice(0, 32);
+    },
+    decodeStream: async (bytes) => {
+      await bytes.nextAbsolute(32);
 
-    const digest = bytes.array.slice(
-      bytes.array.byteOffset,
-      bytes.array.byteOffset + 32,
-    );
+      const digest = bytes.array.slice(
+        bytes.array.byteOffset,
+        bytes.array.byteOffset + 32,
+      );
 
-    bytes.prune(32);
+      bytes.prune(32);
 
-    return digest;
-  },
-  order: (a, b) => {
-    return orderBytes(new Uint8Array(a), new Uint8Array(b));
-  },
-  fromBytes: (bytes) => {
-    return blake3(bytes);
-  },
-  defaultDigest: new Uint8Array(32),
-};
+      return digest;
+    },
+    order: (a, b) => {
+      return orderBytes(new Uint8Array(a), new Uint8Array(b));
+    },
+    fromBytes: (bytes) => {
+      return blake3(bytes);
+    },
+    defaultDigest: new Uint8Array(32),
+  };
+}
 
 export const signatureEncodingScheme: EncodingScheme<Uint8Array> = {
   encode: (sig) => sig,
@@ -163,7 +169,10 @@ export const signatureEncodingScheme: EncodingScheme<Uint8Array> = {
   },
 };
 
-export const meadowcapParams: Meadowcap.MeadowcapParams<
+export function makeMeadowcapParams(
+  ed25519: Ed25519Driver<Uint8Array>,
+  blake3: Blake3Driver,
+): Meadowcap.MeadowcapParams<
   SharePublicKey,
   Uint8Array,
   Uint8Array,
@@ -171,46 +180,61 @@ export const meadowcapParams: Meadowcap.MeadowcapParams<
   Uint8Array,
   Uint8Array,
   Uint8Array
-> = {
-  pathScheme,
-  payloadScheme,
-  isCommunal: isCommunalShare,
-  namespaceKeypairScheme: {
-    encodings: {
-      publicKey: namespaceScheme,
-      signature: signatureEncodingScheme,
-    },
-    signatures: {
-      sign: (publicKey, secretKey, msg) => {
-        return shareSign({
-          publicKey,
-          secretKey,
-        }, msg);
+> {
+  return {
+    pathScheme,
+    payloadScheme: makePayloadScheme(blake3),
+    isCommunal: isCommunalShare,
+    namespaceKeypairScheme: {
+      encodings: {
+        publicKey: namespaceScheme,
+        signature: signatureEncodingScheme,
       },
-      verify: shareVerify,
-    },
-  },
-  userScheme: {
-    order: subspaceScheme.order,
-    encodings: {
-      publicKey: subspaceScheme,
-      signature: signatureEncodingScheme,
-    },
-    signatures: {
-      sign: (publicKey, secretKey, msg) => {
-        return identitySign({
-          publicKey,
-          secretKey,
-        }, msg);
+      signatures: {
+        sign: (publicKey, secretKey, msg) => {
+          return shareSign(
+            {
+              publicKey,
+              secretKey,
+            },
+            msg,
+            ed25519,
+          );
+        },
+        verify: (publicKey, signature, bytestring) => {
+          return shareVerify(publicKey, signature, bytestring, ed25519);
+        },
       },
-      verify: identityVerify,
     },
-  },
-};
+    userScheme: {
+      order: subspaceScheme.order,
+      encodings: {
+        publicKey: subspaceScheme,
+        signature: signatureEncodingScheme,
+      },
+      signatures: {
+        sign: (publicKey, secretKey, msg) => {
+          return identitySign(
+            {
+              publicKey,
+              secretKey,
+            },
+            msg,
+            ed25519,
+          );
+        },
+        verify: (publicKey, signature, bytestring) => {
+          return identityVerify(publicKey, signature, bytestring, ed25519);
+        },
+      },
+    },
+  };
+}
 
-const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
-
-export const authorisationScheme: Willow.AuthorisationScheme<
+export function makeAuthorisationScheme(
+  ed25519: Ed25519Driver<Uint8Array>,
+  blake3: Blake3Driver,
+): Willow.AuthorisationScheme<
   SharePublicKey,
   IdentityPublicKey,
   Uint8Array,
@@ -229,95 +253,106 @@ export const authorisationScheme: Willow.AuthorisationScheme<
     Uint8Array,
     Uint8Array
   >
-> = {
-  isAuthorisedWrite: (entry, token) => {
-    return meadowcap.isAuthorisedWrite(entry, token);
-  },
+> {
+  const meadowcapParams = makeMeadowcapParams(ed25519, blake3);
+  const meadowcap = new Meadowcap.Meadowcap(
+    meadowcapParams,
+  );
 
-  authorise: async (entry, opts) => {
-    const encoded = encodeEntry({
-      namespaceScheme,
-      subspaceScheme,
-      payloadScheme,
-      pathScheme,
-    }, entry);
-
-    const signature = await identitySign(opts.receiverKeypair, encoded);
-
-    return {
-      capability: opts.cap,
-      signature,
-    };
-  },
-
-  tokenEncoding: {
-    encode: (token) => {
-      return concat(
-        [
-          token.signature,
-          Meadowcap.encodeMcCapability({
-            encodingNamespace: namespaceScheme,
-            encodingNamespaceSig: signatureEncodingScheme,
-            encodingUser: subspaceScheme,
-            encodingUserSig: signatureEncodingScheme,
-            orderSubspace: subspaceScheme.order,
-            pathScheme,
-          }, token.capability),
-        ],
-      );
+  return {
+    isAuthorisedWrite: (entry, token) => {
+      return meadowcap.isAuthorisedWrite(entry, token);
     },
-    decode: (encoded) => {
-      const signature = encoded.subarray(0, 64);
-      const capability = Meadowcap.decodeMcCapability({
-        encodingNamespace: namespaceScheme,
-        encodingNamespaceSig:
-          meadowcapParams.namespaceKeypairScheme.encodings.signature,
-        encodingUser: subspaceScheme,
-        encodingUserSig: meadowcapParams.userScheme.encodings.signature,
-        orderSubspace: subspaceScheme.order,
-        pathScheme: pathScheme,
-      }, encoded.subarray(64));
 
-      return {
-        capability,
-        signature,
-      };
-    },
-    encodedLength: (token) => {
-      // TODO Implement a real encodeMcCapabilityLength
-      return 64 + Meadowcap.encodeMcCapability({
-        encodingNamespace: namespaceScheme,
-        encodingNamespaceSig: signatureEncodingScheme,
-        encodingUser: subspaceScheme,
-        encodingUserSig: signatureEncodingScheme,
-        orderSubspace: subspaceScheme.order,
+    authorise: async (entry, opts) => {
+      const encoded = encodeEntry({
+        encodeNamespace: namespaceScheme.encode,
+        encodeSubspace: subspaceScheme.encode,
+        encodePayload: (digest) => digest,
         pathScheme,
-      }, token.capability).byteLength;
-    },
-    decodeStream: async (bytes) => {
-      await bytes.nextAbsolute(64);
+      }, entry);
 
-      const signature = bytes.array.slice(0, 64);
-
-      bytes.prune(64);
-
-      const capability = await Meadowcap.decodeStreamMcCapability({
-        encodingNamespace: namespaceScheme,
-        encodingNamespaceSig:
-          meadowcapParams.namespaceKeypairScheme.encodings.signature,
-        encodingUser: subspaceScheme,
-        encodingUserSig: meadowcapParams.userScheme.encodings.signature,
-        orderSubspace: subspaceScheme.order,
-        pathScheme: pathScheme,
-      }, bytes);
+      const signature = await identitySign(
+        opts.receiverKeypair,
+        encoded,
+        ed25519,
+      );
 
       return {
-        capability,
+        capability: opts.cap,
         signature,
       };
     },
-  },
-};
+
+    tokenEncoding: {
+      encode: (token) => {
+        return concat(
+          [
+            token.signature,
+            Meadowcap.encodeMcCapability({
+              encodingNamespace: namespaceScheme,
+              encodingNamespaceSig: signatureEncodingScheme,
+              encodingUser: subspaceScheme,
+              encodingUserSig: signatureEncodingScheme,
+              orderSubspace: subspaceScheme.order,
+              pathScheme,
+            }, token.capability),
+          ],
+        );
+      },
+      decode: (encoded) => {
+        const signature = encoded.subarray(0, 64);
+        const capability = Meadowcap.decodeMcCapability({
+          encodingNamespace: namespaceScheme,
+          encodingNamespaceSig:
+            meadowcapParams.namespaceKeypairScheme.encodings.signature,
+          encodingUser: subspaceScheme,
+          encodingUserSig: meadowcapParams.userScheme.encodings.signature,
+          orderSubspace: subspaceScheme.order,
+          pathScheme: pathScheme,
+        }, encoded.subarray(64));
+
+        return {
+          capability,
+          signature,
+        };
+      },
+      encodedLength: (token) => {
+        // TODO Implement a real encodeMcCapabilityLength
+        return 64 + Meadowcap.encodeMcCapability({
+          encodingNamespace: namespaceScheme,
+          encodingNamespaceSig: signatureEncodingScheme,
+          encodingUser: subspaceScheme,
+          encodingUserSig: signatureEncodingScheme,
+          orderSubspace: subspaceScheme.order,
+          pathScheme,
+        }, token.capability).byteLength;
+      },
+      decodeStream: async (bytes) => {
+        await bytes.nextAbsolute(64);
+
+        const signature = bytes.array.slice(0, 64);
+
+        bytes.prune(64);
+
+        const capability = await Meadowcap.decodeStreamMcCapability({
+          encodingNamespace: namespaceScheme,
+          encodingNamespaceSig:
+            meadowcapParams.namespaceKeypairScheme.encodings.signature,
+          encodingUser: subspaceScheme,
+          encodingUserSig: meadowcapParams.userScheme.encodings.signature,
+          orderSubspace: subspaceScheme.order,
+          pathScheme: pathScheme,
+        }, bytes);
+
+        return {
+          capability,
+          signature,
+        };
+      },
+    },
+  };
+}
 
 export const fingerprintScheme: Willow.FingerprintScheme<
   SharePublicKey,
@@ -329,10 +364,10 @@ export const fingerprintScheme: Willow.FingerprintScheme<
   neutral: ed25519.ExtendedPoint.ZERO,
   fingerprintSingleton: ({ entry, available }) => {
     const entryEnc = encodeEntry({
-      namespaceScheme,
+      encodeNamespace: namespaceScheme.encode,
       pathScheme,
-      payloadScheme,
-      subspaceScheme,
+      encodePayload: (digest) => digest,
+      encodeSubspace: subspaceScheme.encode,
     }, entry);
 
     const encoded = concat([encodeCompactWidth(available), entryEnc]);
@@ -372,7 +407,11 @@ export const fingerprintScheme: Willow.FingerprintScheme<
   },
 };
 
-export function makeAccessControlScheme(auth: Auth): Willow.AccessControlScheme<
+export function makeAccessControlScheme(
+  auth: Auth,
+  ed25519: Ed25519Driver<Uint8Array>,
+  blake3: Blake3Driver,
+): Willow.AccessControlScheme<
   Meadowcap.ReadCapability<
     SharePublicKey,
     IdentityPublicKey,
@@ -385,6 +424,10 @@ export function makeAccessControlScheme(auth: Auth): Willow.AccessControlScheme<
   SharePublicKey,
   IdentityPublicKey
 > {
+  const meadowcap = new Meadowcap.Meadowcap(
+    makeMeadowcapParams(ed25519, blake3),
+  );
+
   return {
     getGrantedArea: (cap) => meadowcap.getCapGrantedArea(cap),
     getGrantedNamespace: (cap) => cap.namespaceKey,
@@ -403,12 +446,18 @@ export function makeAccessControlScheme(auth: Auth): Willow.AccessControlScheme<
     isValidCap: (cap) => meadowcap.isValidCap(cap),
     signatures: {
       sign: (publicKey, secretKey, msg) => {
-        return identitySign({
-          publicKey,
-          secretKey,
-        }, msg);
+        return identitySign(
+          {
+            publicKey,
+            secretKey,
+          },
+          msg,
+          ed25519,
+        );
       },
-      verify: identityVerify,
+      verify: (publicKey, signature, bytestring) => {
+        return identityVerify(publicKey, signature, bytestring, ed25519);
+      },
     },
     encodings: {
       readCapability: {
@@ -457,6 +506,8 @@ export function makeAccessControlScheme(auth: Auth): Willow.AccessControlScheme<
 
 export function makeSubspaceCapScheme(
   auth: Auth,
+  ed25519: Ed25519Driver<Uint8Array>,
+  blake3: Blake3Driver,
 ): Willow.SubspaceCapScheme<
   SubspaceCapability,
   IdentityPublicKey,
@@ -464,6 +515,10 @@ export function makeSubspaceCapScheme(
   Uint8Array,
   SharePublicKey
 > {
+  const meadowcap = new Meadowcap.Meadowcap(
+    makeMeadowcapParams(ed25519, blake3),
+  );
+
   return {
     getNamespace: (cap) => cap.namespaceKey,
     getReceiver: (cap) => Meadowcap.getReceiverSubspaceCap(cap),
@@ -481,12 +536,18 @@ export function makeSubspaceCapScheme(
     },
     signatures: {
       sign: (publicKey, secretKey, msg) => {
-        return identitySign({
-          publicKey,
-          secretKey,
-        }, msg);
+        return identitySign(
+          {
+            publicKey,
+            secretKey,
+          },
+          msg,
+          ed25519,
+        );
       },
-      verify: identityVerify,
+      verify: (publicKey, signature, bytestring) => {
+        return identityVerify(publicKey, signature, bytestring, ed25519);
+      },
     },
     encodings: {
       subspaceCapability: {
@@ -513,7 +574,10 @@ export function makeSubspaceCapScheme(
   };
 }
 
-export const authorisationTokenScheme: Willow.AuthorisationTokenScheme<
+export function makeAuthorisationTokenScheme(
+  ed25519: Ed25519Driver<Uint8Array>,
+  blake3: Blake3Driver,
+): Willow.AuthorisationTokenScheme<
   AuthorisationToken,
   Meadowcap.WriteCapability<
     SharePublicKey,
@@ -522,69 +586,78 @@ export const authorisationTokenScheme: Willow.AuthorisationTokenScheme<
     Uint8Array
   >,
   Uint8Array
-> = {
-  decomposeAuthToken: (authToken) => {
-    return [
-      authToken.capability as Meadowcap.WriteCapability<
-        SharePublicKey,
-        IdentityPublicKey,
-        Uint8Array,
-        Uint8Array
-      >,
-      authToken.signature,
-    ];
-  },
-  recomposeAuthToken: (staticToken, dynamicToken) => {
-    return {
-      capability: staticToken,
-      signature: dynamicToken,
-    };
-  },
-  encodings: {
-    staticToken: {
-      encode: (cap) => {
-        return meadowcap.encodeCap(cap);
-      },
-      decode: (cap) => {
-        return meadowcap.decodeCap(cap) as Meadowcap.WriteCapability<
+> {
+  const meadowcap = new Meadowcap.Meadowcap(
+    makeMeadowcapParams(ed25519, blake3),
+  );
+
+  return {
+    decomposeAuthToken: (authToken) => {
+      return [
+        authToken.capability as Meadowcap.WriteCapability<
           SharePublicKey,
           IdentityPublicKey,
           Uint8Array,
           Uint8Array
-        >;
-      },
-      decodeStream: (cap) => {
-        return meadowcap.decodeStreamingCap(cap) as Promise<
-          Meadowcap.WriteCapability<
+        >,
+        authToken.signature,
+      ];
+    },
+    recomposeAuthToken: (staticToken, dynamicToken) => {
+      return {
+        capability: staticToken,
+        signature: dynamicToken,
+      };
+    },
+    encodings: {
+      staticToken: {
+        encode: (cap) => {
+          return meadowcap.encodeCap(cap);
+        },
+        decode: (cap) => {
+          return meadowcap.decodeCap(cap) as Meadowcap.WriteCapability<
             SharePublicKey,
             IdentityPublicKey,
             Uint8Array,
             Uint8Array
-          >
-        >;
+          >;
+        },
+        decodeStream: (cap) => {
+          return meadowcap.decodeStreamingCap(cap) as Promise<
+            Meadowcap.WriteCapability<
+              SharePublicKey,
+              IdentityPublicKey,
+              Uint8Array,
+              Uint8Array
+            >
+          >;
+        },
+        encodedLength: (cap) => {
+          return meadowcap.encodeCap(cap).byteLength;
+        },
       },
-      encodedLength: (cap) => {
-        return meadowcap.encodeCap(cap).byteLength;
+      dynamicToken: {
+        encode: (sig) => sig,
+        decode: (sig) => sig.subarray(0, 64),
+        encodedLength: () => 64,
+        decodeStream: async (bytes) => {
+          await bytes.nextAbsolute(64);
+
+          const sig = bytes.array.slice(0, 64);
+
+          bytes.prune(64);
+
+          return sig;
+        },
       },
     },
-    dynamicToken: {
-      encode: (sig) => sig,
-      decode: (sig) => sig.subarray(0, 64),
-      encodedLength: () => 64,
-      decodeStream: async (bytes) => {
-        await bytes.nextAbsolute(64);
+  };
+}
 
-        const sig = bytes.array.slice(0, 64);
-
-        bytes.prune(64);
-
-        return sig;
-      },
-    },
-  },
-};
-
-export const paiScheme: Willow.PaiScheme<
+export function makePaiScheme(
+  ed25519: Ed25519Driver<Uint8Array>,
+  blake3: Blake3Driver,
+): Willow.PaiScheme<
   Meadowcap.ReadCapability<
     SharePublicKey,
     IdentityPublicKey,
@@ -595,42 +668,61 @@ export const paiScheme: Willow.PaiScheme<
   Uint8Array,
   SharePublicKey,
   IdentityPublicKey
-> = {
-  isGroupEqual: (a, b) => {
-    return equalsBytes(a, b);
-  },
-  getScalar: () => {
-    return crypto.getRandomValues(new Uint8Array(32));
-  },
-  scalarMult(group, scalar) {
-    return x25519.scalarMult(scalar, group);
-  },
-  getFragmentKit: (cap) => {
-    const grantedArea = meadowcap.getCapGrantedArea(cap);
+> {
+  const meadowcap = new Meadowcap.Meadowcap(
+    makeMeadowcapParams(ed25519, blake3),
+  );
 
-    if (grantedArea.includedSubspaceId === ANY_SUBSPACE) {
+  return {
+    isGroupEqual: (a, b) => {
+      return equalsBytes(a, b);
+    },
+    getScalar: () => {
+      return crypto.getRandomValues(new Uint8Array(32));
+    },
+    scalarMult(group, scalar) {
+      return x25519.scalarMult(scalar, group);
+    },
+    getFragmentKit: (cap) => {
+      const grantedArea = meadowcap.getCapGrantedArea(cap);
+
+      if (grantedArea.includedSubspaceId === ANY_SUBSPACE) {
+        return {
+          grantedNamespace: cap.namespaceKey,
+          grantedPath: grantedArea.pathPrefix,
+        };
+      }
+
       return {
         grantedNamespace: cap.namespaceKey,
+        grantedSubspace: grantedArea.includedSubspaceId,
         grantedPath: grantedArea.pathPrefix,
       };
-    }
+    },
+    fragmentToGroup: (fragment) => {
+      if (fragment.length === 3) {
+        const [namespace, subspace, path] = fragment;
 
-    return {
-      grantedNamespace: cap.namespaceKey,
-      grantedSubspace: grantedArea.includedSubspaceId,
-      grantedPath: grantedArea.pathPrefix,
-    };
-  },
-  fragmentToGroup: (fragment) => {
-    if (fragment.length === 3) {
-      const [namespace, subspace, path] = fragment;
+        const encoded = concat(
+          [
+            namespaceScheme.encode(namespace),
+            subspaceScheme.encode(subspace),
+            encodePath(pathScheme, path),
+          ],
+        );
+
+        const curve = hashToCurve(encoded, {
+          DST: "earthstar6i",
+        });
+
+        // @ts-ignore toRawBytes really _does_ exist. https://github.com/paulmillr/noble-curves/issues/137
+        return curve.toRawBytes();
+      }
+
+      const [namespace, path] = fragment;
 
       const encoded = concat(
-        [
-          namespaceScheme.encode(namespace),
-          subspaceScheme.encode(subspace),
-          encodePath(pathScheme, path),
-        ],
+        [namespaceScheme.encode(namespace), encodePath(pathScheme, path)],
       );
 
       const curve = hashToCurve(encoded, {
@@ -639,33 +731,20 @@ export const paiScheme: Willow.PaiScheme<
 
       // @ts-ignore toRawBytes really _does_ exist. https://github.com/paulmillr/noble-curves/issues/137
       return curve.toRawBytes();
-    }
-
-    const [namespace, path] = fragment;
-
-    const encoded = concat(
-      [namespaceScheme.encode(namespace), encodePath(pathScheme, path)],
-    );
-
-    const curve = hashToCurve(encoded, {
-      DST: "earthstar6i",
-    });
-
-    // @ts-ignore toRawBytes really _does_ exist. https://github.com/paulmillr/noble-curves/issues/137
-    return curve.toRawBytes();
-  },
-  groupMemberEncoding: {
-    encode: (group) => group,
-    decode: (group) => group.subarray(0, 32),
-    encodedLength: () => 32,
-    decodeStream: async (bytes) => {
-      await bytes.nextAbsolute(32);
-
-      const group = bytes.array.slice(0, 32);
-
-      bytes.prune(32);
-
-      return group;
     },
-  },
-};
+    groupMemberEncoding: {
+      encode: (group) => group,
+      decode: (group) => group.subarray(0, 32),
+      encodedLength: () => 32,
+      decodeStream: async (bytes) => {
+        await bytes.nextAbsolute(32);
+
+        const group = bytes.array.slice(0, 32);
+
+        bytes.prune(32);
+
+        return group;
+      },
+    },
+  };
+}

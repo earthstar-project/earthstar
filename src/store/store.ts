@@ -2,11 +2,11 @@ import * as Willow from "@earthstar/willow";
 import { OPEN_END, successorPath } from "@earthstar/willow-utils";
 import { Auth, AuthorisationToken } from "../auth/auth.ts";
 import {
-  authorisationScheme,
   fingerprintScheme,
+  makeAuthorisationScheme,
+  makePayloadScheme,
   namespaceScheme,
   pathScheme,
-  payloadScheme,
   subspaceScheme,
 } from "../schemes/schemes.ts";
 import { entryToDocument } from "../util/documents.ts";
@@ -80,14 +80,11 @@ export class Store extends EventTarget {
   constructor(
     share: ShareTag,
     auth: Auth,
-    drivers?: StoreDriverOpts,
+    drivers: StoreDriverOpts,
   ) {
     super();
 
     this.auth = auth;
-
-    // If drivers are specified, use those, otherwise always use in-memory drivers (the default in willow-js).
-    const driversToUse = drivers && drivers !== "memory" ? drivers : {};
 
     const sharePublicKey = decodeShareTag(share);
 
@@ -101,11 +98,15 @@ export class Store extends EventTarget {
         namespace: namespaceScheme,
         subspace: subspaceScheme,
         path: pathScheme,
-        payload: payloadScheme,
+        payload: makePayloadScheme(drivers.runtimeDriver.blake3),
         fingerprint: fingerprintScheme,
-        authorisation: authorisationScheme,
+        authorisation: makeAuthorisationScheme(
+          drivers.runtimeDriver.ed25519,
+          drivers.runtimeDriver.blake3,
+        ),
       },
-      ...driversToUse,
+      entryDriver: drivers.entryDriver || undefined,
+      payloadDriver: drivers.payloadDriver || undefined,
     });
 
     relayWillowEvents(this, this.willow);

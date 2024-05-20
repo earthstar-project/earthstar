@@ -1,12 +1,11 @@
 import * as Meadowcap from "@earthstar/meadowcap";
 import { IdentityPublicKey } from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
-import { meadowcapParams } from "../schemes/schemes.ts";
 import { EarthstarError } from "../util/errors.ts";
 import { ReadCapPack, WriteCapPack } from "./types.ts";
 import { concat } from "@std/bytes";
-
-const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
+import { makeMeadowcapParams } from "../schemes/schemes.ts";
+import { RuntimeDriver } from "../peer/types.ts";
 
 export function isReadCapPack(
   capPack: ReadCapPack | WriteCapPack,
@@ -61,7 +60,14 @@ export function isOwnedReadCapability(
   return cap.accessMode === "read";
 }
 
-export function encodeCapPack(capPack: ReadCapPack | WriteCapPack): Uint8Array {
+export function encodeCapPack(
+  capPack: ReadCapPack | WriteCapPack,
+  runtime: RuntimeDriver,
+): Uint8Array {
+  const meadowcap = new Meadowcap.Meadowcap(
+    makeMeadowcapParams(runtime.ed25519, runtime.blake3),
+  );
+
   if (!isReadCapPack(capPack)) {
     return concat([new Uint8Array([2]), meadowcap.encodeCap(capPack.writeCap)]);
   }
@@ -79,7 +85,14 @@ export function encodeCapPack(capPack: ReadCapPack | WriteCapPack): Uint8Array {
   );
 }
 
-export function decodeCapPack(encoded: Uint8Array): ReadCapPack | WriteCapPack {
+export function decodeCapPack(
+  encoded: Uint8Array,
+  runtime: RuntimeDriver,
+): ReadCapPack | WriteCapPack {
+  const meadowcap = new Meadowcap.Meadowcap(
+    makeMeadowcapParams(runtime.ed25519, runtime.blake3),
+  );
+
   const [firstByte] = encoded;
 
   switch (firstByte) {

@@ -10,9 +10,15 @@ import { delay } from "@std/async";
 import { assert, assertEquals } from "@std/assert";
 import { Syncer } from "../syncer/syncer.ts";
 import { Path } from "../path/path.ts";
+import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
+import { StorageDriverMemory } from "../peer/storage_drivers/memory.ts";
 
 Deno.test("Basic server setup", async () => {
-  const peer = new Peer({ password: "test1234" });
+  const peer = new Peer({
+    password: "test1234",
+    runtime: new RuntimeDriverDeno(),
+    storage: new StorageDriverMemory(),
+  });
 
   const suzyKeypair = await peer.createIdentity("suzy") as IdentityKeypair;
   const serverSettingsKeypair = await peer.createShare(
@@ -31,7 +37,11 @@ Deno.test("Basic server setup", async () => {
   );
   const settingsStore = await peer.getStore(serverSettingsKeypair.tag) as Store;
 
-  const serverPeer = new Peer({ password: "server123" });
+  const serverPeer = new Peer({
+    password: "server123",
+    runtime: new RuntimeDriverDeno(),
+    storage: new StorageDriverMemory(),
+  });
   const serverKeypair = await serverPeer.createIdentity(
     "serv",
   ) as IdentityKeypair;

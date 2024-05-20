@@ -1,6 +1,5 @@
 import * as Willow from "@earthstar/willow";
 import { Auth, AuthorisationToken } from "../auth/auth.ts";
-import { blake3 } from "../blake3/blake3.std.ts";
 import { Blake3Digest } from "../blake3/types.ts";
 import {
   ReadCapability,
@@ -10,20 +9,21 @@ import {
 import { IdentityPublicKey } from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
 import {
-  authorisationScheme,
-  authorisationTokenScheme,
   fingerprintScheme,
   makeAccessControlScheme,
+  makeAuthorisationScheme,
+  makeAuthorisationTokenScheme,
+  makePaiScheme,
+  makePayloadScheme,
   makeSubspaceCapScheme,
   namespaceScheme,
-  paiScheme,
   pathScheme,
-  payloadScheme,
   subspaceScheme,
 } from "../schemes/schemes.ts";
 import { Store } from "../store/store.ts";
 import { AuthorisationOpts, PreFingerprint } from "../store/types.ts";
 import { AreaOfInterest } from "@earthstar/willow-utils";
+import { RuntimeDriver } from "../peer/types.ts";
 
 export type SyncInterests = Map<
   Willow.ReadAuthorisation<
@@ -39,6 +39,7 @@ export type SyncerOpts = {
   interests: SyncInterests;
   maxPayloadSizePower: number;
   getStore: (share: SharePublicKey) => Promise<Store>;
+  runtime: RuntimeDriver;
 };
 
 export class Syncer {
@@ -72,7 +73,7 @@ export class Syncer {
       challengeLength: 16,
       challengeHashLength: 32,
       challengeHash: (bytes) => {
-        return blake3(bytes);
+        return opts.runtime.blake3(bytes);
       },
       getStore: async (namespace) => {
         const store = await opts.getStore(namespace);
@@ -83,14 +84,31 @@ export class Syncer {
       schemes: {
         namespace: namespaceScheme,
         subspace: subspaceScheme,
-        payload: payloadScheme,
+        payload: makePayloadScheme(opts.runtime.blake3),
         fingerprint: fingerprintScheme,
         path: pathScheme,
-        accessControl: makeAccessControlScheme(opts.auth),
-        subspaceCap: makeSubspaceCapScheme(opts.auth),
-        authorisation: authorisationScheme,
-        authorisationToken: authorisationTokenScheme,
-        pai: paiScheme,
+        accessControl: makeAccessControlScheme(
+          opts.auth,
+          opts.runtime.ed25519,
+          opts.runtime.blake3,
+        ),
+        subspaceCap: makeSubspaceCapScheme(
+          opts.auth,
+          opts.runtime.ed25519,
+          opts.runtime.blake3,
+        ),
+        authorisation: makeAuthorisationScheme(
+          opts.runtime.ed25519,
+          opts.runtime.blake3,
+        ),
+        authorisationToken: makeAuthorisationTokenScheme(
+          opts.runtime.ed25519,
+          opts.runtime.blake3,
+        ),
+        pai: makePaiScheme(
+          opts.runtime.ed25519,
+          opts.runtime.blake3,
+        ),
       },
     });
   }

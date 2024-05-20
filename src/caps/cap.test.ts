@@ -6,11 +6,15 @@ import { Cap } from "./cap.ts";
 import { encodeIdentityTag } from "../identifiers/identity.ts";
 import { encodeShareTag } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
+import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
+
+const runtimeDriver = new RuntimeDriverDeno();
 
 Deno.test("Cap semantics (communal)", async () => {
   const auth = new Auth({
     password: "hello",
     kvDriver: new KvDriverInMemory(),
+    runtimeDriver,
   });
 
   const id = await auth.createIdentityKeypair("suzy");
@@ -63,6 +67,7 @@ Deno.test("Cap semantics (owned)", async () => {
   const auth = new Auth({
     password: "hello",
     kvDriver: new KvDriverInMemory(),
+    runtimeDriver,
   });
 
   const id = await auth.createIdentityKeypair("suzy");
@@ -115,6 +120,7 @@ Deno.test("Cap delegation", async () => {
   const auth = new Auth({
     password: "hello",
     kvDriver: new KvDriverInMemory(),
+    runtimeDriver,
   });
 
   const id = await auth.createIdentityKeypair("suzy");

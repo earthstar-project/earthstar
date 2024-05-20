@@ -10,6 +10,8 @@ import {
 } from "../identifiers/identity.ts";
 import { SharePublicKey, ShareTag } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
+import { Blake3Digest, Blake3Driver } from "../blake3/types.ts";
+import { RuntimeDriver } from "../peer/types.ts";
 
 export type PreFingerprint = H2CPoint<bigint>;
 
@@ -39,14 +41,15 @@ export type Document = {
   payload: Payload | undefined;
 };
 
-export type StoreDriverOpts = "memory" | {
+export type StoreDriverOpts = {
   entryDriver: Willow.EntryDriver<
     SharePublicKey,
     IdentityPublicKey,
-    ArrayBuffer,
-    ArrayBuffer
+    Blake3Digest,
+    PreFingerprint
   >;
-  payloadDriver: Willow.PayloadDriver<ArrayBuffer>;
+  payloadDriver: Willow.PayloadDriver<Blake3Digest>;
+  runtimeDriver: RuntimeDriver;
 };
 
 export type Query = {

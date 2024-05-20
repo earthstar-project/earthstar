@@ -1,14 +1,16 @@
 import * as Willow from "@earthstar/willow";
 import { encodeShareTag } from "../identifiers/share.ts";
-import { CapSelector, Peer } from "../peer/peer.ts";
+import { Peer } from "../peer/peer.ts";
 import { capSelectorsToCapPackSelectors } from "../peer/util.ts";
-import { EarthstarError, isErr } from "../util/errors.ts";
+import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
 import { Syncer } from "./syncer.ts";
+import { CapSelector, RuntimeDriver } from "../peer/types.ts";
 
-export async function syncInMemory(alfie: Peer, betty: Peer, opts?: {
+export async function syncInMemory(alfie: Peer, betty: Peer, opts: {
   alfieInterests?: CapSelector[];
   bettyInterests?: CapSelector[];
-}) {
+  runtime: RuntimeDriver;
+}): Promise<(() => void) | ValidationError> {
   const [alfieTransport, bettyTransport] = Willow.transportPairInMemory();
 
   // @ts-ignore We are allowed to do this.
@@ -40,6 +42,7 @@ export async function syncInMemory(alfie: Peer, betty: Peer, opts?: {
     maxPayloadSizePower: 64,
     transport: alfieTransport,
     interests: await alfieAuth.interestsFromCaps(alfieSelectors),
+    runtime: opts.runtime,
   });
 
   // @ts-ignore Me too.
@@ -71,6 +74,7 @@ export async function syncInMemory(alfie: Peer, betty: Peer, opts?: {
     maxPayloadSizePower: 64,
     transport: bettyTransport,
     interests: await bettyAuth.interestsFromCaps(bettySelectors),
+    runtime: opts.runtime,
   });
 
   return () => {

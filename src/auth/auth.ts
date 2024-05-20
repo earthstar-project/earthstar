@@ -22,7 +22,7 @@ import {
   shareVerify,
 } from "../identifiers/share.ts";
 import {
-  meadowcapParams,
+  makeMeadowcapParams,
   namespaceScheme,
   subspaceScheme,
 } from "../schemes/schemes.ts";
@@ -32,7 +32,6 @@ import {
   isErr,
   ValidationError,
 } from "../util/errors.ts";
-import { blake3 } from "../blake3/blake3.ts";
 import { Capability, ReadCapPack, WriteCapPack } from "../caps/types.ts";
 import {
   decodeCapPack,
@@ -46,8 +45,8 @@ import { CapPackSelector } from "./types.ts";
 import { Path } from "../path/path.ts";
 import { concat } from "@std/bytes";
 import { Area, areaIsIncluded, orderBytes } from "@earthstar/willow-utils";
-
-const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
+import { RuntimeDriver } from "../peer/types.ts";
+import { Blake3Digest } from "../blake3/types.ts";
 
 export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
   SharePublicKey,
@@ -61,12 +60,24 @@ const PASSWORD_CHALLENGE = new Uint8Array([2, 3, 5, 8, 13]);
 export type AuthOpts = {
   password: string;
   kvDriver: Willow.KvDriver;
+  runtimeDriver: RuntimeDriver;
 };
 
 /** Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password. */
 export class Auth {
+  runtimeDriver: RuntimeDriver;
+
   private encryptionKey = Promise.withResolvers<CryptoKey>();
   private kvDriver: Willow.KvDriver;
+  private meadowcap: Meadowcap.Meadowcap<
+    SharePublicKey,
+    Uint8Array,
+    Uint8Array,
+    IdentityPublicKey,
+    Uint8Array,
+    Uint8Array,
+    Blake3Digest
+  >;
 
   /** Wipes all keypairs and capabilities from local storage. */
   static reset(kvDriver: Willow.KvDriver): Promise<void> {
@@ -82,6 +93,13 @@ export class Auth {
 
   constructor(opts: AuthOpts) {
     this.kvDriver = opts.kvDriver;
+    this.runtimeDriver = opts.runtimeDriver;
+    this.meadowcap = new Meadowcap.Meadowcap(
+      makeMeadowcapParams(
+        opts.runtimeDriver.ed25519,
+        opts.runtimeDriver.blake3,
+      ),
+    );
 
     crypto.subtle.importKey(
       "raw",
@@ -207,8 +225,17 @@ export class Auth {
     keypair: IdentityKeypairRaw,
   ): Promise<true | ValidationError> {
     const message = crypto.getRandomValues(new Uint8Array(16));
-    const sig = await identitySign(keypair, message);
-    const isValid = await identityVerify(keypair.publicKey, sig, message);
+    const sig = await identitySign(
+      keypair,
+      message,
+      this.runtimeDriver.ed25519,
+    );
+    const isValid = await identityVerify(
+      keypair.publicKey,
+      sig,
+      message,
+      this.runtimeDriver.ed25519,
+    );
 
     if (!isValid) {
       return new ValidationError("Identity secret does not match public key");
@@ -221,8 +248,13 @@ export class Auth {
     keypair: ShareKeypairRaw,
   ): Promise<true | ValidationError> {
     const message = crypto.getRandomValues(new Uint8Array(16));
-    const sig = await shareSign(keypair, message);
-    const isValid = await shareVerify(keypair.publicKey, sig, message);
+    const sig = await shareSign(keypair, message, this.runtimeDriver.ed25519);
+    const isValid = await shareVerify(
+      keypair.publicKey,
+      sig,
+      message,
+      this.runtimeDriver.ed25519,
+    );
 
     if (!isValid) {
       return new ValidationError("Identity secret does not match public key");
@@ -235,7 +267,10 @@ export class Auth {
   async createIdentityKeypair(
     shortname: string,
   ): Promise<IdentityKeypairRaw | ValidationError> {
-    const keypair = await generateIdentityKeypair(shortname);
+    const keypair = await generateIdentityKeypair(
+      shortname,
+      this.runtimeDriver.ed25519,
+    );
 
     if (isErr(keypair)) {
       return keypair;
@@ -302,7 +337,11 @@ export class Auth {
     name: string,
     owned: boolean,
   ): Promise<ShareKeypairRaw | ValidationError> {
-    const keypair = await generateShareKeypair(name, owned);
+    const keypair = await generateShareKeypair(
+      name,
+      owned,
+      this.runtimeDriver.ed25519,
+    );
 
     if (isErr(keypair)) {
       return keypair;
@@ -401,7 +440,7 @@ export class Auth {
     }
 
     if (isCommunalShare(keypair.publicKey)) {
-      const cap = meadowcap.createCapCommunal({
+      const cap = this.meadowcap.createCapCommunal({
         accessMode: accessMode,
         namespace: share,
         user: forUser,
@@ -418,7 +457,7 @@ export class Auth {
         : { writeCap: cap };
     }
 
-    const cap = await meadowcap.createCapOwned({
+    const cap = await this.meadowcap.createCapOwned({
       accessMode: accessMode,
       namespace: share,
       namespaceSecret: keypair.secretKey,
@@ -426,7 +465,7 @@ export class Auth {
     });
 
     if (isOwnedReadCapability(cap)) {
-      const subspaceCap = await meadowcap.createSubspaceCap(
+      const subspaceCap = await this.meadowcap.createSubspaceCap(
         share,
         keypair.secretKey,
         forUser,
@@ -512,7 +551,7 @@ export class Auth {
       !isReadCapPack(capPack)
     ) {
       const receiverKeypair = await this.identityKeypair(
-        meadowcap.getCapReceiver(capPack.writeCap),
+        this.meadowcap.getCapReceiver(capPack.writeCap),
       );
 
       if (!receiverKeypair) {
@@ -521,7 +560,7 @@ export class Auth {
         );
       }
 
-      const grantedArea = meadowcap.getCapGrantedArea(capPack.writeCap);
+      const grantedArea = this.meadowcap.getCapGrantedArea(capPack.writeCap);
 
       const toArea: Area<IdentityPublicKey> = {
         includedSubspaceId: restrictTo.identity ||
@@ -532,8 +571,8 @@ export class Auth {
       };
 
       try {
-        if (meadowcap.isCommunal(capPack.writeCap)) {
-          const cap = await meadowcap.delegateCapCommunal(
+        if (this.meadowcap.isCommunal(capPack.writeCap)) {
+          const cap = await this.meadowcap.delegateCapCommunal(
             {
               cap: capPack.writeCap,
               secret: receiverKeypair.secretKey,
@@ -545,7 +584,7 @@ export class Auth {
           return { writeCap: cap };
         }
 
-        const cap = await meadowcap.delegateCapOwned(
+        const cap = await this.meadowcap.delegateCapOwned(
           {
             cap: capPack.writeCap,
             secret: receiverKeypair.secretKey,
@@ -561,7 +600,7 @@ export class Auth {
     }
 
     const receiverKeypair = await this.identityKeypair(
-      meadowcap.getCapReceiver(capPack.readCap),
+      this.meadowcap.getCapReceiver(capPack.readCap),
     );
 
     if (!receiverKeypair) {
@@ -570,7 +609,7 @@ export class Auth {
       );
     }
 
-    const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
+    const grantedArea = this.meadowcap.getCapGrantedArea(capPack.readCap);
 
     const toArea: Area<IdentityPublicKey> = {
       includedSubspaceId: restrictTo.identity ||
@@ -581,8 +620,8 @@ export class Auth {
     };
 
     if (capPack.subspaceCap === undefined) {
-      if (meadowcap.isCommunal(capPack.readCap)) {
-        const delegated = await meadowcap.delegateCapCommunal(
+      if (this.meadowcap.isCommunal(capPack.readCap)) {
+        const delegated = await this.meadowcap.delegateCapCommunal(
           {
             cap: capPack.readCap,
             secret: receiverKeypair.secretKey,
@@ -594,7 +633,7 @@ export class Auth {
         return { readCap: delegated };
       }
 
-      const delegated = await meadowcap.delegateCapOwned(
+      const delegated = await this.meadowcap.delegateCapOwned(
         {
           cap: capPack.readCap,
           secret: receiverKeypair.secretKey,
@@ -603,7 +642,7 @@ export class Auth {
         },
       );
 
-      if (meadowcap.needsSubspaceCap(delegated)) {
+      if (this.meadowcap.needsSubspaceCap(delegated)) {
         return new ValidationError(
           "Newly delegated cap needs a subspace capability, but was not provided an existing subspace capability to delegate from.",
         );
@@ -612,13 +651,13 @@ export class Auth {
       return { readCap: delegated };
     }
 
-    if (meadowcap.isCommunal(capPack.readCap)) {
+    if (this.meadowcap.isCommunal(capPack.readCap)) {
       return new ValidationError(
         "Was provided a communal read capability alongside a subspace capability. Why?",
       );
     }
 
-    const delegatedCap = await meadowcap.delegateCapOwned(
+    const delegatedCap = await this.meadowcap.delegateCapOwned(
       {
         cap: capPack.readCap,
         secret: receiverKeypair.secretKey,
@@ -627,7 +666,7 @@ export class Auth {
       },
     );
 
-    const delegatedSubspaceCap = await meadowcap.delegateSubspaceCap(
+    const delegatedSubspaceCap = await this.meadowcap.delegateSubspaceCap(
       capPack.subspaceCap,
       toUser,
       receiverKeypair.secretKey,
@@ -647,11 +686,11 @@ export class Auth {
   ): Promise<true | AuthorisationError> {
     const cap = "readCap" in capPack ? capPack.readCap : capPack.writeCap;
 
-    const receiver = meadowcap.getCapReceiver(cap);
+    const receiver = this.meadowcap.getCapReceiver(cap);
 
     for await (const keypair of this.identityKeypairs()) {
       if (subspaceScheme.order(keypair.publicKey, receiver) === 0) {
-        const encoded = encodeCapPack(capPack);
+        const encoded = encodeCapPack(capPack, this.runtimeDriver);
         const encrypted = await this.encrypt(encoded);
 
         await this.kvDriver.set([
@@ -680,7 +719,10 @@ export class Auth {
     ) {
       const decrypted = await this.decrypt(value);
 
-      const capPack = decodeCapPack(decrypted) as ReadCapPack;
+      const capPack = decodeCapPack(
+        decrypted,
+        this.runtimeDriver,
+      ) as ReadCapPack;
 
       if (!selectors) {
         yield capPack;
@@ -690,7 +732,7 @@ export class Auth {
       const grantedNamespace = Meadowcap.getGrantedNamespace(
         capPack.readCap,
       );
-      const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
+      const grantedArea = this.meadowcap.getCapGrantedArea(capPack.readCap);
 
       for (const selector of selectors) {
         const hasSameNamespace = namespaceScheme.isEqual(
@@ -737,7 +779,10 @@ export class Auth {
     ) {
       const capBytes = await this.decrypt(value);
 
-      const capPack = decodeCapPack(capBytes) as WriteCapPack;
+      const capPack = decodeCapPack(
+        capBytes,
+        this.runtimeDriver,
+      ) as WriteCapPack;
 
       if (!selectors) {
         yield capPack;
@@ -747,7 +792,7 @@ export class Auth {
       const grantedNamespace = Meadowcap.getGrantedNamespace(
         capPack.writeCap,
       );
-      const grantedArea = meadowcap.getCapGrantedArea(capPack.writeCap);
+      const grantedArea = this.meadowcap.getCapGrantedArea(capPack.writeCap);
 
       for (const selector of selectors) {
         const hasSameNamespace = namespaceScheme.isEqual(
@@ -788,7 +833,7 @@ export class Auth {
   ): Promise<boolean> {
     if (
       "subspaceCap" in capPack && capPack.subspaceCap &&
-      await meadowcap.isValidSubspaceCap(capPack.subspaceCap) ===
+      await this.meadowcap.isValidSubspaceCap(capPack.subspaceCap) ===
         false
     ) {
       return false;
@@ -796,7 +841,7 @@ export class Auth {
 
     const cap = "readCap" in capPack ? capPack.readCap : capPack.writeCap;
 
-    return meadowcap.isValidCap(cap);
+    return this.meadowcap.isValidCap(cap);
   }
 
   /** Return an array of all share public keys authorised by cap packs in safe storage. */
@@ -863,7 +908,7 @@ export class Auth {
         }],
       }])
     ) {
-      const receiver = meadowcap.getCapReceiver(capPack.writeCap);
+      const receiver = this.meadowcap.getCapReceiver(capPack.writeCap);
 
       const keypair = await this.identityKeypair(receiver);
 
@@ -907,8 +952,8 @@ export class Auth {
         continue;
       }
 
-      const candidateArea = meadowcap.getCapGrantedArea(candidateAuth.cap);
-      const contenderArea = meadowcap.getCapGrantedArea(contenderAuth.cap);
+      const candidateArea = this.meadowcap.getCapGrantedArea(candidateAuth.cap);
+      const contenderArea = this.meadowcap.getCapGrantedArea(contenderAuth.cap);
 
       if (areaIsIncluded(subspaceScheme.order, candidateArea, contenderArea)) {
         candidateAuth = contenderAuth;
@@ -931,7 +976,7 @@ export class Auth {
 
     for await (const capPack of this.readCapPacks(selectors)) {
       const shareTag = encodeShareTag(capPack.readCap.namespaceKey);
-      const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
+      const grantedArea = this.meadowcap.getCapGrantedArea(capPack.readCap);
 
       const otherAreas = mostPowerfulCaps.get(shareTag);
 
@@ -943,7 +988,7 @@ export class Auth {
       }
 
       for (const otherCapPack of otherAreas.values()) {
-        const otherGrantedArea = meadowcap.getCapGrantedArea(
+        const otherGrantedArea = this.meadowcap.getCapGrantedArea(
           otherCapPack.readCap,
         );
 
@@ -965,7 +1010,7 @@ export class Auth {
 
     for (const capPacks of mostPowerfulCaps.values()) {
       for (const capPack of capPacks.values()) {
-        const grantedArea = meadowcap.getCapGrantedArea(capPack.readCap);
+        const grantedArea = this.meadowcap.getCapGrantedArea(capPack.readCap);
 
         if (capPack.subspaceCap) {
           interests.set({

@@ -1,8 +1,8 @@
 import { concat } from "@std/bytes";
 import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { Ed25519 } from "./ed25519/ed25519.ts";
 import { GrowingBytes } from "@earthstar/willow-utils";
+import { Ed25519Driver } from "./types.ts";
 
 export type Cinn25519Keypair = {
   publicKey: {
@@ -14,7 +14,11 @@ export type Cinn25519Keypair = {
 
 export async function generateCinn25519Keypair(
   shortname: string,
-  opts: { minLength: number; maxLength: number },
+  opts: {
+    minLength: number;
+    maxLength: number;
+    driver: Ed25519Driver<Uint8Array>;
+  },
 ): Promise<Cinn25519Keypair | ValidationError> {
   const isValid = isValidShortname(shortname, {
     minLength: opts.minLength,
@@ -25,7 +29,7 @@ export async function generateCinn25519Keypair(
     return isValid;
   }
 
-  const { publicKey, secretKey } = await new Ed25519().generateKeypair();
+  const { publicKey, secretKey } = await opts.driver.generateKeypair();
 
   return {
     publicKey: {
@@ -40,12 +44,13 @@ export function cinn25519Sign(
   keypair: Cinn25519Keypair,
   bytes: Uint8Array,
   shortnameMaxLength: number,
+  driver: Ed25519Driver<Uint8Array>,
 ): Promise<Uint8Array> {
   const messageToSign = concat(
     [encodeShortName(keypair.publicKey.shortname, shortnameMaxLength), bytes],
   );
 
-  return new Ed25519().sign(messageToSign, keypair.secretKey);
+  return driver.sign(messageToSign, keypair.secretKey);
 }
 
 export function cinn25519Verify(
@@ -53,12 +58,13 @@ export function cinn25519Verify(
   signature: Uint8Array,
   bytes: Uint8Array,
   shortnameMaxLength: number,
+  driver: Ed25519Driver<Uint8Array>,
 ): Promise<boolean> {
   const messageToVerify = concat(
     [encodeShortName(publicKey.shortname, shortnameMaxLength), bytes],
   );
 
-  return new Ed25519().verify(
+  return driver.verify(
     publicKey.underlying,
     signature,
     messageToVerify,
