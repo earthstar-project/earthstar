@@ -4,7 +4,6 @@ import {
   IdentityPublicKey,
 } from "../identifiers/identity.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { earthstarToWillowPath } from "../util/path.ts";
 import { Query } from "./types.ts";
 
 const orderMap: Record<string, "subspace" | "path" | "timestamp"> = {
@@ -26,16 +25,10 @@ export function queryToWillowQueryParams(query: Query): {
     return identityPublicKey;
   }
 
-  const willowPath = earthstarToWillowPath(query.pathPrefix || []);
-
-  if (isErr(willowPath)) {
-    return willowPath;
-  }
-
   return {
     areaOfInterest: {
       area: {
-        pathPrefix: willowPath,
+        pathPrefix: query.pathPrefix?.underlying || [],
         includedSubspaceId: identityPublicKey || ANY_SUBSPACE,
         timeRange: {
           start: query.timestampGte || 0n,

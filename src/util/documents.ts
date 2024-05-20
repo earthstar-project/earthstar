@@ -1,7 +1,6 @@
 import { Entry, Meadowcap, Willow } from "../../deps.ts";
 import { encodeBase32 } from "../encoding/base32.ts";
 import { Document } from "../store/types.ts";
-import { willowToEarthstarPath } from "./path.ts";
 import { AuthorisationToken } from "../auth/auth.ts";
 import { encodeShareTag, SharePublicKey } from "../identifiers/share.ts";
 import {
@@ -9,6 +8,7 @@ import {
   IdentityPublicKey,
 } from "../identifiers/identity.ts";
 import { Blake3Digest } from "../blake3/types.ts";
+import { Path } from "../path/path.ts";
 
 export function entryToDocument(
   entry: Entry<SharePublicKey, IdentityPublicKey, Blake3Digest>,
@@ -24,7 +24,7 @@ export function entryToDocument(
   return {
     share: shareDisplay,
     identity: identityDisplay,
-    path: willowToEarthstarPath(entry.path),
+    path: new Path(entry.path),
     timestamp: entry.timestamp,
     size: entry.payloadLength,
     digest: encodeBase32(new Uint8Array(entry.payloadDigest)),

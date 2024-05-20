@@ -8,9 +8,10 @@ import { Auth } from "./auth.ts";
 import { notErr } from "../util/errors.ts";
 import { ANY_SUBSPACE, Meadowcap } from "../../deps.ts";
 import { isCommunalShare } from "../identifiers/share.ts";
-import { KvDriverInMemory } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_in_memory.ts";
-import { KvDriverDeno } from "https://deno.land/x/willow@0.2.1/src/store/storage/kv/kv_driver_deno.ts";
+import { KvDriverInMemory } from "jsr:@earthstar/willow";
+import { KvDriverDeno } from "jsr:@earthstar/willow/deno";
 import { meadowcapParams } from "../schemes/schemes.ts";
+import { Path } from "../path/path.ts";
 
 const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
@@ -164,7 +165,7 @@ Deno.test("Auth Read cap packs", async () => {
     capPack: mountainCapPack,
     toUser: newIdentity.publicKey,
     restrictTo: {
-      pathPrefix: [new Uint8Array([1])],
+      pathPrefix: Path.fromBytes(new Uint8Array([1])),
       time: {
         start: 100n,
         end: 900n,
@@ -276,7 +277,7 @@ Deno.test("Auth Write cap packs", async () => {
     capPack: mountainCapPack,
     toUser: newIdentity.publicKey,
     restrictTo: {
-      pathPrefix: [new Uint8Array([1])],
+      pathPrefix: Path.fromBytes(new Uint8Array([1])),
       time: {
         start: 100n,
         end: 900n,
@@ -338,7 +339,7 @@ Deno.test("Delegate (communal, write)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: [new Uint8Array([1])],
+      pathPrefix: Path.fromBytes(new Uint8Array([1])),
       time: {
         start: 2n,
         end: 10n,
@@ -386,7 +387,7 @@ Deno.test("Delegate (communal, read)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: [new Uint8Array([1])],
+      pathPrefix: Path.fromBytes(new Uint8Array([1])),
       time: {
         start: 2n,
         end: 10n,
@@ -436,7 +437,7 @@ Deno.test("Delegate (owned, read)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: [new Uint8Array([1])],
+      pathPrefix: Path.fromBytes(new Uint8Array([1])),
       time: {
         start: 2n,
         end: 10n,
@@ -486,7 +487,7 @@ Deno.test("Delegate (owned, write)", async () => {
   const delegated = await auth.delegateCapPack({
     capPack,
     restrictTo: {
-      pathPrefix: [new Uint8Array([1])],
+      pathPrefix: Path.fromBytes(new Uint8Array([1])),
       time: {
         start: 2n,
         end: 10n,
@@ -523,7 +524,7 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
   const res1 = await auth.getWriteAuthorisation(
     gardeningShare.publicKey,
     newIdentity.publicKey,
-    [],
+    Path.empty,
     0n,
   );
 
@@ -539,7 +540,7 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
   const res2 = await auth.getWriteAuthorisation(
     gardeningShare.publicKey,
     newIdentity.publicKey,
-    [],
+    Path.empty,
     0n,
   );
 
@@ -552,7 +553,7 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
     capPack,
     toUser: newIdentity.publicKey,
     restrictTo: {
-      pathPrefix: [new Uint8Array([8])],
+      pathPrefix: Path.fromBytes(new Uint8Array([8])),
       identity: newIdentity.publicKey,
       time: {
         start: 10n,
@@ -566,7 +567,7 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
   const res3 = await auth.getWriteAuthorisation(
     gardeningShare.publicKey,
     newIdentity.publicKey,
-    [new Uint8Array([8]), new Uint8Array([8])],
+    Path.fromBytes(new Uint8Array([8]), new Uint8Array([8])),
     15n,
   );
   assert(notErr(res3));
@@ -586,7 +587,7 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
   const res4 = await auth2.getWriteAuthorisation(
     gardeningShare.publicKey,
     newIdentity.publicKey,
-    [new Uint8Array([8]), new Uint8Array([8])],
+    Path.fromBytes(new Uint8Array([8]), new Uint8Array([8])),
     15n,
   );
   assert(notErr(res4));
@@ -601,7 +602,7 @@ Deno.test("Auth.getWriteAuthorisation", async () => {
   const res5 = await auth2.getWriteAuthorisation(
     gardeningShare.publicKey,
     newIdentity.publicKey,
-    [new Uint8Array([8]), new Uint8Array([8])],
+    Path.fromBytes(new Uint8Array([8]), new Uint8Array([8])),
     15n,
   );
   assert(notErr(res5));

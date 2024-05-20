@@ -1,14 +1,12 @@
-import { KvDriverInMemory } from "../../../willow-js/src/store/storage/kv/kv_driver_in_memory.ts";
-import { ANY_SUBSPACE, Area, OPEN_END, Path, Willow } from "../../deps.ts";
+import { KvDriverInMemory } from "jsr:@earthstar/willow";
+import { Willow } from "../../deps.ts";
 import { Auth } from "../auth/auth.ts";
-import { CapPackSelector } from "../auth/types.ts";
 import { Cap } from "../caps/cap.ts";
 import { decodeCapPack } from "../caps/util.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
   IdentityKeypair,
-  IdentityPublicKey,
   IdentityTag,
 } from "../identifiers/identity.ts";
 import {
@@ -20,6 +18,7 @@ import {
   SharePublicKey,
   ShareTag,
 } from "../identifiers/share.ts";
+import { Path } from "../path/path.ts";
 import { Store } from "../store/store.ts";
 import { Syncer } from "../syncer/syncer.ts";
 
@@ -56,12 +55,14 @@ export type PeerOpts = {
 
 /** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those. */
 export class Peer {
+  /** The peer's underlying {@linkcode} Auth instance, exposed here for low-level operations. */
+  readonly auth: Auth;
+
   /** Resets the password and irrevocably deletes all previously stored identity keypairs, share keypairs, and capabalities. */
   static reset(driver: PeerDriver): Promise<void> {
     return Auth.reset(driver.authDriver);
   }
 
-  private auth: Auth;
   private createStoreFn: (share: SharePublicKey, auth: Auth) => Promise<Store>;
   private storeMap = new Map<string, Store>();
 
@@ -387,7 +388,7 @@ export class Peer {
 
   async syncHttp(url: string, interests?: CapSelector[]) {
     try {
-      new URL("url");
+      new URL(url);
     } catch {
       return new ValidationError("Invalid URL provided");
     }
