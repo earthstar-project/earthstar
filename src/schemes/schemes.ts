@@ -1,21 +1,17 @@
-import { isFragmentTriple } from "https://deno.land/x/willow@0.3.0/src/wgps/pai/pai_finder.ts";
+import * as Willow from "@earthstar/willow";
+import { concat, equals as equalsBytes } from "@std/bytes";
 import {
   ANY_SUBSPACE,
-  concat,
-  ed25519,
   encodeCompactWidth,
   encodeEntry,
   encodePath,
   EncodingScheme,
-  equalsBytes,
-  hashToCurve,
-  Meadowcap,
   orderBytes,
   PathScheme,
   successorBytesFixedWidth,
-  Willow,
-  x25519,
-} from "../../deps.ts";
+} from "@earthstar/willow-utils";
+import * as Meadowcap from "@earthstar/meadowcap";
+import { ed25519, hashToCurve, x25519 } from "@noble/curves/ed25519";
 import { Auth, AuthorisationToken } from "../auth/auth.ts";
 import { blake3 } from "../blake3/blake3.ts";
 import { SubspaceCapability } from "../caps/types.ts";
@@ -257,15 +253,17 @@ export const authorisationScheme: Willow.AuthorisationScheme<
   tokenEncoding: {
     encode: (token) => {
       return concat(
-        token.signature,
-        Meadowcap.encodeMcCapability({
-          encodingNamespace: namespaceScheme,
-          encodingNamespaceSig: signatureEncodingScheme,
-          encodingUser: subspaceScheme,
-          encodingUserSig: signatureEncodingScheme,
-          orderSubspace: subspaceScheme.order,
-          pathScheme,
-        }, token.capability),
+        [
+          token.signature,
+          Meadowcap.encodeMcCapability({
+            encodingNamespace: namespaceScheme,
+            encodingNamespaceSig: signatureEncodingScheme,
+            encodingUser: subspaceScheme,
+            encodingUserSig: signatureEncodingScheme,
+            orderSubspace: subspaceScheme.order,
+            pathScheme,
+          }, token.capability),
+        ],
       );
     },
     decode: (encoded) => {
@@ -337,7 +335,7 @@ export const fingerprintScheme: Willow.FingerprintScheme<
       subspaceScheme,
     }, entry);
 
-    const encoded = concat(encodeCompactWidth(available), entryEnc);
+    const encoded = concat([encodeCompactWidth(available), entryEnc]);
 
     return Promise.resolve(hashToCurve(encoded, {
       DST: "earthstar6i",
@@ -624,13 +622,15 @@ export const paiScheme: Willow.PaiScheme<
     };
   },
   fragmentToGroup: (fragment) => {
-    if (isFragmentTriple(fragment)) {
+    if (fragment.length === 3) {
       const [namespace, subspace, path] = fragment;
 
       const encoded = concat(
-        namespaceScheme.encode(namespace),
-        subspaceScheme.encode(subspace),
-        encodePath(pathScheme, path),
+        [
+          namespaceScheme.encode(namespace),
+          subspaceScheme.encode(subspace),
+          encodePath(pathScheme, path),
+        ],
       );
 
       const curve = hashToCurve(encoded, {
@@ -644,8 +644,7 @@ export const paiScheme: Willow.PaiScheme<
     const [namespace, path] = fragment;
 
     const encoded = concat(
-      namespaceScheme.encode(namespace),
-      encodePath(pathScheme, path),
+      [namespaceScheme.encode(namespace), encodePath(pathScheme, path)],
     );
 
     const curve = hashToCurve(encoded, {

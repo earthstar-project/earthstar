@@ -1,12 +1,5 @@
-import {
-  Area,
-  areaIsIncluded,
-  concat,
-  deferred,
-  Meadowcap,
-  orderBytes,
-  Willow,
-} from "../../deps.ts";
+import * as Willow from "@earthstar/willow";
+import * as Meadowcap from "@earthstar/meadowcap";
 import {
   decodeIdentityPublicKey,
   encodeIdentityPublicKey,
@@ -51,6 +44,8 @@ import {
 import { SyncInterests } from "../syncer/syncer.ts";
 import { CapPackSelector } from "./types.ts";
 import { Path } from "../path/path.ts";
+import { concat } from "@std/bytes";
+import { Area, areaIsIncluded, orderBytes } from "@earthstar/willow-utils";
 
 const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
@@ -70,7 +65,7 @@ export type AuthOpts = {
 
 /** Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password. */
 export class Auth {
-  private encryptionKey = deferred<CryptoKey>();
+  private encryptionKey = Promise.withResolvers<CryptoKey>();
   private kvDriver: Willow.KvDriver;
 
   /** Wipes all keypairs and capabilities from local storage. */
@@ -80,7 +75,7 @@ export class Auth {
 
   /** Check if Auth has been successfully initialised with the given password. */
   async ready(): Promise<boolean> {
-    await this.encryptionKey;
+    await this.encryptionKey.promise;
 
     return true;
   }
@@ -125,7 +120,7 @@ export class Auth {
           PASSWORD_CHALLENGE,
         );
 
-        const encryptedTest = concat(salt, iv, new Uint8Array(encrypted));
+        const encryptedTest = concat([salt, iv, new Uint8Array(encrypted)]);
 
         this.kvDriver.set(["pwd_challenge"], encryptedTest);
 
@@ -174,7 +169,7 @@ export class Auth {
   }
 
   private async encrypt(bytes: Uint8Array) {
-    const key = await this.encryptionKey;
+    const key = await this.encryptionKey.promise;
 
     const iv = crypto.getRandomValues(new Uint8Array(12));
 
@@ -187,14 +182,14 @@ export class Auth {
       bytes,
     );
 
-    return concat(iv, new Uint8Array(encrypted));
+    return concat([iv, new Uint8Array(encrypted)]);
   }
 
   private async decrypt(encrypted: Uint8Array): Promise<Uint8Array> {
     const iv = encrypted.subarray(0, 12);
     const encryptedData = encrypted.subarray(12);
 
-    const key = await this.encryptionKey;
+    const key = await this.encryptionKey.promise;
 
     const decrypted = await crypto.subtle.decrypt(
       {
@@ -999,7 +994,7 @@ export class Auth {
 
 function encodeIdentityKeypair(keypair: IdentityKeypairRaw): Uint8Array {
   const publicKeyEncoded = encodeIdentityPublicKey(keypair.publicKey);
-  return concat(publicKeyEncoded, keypair.secretKey);
+  return concat([publicKeyEncoded, keypair.secretKey]);
 }
 
 function decodeIdentityKeypair(encoded: Uint8Array): IdentityKeypairRaw {
@@ -1016,7 +1011,7 @@ function decodeIdentityKeypair(encoded: Uint8Array): IdentityKeypairRaw {
 function encodeShareKeypair(keypair: ShareKeypairRaw): Uint8Array {
   const publicKeyEncoded = encodeSharePublicKey(keypair.publicKey);
 
-  return concat(publicKeyEncoded, keypair.secretKey);
+  return concat([publicKeyEncoded, keypair.secretKey]);
 }
 
 function decodeShareKeypair(encoded: Uint8Array): IdentityKeypairRaw {

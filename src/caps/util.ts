@@ -1,9 +1,10 @@
-import { concat, Meadowcap } from "../../deps.ts";
+import * as Meadowcap from "@earthstar/meadowcap";
 import { IdentityPublicKey } from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
 import { meadowcapParams } from "../schemes/schemes.ts";
 import { EarthstarError } from "../util/errors.ts";
 import { ReadCapPack, WriteCapPack } from "./types.ts";
+import { concat } from "@std/bytes";
 
 const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
 
@@ -62,17 +63,19 @@ export function isOwnedReadCapability(
 
 export function encodeCapPack(capPack: ReadCapPack | WriteCapPack): Uint8Array {
   if (!isReadCapPack(capPack)) {
-    return concat(new Uint8Array([2]), meadowcap.encodeCap(capPack.writeCap));
+    return concat([new Uint8Array([2]), meadowcap.encodeCap(capPack.writeCap)]);
   }
 
   if (capPack.subspaceCap === undefined) {
-    return concat(new Uint8Array([0]), meadowcap.encodeCap(capPack.readCap));
+    return concat([new Uint8Array([0]), meadowcap.encodeCap(capPack.readCap)]);
   }
 
   return concat(
-    new Uint8Array([1]),
-    meadowcap.encodeCap(capPack.readCap),
-    meadowcap.encodeSubspaceCap(capPack.subspaceCap),
+    [
+      new Uint8Array([1]),
+      meadowcap.encodeCap(capPack.readCap),
+      meadowcap.encodeSubspaceCap(capPack.subspaceCap),
+    ],
   );
 }
 

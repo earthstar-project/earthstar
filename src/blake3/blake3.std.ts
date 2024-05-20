@@ -1,4 +1,4 @@
-import { crypto } from "https://deno.land/std@0.224.0/crypto/mod.ts";
+import { crypto } from "@std/crypto";
 
 export async function blake3(
   source: Uint8Array | AsyncIterable<Uint8Array>,

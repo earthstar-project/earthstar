@@ -3,13 +3,16 @@ import {
   assertArrayIncludes,
   assertEquals,
   assertRejects,
-} from "https://deno.land/std@0.203.0/assert/mod.ts";
+} from "@std/assert";
+import { ANY_SUBSPACE } from "@earthstar/willow-utils";
+import { KvDriverInMemory } from "@earthstar/willow";
+import { KvDriverDeno } from "@earthstar/willow/deno";
+import * as Meadowcap from "@earthstar/meadowcap";
 import { Auth } from "./auth.ts";
 import { notErr } from "../util/errors.ts";
-import { ANY_SUBSPACE, Meadowcap } from "../../deps.ts";
+
 import { isCommunalShare } from "../identifiers/share.ts";
-import { KvDriverInMemory } from "jsr:@earthstar/willow";
-import { KvDriverDeno } from "jsr:@earthstar/willow/deno";
+
 import { meadowcapParams } from "../schemes/schemes.ts";
 import { Path } from "../path/path.ts";
 

@@ -1,4 +1,4 @@
-import { AreaOfInterest, Willow } from "../../deps.ts";
+import * as Willow from "@earthstar/willow";
 import { Auth, AuthorisationToken } from "../auth/auth.ts";
 import { blake3 } from "../blake3/blake3.std.ts";
 import { Blake3Digest } from "../blake3/types.ts";
@@ -23,6 +23,7 @@ import {
 } from "../schemes/schemes.ts";
 import { Store } from "../store/store.ts";
 import { AuthorisationOpts, PreFingerprint } from "../store/types.ts";
+import { AreaOfInterest } from "@earthstar/willow-utils";
 
 export type SyncInterests = Map<
   Willow.ReadAuthorisation<

@@ -1,4 +1,4 @@
-import { decodeBase64Url, encodeBase64Url } from "../../../deps.ts";
+import { decodeBase64Url, encodeBase64Url } from "@std/encoding/base64url";
 import { Ed25519Driver } from "../types.ts";
 
 export class Ed25519 implements Ed25519Driver<Uint8Array> {

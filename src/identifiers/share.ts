@@ -1,4 +1,4 @@
-import { GrowingBytes } from "../../deps.ts";
+import { GrowingBytes } from "@earthstar/willow-utils";
 import {
   Cinn25519Keypair,
   cinn25519Sign,

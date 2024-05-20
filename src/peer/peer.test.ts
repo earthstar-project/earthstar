@@ -1,8 +1,5 @@
+import { assert, assertEquals } from "@std/assert";
 import { Peer } from "./peer.ts";
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { notErr } from "../util/errors.ts";
 import { Path } from "../path/path.ts";
 

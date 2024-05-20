@@ -1,4 +1,4 @@
-import { createBLAKE3 } from "npm:hash-wasm";
+import { createBLAKE3 } from "hash-wasm";
 
 const reusableBlake3 = createBLAKE3();
 

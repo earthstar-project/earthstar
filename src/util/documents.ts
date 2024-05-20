@@ -1,4 +1,5 @@
-import { Entry, Meadowcap, Willow } from "../../deps.ts";
+import * as Willow from "@earthstar/willow";
+import * as Meadowcap from "@earthstar/meadowcap";
 import { encodeBase32 } from "../encoding/base32.ts";
 import { Document } from "../store/types.ts";
 import { AuthorisationToken } from "../auth/auth.ts";
@@ -9,6 +10,7 @@ import {
 } from "../identifiers/identity.ts";
 import { Blake3Digest } from "../blake3/types.ts";
 import { Path } from "../path/path.ts";
+import { Entry } from "@earthstar/willow-utils";
 
 export function entryToDocument(
   entry: Entry<SharePublicKey, IdentityPublicKey, Blake3Digest>,

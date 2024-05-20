@@ -1,4 +1,8 @@
-import { isPathPrefixed, isValidPath, Path as WillowPath } from "../../deps.ts";
+import {
+  isPathPrefixed,
+  isValidPath,
+  Path as WillowPath,
+} from "@earthstar/willow-utils";
 import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
 import { pathScheme } from "../schemes/schemes.ts";
 import { ValidationError } from "../util/errors.ts";

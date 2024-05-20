@@ -1,10 +1,6 @@
+import { assert, assertEquals } from "@std/assert";
 import { Store } from "./store.ts";
 import { Auth } from "../auth/auth.ts";
-
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { DocumentSetEvent } from "./events.ts";
 import { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";

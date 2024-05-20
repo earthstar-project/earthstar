@@ -1,4 +1,8 @@
-import { ANY_SUBSPACE, AreaOfInterest, OPEN_END } from "../../deps.ts";
+import {
+  ANY_SUBSPACE,
+  AreaOfInterest,
+  OPEN_END,
+} from "@earthstar/willow-utils";
 import {
   decodeIdentityTag,
   IdentityPublicKey,

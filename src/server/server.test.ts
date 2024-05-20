@@ -6,9 +6,8 @@ import { ShareKeypair } from "../identifiers/share.ts";
 import { Cap } from "../caps/cap.ts";
 import { Store } from "../store/store.ts";
 import { ExtensionSyncWebsocket } from "./extensions/sync_websocket.ts";
-import { delay } from "https://deno.land/std@0.224.0/async/delay.ts";
-import { assertEquals } from "https://deno.land/std@0.203.0/assert/assert_equals.ts";
-import { assert } from "https://deno.land/std@0.203.0/assert/assert.ts";
+import { delay } from "@std/async";
+import { assert, assertEquals } from "@std/assert";
 import { Syncer } from "../syncer/syncer.ts";
 import { Path } from "../path/path.ts";
 

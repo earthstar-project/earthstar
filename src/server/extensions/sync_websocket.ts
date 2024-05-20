@@ -1,4 +1,4 @@
-import { Willow } from "../../../deps.ts";
+import { IS_BETTY, TransportWebsocket } from "@earthstar/willow";
 import { encodeShareTag } from "../../identifiers/share.ts";
 import { Peer } from "../../peer/peer.ts";
 import { Syncer } from "../../syncer/syncer.ts";
@@ -33,7 +33,7 @@ export class ExtensionSyncWebsocket implements ServerExtension {
 
     const { socket, response } = Deno.upgradeWebSocket(req);
 
-    const transport = new Willow.TransportWebsocket(Willow.IS_BETTY, socket);
+    const transport = new TransportWebsocket(IS_BETTY, socket);
 
     new Syncer({
       auth: peer.auth,

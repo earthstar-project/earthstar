@@ -1,4 +1,7 @@
-import { stdDecodeBase32, stdEncodeBase32 } from "../../deps.ts";
+import {
+  decodeBase32 as stdDecodeBase32,
+  encodeBase32 as stdEncodeBase32,
+} from "@std/encoding/base32";
 
 export function encodeBase32(bytes: Uint8Array) {
   const raw = stdEncodeBase32(bytes);

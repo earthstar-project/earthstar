@@ -1,4 +1,4 @@
-import { ANY_SUBSPACE, Meadowcap, OPEN_END } from "../../deps.ts";
+import { ANY_SUBSPACE, OPEN_END } from "@earthstar/willow-utils";
 import { Auth } from "../auth/auth.ts";
 import {
   decodeIdentityTag,
@@ -11,8 +11,9 @@ import { meadowcapParams } from "../schemes/schemes.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 import { ReadCapPack, WriteCapPack } from "./types.ts";
 import { encodeCapPack, isReadCapPack } from "./util.ts";
+import { Meadowcap } from "@earthstar/meadowcap";
 
-const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
+const meadowcap = new Meadowcap(meadowcapParams);
 
 /** An unforgeable token bestowing read or write access to a share.
  */

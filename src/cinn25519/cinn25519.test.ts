@@ -1,7 +1,4 @@
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.202.0/assert/mod.ts";
+import { assert, assertEquals } from "@std/assert";
 import { notErr } from "../util/errors.ts";
 import {
   decodeCinn25519PublickKey,

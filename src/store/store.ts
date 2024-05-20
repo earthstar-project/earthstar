@@ -1,4 +1,5 @@
-import { OPEN_END, successorPath, Willow } from "../../deps.ts";
+import * as Willow from "@earthstar/willow";
+import { OPEN_END, successorPath } from "@earthstar/willow-utils";
 import { Auth, AuthorisationToken } from "../auth/auth.ts";
 import {
   authorisationScheme,

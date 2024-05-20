@@ -1,7 +1,8 @@
-import { concat, GrowingBytes } from "../../deps.ts";
+import { concat } from "@std/bytes";
 import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 import { Ed25519 } from "./ed25519/ed25519.ts";
+import { GrowingBytes } from "@earthstar/willow-utils";
 
 export type Cinn25519Keypair = {
   publicKey: {
@@ -41,8 +42,7 @@ export function cinn25519Sign(
   shortnameMaxLength: number,
 ): Promise<Uint8Array> {
   const messageToSign = concat(
-    encodeShortName(keypair.publicKey.shortname, shortnameMaxLength),
-    bytes,
+    [encodeShortName(keypair.publicKey.shortname, shortnameMaxLength), bytes],
   );
 
   return new Ed25519().sign(messageToSign, keypair.secretKey);
@@ -55,8 +55,7 @@ export function cinn25519Verify(
   shortnameMaxLength: number,
 ): Promise<boolean> {
   const messageToVerify = concat(
-    encodeShortName(publicKey.shortname, shortnameMaxLength),
-    bytes,
+    [encodeShortName(publicKey.shortname, shortnameMaxLength), bytes],
   );
 
   return new Ed25519().verify(
@@ -75,7 +74,7 @@ export function encodeCinn25519PublicKey(
     shortnameMaxLength,
   );
 
-  return concat(shortnameEncoded, publicKey.underlying);
+  return concat([shortnameEncoded, publicKey.underlying]);
 }
 
 export function decodeCinn25519PublickKey(
@@ -161,7 +160,7 @@ export function encodeShortName(
     return ascii;
   }
 
-  return concat(ascii, new Uint8Array([0x0]));
+  return concat([ascii, new Uint8Array([0x0])]);
 }
 
 export function encodeCinn25519PublicKeyDisplay(

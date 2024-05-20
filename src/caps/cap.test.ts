@@ -1,9 +1,8 @@
-import { assert } from "https://deno.land/std@0.203.0/assert/assert.ts";
+import { assert, assertEquals } from "@std/assert";
+import { KvDriverInMemory } from "@earthstar/willow";
 import { Auth } from "../auth/auth.ts";
-import { KvDriverInMemory } from "jsr:@earthstar/willow";
 import { notErr } from "../util/errors.ts";
 import { Cap } from "./cap.ts";
-import { assertEquals } from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { encodeIdentityTag } from "../identifiers/identity.ts";
 import { encodeShareTag } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";

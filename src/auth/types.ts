@@ -1,4 +1,4 @@
-import { Area } from "../../deps.ts";
+import { Area } from "@earthstar/willow-utils";
 import { IdentityPublicKey } from "../identifiers/identity.ts";
 import { SharePublicKey } from "../identifiers/share.ts";
 

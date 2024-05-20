@@ -1,6 +1,6 @@
-import { ensureDir } from "https://deno.land/std@0.188.0/fs/ensure_dir.ts";
-import { join } from "https://deno.land/std@0.188.0/path/win32.ts";
-import { Willow } from "../../deps.ts";
+import * as Willow from "@earthstar/willow";
+import { ensureDir } from "@std/fs";
+import { join } from "@std/path";
 
 import {
   fingerprintScheme,

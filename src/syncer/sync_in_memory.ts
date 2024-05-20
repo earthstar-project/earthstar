@@ -1,4 +1,4 @@
-import { Willow } from "../../deps.ts";
+import * as Willow from "@earthstar/willow";
 import { encodeShareTag } from "../identifiers/share.ts";
 import { CapSelector, Peer } from "../peer/peer.ts";
 import { capSelectorsToCapPackSelectors } from "../peer/util.ts";

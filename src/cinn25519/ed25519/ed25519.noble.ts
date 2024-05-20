@@ -1,4 +1,4 @@
-import * as ed from "jsr:@noble/ed25519@2.1.0";
+import * as ed from "@noble/ed25519";
 import { Ed25519Driver } from "../types.ts";
 
 export class Ed25519 implements Ed25519Driver<Uint8Array> {

@@ -1,5 +1,9 @@
-import { KvDriverInMemory } from "jsr:@earthstar/willow";
-import { Willow } from "../../deps.ts";
+import {
+  IS_ALFIE,
+  KvDriver,
+  KvDriverInMemory,
+  TransportWebsocket,
+} from "jsr:@earthstar/willow";
 import { Auth } from "../auth/auth.ts";
 import { Cap } from "../caps/cap.ts";
 import { decodeCapPack } from "../caps/util.ts";
@@ -43,7 +47,7 @@ export type CapSelector = {
 };
 
 export type PeerDriver = {
-  authDriver: Willow.KvDriver;
+  authDriver: KvDriver;
   createStore: (share: SharePublicKey) => Promise<Store>;
 };
 
@@ -394,7 +398,7 @@ export class Peer {
     }
 
     const socket = new WebSocket(url);
-    const transport = new Willow.TransportWebsocket(Willow.IS_ALFIE, socket);
+    const transport = new TransportWebsocket(IS_ALFIE, socket);
 
     const selectors = interests
       ? capSelectorsToCapPackSelectors(interests)

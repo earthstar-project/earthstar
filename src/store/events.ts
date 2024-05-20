@@ -1,4 +1,4 @@
-import { Willow } from "../../deps.ts";
+import * as Willow from "@earthstar/willow";
 import { AuthorisationToken } from "../auth/auth.ts";
 import { Capability } from "../caps/types.ts";
 import {
