@@ -1,12 +1,12 @@
-import { ANY_SUBSPACE, Area, OPEN_END } from "@earthstar/willow-utils";
-import { CapPackSelector } from "../auth/types.ts";
+import { ANY_SUBSPACE, type Area, OPEN_END } from "@earthstar/willow-utils";
+import type { CapPackSelector } from "../auth/types.ts";
 import {
   decodeIdentityTag,
-  IdentityPublicKey,
+  type IdentityPublicKey,
 } from "../identifiers/identity.ts";
 import { decodeShareTag } from "../identifiers/share.ts";
-import { isErr, ValidationError } from "../util/errors.ts";
-import { CapSelector } from "./types.ts";
+import { isErr, type ValidationError } from "../util/errors.ts";
+import type { CapSelector } from "./types.ts";
 
 export function capSelectorsToCapPackSelectors(
   selectors: CapSelector[],

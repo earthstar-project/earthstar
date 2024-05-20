@@ -1,13 +1,13 @@
 import { assert, assertEquals } from "@std/assert";
 import { Store } from "./store.ts";
 import { Auth } from "../auth/auth.ts";
-import { DocumentSetEvent } from "./events.ts";
-import { Document } from "./types.ts";
+import type { DocumentSetEvent } from "./events.ts";
+import type { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";
-import { encodeShareTag, ShareKeypairRaw } from "../identifiers/share.ts";
+import { encodeShareTag, type ShareKeypairRaw } from "../identifiers/share.ts";
 import {
   encodeIdentityTag,
-  IdentityKeypairRaw,
+  type IdentityKeypairRaw,
 } from "../identifiers/identity.ts";
 import {
   EntryDriverKvStore,

@@ -1,6 +1,6 @@
 import { EntryDriverKvStore } from "@earthstar/willow";
 import { KvDriverDeno, PayloadDriverFilesystem } from "@earthstar/willow/deno";
-import { StorageDriver } from "../types.ts";
+import type { StorageDriver } from "../types.ts";
 import {
   fingerprintScheme,
   makePayloadScheme,
@@ -25,6 +25,9 @@ export async function getStorageDriverFilesystem(
       const tag = encodeShareTag(share);
 
       const sharePath = join(path, tag);
+
+      await ensureDir(sharePath);
+
       const payloadPath = join(sharePath, "payloads");
 
       const payloadScheme = makePayloadScheme(runtime.blake3);

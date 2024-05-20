@@ -1,11 +1,11 @@
 import * as Meadowcap from "@earthstar/meadowcap";
-import { IdentityPublicKey } from "../identifiers/identity.ts";
-import { SharePublicKey } from "../identifiers/share.ts";
+import type { IdentityPublicKey } from "../identifiers/identity.ts";
+import type { SharePublicKey } from "../identifiers/share.ts";
 import { EarthstarError } from "../util/errors.ts";
-import { ReadCapPack, WriteCapPack } from "./types.ts";
+import type { ReadCapPack, WriteCapPack } from "./types.ts";
 import { concat } from "@std/bytes";
 import { makeMeadowcapParams } from "../schemes/schemes.ts";
-import { RuntimeDriver } from "../peer/types.ts";
+import type { RuntimeDriver } from "../peer/types.ts";
 
 export function isReadCapPack(
   capPack: ReadCapPack | WriteCapPack,

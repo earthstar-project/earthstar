@@ -1,6 +1,6 @@
-import { GrowingBytes } from "@earthstar/willow-utils";
+import type { GrowingBytes } from "@earthstar/willow-utils";
 import {
-  Cinn25519Keypair,
+  type Cinn25519Keypair,
   cinn25519Sign,
   cinn25519Verify,
   decodeCinn25519PublickKey,
@@ -11,15 +11,17 @@ import {
   generateCinn25519Keypair,
   isValidShortname,
 } from "../cinn25519/cinn25519.ts";
-import { ValidationError } from "../util/errors.ts";
-import { Ed25519Driver } from "../cinn25519/types.ts";
+import type { ValidationError } from "../util/errors.ts";
+import type { Ed25519Driver } from "../cinn25519/types.ts";
 
 export const MIN_IDENTITY_SHORTNAME_LENGTH = 4;
 export const MAX_IDENTITY_SHORTNAME_LENGTH = 4;
 
 export type IdentityKeypairRaw = Cinn25519Keypair;
 export type IdentityPublicKey = IdentityKeypairRaw["publicKey"];
+/** An identity's public key encoded in a more human-friendly form. */
 export type IdentityTag = string;
+/** An identity's tag and its corresponding secret key. */
 export type IdentityKeypair = {
   tag: IdentityTag;
   secretKey: Uint8Array;

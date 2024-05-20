@@ -1,12 +1,12 @@
 import {
-  EntryDriver,
+  type EntryDriver,
   EntryDriverKvStore,
-  KvDriver,
+  type KvDriver,
   KvDriverInMemory,
-  PayloadDriver,
+  type PayloadDriver,
   PayloadDriverMemory,
 } from "@earthstar/willow";
-import { RuntimeDriver, StorageDriver } from "../types.ts";
+import type { RuntimeDriver, StorageDriver } from "../types.ts";
 import {
   fingerprintScheme,
   makePayloadScheme,
@@ -14,11 +14,12 @@ import {
   pathScheme,
   subspaceScheme,
 } from "../../schemes/schemes.ts";
-import { SharePublicKey } from "../../identifiers/share.ts";
-import { Blake3Digest } from "../../blake3/types.ts";
-import { IdentityPublicKey } from "../../identifiers/identity.ts";
-import { PreFingerprint } from "../../store/types.ts";
+import type { SharePublicKey } from "../../identifiers/share.ts";
+import type { Blake3Digest } from "../../blake3/types.ts";
+import type { IdentityPublicKey } from "../../identifiers/identity.ts";
+import type { PreFingerprint } from "../../store/types.ts";
 
+/** A {@linkcode StorageDriver} for persisting keypairs, caps, entries, and payloads in memory. */
 export class StorageDriverMemory implements StorageDriver {
   auth: KvDriver = new KvDriverInMemory();
 

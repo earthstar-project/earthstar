@@ -1,26 +1,26 @@
-import { IS_ALFIE, KvDriver, TransportWebsocket } from "@earthstar/willow";
+import { IS_ALFIE, type KvDriver, TransportWebsocket } from "@earthstar/willow";
 import { Auth } from "../auth/auth.ts";
 import { Cap } from "../caps/cap.ts";
 import { decodeCapPack } from "../caps/util.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
-  IdentityKeypair,
-  IdentityTag,
+  type IdentityKeypair,
+  type IdentityTag,
 } from "../identifiers/identity.ts";
 import {
   decodeShareTag,
   encodeShareTag,
   isCommunalShare,
-  ShareKeypair,
-  ShareKeypairRaw,
-  ShareTag,
+  type ShareKeypair,
+  type ShareKeypairRaw,
+  type ShareTag,
 } from "../identifiers/share.ts";
 import { Store } from "../store/store.ts";
 import { Syncer } from "../syncer/syncer.ts";
 import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
 import { capSelectorsToCapPackSelectors } from "./util.ts";
-import {
+import type {
   CapSelector,
   PeerOpts,
   RuntimeDriver,
@@ -43,6 +43,7 @@ export class Peer {
 
   private storageDriver: StorageDriver;
 
+  /** Construct a new {@linkcode Peer}. */
   constructor(opts: PeerOpts) {
     this.auth = new Auth({
       password: opts.password,
@@ -373,6 +374,11 @@ export class Peer {
     return tags;
   }
 
+  /** Sync with a peer with a publicly reachable address over HTTP using a websocket connection.
+   *
+   * @param url - The address of the peer to sync with.
+   * @param interests - An optional array of {@linkcode CapSelector} to select areas of interest to sync by. All selectors with a corresponding read capability in storage will be included when syncing.
+   */
   async syncHttp(
     url: string,
     interests?: CapSelector[],

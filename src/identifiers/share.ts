@@ -1,6 +1,6 @@
-import { GrowingBytes } from "@earthstar/willow-utils";
+import type { GrowingBytes } from "@earthstar/willow-utils";
 import {
-  Cinn25519Keypair,
+  type Cinn25519Keypair,
   cinn25519Sign,
   cinn25519Verify,
   decodeCinn25519PublickKey,
@@ -12,14 +12,17 @@ import {
   isValidShortname,
 } from "../cinn25519/cinn25519.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { Ed25519Driver } from "../cinn25519/types.ts";
+import type { Ed25519Driver } from "../cinn25519/types.ts";
 
 export const MIN_SHARE_SHORTNAME_LENGTH = 1;
 export const MAX_SHARE_SHORTNAME_LENGTH = 15;
 
 export type ShareKeypairRaw = Cinn25519Keypair;
 export type SharePublicKey = ShareKeypairRaw["publicKey"];
+
+/** An share's public key encoded in a more human-friendly form. */
 export type ShareTag = string;
+/** A share's tag and its corresponding secret key. */
 export type ShareKeypair = {
   tag: ShareTag;
   secretKey: Uint8Array;

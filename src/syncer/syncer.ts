@@ -1,13 +1,13 @@
 import * as Willow from "@earthstar/willow";
-import { Auth, AuthorisationToken } from "../auth/auth.ts";
-import { Blake3Digest } from "../blake3/types.ts";
-import {
+import type { Auth, AuthorisationToken } from "../auth/auth.ts";
+import type { Blake3Digest } from "../blake3/types.ts";
+import type {
   ReadCapability,
   SubspaceCapability,
   WriteCapability,
 } from "../caps/types.ts";
-import { IdentityPublicKey } from "../identifiers/identity.ts";
-import { SharePublicKey } from "../identifiers/share.ts";
+import type { IdentityPublicKey } from "../identifiers/identity.ts";
+import type { SharePublicKey } from "../identifiers/share.ts";
 import {
   fingerprintScheme,
   makeAccessControlScheme,
@@ -20,28 +20,38 @@ import {
   pathScheme,
   subspaceScheme,
 } from "../schemes/schemes.ts";
-import { Store } from "../store/store.ts";
-import { AuthorisationOpts, PreFingerprint } from "../store/types.ts";
-import { AreaOfInterest } from "@earthstar/willow-utils";
-import { RuntimeDriver } from "../peer/types.ts";
+import type { Store } from "../store/store.ts";
+import type { AuthorisationOpts, PreFingerprint } from "../store/types.ts";
+import type { AreaOfInterest } from "@earthstar/willow-utils";
+import type { RuntimeDriver } from "../peer/types.ts";
 
+/** A {@linkcode ReadCapability} and possibly accompanying {@linkcode SubspaceCapability} */
+export type ReadAuthorisation = Willow.ReadAuthorisation<
+  ReadCapability,
+  SubspaceCapability
+>;
+
+/** A mapping of {@linkcode ReadAuthorisation} to {@linkcode AreaOfInterest}s permitted by that authorisation. */
 export type SyncInterests = Map<
-  Willow.ReadAuthorisation<
-    ReadCapability,
-    SubspaceCapability
-  >,
+  ReadAuthorisation,
   AreaOfInterest<IdentityPublicKey>[]
 >;
 
+/** A transport for exchanging bytes with another peer. */
+export type Transport = Willow.Transport;
+
+/** Options for instantiating a {@linkcode Syncer}. */
 export type SyncerOpts = {
   auth: Auth;
-  transport: Willow.Transport;
+  transport: Transport;
   interests: SyncInterests;
   maxPayloadSizePower: number;
   getStore: (share: SharePublicKey) => Promise<Store>;
   runtime: RuntimeDriver;
 };
 
+/** Synchronises different shares known by a {@linkcode Peer}.
+ */
 export class Syncer {
   private wgpsMessenger: Willow.WgpsMessenger<
     ReadCapability,
@@ -65,6 +75,7 @@ export class Syncer {
     AuthorisationOpts
   >;
 
+  /** Construct a new {@linkcode Syncer}. You shouldn't need to, normally, as {@linkcode Peer} handles that all for you. */
   constructor(opts: SyncerOpts) {
     this.wgpsMessenger = new Willow.WgpsMessenger({
       transport: opts.transport,
@@ -113,6 +124,7 @@ export class Syncer {
     });
   }
 
+  /** Stop syncing and terminate the connection. */
   close() {
     this.wgpsMessenger.close();
   }

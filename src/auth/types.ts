@@ -1,6 +1,6 @@
-import { Area } from "@earthstar/willow-utils";
-import { IdentityPublicKey } from "../identifiers/identity.ts";
-import { SharePublicKey } from "../identifiers/share.ts";
+import type { Area } from "@earthstar/willow-utils";
+import type { IdentityPublicKey } from "../identifiers/identity.ts";
+import type { SharePublicKey } from "../identifiers/share.ts";
 
 export type CapPackSelector = {
   /** The share which a cap pack must belong to. */

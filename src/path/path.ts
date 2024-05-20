@@ -1,7 +1,7 @@
 import {
   isPathPrefixed,
   isValidPath,
-  Path as WillowPath,
+  type Path as WillowPath,
 } from "@earthstar/willow-utils";
 import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
 import { pathScheme } from "../schemes/schemes.ts";
@@ -137,7 +137,9 @@ export class Path {
     return b32Path;
   }
 
+  /** Format the underlying array of bytestrings as though they were ASCII. May fail. */
   format(format: "ascii"): string | undefined;
+  /** Format the underlying array of bytestrings as Base32 encoded strings. */
   format(format: "base32"): string;
   format(format: "ascii" | "base32"): string | undefined {
     if (format === "ascii") {

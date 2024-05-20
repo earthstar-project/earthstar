@@ -1,11 +1,11 @@
-import {
+import type {
   McCapability,
   McSubspaceCapability,
   ReadCapability as McReadCapability,
   WriteCapability as McWriteCapability,
 } from "@earthstar/meadowcap";
-import { IdentityPublicKey } from "../identifiers/identity.ts";
-import { SharePublicKey } from "../identifiers/share.ts";
+import type { IdentityPublicKey } from "../identifiers/identity.ts";
+import type { SharePublicKey } from "../identifiers/share.ts";
 
 /** An unforgeable token bestowing access to some resource. */
 export type Capability = McCapability<

@@ -1,14 +1,14 @@
-import { IdentityKeypair } from "../identifiers/identity.ts";
+import type { IdentityKeypair } from "../identifiers/identity.ts";
 import { Peer } from "../peer/peer.ts";
 import { Server } from "./server.ts";
 
-import { ShareKeypair } from "../identifiers/share.ts";
-import { Cap } from "../caps/cap.ts";
-import { Store } from "../store/store.ts";
+import type { ShareKeypair } from "../identifiers/share.ts";
+import type { Cap } from "../caps/cap.ts";
+import type { Store } from "../store/store.ts";
 import { ExtensionSyncWebsocket } from "./extensions/sync_websocket.ts";
 import { delay } from "@std/async";
 import { assert, assertEquals } from "@std/assert";
-import { Syncer } from "../syncer/syncer.ts";
+import type { Syncer } from "../syncer/syncer.ts";
 import { Path } from "../path/path.ts";
 import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
 import { StorageDriverMemory } from "../peer/storage_drivers/memory.ts";

@@ -1,4 +1,4 @@
-import { Ed25519Driver } from "../types.ts";
+import type { Ed25519Driver } from "../types.ts";
 
 export class Ed25519webcryptoNonExtractable
   implements Ed25519Driver<CryptoKey> {

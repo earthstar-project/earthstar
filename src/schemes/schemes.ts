@@ -1,4 +1,4 @@
-import * as Willow from "@earthstar/willow";
+import type * as Willow from "@earthstar/willow";
 
 import { concat, equals as equalsBytes } from "@std/bytes";
 import {
@@ -6,21 +6,22 @@ import {
   encodeCompactWidth,
   encodeEntry,
   encodePath,
-  EncodingScheme,
+  type EncodingScheme,
   orderBytes,
-  PathScheme,
+  type PathScheme,
   successorBytesFixedWidth,
 } from "@earthstar/willow-utils";
 import * as Meadowcap from "@earthstar/meadowcap";
 import { ed25519, hashToCurve, x25519 } from "@noble/curves/ed25519";
-import { Auth, AuthorisationToken } from "../auth/auth.ts";
-import { SubspaceCapability } from "../caps/types.ts";
+import { ExtPointConstructor } from "@noble/curves/abstract/edwards";
+import type { Auth, AuthorisationToken } from "../auth/auth.ts";
+import type { SubspaceCapability } from "../caps/types.ts";
 import {
   decodeIdentityPublicKey,
   decodeStreamIdentityPublicKey,
   encodeIdentityPublicKey,
-  IdentityKeypairRaw,
-  IdentityPublicKey,
+  type IdentityKeypairRaw,
+  type IdentityPublicKey,
   identitySign,
   identityVerify,
 } from "../identifiers/identity.ts";
@@ -29,14 +30,15 @@ import {
   decodeStreamSharePublicKey,
   encodeSharePublicKey,
   isCommunalShare,
-  SharePublicKey,
+  type SharePublicKey,
   shareSign,
   shareVerify,
 } from "../identifiers/share.ts";
 import { EarthstarError } from "../util/errors.ts";
-import { PreFingerprint } from "../store/types.ts";
-import { Blake3Driver } from "../blake3/types.ts";
-import { Ed25519Driver } from "../cinn25519/types.ts";
+import type { PreFingerprint } from "../store/types.ts";
+import type { Blake3Driver } from "../blake3/types.ts";
+import type { Ed25519Driver } from "../cinn25519/types.ts";
+import { ExtendedPoint } from "@noble/ed25519";
 
 export const namespaceScheme: Willow.NamespaceScheme<SharePublicKey> = {
   encode: (key) => encodeSharePublicKey(key),
@@ -377,7 +379,10 @@ export const fingerprintScheme: Willow.FingerprintScheme<
     }));
   },
   fingerprintCombine: (a, b) => {
-    return a.add(b);
+    // We do this because willow-js doesn't (de)serialise classes with all their methods.
+    const realA = new ExtendedPoint(a.ex, a.ey, a.ez, a.et);
+    const realB = new ExtendedPoint(b.ex, b.ey, b.ez, b.et);
+    return realA.add(realB);
   },
   fingerprintFinalise: (pre) => {
     // @ts-ignore https://github.com/paulmillr/noble-curves/issues/137

@@ -1,5 +1,5 @@
-import { Peer } from "../peer/peer.ts";
-import { ServerExtension } from "./extensions/extension.ts";
+import type { Peer } from "../peer/peer.ts";
+import type { ServerExtension } from "./extensions/extension.ts";
 
 /** The core server logic. Combine this with a HTTP framework to create a fully-fledged server. */
 export class ServerCore {

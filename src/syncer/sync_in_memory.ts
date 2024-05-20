@@ -1,11 +1,12 @@
 import * as Willow from "@earthstar/willow";
 import { encodeShareTag } from "../identifiers/share.ts";
-import { Peer } from "../peer/peer.ts";
+import type { Peer } from "../peer/peer.ts";
 import { capSelectorsToCapPackSelectors } from "../peer/util.ts";
-import { EarthstarError, isErr, ValidationError } from "../util/errors.ts";
+import { EarthstarError, isErr, type ValidationError } from "../util/errors.ts";
 import { Syncer } from "./syncer.ts";
-import { CapSelector, RuntimeDriver } from "../peer/types.ts";
+import type { CapSelector, RuntimeDriver } from "../peer/types.ts";
 
+/** Sync two {@linkcode Peer} instances in the same process using an in-memory transport. */
 export async function syncInMemory(alfie: Peer, betty: Peer, opts: {
   alfieInterests?: CapSelector[];
   bettyInterests?: CapSelector[];

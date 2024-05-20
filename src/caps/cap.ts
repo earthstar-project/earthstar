@@ -1,14 +1,14 @@
 import { ANY_SUBSPACE, OPEN_END } from "@earthstar/willow-utils";
-import { Auth } from "../auth/auth.ts";
+import type { Auth } from "../auth/auth.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
-  IdentityTag,
+  type IdentityTag,
 } from "../identifiers/identity.ts";
-import { encodeShareTag, ShareTag } from "../identifiers/share.ts";
+import { encodeShareTag, type ShareTag } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
-import { isErr, ValidationError } from "../util/errors.ts";
-import { ReadCapPack, WriteCapPack } from "./types.ts";
+import { isErr, type ValidationError } from "../util/errors.ts";
+import type { ReadCapPack, WriteCapPack } from "./types.ts";
 import { encodeCapPack, isReadCapPack } from "./util.ts";
 import {
   getGrantedAreaCommunal,

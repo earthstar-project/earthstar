@@ -1,9 +1,9 @@
 import { IS_BETTY, TransportWebsocket } from "@earthstar/willow";
 import { encodeShareTag } from "../../identifiers/share.ts";
-import { Peer } from "../../peer/peer.ts";
+import type { Peer } from "../../peer/peer.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { EarthstarError, isErr } from "../../util/errors.ts";
-import { ServerExtension } from "./extension.ts";
+import type { ServerExtension } from "./extension.ts";
 import { RuntimeDriverDeno } from "../../runtime/driver_deno.ts";
 
 export class ExtensionSyncWebsocket implements ServerExtension {

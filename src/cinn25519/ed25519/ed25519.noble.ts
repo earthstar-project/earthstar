@@ -1,5 +1,5 @@
 import * as ed from "@noble/ed25519";
-import { Ed25519Driver } from "../types.ts";
+import type { Ed25519Driver } from "../types.ts";
 
 export class Ed25519noble implements Ed25519Driver<Uint8Array> {
   async generateKeypair(): Promise<

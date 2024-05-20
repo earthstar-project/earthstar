@@ -1,8 +1,8 @@
 import { concat } from "@std/bytes";
 import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
-import { GrowingBytes } from "@earthstar/willow-utils";
-import { Ed25519Driver } from "./types.ts";
+import type { GrowingBytes } from "@earthstar/willow-utils";
+import type { Ed25519Driver } from "./types.ts";
 
 export type Cinn25519Keypair = {
   publicKey: {

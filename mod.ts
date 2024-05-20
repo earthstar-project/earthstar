@@ -1,11 +1,15 @@
 export type { AuthOpts } from "./src/auth/auth.ts";
 export { Auth } from "./src/auth/auth.ts";
 
+export type { Blake3Digest, Blake3Driver } from "./src/blake3/types.ts";
+export type { Ed25519Driver } from "./src/cinn25519/types.ts";
+
 export { Cap } from "./src/caps/cap.ts";
 
 export { Path } from "./src/path/path.ts";
 
 export type {
+  CapSelector,
   PeerOpts,
   RuntimeDriver,
   StorageDriver,
@@ -20,6 +24,12 @@ export { RuntimeDriverUniversal } from "./src/runtime/driver_universal.ts";
 export type { ServerExtension } from "./src/server/extensions/extension.ts";
 
 export type {
+  IdentityKeypair,
+  IdentityTag,
+} from "./src/identifiers/identity.ts";
+export type { ShareKeypair, ShareTag } from "./src/identifiers/share.ts";
+
+export type {
   Document,
   Payload,
   Query,
@@ -31,7 +41,12 @@ export { Store } from "./src/store/store.ts";
 
 export { syncInMemory } from "./src/syncer/sync_in_memory.ts";
 
-export type { SyncerOpts, SyncInterests } from "./src/syncer/syncer.ts";
+export type {
+  ReadAuthorisation,
+  SyncerOpts,
+  SyncInterests,
+  Transport,
+} from "./src/syncer/syncer.ts";
 
 export { Syncer } from "./src/syncer/syncer.ts";
 

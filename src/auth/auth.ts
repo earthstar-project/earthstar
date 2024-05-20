@@ -1,11 +1,11 @@
-import * as Willow from "@earthstar/willow";
+import type * as Willow from "@earthstar/willow";
 import * as Meadowcap from "@earthstar/meadowcap";
 import {
   decodeIdentityPublicKey,
   encodeIdentityPublicKey,
   generateIdentityKeypair,
-  IdentityKeypairRaw,
-  IdentityPublicKey,
+  type IdentityKeypairRaw,
+  type IdentityPublicKey,
   identitySign,
   identityVerify,
 } from "../identifiers/identity.ts";
@@ -15,10 +15,10 @@ import {
   encodeShareTag,
   generateShareKeypair,
   isCommunalShare,
-  ShareKeypairRaw,
-  SharePublicKey,
+  type ShareKeypairRaw,
+  type SharePublicKey,
   shareSign,
-  ShareTag,
+  type ShareTag,
   shareVerify,
 } from "../identifiers/share.ts";
 import {
@@ -32,7 +32,7 @@ import {
   isErr,
   ValidationError,
 } from "../util/errors.ts";
-import { Capability, ReadCapPack, WriteCapPack } from "../caps/types.ts";
+import type { Capability, ReadCapPack, WriteCapPack } from "../caps/types.ts";
 import {
   decodeCapPack,
   encodeCapPack,
@@ -40,13 +40,13 @@ import {
   isOwnedReadCapability,
   isReadCapPack,
 } from "../caps/util.ts";
-import { SyncInterests } from "../syncer/syncer.ts";
-import { CapPackSelector } from "./types.ts";
-import { Path } from "../path/path.ts";
+import type { SyncInterests } from "../syncer/syncer.ts";
+import type { CapPackSelector } from "./types.ts";
+import type { Path } from "../path/path.ts";
 import { concat } from "@std/bytes";
-import { Area, areaIsIncluded, orderBytes } from "@earthstar/willow-utils";
-import { RuntimeDriver } from "../peer/types.ts";
-import { Blake3Digest } from "../blake3/types.ts";
+import { type Area, areaIsIncluded, orderBytes } from "@earthstar/willow-utils";
+import type { RuntimeDriver } from "../peer/types.ts";
+import type { Blake3Digest } from "../blake3/types.ts";
 
 export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
   SharePublicKey,
@@ -57,6 +57,7 @@ export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
 
 const PASSWORD_CHALLENGE = new Uint8Array([2, 3, 5, 8, 13]);
 
+/** Options for constructing an {@linkcode Auth} instance. */
 export type AuthOpts = {
   password: string;
   kvDriver: Willow.KvDriver;
@@ -65,6 +66,7 @@ export type AuthOpts = {
 
 /** Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password. */
 export class Auth {
+  /** The {@linkcode RuntimeDriver} being used by this {@linkcode Auth}. */
   runtimeDriver: RuntimeDriver;
 
   private encryptionKey = Promise.withResolvers<CryptoKey>();
@@ -91,6 +93,7 @@ export class Auth {
     return true;
   }
 
+  /** Create a new {@linkcode} Auth instance. {@linkcode Peer} usually does this for you. */
   constructor(opts: AuthOpts) {
     this.kvDriver = opts.kvDriver;
     this.runtimeDriver = opts.runtimeDriver;
@@ -186,7 +189,8 @@ export class Auth {
     });
   }
 
-  private async encrypt(bytes: Uint8Array) {
+  /** Encrypt some bytes with a derived encryption key. */
+  private async encrypt(bytes: Uint8Array): Promise<Uint8Array> {
     const key = await this.encryptionKey.promise;
 
     const iv = crypto.getRandomValues(new Uint8Array(12));
@@ -203,6 +207,7 @@ export class Auth {
     return concat([iv, new Uint8Array(encrypted)]);
   }
 
+  /** Decrypt some encrypted bytes with a derived encryption key. */
   private async decrypt(encrypted: Uint8Array): Promise<Uint8Array> {
     const iv = encrypted.subarray(0, 12);
     const encryptedData = encrypted.subarray(12);
@@ -412,19 +417,21 @@ export class Auth {
     }
   }
 
-  /** Produce a new cap pack granting full read / write access based on the semantics of the share (communal vs. share), and optionally store it in encrypted storage. */
+  /** Produce a new read cap pack granting full read / write access based on the semantics of the share (communal vs. share), and optionally store it in encrypted storage. */
   async createFullCapPack(
     share: SharePublicKey,
     forUser: IdentityPublicKey,
     accessMode: "read",
     store?: boolean,
   ): Promise<ReadCapPack | ValidationError>;
+  /** Produce a new write cap pack granting full read / write access based on the semantics of the share (communal vs. share), and optionally store it in encrypted storage. */
   async createFullCapPack(
     share: SharePublicKey,
     forUser: IdentityPublicKey,
     accessMode: "write",
     store?: boolean,
   ): Promise<WriteCapPack | ValidationError>;
+  /** Produce a new cap pack granting full read / write access based on the semantics of the share (communal vs. share), and optionally store it in encrypted storage. */
   async createFullCapPack(
     share: SharePublicKey,
     forUser: IdentityPublicKey,
