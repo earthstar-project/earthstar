@@ -18,6 +18,12 @@ export type PreFingerprint = H2CPoint<bigint>;
 /** Provides access to the (possibly partial) data associated with a {@linkcode Document}. */
 export type Payload = Willow.Payload;
 
+/** The options used to create an {@link AuthorisationToken}. */
+export type AuthorisationOpts = {
+  cap: Capability;
+  receiverKeypair: IdentityKeypairRaw;
+};
+
 /** The metadata associated with a {@link Payload}. */
 export type Document = {
   /** The share this document belongs to. */
