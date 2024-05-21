@@ -1,15 +1,15 @@
-import { Willow } from "../../deps.ts";
-import { AuthorisationToken } from "../auth/auth.ts";
-import { Capability } from "../caps/types.ts";
-import {
+import type * as Willow from "@earthstar/willow";
+import type { AuthorisationToken } from "../auth/auth.ts";
+import type { Capability } from "../caps/types.ts";
+import type {
   IdentityKeypairRaw,
   IdentityPublicKey,
 } from "../identifiers/identity.ts";
-import { SharePublicKey } from "../identifiers/share.ts";
+import type { SharePublicKey } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
 import { entryToDocument } from "../util/documents.ts";
 
-import { Document, PreFingerprint } from "./types.ts";
+import type { Document, PreFingerprint } from "./types.ts";
 
 export class DocumentSetEvent extends CustomEvent<{ document: Document }> {
   constructor(document: Document) {

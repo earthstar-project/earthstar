@@ -1,7 +1,7 @@
-import { decodeBase64Url, encodeBase64Url } from "../../../deps.ts";
-import { Ed25519Driver } from "../types.ts";
+import { decodeBase64Url, encodeBase64Url } from "@std/encoding/base64url";
+import type { Ed25519Driver } from "../types.ts";
 
-export class Ed25519 implements Ed25519Driver<Uint8Array> {
+export class Ed25519webcrypto implements Ed25519Driver<Uint8Array> {
   async generateKeypair(): Promise<
     { publicKey: Uint8Array; secretKey: Uint8Array }
   > {

@@ -1,6 +1,6 @@
-import { GrowingBytes } from "../../deps.ts";
+import type { GrowingBytes } from "@earthstar/willow-utils";
 import {
-  Cinn25519Keypair,
+  type Cinn25519Keypair,
   cinn25519Sign,
   cinn25519Verify,
   decodeCinn25519PublickKey,
@@ -12,13 +12,17 @@ import {
   isValidShortname,
 } from "../cinn25519/cinn25519.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
+import type { Ed25519Driver } from "../cinn25519/types.ts";
 
 export const MIN_SHARE_SHORTNAME_LENGTH = 1;
 export const MAX_SHARE_SHORTNAME_LENGTH = 15;
 
 export type ShareKeypairRaw = Cinn25519Keypair;
 export type SharePublicKey = ShareKeypairRaw["publicKey"];
+
+/** An share's public key encoded in a more human-friendly form. */
 export type ShareTag = string;
+/** A share's tag and its corresponding secret key. */
 export type ShareKeypair = {
   tag: ShareTag;
   secretKey: Uint8Array;
@@ -26,11 +30,13 @@ export type ShareKeypair = {
 
 export async function generateShareKeypair(
   shortname: string,
-  owned?: boolean,
+  owned: boolean,
+  driver: Ed25519Driver<Uint8Array>,
 ): Promise<ShareKeypairRaw | ValidationError> {
   let keypair = await generateCinn25519Keypair(shortname, {
     minLength: MIN_SHARE_SHORTNAME_LENGTH,
     maxLength: MAX_SHARE_SHORTNAME_LENGTH,
+    driver,
   });
 
   if (isErr(keypair)) {
@@ -44,6 +50,7 @@ export async function generateShareKeypair(
     keypair = await generateCinn25519Keypair(shortname, {
       minLength: MIN_SHARE_SHORTNAME_LENGTH,
       maxLength: MAX_SHARE_SHORTNAME_LENGTH,
+      driver,
     }) as ShareKeypairRaw;
   }
 
@@ -52,15 +59,12 @@ export async function generateShareKeypair(
 
 export async function generateOwnedShareKeypair(
   shortname: string,
+  driver: Ed25519Driver<Uint8Array>,
 ): Promise<ShareKeypairRaw | ValidationError> {
-  let keypair = await generateShareKeypair(shortname);
+  const keypair = await generateShareKeypair(shortname, true, driver);
 
   if (isErr(keypair)) {
     return keypair;
-  }
-
-  while (isCommunalShare(keypair.publicKey)) {
-    keypair = await generateShareKeypair(shortname) as ShareKeypairRaw;
   }
 
   return keypair;
@@ -69,20 +73,23 @@ export async function generateOwnedShareKeypair(
 export function shareSign(
   keypair: ShareKeypairRaw,
   bytes: Uint8Array,
+  driver: Ed25519Driver<Uint8Array>,
 ): Promise<Uint8Array> {
-  return cinn25519Sign(keypair, bytes, MAX_SHARE_SHORTNAME_LENGTH);
+  return cinn25519Sign(keypair, bytes, MAX_SHARE_SHORTNAME_LENGTH, driver);
 }
 
 export function shareVerify(
   keypair: ShareKeypairRaw["publicKey"],
   signature: Uint8Array,
   bytes: Uint8Array,
+  driver: Ed25519Driver<Uint8Array>,
 ): Promise<boolean> {
   return cinn25519Verify(
     keypair,
     signature,
     bytes,
     MAX_SHARE_SHORTNAME_LENGTH,
+    driver,
   );
 }
 

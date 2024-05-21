@@ -1,11 +1,12 @@
-import { OPEN_END, successorPath, Willow } from "../../deps.ts";
-import { Auth, AuthorisationToken } from "../auth/auth.ts";
+import * as Willow from "@earthstar/willow";
+import { OPEN_END, successorPath } from "@earthstar/willow-utils";
+import type { Auth, AuthorisationToken } from "../auth/auth.ts";
 import {
-  authorisationScheme,
   fingerprintScheme,
+  makeAuthorisationScheme,
+  makePayloadScheme,
   namespaceScheme,
   pathScheme,
-  payloadScheme,
   subspaceScheme,
 } from "../schemes/schemes.ts";
 import { entryToDocument } from "../util/documents.ts";
@@ -16,7 +17,7 @@ import {
   ValidationError,
 } from "../util/errors.ts";
 import { relayWillowEvents } from "./events.ts";
-import {
+import type {
   AuthorisationOpts,
   Document,
   PreFingerprint,
@@ -28,14 +29,14 @@ import { queryToWillowQueryParams } from "./util.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
-  IdentityPublicKey,
-  IdentityTag,
+  type IdentityPublicKey,
+  type IdentityTag,
 } from "../identifiers/identity.ts";
 import {
   decodeShareTag,
   encodeShareTag,
-  SharePublicKey,
-  ShareTag,
+  type SharePublicKey,
+  type ShareTag,
 } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
 
@@ -72,21 +73,20 @@ export class Store extends EventTarget {
     Uint8Array
   >;
 
+  /** The tag of the share this {@linkcode Store} belongs to. */
   get share(): ShareTag {
     return encodeShareTag(this.willow.namespace);
   }
 
+  /** Construct a new {@linkcode} Store. Normally {@linkcode Peer} will do this for you. */
   constructor(
     share: ShareTag,
     auth: Auth,
-    drivers?: StoreDriverOpts,
+    drivers: StoreDriverOpts,
   ) {
     super();
 
     this.auth = auth;
-
-    // If drivers are specified, use those, otherwise always use in-memory drivers (the default in willow-js).
-    const driversToUse = drivers && drivers !== "memory" ? drivers : {};
 
     const sharePublicKey = decodeShareTag(share);
 
@@ -100,11 +100,15 @@ export class Store extends EventTarget {
         namespace: namespaceScheme,
         subspace: subspaceScheme,
         path: pathScheme,
-        payload: payloadScheme,
+        payload: makePayloadScheme(drivers.runtimeDriver.blake3),
         fingerprint: fingerprintScheme,
-        authorisation: authorisationScheme,
+        authorisation: makeAuthorisationScheme(
+          drivers.runtimeDriver.ed25519,
+          drivers.runtimeDriver.blake3,
+        ),
       },
-      ...driversToUse,
+      entryDriver: drivers.entryDriver || undefined,
+      payloadDriver: drivers.payloadDriver || undefined,
     });
 
     relayWillowEvents(this, this.willow);

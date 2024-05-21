@@ -1,18 +1,20 @@
-import { ANY_SUBSPACE, Meadowcap, OPEN_END } from "../../deps.ts";
-import { Auth } from "../auth/auth.ts";
+import { ANY_SUBSPACE, OPEN_END } from "@earthstar/willow-utils";
+import type { Auth } from "../auth/auth.ts";
 import {
   decodeIdentityTag,
   encodeIdentityTag,
-  IdentityTag,
+  type IdentityTag,
 } from "../identifiers/identity.ts";
-import { encodeShareTag, ShareTag } from "../identifiers/share.ts";
+import { encodeShareTag, type ShareTag } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
-import { meadowcapParams } from "../schemes/schemes.ts";
-import { isErr, ValidationError } from "../util/errors.ts";
-import { ReadCapPack, WriteCapPack } from "./types.ts";
+import { isErr, type ValidationError } from "../util/errors.ts";
+import type { ReadCapPack, WriteCapPack } from "./types.ts";
 import { encodeCapPack, isReadCapPack } from "./util.ts";
-
-const meadowcap = new Meadowcap.Meadowcap(meadowcapParams);
+import {
+  getGrantedAreaCommunal,
+  getGrantedAreaOwned,
+  getReceiver,
+} from "@earthstar/meadowcap";
 
 /** An unforgeable token bestowing read or write access to a share.
  */
@@ -48,11 +50,13 @@ export class Cap {
 
     this.share = encodeShareTag(cap.namespaceKey);
     this.receiver = encodeIdentityTag(
-      meadowcap.getCapReceiver(cap),
+      getReceiver(cap),
     );
     this.accessMode = cap.accessMode;
 
-    const grantedArea = meadowcap.getCapGrantedArea(cap);
+    const grantedArea = "initialAuthorisation" in cap
+      ? getGrantedAreaOwned(cap)
+      : getGrantedAreaCommunal(cap);
 
     this.grantedIdentity = grantedArea.includedSubspaceId === ANY_SUBSPACE
       ? undefined
@@ -124,6 +128,6 @@ export class Cap {
 
   /** Export the capability to an encoded format for transmission. */
   export(): Uint8Array {
-    return encodeCapPack(this.capPack);
+    return encodeCapPack(this.capPack, this.auth.runtimeDriver);
   }
 }

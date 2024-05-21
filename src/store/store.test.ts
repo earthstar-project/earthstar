@@ -1,24 +1,34 @@
+import { assert, assertEquals } from "@std/assert";
 import { Store } from "./store.ts";
 import { Auth } from "../auth/auth.ts";
-
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.203.0/assert/mod.ts";
-import { DocumentSetEvent } from "./events.ts";
-import { Document } from "./types.ts";
+import type { DocumentSetEvent } from "./events.ts";
+import type { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";
-import { encodeShareTag, ShareKeypairRaw } from "../identifiers/share.ts";
+import { encodeShareTag, type ShareKeypairRaw } from "../identifiers/share.ts";
 import {
   encodeIdentityTag,
-  IdentityKeypairRaw,
+  type IdentityKeypairRaw,
 } from "../identifiers/identity.ts";
-import { KvDriverInMemory } from "jsr:@earthstar/willow";
+import {
+  EntryDriverKvStore,
+  KvDriverInMemory,
+  PayloadDriverMemory,
+} from "jsr:@earthstar/willow";
 import { Path } from "../path/path.ts";
+import { blake3std } from "../blake3/blake3.std.ts";
+import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
+import {
+  fingerprintScheme,
+  makePayloadScheme,
+  namespaceScheme,
+  pathScheme,
+  subspaceScheme,
+} from "../schemes/schemes.ts";
 
 const auth = new Auth({
   password: "password1234",
   kvDriver: new KvDriverInMemory(),
+  runtimeDriver: new RuntimeDriverDeno(),
 });
 
 const share = await auth.createShareKeypair(
@@ -34,7 +44,23 @@ const identityDisplay = encodeIdentityTag(identity.publicKey);
 await auth.createFullCapPack(share.publicKey, identity.publicKey, "write");
 
 function newStore() {
-  return new Store(shareDisplay, auth);
+  const payload = new PayloadDriverMemory(makePayloadScheme(blake3std));
+
+  const entry = new EntryDriverKvStore({
+    namespaceScheme,
+    subspaceScheme,
+    pathScheme,
+    payloadScheme: makePayloadScheme(blake3std),
+    getPayloadLength: (digest) => payload.length(digest),
+    fingerprintScheme: fingerprintScheme,
+    kvDriver: new KvDriverInMemory(),
+  });
+
+  return new Store(shareDisplay, auth, {
+    runtimeDriver: new RuntimeDriverDeno(),
+    entryDriver: entry,
+    payloadDriver: payload,
+  });
 }
 
 Deno.test("Store.set", async () => {

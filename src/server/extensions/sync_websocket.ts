@@ -1,9 +1,10 @@
-import { Willow } from "../../../deps.ts";
+import { IS_BETTY, TransportWebsocket } from "@earthstar/willow";
 import { encodeShareTag } from "../../identifiers/share.ts";
-import { Peer } from "../../peer/peer.ts";
+import type { Peer } from "../../peer/peer.ts";
 import { Syncer } from "../../syncer/syncer.ts";
 import { EarthstarError, isErr } from "../../util/errors.ts";
-import { ServerExtension } from "./extension.ts";
+import type { ServerExtension } from "./extension.ts";
+import { RuntimeDriverDeno } from "../../runtime/driver_deno.ts";
 
 export class ExtensionSyncWebsocket implements ServerExtension {
   private path = "";
@@ -33,7 +34,7 @@ export class ExtensionSyncWebsocket implements ServerExtension {
 
     const { socket, response } = Deno.upgradeWebSocket(req);
 
-    const transport = new Willow.TransportWebsocket(Willow.IS_BETTY, socket);
+    const transport = new TransportWebsocket(IS_BETTY, socket);
 
     new Syncer({
       auth: peer.auth,
@@ -53,6 +54,7 @@ export class ExtensionSyncWebsocket implements ServerExtension {
 
         return result;
       },
+      runtime: new RuntimeDriverDeno(),
     });
 
     return response;

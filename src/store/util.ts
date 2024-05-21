@@ -1,10 +1,14 @@
-import { ANY_SUBSPACE, AreaOfInterest, OPEN_END } from "../../deps.ts";
+import {
+  ANY_SUBSPACE,
+  type AreaOfInterest,
+  OPEN_END,
+} from "@earthstar/willow-utils";
 import {
   decodeIdentityTag,
-  IdentityPublicKey,
+  type IdentityPublicKey,
 } from "../identifiers/identity.ts";
-import { isErr, ValidationError } from "../util/errors.ts";
-import { Query } from "./types.ts";
+import { isErr, type ValidationError } from "../util/errors.ts";
+import type { Query } from "./types.ts";
 
 const orderMap: Record<string, "subspace" | "path" | "timestamp"> = {
   "identity": "subspace",

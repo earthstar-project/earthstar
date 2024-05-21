@@ -1,7 +1,7 @@
-import * as ed from "jsr:@noble/ed25519@2.1.0";
-import { Ed25519Driver } from "../types.ts";
+import * as ed from "@noble/ed25519";
+import type { Ed25519Driver } from "../types.ts";
 
-export class Ed25519 implements Ed25519Driver<Uint8Array> {
+export class Ed25519noble implements Ed25519Driver<Uint8Array> {
   async generateKeypair(): Promise<
     { publicKey: Uint8Array; secretKey: Uint8Array }
   > {

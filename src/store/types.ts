@@ -1,24 +1,30 @@
-import { H2CPoint, Willow } from "../../deps.ts";
-import { AuthorisationToken } from "../auth/auth.ts";
-import { Capability } from "../caps/types.ts";
-import { Base32String } from "../encoding/types.ts";
-import {
+import type * as Willow from "@earthstar/willow";
+import type { H2CPoint } from "@noble/curves";
+import type { AuthorisationToken } from "../auth/auth.ts";
+import type { Capability } from "../caps/types.ts";
+import type { Base32String } from "../encoding/types.ts";
+import type {
   IdentityKeypairRaw,
   IdentityPublicKey,
   IdentityTag,
 } from "../identifiers/identity.ts";
-import { SharePublicKey, ShareTag } from "../identifiers/share.ts";
-import { Path } from "../path/path.ts";
+import type { SharePublicKey, ShareTag } from "../identifiers/share.ts";
+import type { Path } from "../path/path.ts";
+import type { Blake3Digest } from "../blake3/types.ts";
+import type { RuntimeDriver } from "../peer/types.ts";
 
 export type PreFingerprint = H2CPoint<bigint>;
 
+/** Provides access to the (possibly partial) data associated with a {@linkcode Document}. */
 export type Payload = Willow.Payload;
 
+/** The options used to create an {@link AuthorisationToken}. */
 export type AuthorisationOpts = {
   cap: Capability;
   receiverKeypair: IdentityKeypairRaw;
 };
 
+/** The metadata associated with a {@link Payload}. */
 export type Document = {
   /** The share this document belongs to. */
   share: ShareTag;
@@ -38,16 +44,19 @@ export type Document = {
   payload: Payload | undefined;
 };
 
-export type StoreDriverOpts = "memory" | {
+/** Options for configuring the drivers used by a {@linkcode Store}. */
+export type StoreDriverOpts = {
   entryDriver: Willow.EntryDriver<
     SharePublicKey,
     IdentityPublicKey,
-    ArrayBuffer,
-    ArrayBuffer
+    Blake3Digest,
+    PreFingerprint
   >;
-  payloadDriver: Willow.PayloadDriver<ArrayBuffer>;
+  payloadDriver: Willow.PayloadDriver<Blake3Digest>;
+  runtimeDriver: RuntimeDriver;
 };
 
+/** Describes which {@linkcode Document}s should be retrieved. */
 export type Query = {
   /** A path all documents must be prefixed by. */
   pathPrefix?: Path;
@@ -72,6 +81,7 @@ export type Query = {
   descending?: boolean;
 };
 
+/** Emitted after an attempt to set a document fails. */
 export type SetEventFailure = {
   kind: "failure";
   reason: "write_failure" | "invalid_entry" | "pruning_disallowed";
@@ -79,16 +89,19 @@ export type SetEventFailure = {
   err: Error | null;
 };
 
+/** Emitted after an operation which would otherwise trigger prefix pruning is prevented. */
 export type SetEventPruningPrevented = {
   kind: "pruning_prevented";
   preservedDocuments: Document[];
 };
 
+/** Emitted when an attempt to set a document does nothing at all. */
 export type SetEventNoOp = {
   kind: "no_op";
   reason: "obsolete_from_same_subspace" | "newer_prefix_found";
 };
 
+/** Emitted when an attempt to set a document succeeds. */
 export type SetEventSuccess = {
   kind: "success";
   /** The successfully created document. */
@@ -97,12 +110,14 @@ export type SetEventSuccess = {
   pruned: Path[];
 };
 
+/** Emitted after an attempt to set a document. */
 export type SetEvent =
   | SetEventFailure
   | SetEventPruningPrevented
   | SetEventNoOp
   | SetEventSuccess;
 
+/** Emitted after an attempt to ingest a document from elsewhere. */
 export type IngestEvent = Willow.IngestEvent<
   SharePublicKey,
   IdentityPublicKey,

@@ -1,14 +1,17 @@
+import { assert, assertEquals } from "@std/assert";
 import { Peer } from "./peer.ts";
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.203.0/assert/mod.ts";
 import { notErr } from "../util/errors.ts";
 import { Path } from "../path/path.ts";
+import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
+import { StorageDriverMemory } from "./storage_drivers/memory.ts";
 
 Deno.test("Peer", async () => {
   // A Peer which can securely store capabilities and keypairs.
-  const peer = new Peer({ password: "password1234" });
+  const peer = new Peer({
+    password: "password1234",
+    runtime: new RuntimeDriverDeno(),
+    storage: new StorageDriverMemory(),
+  });
 
   // At this point the peer has no capabilities, so no shares.
   assertEquals(await peer.shares(), []);

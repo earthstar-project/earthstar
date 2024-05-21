@@ -1,11 +1,11 @@
-import { createServer } from "node:http";
-import { ServerExtension } from "./extensions/extension.ts";
+import type { createServer } from "node:http";
+import type { ServerExtension } from "./extensions/extension.ts";
 import { Buffer } from "https://deno.land/std@0.167.0/node/buffer.ts";
 import { ServerCore } from "./server_core.ts";
-import { PeerOpts } from "../peer/peer.ts";
+import type { Peer } from "../peer/peer.ts";
 
 export type ServerOpts = {
-  peer: PeerOpts;
+  peer: Peer;
   port?: number;
   server: ReturnType<typeof createServer>;
 };

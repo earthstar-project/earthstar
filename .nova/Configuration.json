@@ -10,7 +10,9 @@
     "deno.json",
     "deps.ts",
     "src",
-    "debug"
+    "debug",
+    "mod.deno.ts",
+    "mod.ts"
   ],
   "eablokker.tabsSidebar.config.customKindGroupsOrder" : [
     "typescript"

@@ -1,13 +1,11 @@
-import {
-  assert,
-  assertEquals,
-} from "https://deno.land/std@0.202.0/assert/mod.ts";
+import { assert, assertEquals } from "@std/assert";
 import { notErr } from "../util/errors.ts";
 import {
   decodeCinn25519PublickKey,
   encodeCinn25519PublicKey,
   generateCinn25519Keypair,
 } from "./cinn25519.ts";
+import { Ed25519webcrypto } from "./ed25519/ed25519.webcrypto.ts";
 
 type PubKeyEncodeVector = {
   shortname: string;
@@ -34,6 +32,7 @@ Deno.test("encode / decode Cinn25519 public key", async () => {
     const keypair = await generateCinn25519Keypair(shortname, {
       minLength,
       maxLength,
+      driver: new Ed25519webcrypto(),
     });
 
     assert(notErr(keypair));

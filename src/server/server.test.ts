@@ -1,19 +1,24 @@
-import { IdentityKeypair } from "../identifiers/identity.ts";
+import type { IdentityKeypair } from "../identifiers/identity.ts";
 import { Peer } from "../peer/peer.ts";
 import { Server } from "./server.ts";
 
-import { ShareKeypair } from "../identifiers/share.ts";
-import { Cap } from "../caps/cap.ts";
-import { Store } from "../store/store.ts";
+import type { ShareKeypair } from "../identifiers/share.ts";
+import type { Cap } from "../caps/cap.ts";
+import type { Store } from "../store/store.ts";
 import { ExtensionSyncWebsocket } from "./extensions/sync_websocket.ts";
-import { delay } from "https://deno.land/std@0.224.0/async/delay.ts";
-import { assertEquals } from "https://deno.land/std@0.203.0/assert/assert_equals.ts";
-import { assert } from "https://deno.land/std@0.203.0/assert/assert.ts";
-import { Syncer } from "../syncer/syncer.ts";
+import { delay } from "@std/async";
+import { assert, assertEquals } from "@std/assert";
+import type { Syncer } from "../syncer/syncer.ts";
 import { Path } from "../path/path.ts";
+import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
+import { StorageDriverMemory } from "../peer/storage_drivers/memory.ts";
 
 Deno.test("Basic server setup", async () => {
-  const peer = new Peer({ password: "test1234" });
+  const peer = new Peer({
+    password: "test1234",
+    runtime: new RuntimeDriverDeno(),
+    storage: new StorageDriverMemory(),
+  });
 
   const suzyKeypair = await peer.createIdentity("suzy") as IdentityKeypair;
   const serverSettingsKeypair = await peer.createShare(
@@ -32,7 +37,11 @@ Deno.test("Basic server setup", async () => {
   );
   const settingsStore = await peer.getStore(serverSettingsKeypair.tag) as Store;
 
-  const serverPeer = new Peer({ password: "server123" });
+  const serverPeer = new Peer({
+    password: "server123",
+    runtime: new RuntimeDriverDeno(),
+    storage: new StorageDriverMemory(),
+  });
   const serverKeypair = await serverPeer.createIdentity(
     "serv",
   ) as IdentityKeypair;

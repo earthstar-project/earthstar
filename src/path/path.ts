@@ -1,4 +1,8 @@
-import { isPathPrefixed, isValidPath, Path as WillowPath } from "../../deps.ts";
+import {
+  isPathPrefixed,
+  isValidPath,
+  type Path as WillowPath,
+} from "@earthstar/willow-utils";
 import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
 import { pathScheme } from "../schemes/schemes.ts";
 import { ValidationError } from "../util/errors.ts";
@@ -7,7 +11,7 @@ import { ValidationError } from "../util/errors.ts";
  */
 export class Path {
   /** The empty path, which prefixes all other paths. */
-  static empty = new Path([]);
+  static empty: Path = new Path([]);
 
   /** Determine whether a new {@linkcode Path} made of bytestrings would be a valid Earthstar path. */
   static isValidBytePath(...bytePath: Uint8Array[]): boolean {
@@ -133,7 +137,9 @@ export class Path {
     return b32Path;
   }
 
+  /** Format the underlying array of bytestrings as though they were ASCII. May fail. */
   format(format: "ascii"): string | undefined;
+  /** Format the underlying array of bytestrings as Base32 encoded strings. */
   format(format: "base32"): string;
   format(format: "ascii" | "base32"): string | undefined {
     if (format === "ascii") {

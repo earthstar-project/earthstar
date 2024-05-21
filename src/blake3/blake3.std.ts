@@ -1,6 +1,6 @@
-import { crypto } from "https://deno.land/std@0.224.0/crypto/mod.ts";
+import { crypto } from "@std/crypto";
 
-export async function blake3(
+export async function blake3std(
   source: Uint8Array | AsyncIterable<Uint8Array>,
 ): Promise<Uint8Array> {
   const buffer = await crypto.subtle.digest("BLAKE3", source);

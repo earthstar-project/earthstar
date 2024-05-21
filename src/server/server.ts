@@ -1,6 +1,6 @@
-import { ServerExtension } from "./extensions/extension.ts";
+import type { ServerExtension } from "./extensions/extension.ts";
 import { ServerCore } from "./server_core.ts";
-import { Peer } from "../peer/peer.ts";
+import type { Peer } from "../peer/peer.ts";
 
 export type ServerOpts = {
   peer: Peer;
