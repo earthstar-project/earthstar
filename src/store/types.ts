@@ -15,13 +15,10 @@ import type { RuntimeDriver } from "../peer/types.ts";
 
 export type PreFingerprint = H2CPoint<bigint>;
 
+/** Provides access to the (possibly partial) data associated with a {@linkcode Document}. */
 export type Payload = Willow.Payload;
 
-export type AuthorisationOpts = {
-  cap: Capability;
-  receiverKeypair: IdentityKeypairRaw;
-};
-
+/** The metadata associated with a {@link Payload}. */
 export type Document = {
   /** The share this document belongs to. */
   share: ShareTag;
@@ -41,6 +38,7 @@ export type Document = {
   payload: Payload | undefined;
 };
 
+/** Options for configuring the drivers used by a {@linkcode Store}. */
 export type StoreDriverOpts = {
   entryDriver: Willow.EntryDriver<
     SharePublicKey,
@@ -52,6 +50,7 @@ export type StoreDriverOpts = {
   runtimeDriver: RuntimeDriver;
 };
 
+/** Describes which {@linkcode Document}s should be retrieved. */
 export type Query = {
   /** A path all documents must be prefixed by. */
   pathPrefix?: Path;

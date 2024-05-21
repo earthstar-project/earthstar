@@ -2,7 +2,8 @@
 
 ## v10.2.1
 
-- (Fix) Fixed invitation URL redemption in Firefox and Chrome (thank you for reporting and testing @tripledoublev!)
+- (Fix) Fixed invitation URL redemption in Firefox and Chrome (thank you for
+  reporting and testing @tripledoublev!)
 
 ## v10.2.0
 

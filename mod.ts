@@ -1,3 +1,18 @@
+/**
+ * [Earthstar](https://earthstar-project.org) is a general purpose distributed data store, designed with the social realities of peer-to-peer computing kept in mind. It is powered by [Willow](https://willowprotocol.org).
+ *
+ * To get started, try instantiating a new {@linkcode Peer}:
+ *
+ * ```
+ * const peer = new Peer({
+ *   password: "password1234",
+ *   runtime: new RuntimeDriverUniversal(),
+ *   storage: new StorageDriverMemory();,
+ * });
+ * ```
+ *
+ * @module
+ */
 export type { AuthOpts } from "./src/auth/auth.ts";
 export { Auth } from "./src/auth/auth.ts";
 

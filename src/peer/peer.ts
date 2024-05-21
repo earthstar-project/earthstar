@@ -27,7 +27,16 @@ import type {
   StorageDriver,
 } from "./types.ts";
 
-/** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those. */
+/** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those.
+ *
+ * ```
+ * const peer = new Peer({
+ *   password: "password1234",
+ *   runtime: new RuntimeDriverUniversal(),
+ *   storage: new StorageDriverMemory();,
+ * });
+ * ```
+ */
 export class Peer {
   /** The peer's underlying {@linkcode} Auth instance, exposed here for low-level operations. */
   readonly auth: Auth;
