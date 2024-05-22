@@ -12,7 +12,8 @@
     "src",
     "debug",
     "mod.deno.ts",
-    "mod.ts"
+    "mod.ts",
+    "mod.browser.ts"
   ],
   "eablokker.tabsSidebar.config.customKindGroupsOrder" : [
     "typescript"
