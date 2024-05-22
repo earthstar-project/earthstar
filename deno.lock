@@ -3,9 +3,8 @@
   "packages": {
     "specifiers": {
       "jsr:@earthstar/meadowcap@^0.6.3": "jsr:@earthstar/meadowcap@0.6.3",
-      "jsr:@earthstar/willow": "jsr:@earthstar/willow@0.3.6",
       "jsr:@earthstar/willow-utils@^1.0.0": "jsr:@earthstar/willow-utils@1.0.0",
-      "jsr:@earthstar/willow@^0.3.6": "jsr:@earthstar/willow@0.3.6",
+      "jsr:@earthstar/willow@^0.4.0": "jsr:@earthstar/willow@0.4.0",
       "jsr:@noble/ed25519@^2.1.0": "jsr:@noble/ed25519@2.1.0",
       "jsr:@std/assert@^0.224.0": "jsr:@std/assert@0.224.0",
       "jsr:@std/assert@^0.225.2": "jsr:@std/assert@0.225.2",
@@ -28,13 +27,11 @@
       "@earthstar/willow-utils@1.0.0": {
         "integrity": "5d30cb60315bbd3a2e00e9df2e4a7aa4a29689607c5b577a22bce2004a817c96"
       },
-      "@earthstar/willow@0.3.6": {
-        "integrity": "fde7c3a2c871524e1ad77d4c8e981fc25191d1ce81752f92b03441e0e1fa46dc",
+      "@earthstar/willow@0.4.0": {
+        "integrity": "e10dfe2404aabdb3f6f9a158f1f6f16b042cdb0ce73e912ef382e5bc1374080e",
         "dependencies": [
           "jsr:@std/data-structures@^0.224.0",
-          "jsr:@std/encoding@^0.224.1",
-          "jsr:@std/fs@^0.229.1",
-          "jsr:@std/path@^0.225.1"
+          "jsr:@std/encoding@^0.224.1"
         ]
       },
       "@noble/ed25519@2.1.0": {
@@ -120,7 +117,7 @@
     "dependencies": [
       "jsr:@earthstar/meadowcap@^0.6.3",
       "jsr:@earthstar/willow-utils@^1.0.0",
-      "jsr:@earthstar/willow@^0.3.6",
+      "jsr:@earthstar/willow@^0.4.0",
       "jsr:@noble/ed25519@^2.1.0",
       "jsr:@std/assert@^0.225.2",
       "jsr:@std/async@^0.224.0",
