@@ -45,17 +45,15 @@ import { Path } from "../path/path.ts";
  * Which documents a store has depends on many factors: what has been written to it locally, the other stores you have synced to, and the capabilities granted during sync.
  *
  * ```ts
- * const store = new Store("+gardening.bhynoq5vqfpysmi2i7zilhdnynfsuq5wddus5sfgce24z53a2f6da");
- *
  * await store.set({
  *   identity: "@suzy.b3kxcquuxuckzqcovqhtk32ncj6aiixk46zg6pkfocdkhpst4selq",
- *   path: ['greetings', 'earth'],
+ *   path: Path.fromstrings("greetings", "earth"),
  *   payload: new TextEncoder().encode("Hello world!"),
  * });
  *
  * const doc = await store.get({
  *   identity: "@suzy.b3kxcquuxuckzqcovqhtk32ncj6aiixk46zg6pkfocdkhpst4selq",
- *   path: ['greetings', 'earth'],
+ *   path: Path.fromstrings("greetings", "earth"),
  * });
  * ```
  */
@@ -78,7 +76,8 @@ export class Store extends EventTarget {
     return encodeShareTag(this.willow.namespace);
   }
 
-  /** Construct a new {@linkcode} Store. Normally {@linkcode Peer} will do this for you. */
+  /** Construct a new {@linkcode} Store. Normally {@linkcode Peer} will do this for you.
+   */
   constructor(
     share: ShareTag,
     auth: Auth,
@@ -230,7 +229,7 @@ export class Store extends EventTarget {
    * ```ts
    * await store.clear({
    *   identity: "@suzy.b3kxcquuxuckzqcovqhtk32ncj6aiixk46zg6pkfocdkhpst4selq",
-   *   path: ['greetings', 'earth'],
+   *   path: Path.fromStrings("greetings", "earth"),
    * });
    * ```
    */
@@ -298,7 +297,7 @@ export class Store extends EventTarget {
    * ```ts
    * const displayNameDoc = await store.get(
    *  "@suzy.b3kxcquuxuckzqcovqhtk32ncj6aiixk46zg6pkfocdkhpst4selq",
-   *  ["about", "displayName"]
+   *  Path.fromStrings("about", "display_name"),
    * )
    * ```
    */
@@ -369,7 +368,7 @@ export class Store extends EventTarget {
   /** Retrieve the most recently written document at a path, regardless of the identity associated with it.
    *
    * ```ts
-   * const latest = await store.latestDocAtPath(["weather"]);
+   * const latest = await store.latestDocAtPath(Path.fromStrings("weather"));
    * ```
    */
   async latestDocAtPath(
@@ -403,7 +402,7 @@ export class Store extends EventTarget {
   /** Iterate through all documents at a given path, sorted newest document first.
    *
    * ```ts
-   * for await (const avatarDoc of store.documentsAtPath(["about", "avatar"])) {
+   * for await (const avatarDoc of store.documentsAtPath(Path.fromStrings("about", "avatar"))) {
    *    console.log(avatarDoc);
    * }
    * ```
@@ -438,7 +437,7 @@ export class Store extends EventTarget {
    *
    * ```ts
    * for await (const recentBlogDoc of store.queryDocs({
-   *  pathPrefix: ["blog"],
+   *  pathPrefix: Path.fromStrings("blog"),
    *  timestampGte: lastWeek,
    *  limit: 10
    * }) {

@@ -6,6 +6,7 @@ import { EarthstarError, isErr } from "../../util/errors.ts";
 import type { ServerExtension } from "./extension.ts";
 import { RuntimeDriverDeno } from "../../runtime/driver_deno.ts";
 
+/** Extends a server so that it can receive requests to sync over [Websockets](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket). */
 export class ExtensionSyncWebsocket implements ServerExtension {
   private path = "";
   private peer = Promise.withResolvers<Peer>();

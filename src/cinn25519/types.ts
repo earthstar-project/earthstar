@@ -1,3 +1,4 @@
+/** A driver capabile of generating ed25199 keypairs and using them to sign and verify data. */
 export interface Ed25519Driver<PrivateKey> {
   generateKeypair(): Promise<{
     publicKey: Uint8Array;

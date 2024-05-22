@@ -27,13 +27,23 @@ import type {
   StorageDriver,
 } from "./types.ts";
 
-/** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s based on those.
+/** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s and {@linkcode Cap}s based on those.
  *
  * ```
  * const peer = new Peer({
  *   password: "password1234",
  *   runtime: new RuntimeDriverUniversal(),
  *   storage: new StorageDriverMemory();,
+ * });
+ *
+ * const keypair = await peer.createIdentity("suzy");
+ * const share = await peer.createShare("gardening", true);
+ * const store = await peer.getStore(share);
+ *
+ * await store.set({
+ *   identity: keypair.tag,
+ *   path: Path.fromStrings("greetings", "casual"),
+ *   payload: new TextEncoder().encode("Hello world!"),
  * });
  * ```
  */
@@ -131,7 +141,33 @@ export class Peer {
     };
   }
 
-  /** Create a new {@linkcode Share} and store any information in the peer.
+  /** Create a new communal share using a short name.
+   *
+   * Once a share has been created, a corresponding {@linkcode Store} can be retrieved from the peer.
+   *
+   * @param shortname A 1-15 character name for the share, containing only numbers and lowercase letters, and which must start with a letter.
+   * @param communal Whether the share is [communal or owned](https://willowprotocol.org/specs/meadowcap/index.html#meadowcap_overview).
+   *
+   * @returns The {@linkcode ShareTag} of the new share.
+   */
+  createShare(
+    shortname: string,
+    communal: true,
+  ): Promise<ShareTag | ValidationError>;
+  /** Create a new owned share using a short name.
+   *
+   * Once a share has been created, a corresponding {@linkcode Store} can be retrieved from the peer.
+   *
+   * @param shortname A 1-15 character name for the share, containing only numbers and lowercase letters, and which must start with a letter.
+   * @param communal Whether the share is [communal or owned](https://willowprotocol.org/specs/meadowcap/index.html#meadowcap_overview).
+   *
+   * @returns The {@linkcode ShareKeypair} of the new share.
+   */
+  createShare(
+    shortname: string,
+    communal: false,
+  ): Promise<ShareKeypair | ValidationError>;
+  /** Create a new share and store any information in the peer.
    *
    * Once a share has been created, a corresponding {@linkcode Store} can be retrieved from the peer.
    *
@@ -140,16 +176,8 @@ export class Peer {
    * @param shortname A 1-15 character name for the share, containing only numbers and lowercase letters, and which must start with a letter.
    * @param communal Whether the share is [communal or owned](https://willowprotocol.org/specs/meadowcap/index.html#meadowcap_overview).
    *
-   * @returns A tag if the new share is communal, a {@linkcode ShareKeypairRaw} if it is owned, or {@linkcode ValidationError} if the given shortname is invalid.
+   * @returns A {@linkcode ShareTag} if the new share is communal, a {@linkcode ShareKeypair} if it is owned, or {@linkcode ValidationError} if the given shortname is invalid.
    */
-  createShare(
-    shortname: string,
-    communal: true,
-  ): Promise<ShareTag | ValidationError>;
-  createShare(
-    shortname: string,
-    communal: false,
-  ): Promise<ShareKeypair | ValidationError>;
   async createShare(
     shortname: string,
     communal: boolean,
@@ -170,13 +198,13 @@ export class Peer {
     };
   }
 
-  /** Store an existing {@linkcode IdentityKeypair} in the peer.
+  /** Store an existing share to the peer using a {@linkcode ShareTag} (for communal shares) or {@linkcode ShareKeypair} (for owned shares).
    *
-   * Once an identity keypair has been added, capabilities given to that identity can be added to the peer.
+   * Once an share keypair has been added, a {@linkcode Store} will become available from the {@linkcode Peer} if it isn't already.
    *
    * It's recommended to store keypairs in an additional secure storage, e.g. a password manager.
    *
-   * @param share The tag of a communal share or the {@linkcode ShareKeypairRaw} of an owned share.
+   * @param share The tag of a communal share or the {@linkcode ShareKeypair} of an owned share.
    *
    * @returns `true` if the operation was successful, or a {@linkcode ValidationError} if the keypair for an owned share was invalid.
    */
@@ -232,8 +260,8 @@ export class Peer {
     return this.auth.identityKeypair(publicKey);
   }
 
-  /** Iterate through all read capabilities satisfying an (optional) {@linkcode CapQuery} */
-  async *getReadCapabilities(selectors?: CapSelector[]): AsyncGenerator<Cap> {
+  /** Iterate through all stored {@linkcode Cap}s with read access which satisfy an (optional) {@linkcode CapQuery} */
+  async *getReadCaps(selectors?: CapSelector[]): AsyncGenerator<Cap> {
     if (!selectors) {
       for await (const cap of this.auth.readCapPacks()) {
         yield new Cap(cap, this.auth);
@@ -253,7 +281,7 @@ export class Peer {
     }
   }
 
-  /** Iterate through all write capabilities satisfying an (optional) {@linkcode CapQuery} */
+  /** Iterate through all stored {@linkcode Cap}s with write access which satisfy an (optional) {@linkcode CapQuery} */
   async *getWriteCapabilities(selectors?: CapSelector[]): AsyncGenerator<Cap> {
     if (!selectors) {
       for await (const cap of this.auth.writeCapPacks()) {
@@ -326,7 +354,7 @@ export class Peer {
     return new Cap(capPack, this.auth);
   }
 
-  /** Retrive a {@linkcode Store} for the share with a given tag.
+  /** Retrieve a {@linkcode Store} for the share with a given tag.
    *
    * @returns A {@linkcode Store} if any authorised capabilities for that share are held, otherwise a {@linkcode ValidationError}.
    */
