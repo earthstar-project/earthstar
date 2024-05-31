@@ -141,6 +141,16 @@ export class Peer {
     };
   }
 
+  /** Iterate though all {@linkcode IdentityKeypair}s stored in the {@linkcode Peer}. */
+  async *identities(): AsyncIterable<IdentityKeypair> {
+    for await (const keypair of this.auth.identityKeypairs()) {
+      yield {
+        tag: encodeIdentityTag(keypair.publicKey),
+        secretKey: keypair.secretKey,
+      };
+    }
+  }
+
   /** Create a new communal share using a short name.
    *
    * Once a share has been created, a corresponding {@linkcode Store} can be retrieved from the peer.
@@ -282,7 +292,7 @@ export class Peer {
   }
 
   /** Iterate through all stored {@linkcode Cap}s with write access which satisfy an (optional) {@linkcode CapQuery} */
-  async *getWriteCapabilities(selectors?: CapSelector[]): AsyncGenerator<Cap> {
+  async *getWriteCaps(selectors?: CapSelector[]): AsyncGenerator<Cap> {
     if (!selectors) {
       for await (const cap of this.auth.writeCapPacks()) {
         yield new Cap(cap, this.auth);
