@@ -47,13 +47,13 @@ import { Path } from "../path/path.ts";
  * ```ts
  * await store.set({
  *   identity: "@suzy.b3kxcquuxuckzqcovqhtk32ncj6aiixk46zg6pkfocdkhpst4selq",
- *   path: Path.fromstrings("greetings", "earth"),
+ *   path: Path.fromStrings("greetings", "earth"),
  *   payload: new TextEncoder().encode("Hello world!"),
  * });
  *
  * const doc = await store.get({
  *   identity: "@suzy.b3kxcquuxuckzqcovqhtk32ncj6aiixk46zg6pkfocdkhpst4selq",
- *   path: Path.fromstrings("greetings", "earth"),
+ *   path: Path.fromStrings("greetings", "earth"),
  * });
  * ```
  */
