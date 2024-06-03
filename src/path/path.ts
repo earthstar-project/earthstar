@@ -120,7 +120,7 @@ export class Path {
         return undefined;
       }
 
-      stringPath.push();
+      stringPath.push(decoded);
     }
 
     return stringPath;
