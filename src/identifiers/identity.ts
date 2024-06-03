@@ -13,6 +13,7 @@ import {
 } from "../cinn25519/cinn25519.ts";
 import type { ValidationError } from "../util/errors.ts";
 import type { Ed25519Driver } from "../cinn25519/types.ts";
+import { Base32String } from "../encoding/types.ts";
 
 export const MIN_IDENTITY_SHORTNAME_LENGTH = 4;
 export const MAX_IDENTITY_SHORTNAME_LENGTH = 4;
@@ -24,7 +25,7 @@ export type IdentityTag = string;
 /** An identity's tag and its corresponding secret key. */
 export type IdentityKeypair = {
   tag: IdentityTag;
-  secretKey: Uint8Array;
+  secretKey: Base32String;
 };
 
 export function generateIdentityKeypair(
