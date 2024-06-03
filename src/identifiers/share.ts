@@ -13,6 +13,7 @@ import {
 } from "../cinn25519/cinn25519.ts";
 import { isErr, ValidationError } from "../util/errors.ts";
 import type { Ed25519Driver } from "../cinn25519/types.ts";
+import { Base32String } from "../encoding/types.ts";
 
 export const MIN_SHARE_SHORTNAME_LENGTH = 1;
 export const MAX_SHARE_SHORTNAME_LENGTH = 15;
@@ -25,7 +26,7 @@ export type ShareTag = string;
 /** A share's tag and its corresponding secret key. */
 export type ShareKeypair = {
   tag: ShareTag;
-  secretKey: Uint8Array;
+  secretKey: Base32String;
 };
 
 export async function generateShareKeypair(

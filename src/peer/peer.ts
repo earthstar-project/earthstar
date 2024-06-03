@@ -26,6 +26,7 @@ import type {
   RuntimeDriver,
   StorageDriver,
 } from "./types.ts";
+import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
 
 /** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s and {@linkcode Cap}s based on those.
  *
@@ -94,7 +95,7 @@ export class Peer {
 
     return {
       tag: encodeIdentityTag(result.publicKey),
-      secretKey: result.secretKey,
+      secretKey: encodeBase32(result.secretKey),
     };
   }
 
@@ -113,10 +114,14 @@ export class Peer {
       return Promise.resolve(decodedTag);
     }
 
-    return this.auth.addIdentityKeypair({
-      publicKey: decodedTag,
-      secretKey: keypair.secretKey,
-    });
+    try {
+      return this.auth.addIdentityKeypair({
+        publicKey: decodedTag,
+        secretKey: decodeBase32(keypair.secretKey),
+      });
+    } catch {
+      return Promise.resolve(new ValidationError("Invalid secret"));
+    }
   }
 
   /** Retrieve a stored {@linkcode IdentityKeypair} using its tag. */
@@ -137,7 +142,7 @@ export class Peer {
 
     return {
       tag: encodeIdentityTag(keypair.publicKey),
-      secretKey: keypair.secretKey,
+      secretKey: encodeBase32(keypair.secretKey),
     };
   }
 
@@ -146,7 +151,7 @@ export class Peer {
     for await (const keypair of this.auth.identityKeypairs()) {
       yield {
         tag: encodeIdentityTag(keypair.publicKey),
-        secretKey: keypair.secretKey,
+        secretKey: encodeBase32(keypair.secretKey),
       };
     }
   }
@@ -204,7 +209,7 @@ export class Peer {
 
     return {
       tag: encodeShareTag(keypair.publicKey),
-      secretKey: keypair.secretKey,
+      secretKey: encodeBase32(keypair.secretKey),
     };
   }
 
@@ -228,10 +233,14 @@ export class Peer {
         return publicKey;
       }
 
-      return await this.auth.addShareKeypair({
-        publicKey,
-        secretKey: share.secretKey,
-      });
+      try {
+        return await this.auth.addShareKeypair({
+          publicKey,
+          secretKey: decodeBase32(share.secretKey),
+        });
+      } catch {
+        return new ValidationError("Invalid secret");
+      }
     }
 
     const publicKey = decodeShareTag(share);
