@@ -47,3 +47,42 @@ Deno.test("Peer", async () => {
   });
   assertEquals(result.kind, "success");
 });
+
+Deno.test("Peer with existing share", async () => {
+  // A Peer which can securely store capabilities and keypairs.
+  const peer = new Peer({
+    password: "password1234",
+    runtime: new RuntimeDriverDeno(),
+    storage: new StorageDriverMemory(),
+  });
+
+  // Create a new identity keypair for us.
+  const suzyKeypair = await peer.createIdentity("suzy");
+  assert(notErr(suzyKeypair));
+
+  // Use an existing share
+  const gardeningTag = "+gardening.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  assert(notErr(await peer.addExistingShare(gardeningTag)));
+
+  // Make a root capability for suzy to write to +gardening
+  const gardeningRootCap = await peer.mintCap(
+    gardeningTag,
+    suzyKeypair.tag,
+    "write",
+  );
+  assert(notErr(gardeningRootCap));
+
+  // Now our Peer can produce stores to access +gardening
+  assertEquals(await peer.shares(), [gardeningTag]);
+  const gardeningStore = await peer.getStore(gardeningTag);
+  assert(notErr(gardeningStore));
+
+  // And even better, our Store knows about our capabilities,
+  // And selects them automatically when creating new documents.
+  const result = await gardeningStore.set({
+    path: Path.fromStrings("hello"),
+    identity: suzyKeypair.tag,
+    payload: new TextEncoder().encode("yo!"),
+  });
+  assertEquals(result.kind, "success");
+});

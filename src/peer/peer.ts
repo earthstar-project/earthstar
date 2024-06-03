@@ -228,7 +228,7 @@ export class Peer {
         return publicKey;
       }
 
-      return await this.auth.addIdentityKeypair({
+      return await this.auth.addShareKeypair({
         publicKey,
         secretKey: share.secretKey,
       });
@@ -240,7 +240,7 @@ export class Peer {
       return publicKey;
     }
 
-    const result = await this.auth.addIdentityKeypair({
+    const result = await this.auth.addShareKeypair({
       publicKey,
       secretKey: new Uint8Array(),
     });
