@@ -1,8 +1,10 @@
 # Earthstar
 
-> **This version of Earthstar does not yet use
-> [Willow](https://willowprotocol.org). The next version will, and is being
-> worked on! **
+> v11 using [Willow](https://willowprotocol.org) is now available in
+> [beta](https://jsr.io/@earthstar/earthstar/versions)!
+>
+> Development is happening on the
+> [`willow branch`](https://github.com/earthstar-project/earthstar/tree/willow).
 
 [Earthstar](https://earthstar-project.org) is a small and resilient distributed
 storage protocol designed with a strong focus on simplicity and versatility,
