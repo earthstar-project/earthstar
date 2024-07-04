@@ -15,9 +15,9 @@
     "bundle": "deno run --allow-all scripts/build_web_bundle.ts"
   },
   "imports": {
-    "@earthstar/meadowcap": "jsr:@earthstar/meadowcap@^0.6.3",
-    "@earthstar/willow": "jsr:@earthstar/willow@^0.5.1",
-    "@earthstar/willow-utils": "jsr:@earthstar/willow-utils@^1.0.0",
+    "@earthstar/meadowcap": "jsr:@earthstar/meadowcap@^0.6.4",
+    "@earthstar/willow": "jsr:@earthstar/willow@^0.5.3",
+    "@earthstar/willow-utils": "jsr:@earthstar/willow-utils@^2.0.0",
     "@noble/curves": "npm:@noble/curves@^1.4.0",
     "@noble/ed25519": "jsr:@noble/ed25519@^2.1.0",
     "@std/assert": "jsr:@std/assert@^0.225.2",

@@ -2,43 +2,46 @@
   "version": "3",
   "packages": {
     "specifiers": {
-      "jsr:@earthstar/meadowcap@^0.6.3": "jsr:@earthstar/meadowcap@0.6.3",
-      "jsr:@earthstar/willow-utils@^1.0.0": "jsr:@earthstar/willow-utils@1.0.2",
-      "jsr:@earthstar/willow-utils@^1.0.2": "jsr:@earthstar/willow-utils@1.0.2",
-      "jsr:@earthstar/willow@^0.5.1": "jsr:@earthstar/willow@0.5.2",
+      "jsr:@earthstar/willow": "jsr:@earthstar/willow@0.5.3",
+      "jsr:@earthstar/willow-utils@^2.0.0": "jsr:@earthstar/willow-utils@2.0.0",
+      "jsr:@earthstar/willow@^0.5.3": "jsr:@earthstar/willow@0.5.3",
       "jsr:@korkje/fifo@^0.2.4": "jsr:@korkje/fifo@0.2.4",
       "jsr:@noble/ed25519@^2.1.0": "jsr:@noble/ed25519@2.1.0",
       "jsr:@std/assert@^0.224.0": "jsr:@std/assert@0.224.0",
-      "jsr:@std/assert@^0.225.2": "jsr:@std/assert@0.225.2",
-      "jsr:@std/async@^0.224.0": "jsr:@std/async@0.224.0",
+      "jsr:@std/assert@^0.225.2": "jsr:@std/assert@0.225.3",
+      "jsr:@std/assert@^0.226.0": "jsr:@std/assert@0.226.0",
+      "jsr:@std/async@^0.224.0": "jsr:@std/async@0.224.2",
       "jsr:@std/bytes@^0.224.0": "jsr:@std/bytes@0.224.0",
       "jsr:@std/crypto@^0.224.0": "jsr:@std/crypto@0.224.0",
       "jsr:@std/data-structures@^0.224.0": "jsr:@std/data-structures@0.224.1",
-      "jsr:@std/encoding@^0.224.0": "jsr:@std/encoding@0.224.1",
+      "jsr:@std/encoding@^0.224.0": "jsr:@std/encoding@0.224.3",
       "jsr:@std/encoding@^0.224.1": "jsr:@std/encoding@0.224.3",
-      "jsr:@std/fs@^0.229.1": "jsr:@std/fs@0.229.1",
+      "jsr:@std/fs@^0.229.1": "jsr:@std/fs@0.229.3",
       "jsr:@std/internal@^0.225.1": "jsr:@std/internal@0.225.1",
-      "jsr:@std/path@^0.225.1": "jsr:@std/path@0.225.1",
+      "jsr:@std/internal@^1.0.0": "jsr:@std/internal@1.0.1",
+      "jsr:@std/path@1.0.0-rc.1": "jsr:@std/path@1.0.0-rc.1",
+      "jsr:@std/path@^0.225.1": "jsr:@std/path@0.225.2",
       "npm:@noble/curves@^1.4.0": "npm:@noble/curves@1.4.0",
       "npm:hash-wasm@^4.11.0": "npm:hash-wasm@4.11.0"
     },
     "jsr": {
-      "@earthstar/meadowcap@0.6.3": {
-        "integrity": "e150736d293105d3abf1f1ee8c3bf0cf36986ab08e04ae9057cfbc73707b108a"
+      "@earthstar/meadowcap@0.6.4": {
+        "integrity": "6697a074d9402269fd699ec51a1f5d62e8b5dee7197cb1713ad99cdc60afa638"
       },
       "@earthstar/willow-utils@1.0.0": {
         "integrity": "5d30cb60315bbd3a2e00e9df2e4a7aa4a29689607c5b577a22bce2004a817c96"
       },
-      "@earthstar/willow-utils@1.0.2": {
-        "integrity": "09c08721a249f9a609f9250ccbf1fb40e9269bf68fc827cb063ee74448da35e1"
+      "@earthstar/willow-utils@2.0.0": {
+        "integrity": "439dda5ff8475db1093de7d59cac2b7b763571d291c72a4ac2731a4a5c835525"
       },
-      "@earthstar/willow@0.5.2": {
-        "integrity": "77bd0c6f267cc24738f22f8b7002e32ed5df86dd0f267ca1f9d41cebc8020119",
+      "@earthstar/willow@0.5.3": {
+        "integrity": "9a17a85c64b6025328c83baf31453b5c229676156399fe09f30df9f5c36c2d73",
         "dependencies": [
-          "jsr:@earthstar/willow-utils@^1.0.2",
           "jsr:@korkje/fifo@^0.2.4",
           "jsr:@std/data-structures@^0.224.0",
-          "jsr:@std/encoding@^0.224.1"
+          "jsr:@std/encoding@^0.224.1",
+          "jsr:@std/fs@^0.229.1",
+          "jsr:@std/path@^0.225.1"
         ]
       },
       "@korkje/fifo@0.2.4": {
@@ -56,11 +59,23 @@
           "jsr:@std/internal@^0.225.1"
         ]
       },
+      "@std/assert@0.225.3": {
+        "integrity": "b3c2847aecf6955b50644cdb9cf072004ea3d1998dd7579fc0acb99dbb23bd4f",
+        "dependencies": [
+          "jsr:@std/internal@^1.0.0"
+        ]
+      },
+      "@std/assert@0.226.0": {
+        "integrity": "0dfb5f7c7723c18cec118e080fec76ce15b4c31154b15ad2bd74822603ef75b3"
+      },
       "@std/async@0.224.0": {
         "integrity": "b6da423eeafbd0003fe88d950e069368c6a156f8b5293b7adbd9c8903a8f8d66",
         "dependencies": [
           "jsr:@std/assert@^0.224.0"
         ]
+      },
+      "@std/async@0.224.2": {
+        "integrity": "4d277d6e165df43d5e061ba0ef3edfddb8e8d558f5b920e3e6b1d2614b44d074"
       },
       "@std/bytes@0.224.0": {
         "integrity": "a2250e1d0eb7d1c5a426f21267ab9bdeac2447fa87a3d0d1a467d3f7a6058e49"
@@ -88,14 +103,32 @@
           "jsr:@std/path@^0.225.1"
         ]
       },
+      "@std/fs@0.229.3": {
+        "integrity": "783bca21f24da92e04c3893c9e79653227ab016c48e96b3078377ebd5222e6eb",
+        "dependencies": [
+          "jsr:@std/path@1.0.0-rc.1"
+        ]
+      },
       "@std/internal@0.225.1": {
         "integrity": "7d8a812be88c2792f15ab9cf46911e521ccca50435948a8f24df5cefda96bde9"
+      },
+      "@std/internal@1.0.1": {
+        "integrity": "6f8c7544d06a11dd256c8d6ba54b11ed870aac6c5aeafff499892662c57673e6"
       },
       "@std/path@0.225.1": {
         "integrity": "8c3220635a73730eb51fe43de9e10b79e2724a5bb8638b9355d35ae012fd9429",
         "dependencies": [
           "jsr:@std/assert@^0.225.2"
         ]
+      },
+      "@std/path@0.225.2": {
+        "integrity": "0f2db41d36b50ef048dcb0399aac720a5348638dd3cb5bf80685bf2a745aa506",
+        "dependencies": [
+          "jsr:@std/assert@^0.226.0"
+        ]
+      },
+      "@std/path@1.0.0-rc.1": {
+        "integrity": "b8c00ae2f19106a6bb7cbf1ab9be52aa70de1605daeb2dbdc4f87a7cbaf10ff6"
       }
     },
     "npm": {
@@ -128,9 +161,9 @@
   },
   "workspace": {
     "dependencies": [
-      "jsr:@earthstar/meadowcap@^0.6.3",
-      "jsr:@earthstar/willow-utils@^1.0.0",
-      "jsr:@earthstar/willow@^0.5.1",
+      "jsr:@earthstar/meadowcap@^0.6.4",
+      "jsr:@earthstar/willow-utils@^2.0.0",
+      "jsr:@earthstar/willow@^0.5.3",
       "jsr:@noble/ed25519@^2.1.0",
       "jsr:@std/assert@^0.225.2",
       "jsr:@std/async@^0.224.0",
