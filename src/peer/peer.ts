@@ -34,11 +34,16 @@ import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
  * const peer = new Peer({
  *   password: "password1234",
  *   runtime: new RuntimeDriverUniversal(),
- *   storage: new StorageDriverMemory();,
+ *   storage: new StorageDriverMemory(),
  * });
  *
  * const keypair = await peer.createIdentity("suzy");
  * const share = await peer.createShare("gardening", true);
+ * const suzyWriteCap = await peer.mintCap(
+ *   share,
+ *   keypair.tag,
+ *   "write",
+ * );
  * const store = await peer.getStore(share);
  *
  * await store.set({
