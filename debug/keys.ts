@@ -48,7 +48,7 @@ const derivedKey = await crypto.subtle.deriveKey(
 
 const message = "Hello, there! This is my secret message.";
 
-const iv = crypto.getRandomValues(new Uint8Array(16));
+const iv = crypto.getRandomValues(new Uint8Array(12));
 
 const encrypted = await crypto.subtle.encrypt(
   {
