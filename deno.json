@@ -1,6 +1,6 @@
 {
   "name": "@earthstar/earthstar",
-  "version": "11.0.0-beta.5",
+  "version": "11.0.0-beta.6",
   "exports": {
     ".": "./mod.ts",
     "./deno": "./mod.deno.ts",
@@ -16,7 +16,7 @@
   },
   "imports": {
     "@earthstar/meadowcap": "jsr:@earthstar/meadowcap@^0.6.4",
-    "@earthstar/willow": "jsr:@earthstar/willow@^0.5.3",
+    "@earthstar/willow": "jsr:@earthstar/willow@^0.6.0",
     "@earthstar/willow-utils": "jsr:@earthstar/willow-utils@^2.0.0",
     "@noble/curves": "npm:@noble/curves@^1.4.0",
     "@noble/ed25519": "jsr:@noble/ed25519@^2.1.0",

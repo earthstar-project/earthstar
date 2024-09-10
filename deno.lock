@@ -2,9 +2,9 @@
   "version": "3",
   "packages": {
     "specifiers": {
-      "jsr:@earthstar/willow": "jsr:@earthstar/willow@0.5.3",
-      "jsr:@earthstar/willow-utils@^2.0.0": "jsr:@earthstar/willow-utils@2.0.0",
-      "jsr:@earthstar/willow@^0.5.3": "jsr:@earthstar/willow@0.5.3",
+      "jsr:@earthstar/meadowcap@^0.6.4": "jsr:@earthstar/meadowcap@0.6.4",
+      "jsr:@earthstar/willow-utils@^2.0.0": "jsr:@earthstar/willow-utils@2.0.1",
+      "jsr:@earthstar/willow@^0.6.0": "jsr:@earthstar/willow@0.6.0",
       "jsr:@korkje/fifo@^0.2.4": "jsr:@korkje/fifo@0.2.4",
       "jsr:@noble/ed25519@^2.1.0": "jsr:@noble/ed25519@2.1.0",
       "jsr:@std/assert@^0.224.0": "jsr:@std/assert@0.224.0",
@@ -26,7 +26,11 @@
     },
     "jsr": {
       "@earthstar/meadowcap@0.6.4": {
-        "integrity": "6697a074d9402269fd699ec51a1f5d62e8b5dee7197cb1713ad99cdc60afa638"
+        "integrity": "6697a074d9402269fd699ec51a1f5d62e8b5dee7197cb1713ad99cdc60afa638",
+        "dependencies": [
+          "jsr:@earthstar/willow-utils@^2.0.0",
+          "jsr:@std/bytes@^0.224.0"
+        ]
       },
       "@earthstar/willow-utils@1.0.0": {
         "integrity": "5d30cb60315bbd3a2e00e9df2e4a7aa4a29689607c5b577a22bce2004a817c96"
@@ -34,14 +38,20 @@
       "@earthstar/willow-utils@2.0.0": {
         "integrity": "439dda5ff8475db1093de7d59cac2b7b763571d291c72a4ac2731a4a5c835525"
       },
-      "@earthstar/willow@0.5.3": {
-        "integrity": "9a17a85c64b6025328c83baf31453b5c229676156399fe09f30df9f5c36c2d73",
+      "@earthstar/willow-utils@2.0.1": {
+        "integrity": "7d426c47ec8101f6f6786efd69b8ab4a1fc877514d3d0a00cbfdf6384a4c6248",
         "dependencies": [
+          "jsr:@std/bytes@^0.224.0"
+        ]
+      },
+      "@earthstar/willow@0.6.0": {
+        "integrity": "ab15ccf139141b20b18d3775075e92b8a0b8e4a514747b051277229dabf130e8",
+        "dependencies": [
+          "jsr:@earthstar/willow-utils@^2.0.0",
           "jsr:@korkje/fifo@^0.2.4",
+          "jsr:@std/bytes@^0.224.0",
           "jsr:@std/data-structures@^0.224.0",
-          "jsr:@std/encoding@^0.224.1",
-          "jsr:@std/fs@^0.229.1",
-          "jsr:@std/path@^0.225.1"
+          "jsr:@std/encoding@^0.224.1"
         ]
       },
       "@korkje/fifo@0.2.4": {
@@ -163,7 +173,7 @@
     "dependencies": [
       "jsr:@earthstar/meadowcap@^0.6.4",
       "jsr:@earthstar/willow-utils@^2.0.0",
-      "jsr:@earthstar/willow@^0.5.3",
+      "jsr:@earthstar/willow@^0.6.0",
       "jsr:@noble/ed25519@^2.1.0",
       "jsr:@std/assert@^0.225.2",
       "jsr:@std/async@^0.224.0",
