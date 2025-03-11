@@ -13,9 +13,10 @@
  *
  * @module
  */
-export type { AuthOpts } from "./src/auth/auth.ts";
+export type { AuthEvents, AuthOpts, MappedEvents } from "./src/auth/auth.ts";
 export { Auth } from "./src/auth/auth.ts";
 
+export type { TypedEventTarget } from "./src/util/TypedEventTarget.ts";
 export type { Blake3Digest, Blake3Driver } from "./src/blake3/types.ts";
 export type { Ed25519Driver } from "./src/cinn25519/types.ts";
 

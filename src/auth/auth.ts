@@ -47,6 +47,8 @@ import { concat } from "@std/bytes";
 import { type Area, areaIsIncluded, orderBytes } from "@earthstar/willow-utils";
 import type { RuntimeDriver } from "../peer/types.ts";
 import type { Blake3Digest } from "../blake3/types.ts";
+import { TypedEventTarget } from "@derzade/typescript-event-target";
+import { AuthEvents, AuthMappedEvents } from "./events.ts";
 
 export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
   SharePublicKey,
@@ -64,8 +66,11 @@ export type AuthOpts = {
   runtimeDriver: RuntimeDriver;
 };
 
-/** Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password. */
-export class Auth {
+/**
+ * Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password.
+ * @extends TypedEventTarget<MappedEvents>
+ */
+export class Auth extends TypedEventTarget<AuthMappedEvents> {
   /** The {@linkcode RuntimeDriver} being used by this {@linkcode Auth}. */
   runtimeDriver: RuntimeDriver;
 
@@ -89,12 +94,13 @@ export class Auth {
   /** Check if Auth has been successfully initialised with the given password. */
   async ready(): Promise<boolean> {
     await this.encryptionKey.promise;
-
     return true;
   }
 
   /** Create a new {@linkcode} Auth instance. {@linkcode Peer} usually does this for you. */
   constructor(opts: AuthOpts) {
+    super();
+
     this.kvDriver = opts.kvDriver;
     this.runtimeDriver = opts.runtimeDriver;
     this.meadowcap = new Meadowcap.Meadowcap(
@@ -183,10 +189,21 @@ export class Auth {
 
         // It's the right password, yay.
         this.encryptionKey.resolve(encryptionKey);
+        this.triggerReady();
       } catch {
         this.encryptionKey.reject("Wrong password entered for Auth");
       }
     });
+  }
+
+  /**
+   * Triggers ready event
+   */
+  private triggerReady() {
+    this.dispatchTypedEvent(
+      AuthEvents.Ready,
+      new CustomEvent(AuthEvents.Ready, { detail: this }),
+    );
   }
 
   /** Encrypt some bytes with a derived encryption key. */
@@ -304,6 +321,12 @@ export class Auth {
       keypairEncrypted,
     );
 
+    this.dispatchTypedEvent(
+      AuthEvents.KeypairAdd,
+      new CustomEvent(AuthEvents.KeypairAdd, {
+        detail: { type: "IDENTITY", keypair },
+      }),
+    );
     return true;
   }
 
@@ -384,6 +407,12 @@ export class Auth {
       keypairEncrypted,
     );
 
+    this.dispatchTypedEvent(
+      AuthEvents.KeypairAdd,
+      new CustomEvent(AuthEvents.KeypairAdd, {
+        detail: { type: "SHARE", keypair },
+      }),
+    );
     return true;
   }
 
@@ -706,6 +735,10 @@ export class Auth {
           crypto.getRandomValues(new Uint8Array(32)),
         ], encrypted);
 
+        this.dispatchTypedEvent(
+          AuthEvents.CapAdd,
+          new CustomEvent(AuthEvents.CapAdd, { detail: capPack }),
+        );
         return true;
       }
     }
