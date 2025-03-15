@@ -15,6 +15,7 @@
     "bundle": "deno run --allow-all scripts/build_web_bundle.ts"
   },
   "imports": {
+    "@derzade/typescript-event-target": "jsr:@derzade/typescript-event-target@^1.1.1",
     "@earthstar/meadowcap": "jsr:@earthstar/meadowcap@^0.6.4",
     "@earthstar/willow": "jsr:@earthstar/willow@^0.6.0",
     "@earthstar/willow-utils": "jsr:@earthstar/willow-utils@^2.0.0",

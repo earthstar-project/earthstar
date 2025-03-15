@@ -15,9 +15,44 @@ type KeypairAddPayload =
   | { type: "SHARE"; keypair: ShareKeypairRaw };
 
 export type AuthMappedEvents = {
-  [AuthEvents.KeypairAdd]: CustomEvent<KeypairAddPayload>;
-  [AuthEvents.CapAdd]: CustomEvent<ReadCapPack | WriteCapPack>;
-  [AuthEvents.Ready]: CustomEvent<Auth>;
+  [AuthEvents.KeypairAdd]: KeypairAddEvent;
+  [AuthEvents.CapAdd]: CapAddEvent;
+  [AuthEvents.CapDelegate]: CapDelegateEvent;
+  [AuthEvents.Ready]: ReadyEvent;
 };
 
-// todo: Add Custom Event classes with documentation
+/**
+ * Emitted when a new keypair is added to the {@linkcode Auth} instance.
+ */
+export class KeypairAddEvent extends CustomEvent<KeypairAddPayload> {
+  constructor(payload: KeypairAddPayload) {
+    super(AuthEvents.KeypairAdd, { detail: payload });
+  }
+}
+
+/**
+ * Emitted when a new capability is added to the {@linkcode Auth} instance.
+ */
+export class CapAddEvent extends CustomEvent<ReadCapPack | WriteCapPack> {
+  constructor(payload: ReadCapPack | WriteCapPack) {
+    super(AuthEvents.CapAdd, { detail: payload });
+  }
+}
+
+/**
+ * Emitted when a capability is delegated in the {@linkcode Auth} instance.
+ */
+export class CapDelegateEvent extends CustomEvent<ReadCapPack | WriteCapPack> {
+  constructor(payload: ReadCapPack | WriteCapPack) {
+    super(AuthEvents.CapDelegate, { detail: payload });
+  }
+}
+
+/**
+ * Emitted when the {@linkcode Auth} instance is ready to be used.
+ */
+export class ReadyEvent extends CustomEvent<Auth> {
+  constructor(payload: Auth) {
+    super(AuthEvents.Ready, { detail: payload });
+  }
+}

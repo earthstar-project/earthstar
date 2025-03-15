@@ -48,7 +48,14 @@ import { type Area, areaIsIncluded, orderBytes } from "@earthstar/willow-utils";
 import type { RuntimeDriver } from "../peer/types.ts";
 import type { Blake3Digest } from "../blake3/types.ts";
 import { TypedEventTarget } from "@derzade/typescript-event-target";
-import { AuthEvents, AuthMappedEvents } from "./events.ts";
+import {
+  AuthEvents,
+  AuthMappedEvents,
+  CapAddEvent,
+  CapDelegateEvent,
+  KeypairAddEvent,
+  ReadyEvent,
+} from "./events.ts";
 
 export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
   SharePublicKey,
@@ -189,21 +196,14 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
 
         // It's the right password, yay.
         this.encryptionKey.resolve(encryptionKey);
-        this.triggerReady();
+        this.dispatchTypedEvent(
+          AuthEvents.Ready,
+          new ReadyEvent(this),
+        );
       } catch {
         this.encryptionKey.reject("Wrong password entered for Auth");
       }
     });
-  }
-
-  /**
-   * Triggers ready event
-   */
-  private triggerReady() {
-    this.dispatchTypedEvent(
-      AuthEvents.Ready,
-      new CustomEvent(AuthEvents.Ready, { detail: this }),
-    );
   }
 
   /** Encrypt some bytes with a derived encryption key. */
@@ -323,9 +323,7 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
 
     this.dispatchTypedEvent(
       AuthEvents.KeypairAdd,
-      new CustomEvent(AuthEvents.KeypairAdd, {
-        detail: { type: "IDENTITY", keypair },
-      }),
+      new KeypairAddEvent({ type: "IDENTITY", keypair }),
     );
     return true;
   }
@@ -409,9 +407,7 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
 
     this.dispatchTypedEvent(
       AuthEvents.KeypairAdd,
-      new CustomEvent(AuthEvents.KeypairAdd, {
-        detail: { type: "SHARE", keypair },
-      }),
+      new KeypairAddEvent({ type: "SHARE", keypair }),
     );
     return true;
   }
@@ -617,6 +613,10 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
             },
           );
 
+          this.dispatchTypedEvent(
+            AuthEvents.CapDelegate,
+            new CapDelegateEvent({ writeCap: cap }),
+          );
           return { writeCap: cap };
         }
 
@@ -629,6 +629,10 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
           },
         );
 
+        this.dispatchTypedEvent(
+          AuthEvents.CapDelegate,
+          new CapDelegateEvent({ writeCap: cap }),
+        );
         return { writeCap: cap };
       } catch (err) {
         return new ValidationError(err);
@@ -666,6 +670,10 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
           },
         );
 
+        this.dispatchTypedEvent(
+          AuthEvents.CapDelegate,
+          new CapDelegateEvent({ readCap: delegated }),
+        );
         return { readCap: delegated };
       }
 
@@ -684,6 +692,10 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
         );
       }
 
+      this.dispatchTypedEvent(
+        AuthEvents.CapDelegate,
+        new CapDelegateEvent({ readCap: delegated }),
+      );
       return { readCap: delegated };
     }
 
@@ -708,6 +720,13 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
       receiverKeypair.secretKey,
     );
 
+    this.dispatchTypedEvent(
+      AuthEvents.CapDelegate,
+      new CapDelegateEvent({
+        readCap: delegatedCap,
+        subspaceCap: delegatedSubspaceCap,
+      }),
+    );
     return {
       readCap: delegatedCap,
       subspaceCap: delegatedSubspaceCap,
@@ -737,7 +756,7 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
 
         this.dispatchTypedEvent(
           AuthEvents.CapAdd,
-          new CustomEvent(AuthEvents.CapAdd, { detail: capPack }),
+          new CapAddEvent(capPack),
         );
         return true;
       }
