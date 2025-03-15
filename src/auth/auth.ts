@@ -50,7 +50,7 @@ import type { Blake3Digest } from "../blake3/types.ts";
 import { TypedEventTarget } from "@derzade/typescript-event-target";
 import {
   AuthEvents,
-  AuthMappedEvents,
+  type AuthEventsMap,
   CapAddEvent,
   CapDelegateEvent,
   KeypairAddEvent,
@@ -77,7 +77,7 @@ export type AuthOpts = {
  * Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password.
  * @extends TypedEventTarget<MappedEvents>
  */
-export class Auth extends TypedEventTarget<AuthMappedEvents> {
+export class Auth extends TypedEventTarget<AuthEventsMap> {
   /** The {@linkcode RuntimeDriver} being used by this {@linkcode Auth}. */
   runtimeDriver: RuntimeDriver;
 
@@ -893,7 +893,7 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
     if (
       "subspaceCap" in capPack && capPack.subspaceCap &&
       await this.meadowcap.isValidSubspaceCap(capPack.subspaceCap) ===
-        false
+      false
     ) {
       return false;
     }
@@ -1000,12 +1000,12 @@ export class Auth extends TypedEventTarget<AuthMappedEvents> {
 
       if (
         candidateAuth.cap.delegations.length <
-          contenderAuth.cap.delegations.length
+        contenderAuth.cap.delegations.length
       ) {
         continue;
       } else if (
         contenderAuth.cap.delegations.length <
-          candidateAuth.cap.delegations.length
+        candidateAuth.cap.delegations.length
       ) {
         candidateAuth = contenderAuth;
         continue;

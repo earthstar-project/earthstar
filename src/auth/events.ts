@@ -14,7 +14,7 @@ type KeypairAddPayload =
   | { type: "IDENTITY"; keypair: IdentityKeypairRaw }
   | { type: "SHARE"; keypair: ShareKeypairRaw };
 
-export type AuthMappedEvents = {
+export type AuthEventsMap = {
   [AuthEvents.KeypairAdd]: KeypairAddEvent;
   [AuthEvents.CapAdd]: CapAddEvent;
   [AuthEvents.CapDelegate]: CapDelegateEvent;

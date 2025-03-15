@@ -16,7 +16,7 @@ import {
   isErr,
   ValidationError,
 } from "../util/errors.ts";
-import { relayWillowEvents, StoreEventsMapping } from "./events.ts";
+import { relayWillowEvents, type StoreEventsMap } from "./events.ts";
 import type {
   AuthorisationOpts,
   Document,
@@ -58,7 +58,7 @@ import { TypedEventTarget } from "@derzade/typescript-event-target";
  * });
  * ```
  */
-export class Store extends TypedEventTarget<StoreEventsMapping> {
+export class Store extends TypedEventTarget<StoreEventsMap> {
   private auth: Auth;
 
   /** The underlying Willow `Store`, made accessible for advanced usage and shenanigans. */

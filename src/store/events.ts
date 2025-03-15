@@ -20,7 +20,7 @@ export const StoreEvents = {
   PayloadRemove: "payloadRemove",
 } as const;
 
-export type StoreEventsMapping = {
+export type StoreEventsMap = {
   [StoreEvents.DocumentSet]: DocumentSetEvent;
   [StoreEvents.EntryIngest]: DocumentIngestEvent;
   [StoreEvents.EntryRemove]: DocumentRemoveEvent;
