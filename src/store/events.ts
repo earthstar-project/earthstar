@@ -14,10 +14,10 @@ import type { Document, PreFingerprint } from "./types.ts";
 
 export const StoreEvents = {
   DocumentSet: "documentset",
-  EntryIngest: "entryingest",
-  EntryRemove: "entryremove",
-  PayloadIngest: "payloadingest",
-  PayloadRemove: "payloadRemove",
+  EntryIngest: WillowEvents.EntryIngest,
+  EntryRemove: WillowEvents.EntryRemove,
+  PayloadIngest: WillowEvents.PayloadIngest,
+  PayloadRemove: WillowEvents.PayloadRemove,
 } as const;
 
 export type StoreEventsMap = {
