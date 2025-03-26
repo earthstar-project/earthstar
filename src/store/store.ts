@@ -16,7 +16,7 @@ import {
   isErr,
   ValidationError,
 } from "../util/errors.ts";
-import { relayWillowEvents } from "./events.ts";
+import { relayWillowEvents, type StoreEventsMap } from "./events.ts";
 import type {
   AuthorisationOpts,
   Document,
@@ -39,6 +39,7 @@ import {
   type ShareTag,
 } from "../identifiers/share.ts";
 import { Path } from "../path/path.ts";
+import { TypedEventTarget } from "@derzade/typescript-event-target";
 
 /** A store for reading, writing, and querying documents from a corresponding share.
  *
@@ -57,7 +58,7 @@ import { Path } from "../path/path.ts";
  * });
  * ```
  */
-export class Store extends EventTarget {
+export class Store extends TypedEventTarget<StoreEventsMap> {
   private auth: Auth;
 
   /** The underlying Willow `Store`, made accessible for advanced usage and shenanigans. */

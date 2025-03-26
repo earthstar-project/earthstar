@@ -1,4 +1,5 @@
 import type * as Willow from "@earthstar/willow";
+import { StoreEvents as WillowEvents } from "@earthstar/willow";
 import type { AuthorisationToken } from "../auth/auth.ts";
 import type { Capability } from "../caps/types.ts";
 import type {
@@ -11,24 +12,44 @@ import { entryToDocument } from "../util/documents.ts";
 
 import type { Document, PreFingerprint } from "./types.ts";
 
+export const StoreEvents = {
+  DocumentSet: "documentset",
+  EntryIngest: WillowEvents.EntryIngest,
+  EntryRemove: WillowEvents.EntryRemove,
+  PayloadIngest: WillowEvents.PayloadIngest,
+  PayloadRemove: WillowEvents.PayloadRemove,
+} as const;
+
+export type StoreEventsMap = {
+  [StoreEvents.DocumentSet]: DocumentSetEvent;
+  [StoreEvents.EntryIngest]: DocumentIngestEvent;
+  [StoreEvents.EntryRemove]: DocumentRemoveEvent;
+  [StoreEvents.PayloadIngest]: PayloadIngestEvent;
+  [StoreEvents.PayloadRemove]: PayloadRemoveEvent;
+};
+
+/** Emitted after a {@linkcode Store} creates or updates a {@linkcode Document}. */
 export class DocumentSetEvent extends CustomEvent<{ document: Document }> {
   constructor(document: Document) {
-    super("documentset", { detail: { document } });
+    super(StoreEvents.DocumentSet, { detail: { document } });
   }
 }
 
+/** Emitted after a {@linkcode Store} attempts to ingest a {@linkcode Document}. */
 export class DocumentIngestEvent extends CustomEvent<{ document: Document }> {
   constructor(document: Document) {
-    super("entryingest", { detail: { document } });
+    super(StoreEvents.EntryIngest, { detail: { document } });
   }
 }
 
+/** Emitted after a {@linkcode Store} attempts to ingest a payload. */
 export class PayloadIngestEvent extends CustomEvent<{ document: Document }> {
   constructor(document: Document) {
-    super("payloadingest", { detail: { document } });
+    super(StoreEvents.PayloadIngest, { detail: { document } });
   }
 }
 
+/** Emitted after a {@linkcode Store} removes a {@linkcode Document}. */
 export class DocumentRemoveEvent extends CustomEvent<{
   removed: Path;
   removedBy: Document;
@@ -37,7 +58,7 @@ export class DocumentRemoveEvent extends CustomEvent<{
     removed: Path,
     removedBy: Document,
   ) {
-    super("entryremove", {
+    super(StoreEvents.EntryRemove, {
       detail: {
         removed,
         removedBy,
@@ -46,9 +67,10 @@ export class DocumentRemoveEvent extends CustomEvent<{
   }
 }
 
+/** Emitted after a {@linkcode Store} removes a payload. */
 export class PayloadRemoveEvent extends CustomEvent<{ removedBy: Document }> {
   constructor(removedBy: Document) {
-    super("payloadRemove", { detail: { removedBy } });
+    super(StoreEvents.PayloadRemove, { detail: { removedBy } });
   }
 }
 
@@ -84,7 +106,10 @@ export function relayWillowEvents(
     );
   };
 
-  willowStore.addEventListener("entrypayloadset", onEntryPayloadSet);
+  willowStore.addEventListener(
+    WillowEvents.EntryPayloadSet,
+    onEntryPayloadSet,
+  );
 
   const onEntryIngest = (event: Event) => {
     const evt = event as Willow.EntryIngestEvent<
@@ -104,7 +129,7 @@ export function relayWillowEvents(
   };
 
   willowStore.addEventListener(
-    "entryingest",
+    WillowEvents.EntryIngest,
     onEntryIngest,
   );
 
@@ -126,7 +151,7 @@ export function relayWillowEvents(
   };
 
   willowStore.addEventListener(
-    "payloadingest",
+    WillowEvents.PayloadIngest,
     onPayloadIngest,
   );
 
@@ -151,7 +176,7 @@ export function relayWillowEvents(
   };
 
   willowStore.addEventListener(
-    "entryremove",
+    WillowEvents.EntryRemove,
     onEntryRemove,
   );
 
@@ -175,15 +200,30 @@ export function relayWillowEvents(
   };
 
   willowStore.addEventListener(
-    "payloadremove",
+    WillowEvents.PayloadRemove,
     onPayloadRemove,
   );
 
   return () => {
-    willowStore.removeEventListener("entrypayloadset", onEntryPayloadSet);
-    willowStore.removeEventListener("entryingest", onEntryIngest);
-    willowStore.removeEventListener("payloadingest", onPayloadIngest);
-    willowStore.removeEventListener("entryremove", onEntryRemove);
-    willowStore.removeEventListener("payloadremove", onPayloadRemove);
+    willowStore.removeEventListener(
+      WillowEvents.EntryPayloadSet,
+      onEntryPayloadSet,
+    );
+    willowStore.removeEventListener(
+      WillowEvents.EntryIngest,
+      onEntryIngest,
+    );
+    willowStore.removeEventListener(
+      WillowEvents.PayloadIngest,
+      onPayloadIngest,
+    );
+    willowStore.removeEventListener(
+      WillowEvents.EntryRemove,
+      onEntryRemove,
+    );
+    willowStore.removeEventListener(
+      WillowEvents.PayloadRemove,
+      onPayloadRemove,
+    );
   };
 }

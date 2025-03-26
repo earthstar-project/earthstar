@@ -15,6 +15,7 @@
  */
 export type { AuthOpts } from "./src/auth/auth.ts";
 export { Auth } from "./src/auth/auth.ts";
+export * from "./src/auth/events.ts";
 
 export type { Blake3Digest, Blake3Driver } from "./src/blake3/types.ts";
 export type { Ed25519Driver } from "./src/cinn25519/types.ts";
@@ -53,6 +54,7 @@ export type {
 } from "./src/store/types.ts";
 
 export { Store } from "./src/store/store.ts";
+export * from "./src/store/events.ts";
 
 export { syncInMemory } from "./src/syncer/sync_in_memory.ts";
 

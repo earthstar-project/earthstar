@@ -47,6 +47,15 @@ import { concat } from "@std/bytes";
 import { type Area, areaIsIncluded, orderBytes } from "@earthstar/willow-utils";
 import type { RuntimeDriver } from "../peer/types.ts";
 import type { Blake3Digest } from "../blake3/types.ts";
+import { TypedEventTarget } from "@derzade/typescript-event-target";
+import {
+  AuthEvents,
+  type AuthEventsMap,
+  CapAddEvent,
+  CapDelegateEvent,
+  KeypairAddEvent,
+  ReadyEvent,
+} from "./events.ts";
 
 export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
   SharePublicKey,
@@ -64,8 +73,11 @@ export type AuthOpts = {
   runtimeDriver: RuntimeDriver;
 };
 
-/** Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password. */
-export class Auth {
+/**
+ * Stores sensitive credentials like share and identity keypairs and capabilities in local storage. Encrypts and decrypts contents using a plaintext password.
+ * @extends TypedEventTarget<MappedEvents>
+ */
+export class Auth extends TypedEventTarget<AuthEventsMap> {
   /** The {@linkcode RuntimeDriver} being used by this {@linkcode Auth}. */
   runtimeDriver: RuntimeDriver;
 
@@ -89,12 +101,13 @@ export class Auth {
   /** Check if Auth has been successfully initialised with the given password. */
   async ready(): Promise<boolean> {
     await this.encryptionKey.promise;
-
     return true;
   }
 
   /** Create a new {@linkcode} Auth instance. {@linkcode Peer} usually does this for you. */
   constructor(opts: AuthOpts) {
+    super();
+
     this.kvDriver = opts.kvDriver;
     this.runtimeDriver = opts.runtimeDriver;
     this.meadowcap = new Meadowcap.Meadowcap(
@@ -183,6 +196,10 @@ export class Auth {
 
         // It's the right password, yay.
         this.encryptionKey.resolve(encryptionKey);
+        this.dispatchTypedEvent(
+          AuthEvents.Ready,
+          new ReadyEvent(this),
+        );
       } catch {
         this.encryptionKey.reject("Wrong password entered for Auth");
       }
@@ -304,6 +321,10 @@ export class Auth {
       keypairEncrypted,
     );
 
+    this.dispatchTypedEvent(
+      AuthEvents.KeypairAdd,
+      new KeypairAddEvent({ type: "IDENTITY", keypair }),
+    );
     return true;
   }
 
@@ -384,6 +405,10 @@ export class Auth {
       keypairEncrypted,
     );
 
+    this.dispatchTypedEvent(
+      AuthEvents.KeypairAdd,
+      new KeypairAddEvent({ type: "SHARE", keypair }),
+    );
     return true;
   }
 
@@ -588,6 +613,10 @@ export class Auth {
             },
           );
 
+          this.dispatchTypedEvent(
+            AuthEvents.CapDelegate,
+            new CapDelegateEvent({ writeCap: cap }),
+          );
           return { writeCap: cap };
         }
 
@@ -600,6 +629,10 @@ export class Auth {
           },
         );
 
+        this.dispatchTypedEvent(
+          AuthEvents.CapDelegate,
+          new CapDelegateEvent({ writeCap: cap }),
+        );
         return { writeCap: cap };
       } catch (err) {
         return new ValidationError(err);
@@ -637,6 +670,10 @@ export class Auth {
           },
         );
 
+        this.dispatchTypedEvent(
+          AuthEvents.CapDelegate,
+          new CapDelegateEvent({ readCap: delegated }),
+        );
         return { readCap: delegated };
       }
 
@@ -655,6 +692,10 @@ export class Auth {
         );
       }
 
+      this.dispatchTypedEvent(
+        AuthEvents.CapDelegate,
+        new CapDelegateEvent({ readCap: delegated }),
+      );
       return { readCap: delegated };
     }
 
@@ -679,6 +720,13 @@ export class Auth {
       receiverKeypair.secretKey,
     );
 
+    this.dispatchTypedEvent(
+      AuthEvents.CapDelegate,
+      new CapDelegateEvent({
+        readCap: delegatedCap,
+        subspaceCap: delegatedSubspaceCap,
+      }),
+    );
     return {
       readCap: delegatedCap,
       subspaceCap: delegatedSubspaceCap,
@@ -706,6 +754,10 @@ export class Auth {
           crypto.getRandomValues(new Uint8Array(32)),
         ], encrypted);
 
+        this.dispatchTypedEvent(
+          AuthEvents.CapAdd,
+          new CapAddEvent(capPack),
+        );
         return true;
       }
     }
@@ -841,7 +893,7 @@ export class Auth {
     if (
       "subspaceCap" in capPack && capPack.subspaceCap &&
       await this.meadowcap.isValidSubspaceCap(capPack.subspaceCap) ===
-        false
+      false
     ) {
       return false;
     }
@@ -948,12 +1000,12 @@ export class Auth {
 
       if (
         candidateAuth.cap.delegations.length <
-          contenderAuth.cap.delegations.length
+        contenderAuth.cap.delegations.length
       ) {
         continue;
       } else if (
         contenderAuth.cap.delegations.length <
-          candidateAuth.cap.delegations.length
+        candidateAuth.cap.delegations.length
       ) {
         candidateAuth = contenderAuth;
         continue;

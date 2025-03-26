@@ -2,6 +2,7 @@
   "version": "3",
   "packages": {
     "specifiers": {
+      "jsr:@derzade/typescript-event-target@^1.1.1": "jsr:@derzade/typescript-event-target@1.1.1",
       "jsr:@earthstar/meadowcap@^0.6.4": "jsr:@earthstar/meadowcap@0.6.4",
       "jsr:@earthstar/willow-utils@^2.0.0": "jsr:@earthstar/willow-utils@2.0.1",
       "jsr:@earthstar/willow@^0.6.0": "jsr:@earthstar/willow@0.6.0",
@@ -25,6 +26,9 @@
       "npm:hash-wasm@^4.11.0": "npm:hash-wasm@4.11.0"
     },
     "jsr": {
+      "@derzade/typescript-event-target@1.1.1": {
+        "integrity": "853c4cb91c333923534faf02fe68f2a91050dc41732a6899fb67ccee204f7dc7"
+      },
       "@earthstar/meadowcap@0.6.4": {
         "integrity": "6697a074d9402269fd699ec51a1f5d62e8b5dee7197cb1713ad99cdc60afa638",
         "dependencies": [
@@ -171,6 +175,7 @@
   },
   "workspace": {
     "dependencies": [
+      "jsr:@derzade/typescript-event-target@^1.1.1",
       "jsr:@earthstar/meadowcap@^0.6.4",
       "jsr:@earthstar/willow-utils@^2.0.0",
       "jsr:@earthstar/willow@^0.6.0",
