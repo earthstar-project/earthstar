@@ -10,7 +10,7 @@ export const AuthEvents = {
   Ready: "ready",
 } as const;
 
-type KeypairAddPayload =
+export type KeypairAddPayload =
   | { type: "IDENTITY"; keypair: IdentityKeypairRaw }
   | { type: "SHARE"; keypair: ShareKeypairRaw };
 

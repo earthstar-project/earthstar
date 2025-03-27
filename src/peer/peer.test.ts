@@ -4,6 +4,7 @@ import { notErr } from "../util/errors.ts";
 import { Path } from "../path/path.ts";
 import { RuntimeDriverDeno } from "../runtime/driver_deno.ts";
 import { StorageDriverMemory } from "./storage_drivers/memory.ts";
+import { AuthEvents } from "../auth/events.ts";
 
 Deno.test("Peer", async () => {
   // A Peer which can securely store capabilities and keypairs.
@@ -61,7 +62,8 @@ Deno.test("Peer with existing share", async () => {
   assert(notErr(suzyKeypair));
 
   // Use an existing share
-  const gardeningTag = "+gardening.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const gardeningTag =
+    "+gardening.baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   assert(notErr(await peer.addExistingShare(gardeningTag)));
 
   // Make a root capability for suzy to write to +gardening
@@ -85,4 +87,55 @@ Deno.test("Peer with existing share", async () => {
     payload: new TextEncoder().encode("yo!"),
   });
   assertEquals(result.kind, "success");
+});
+
+Deno.test("Peer Events", async () => {
+  // A Peer which can securely store capabilities and keypairs.
+  const peer = new Peer({
+    password: "password1234",
+    runtime: new RuntimeDriverDeno(),
+    storage: new StorageDriverMemory(),
+  });
+
+  let keypairAddEventEmitted = false;
+  let capAddEventEmitted = false;
+  let capDelegateEventEmitted = false;
+
+  peer.addEventListener(AuthEvents.KeypairAdd, () => {
+    keypairAddEventEmitted = true;
+  });
+  peer.addEventListener(AuthEvents.CapAdd, () => {
+    capAddEventEmitted = true;
+  });
+  peer.addEventListener(AuthEvents.CapDelegate, () => {
+    capDelegateEventEmitted = true;
+  });
+
+  // Create a new identity keypair for us.
+  const suzyKeypair = await peer.createIdentity("suzy");
+  assert(notErr(suzyKeypair));
+
+  // Create a new identity keypair for us.
+  const fulanitoKeypair = await peer.createIdentity("fulanito");
+  assert(notErr(fulanitoKeypair));
+
+  // Create a new communal share (which need no secret, so no keypair returned)
+  // (if this was an owned share we'd return a keypair)
+  const gardeningTag = await peer.createShare("gardening", true);
+  assert(notErr(gardeningTag));
+
+  // Make a root capability for suzy to write to +gardening
+  const gardeningRootCap = await peer.mintCap(
+    gardeningTag,
+    suzyKeypair.tag,
+    "write",
+  );
+  assert(notErr(gardeningRootCap));
+  const delegatedCap = await gardeningRootCap.delegate(fulanitoKeypair.tag);
+  assert(notErr(delegatedCap));
+
+  // Assert that the events were emitted
+  assert(keypairAddEventEmitted, "The 'keypairadd' event was not emitted.");
+  assert(capAddEventEmitted, "The 'capadd' event was not emitted.");
+  assert(capDelegateEventEmitted, "The 'capdelegate' event was not emitted.");
 });
