@@ -54,7 +54,6 @@ import {
   CapAddEvent,
   CapDelegateEvent,
   KeypairAddEvent,
-  ReadyEvent,
 } from "./events.ts";
 
 export type AuthorisationToken = Meadowcap.MeadowcapAuthorisationToken<
@@ -196,10 +195,6 @@ export class Auth extends TypedEventTarget<AuthEventsMap> {
 
         // It's the right password, yay.
         this.encryptionKey.resolve(encryptionKey);
-        this.dispatchTypedEvent(
-          AuthEvents.Ready,
-          new ReadyEvent(this),
-        );
       } catch {
         this.encryptionKey.reject("Wrong password entered for Auth");
       }

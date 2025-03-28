@@ -6,7 +6,6 @@ export type PeerEventsMap = {
   [AuthEvents.KeypairAdd]: KeypairAddEvent;
   [AuthEvents.CapAdd]: CapAddEvent;
   [AuthEvents.CapDelegate]: CapDelegateEvent;
-  [AuthEvents.Ready]: ReadyEvent;
 };
 
 /** Emitted when a new keypair is added to the {@linkcode Peer} instance. */
@@ -30,13 +29,6 @@ export class CapDelegateEvent extends CustomEvent<ReadCapPack | WriteCapPack> {
   }
 }
 
-/** Emitted when the {@linkcode Peer} instance is ready to be used. */
-export class ReadyEvent extends CustomEvent<Auth> {
-  constructor(payload: Auth) {
-    super(AuthEvents.Ready, { detail: payload });
-  }
-}
-
 function handleKeypairAdd(event: Event, dispatcher: EventTarget) {
   dispatcher.dispatchEvent(
     new KeypairAddEvent((event as CustomEvent<KeypairAddPayload>).detail),
@@ -57,27 +49,20 @@ function handleCapDelegate(event: Event, dispatcher: EventTarget) {
   );
 }
 
-function handleReady(event: Event, dispatcher: EventTarget) {
-  dispatcher.dispatchEvent(new ReadyEvent((event as CustomEvent<Auth>).detail));
-}
-
 export function relayAuthEvents(dispatcher: EventTarget, auth: Auth) {
   const keypairAddHandler = (event: Event) =>
     handleKeypairAdd(event, dispatcher);
   const capAddHandler = (event: Event) => handleCapAdd(event, dispatcher);
   const capDelegateHandler = (event: Event) =>
     handleCapDelegate(event, dispatcher);
-  const readyHandler = (event: Event) => handleReady(event, dispatcher);
 
   auth.addEventListener(AuthEvents.KeypairAdd, keypairAddHandler);
   auth.addEventListener(AuthEvents.CapAdd, capAddHandler);
   auth.addEventListener(AuthEvents.CapDelegate, capDelegateHandler);
-  auth.addEventListener(AuthEvents.Ready, readyHandler);
 
   return () => {
     auth.removeEventListener(AuthEvents.KeypairAdd, keypairAddHandler);
     auth.removeEventListener(AuthEvents.CapAdd, capAddHandler);
     auth.removeEventListener(AuthEvents.CapDelegate, capDelegateHandler);
-    auth.removeEventListener(AuthEvents.Ready, readyHandler);
   };
 }
