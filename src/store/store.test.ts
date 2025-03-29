@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { Store } from "./store.ts";
 import { Auth } from "../auth/auth.ts";
-import type { DocumentSetEvent } from "./events.ts";
+import { type DocumentSetEvent, StoreEvents } from "./events.ts";
 import type { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";
 import { encodeShareTag, type ShareKeypairRaw } from "../identifiers/share.ts";
@@ -555,4 +555,52 @@ Deno.test("Store.queryIdentities", async () => {
     pathPrefix: Path.fromStrings("test1"),
   }));
   assertEquals(identities, [identityDisplay]);
+});
+
+Deno.test("Store events", async () => {
+  const store = newStore();
+
+  let documentSetEmitted = false;
+  let entryRemoveEmitted = false;
+  let entryIngestEmitted = false;
+  let payloadIngestEmitted = false;
+  let payloadRemoveEmitted = false;
+
+  store.addEventListener(StoreEvents.DocumentSet, () => {
+    documentSetEmitted = true;
+  });
+
+  store.addEventListener(StoreEvents.EntryIngest, () => {
+    entryIngestEmitted = true;
+  });
+
+  store.addEventListener(StoreEvents.EntryRemove, () => {
+    entryRemoveEmitted = true;
+  });
+
+  store.addEventListener(StoreEvents.PayloadIngest, () => {
+    payloadIngestEmitted = true;
+  });
+
+  store.addEventListener(StoreEvents.PayloadRemove, () => {
+    payloadRemoveEmitted = true;
+  });
+
+  const path = Path.fromStrings("testEvents");
+  await store.set({
+    identity: identityDisplay,
+    path: path,
+    payload: new TextEncoder().encode("Hello world"),
+  });
+
+  await store.clear(identityDisplay, path);
+
+  assert(documentSetEmitted, "The 'documentset' event was not emitted.");
+  // TODO: entryingest event
+  // assert(entryIngestEmitted, "The 'entryingest' event was not emitted.");
+  // TODO: payloadingest event
+  //  assert(payloadIngestEmitted, "The 'payloadingest' event was not emitted.");
+  assert(entryRemoveEmitted, "The 'entryremove' event was not emitted.");
+  // TODO: payloadremove event test
+  // assert(payloadRemoveEmitted, "The 'payloadremove' event was not emitted.");
 });

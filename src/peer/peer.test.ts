@@ -111,16 +111,12 @@ Deno.test("Peer Events", async () => {
     capDelegateEventEmitted = true;
   });
 
-  // Create a new identity keypair for us.
   const suzyKeypair = await peer.createIdentity("suzy");
   assert(notErr(suzyKeypair));
 
-  // Create a new identity keypair for us.
-  const fulanitoKeypair = await peer.createIdentity("fulanito");
-  assert(notErr(fulanitoKeypair));
+  const pacoKeypair = await peer.createIdentity("paco");
+  assert(notErr(pacoKeypair));
 
-  // Create a new communal share (which need no secret, so no keypair returned)
-  // (if this was an owned share we'd return a keypair)
   const gardeningTag = await peer.createShare("gardening", true);
   assert(notErr(gardeningTag));
 
@@ -131,7 +127,7 @@ Deno.test("Peer Events", async () => {
     "write",
   );
   assert(notErr(gardeningRootCap));
-  const delegatedCap = await gardeningRootCap.delegate(fulanitoKeypair.tag);
+  const delegatedCap = await gardeningRootCap.delegate(pacoKeypair.tag);
   assert(notErr(delegatedCap));
 
   // Assert that the events were emitted
