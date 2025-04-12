@@ -27,6 +27,8 @@ import type {
   StorageDriver,
 } from "./types.ts";
 import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
+import { TypedEventTarget } from "@derzade/typescript-event-target";
+import { PeerEventsMap, relayAuthEvents } from "./events.ts";
 
 /** Stores and generates keypairs and capabilities and exposes access to {@linkcode Store}s and {@linkcode Cap}s based on those.
  *
@@ -53,7 +55,7 @@ import { decodeBase32, encodeBase32 } from "../encoding/base32.ts";
  * });
  * ```
  */
-export class Peer {
+export class Peer extends TypedEventTarget<PeerEventsMap> {
   /** The peer's underlying {@linkcode} Auth instance, exposed here for low-level operations. */
   readonly auth: Auth;
 
@@ -70,6 +72,7 @@ export class Peer {
 
   /** Construct a new {@linkcode Peer}. */
   constructor(opts: PeerOpts) {
+    super();
     this.auth = new Auth({
       password: opts.password,
       kvDriver: opts.storage.auth,
@@ -79,6 +82,8 @@ export class Peer {
     this.storageDriver = opts.storage;
 
     this.runtime = opts.runtime;
+
+    relayAuthEvents(this, this.auth);
   }
 
   /** Create a new {@linkcode IdentityKeypair} and store it in the peer.

@@ -1,7 +1,7 @@
 import { assert, assertEquals } from "@std/assert";
 import { Store } from "./store.ts";
 import { Auth } from "../auth/auth.ts";
-import type { DocumentSetEvent } from "./events.ts";
+import { type DocumentSetEvent, StoreEvents } from "./events.ts";
 import type { Document } from "./types.ts";
 import { isErr, notErr } from "../util/errors.ts";
 import { encodeShareTag, type ShareKeypairRaw } from "../identifiers/share.ts";
