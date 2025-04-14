@@ -630,7 +630,7 @@ export class Auth extends TypedEventTarget<AuthEventsMap> {
         );
         return { writeCap: cap };
       } catch (err) {
-        return new ValidationError(err);
+        return new ValidationError(err as string);
       }
     }
 

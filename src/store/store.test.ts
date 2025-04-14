@@ -556,3 +556,34 @@ Deno.test("Store.queryIdentities", async () => {
   }));
   assertEquals(identities, [identityDisplay]);
 });
+
+Deno.test("Store.createDrop() and Store.ingestDrop()", async () => {
+  const source = newStore();
+  await source.set({
+    identity: identityDisplay,
+    path: Path.fromStrings("hello", "a"),
+    payload: new TextEncoder().encode("b"),
+    timestamp: 1000n,
+  });
+  await source.set({
+    identity: identityDisplay,
+    path: Path.fromStrings("hello", "c"),
+    payload: new TextEncoder().encode("d"),
+    timestamp: 2000n,
+  });
+
+  const dropStream = source.createDrop({
+    timestampGte: 1500n,
+  });
+  if (isErr(dropStream)) throw dropStream;
+
+  const target = newStore();
+  await target.ingestDrop(dropStream);
+
+  const v1 = await target.get(identityDisplay, Path.fromStrings("hello", "a"));
+  assertEquals(undefined, v1);
+
+  const v2 = await target.get(identityDisplay, Path.fromStrings("hello", "c"));
+  if (isErr(v2)) throw v2;
+  assertEquals(new TextEncoder().encode("d"), await v2?.payload?.bytes());
+});

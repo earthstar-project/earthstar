@@ -2,6 +2,7 @@ import * as Willow from "@earthstar/willow";
 import { OPEN_END, successorPath } from "@earthstar/willow-utils";
 import type { Auth, AuthorisationToken } from "../auth/auth.ts";
 import {
+  type AuthorizationScheme,
   fingerprintScheme,
   makeAuthorisationScheme,
   makePayloadScheme,
@@ -60,6 +61,7 @@ import { TypedEventTarget } from "@derzade/typescript-event-target";
  */
 export class Store extends TypedEventTarget<StoreEventsMap> {
   private auth: Auth;
+  private payloadScheme: Willow.PayloadScheme<Uint8Array>;
 
   /** The underlying Willow `Store`, made accessible for advanced usage and shenanigans. */
   willow: Willow.Store<
@@ -71,6 +73,7 @@ export class Store extends TypedEventTarget<StoreEventsMap> {
     PreFingerprint,
     Uint8Array
   >;
+  authorizationScheme: AuthorizationScheme;
 
   /** The tag of the share this {@linkcode Store} belongs to. */
   get share(): ShareTag {
@@ -94,24 +97,77 @@ export class Store extends TypedEventTarget<StoreEventsMap> {
       throw sharePublicKey;
     }
 
+    this.payloadScheme = makePayloadScheme(drivers.runtimeDriver.blake3);
+    this.authorizationScheme = makeAuthorisationScheme(
+      drivers.runtimeDriver.ed25519,
+      drivers.runtimeDriver.blake3
+    );
     this.willow = new Willow.Store({
       namespace: sharePublicKey,
       schemes: {
         namespace: namespaceScheme,
         subspace: subspaceScheme,
         path: pathScheme,
-        payload: makePayloadScheme(drivers.runtimeDriver.blake3),
+        payload: this.payloadScheme,
         fingerprint: fingerprintScheme,
-        authorisation: makeAuthorisationScheme(
-          drivers.runtimeDriver.ed25519,
-          drivers.runtimeDriver.blake3,
-        ),
+        authorisation: this.authorizationScheme,
       },
       entryDriver: drivers.entryDriver || undefined,
       payloadDriver: drivers.payloadDriver || undefined,
     });
 
     relayWillowEvents(this, this.willow);
+  }
+
+  
+  createDrop(
+    query: Query,
+    encryptTransform: TransformStream<Uint8Array> = new TransformStream()
+  ): ReadableStream<Uint8Array> | ValidationError {
+    const willowQueryParams = queryToWillowQueryParams(query);
+
+    if (isErr(willowQueryParams)) {
+      return willowQueryParams;
+    }
+
+    return Willow.createDrop({
+      areaOfInterest: willowQueryParams.areaOfInterest,
+      schemes: {
+        namespace: namespaceScheme,
+        subspace: subspaceScheme,
+        path: pathScheme,
+        payload: this.payloadScheme,
+      },
+      store: this.willow,
+      encodeAuthorisationToken: this.authorizationScheme.tokenEncoding.encode,
+      encryptTransform,
+    });
+  }
+
+  async ingestDrop(
+    drop: ReadableStream<Uint8Array>,
+    decryptTransform: TransformStream<Uint8Array> = new TransformStream()
+  ) {
+    await Willow.ingestDrop({
+      decodeStreamAuthorisationToken:
+        this.authorizationScheme.tokenEncoding.decodeStream,
+      decryptTransform,
+      dropStream: drop,
+      // deno-lint-ignore require-await
+      getStore: async (namespace) => {
+        if (namespaceScheme.isEqual(namespace, this.willow.namespace)) {
+          return this.willow;
+        } else {
+          throw new EarthstarError("Cannot ingest drop: drop is for different namespace")
+        }
+      },
+      schemes: {
+        namespace: namespaceScheme,
+        subspace: subspaceScheme,
+        path: pathScheme,
+        payload: this.payloadScheme,
+      },
+    });
   }
 
   /** Create (or update) a document for a given identity and path.

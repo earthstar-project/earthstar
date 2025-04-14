@@ -233,10 +233,7 @@ export function makeMeadowcapParams(
   };
 }
 
-export function makeAuthorisationScheme(
-  ed25519: Ed25519Driver<Uint8Array>,
-  blake3: Blake3Driver,
-): Willow.AuthorisationScheme<
+export type AuthorizationScheme = Willow.AuthorisationScheme<
   SharePublicKey,
   IdentityPublicKey,
   Uint8Array,
@@ -255,7 +252,12 @@ export function makeAuthorisationScheme(
     Uint8Array,
     Uint8Array
   >
-> {
+>;
+
+export function makeAuthorisationScheme(
+  ed25519: Ed25519Driver<Uint8Array>,
+  blake3: Blake3Driver,
+): AuthorizationScheme {
   const meadowcapParams = makeMeadowcapParams(ed25519, blake3);
   const meadowcap = new Meadowcap.Meadowcap(
     meadowcapParams,
